@@ -1,6 +1,18 @@
 #include "partial_hash_index_impl.hpp"
 
+#include <cstddef>
+#include <memory>
+#include <unordered_set>
+#include <utility>
+#include <vector>
+
+#include "tsl/sparse_set.h"
+
+#include "all_type_variant.hpp"
+#include "storage/chunk.hpp"
+#include "storage/index/partial_hash/flat_map_iterator.hpp"
 #include "storage/segment_iterate.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
@@ -54,7 +66,9 @@ size_t PartialHashIndexImpl<DataType>::remove(const std::vector<ChunkID>& chunks
   }
 
   // Checks whether a given RowID's ChunkID is in the set of ChunkIDs to be unindexed.
-  auto is_to_remove = [&indexed_chunks](const RowID& row_id) { return indexed_chunks.contains(row_id.chunk_id); };
+  auto is_to_remove = [&indexed_chunks](const RowID& row_id) {
+    return indexed_chunks.contains(row_id.chunk_id);
+  };
 
   // Iterate over all values stored in the index.
   auto map_iter = _positions.begin();
@@ -122,7 +136,7 @@ BasePartialHashIndexImpl::Iterator PartialHashIndexImpl<DataType>::null_cend() c
 
 template <typename DataType>
 size_t PartialHashIndexImpl<DataType>::estimate_memory_usage() const {
-  auto bytes = size_t{0u};
+  auto bytes = size_t{0};
   bytes += sizeof(_indexed_chunk_ids);
 
   // It is not trivial to estimate the memory consumption of a hash set. We use a tsl::sparse_set, so that the result

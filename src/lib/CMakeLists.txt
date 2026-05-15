@@ -117,6 +117,8 @@ set(
     logical_query_plan/create_view_node.hpp
     logical_query_plan/data_dependencies/functional_dependency.cpp
     logical_query_plan/data_dependencies/functional_dependency.hpp
+    logical_query_plan/data_dependencies/order_dependency.cpp
+    logical_query_plan/data_dependencies/order_dependency.hpp
     logical_query_plan/data_dependencies/unique_column_combination.cpp
     logical_query_plan/data_dependencies/unique_column_combination.hpp
     logical_query_plan/delete_node.cpp
@@ -171,7 +173,8 @@ set(
     lossless_cast.cpp
     lossless_cast.hpp
     lossy_cast.hpp
-    memory/boost_default_memory_resource.cpp
+    memory/default_memory_resource.cpp
+    memory/default_memory_resource.hpp
     memory/zero_allocator.hpp
     null_value.hpp
     operators/abstract_aggregate_operator.cpp
@@ -297,6 +300,7 @@ set(
     optimizer/join_ordering/join_graph_edge.hpp
     optimizer/optimizer.cpp
     optimizer/optimizer.hpp
+    optimizer/optimization_context.hpp
     optimizer/strategy/abstract_rule.cpp
     optimizer/strategy/abstract_rule.hpp
     optimizer/strategy/between_composition_rule.cpp
@@ -350,6 +354,8 @@ set(
     scheduler/node_queue_scheduler.hpp
     scheduler/operator_task.cpp
     scheduler/operator_task.hpp
+    scheduler/shutdown_task.cpp
+    scheduler/shutdown_task.hpp
     scheduler/task_queue.cpp
     scheduler/task_queue.hpp
     scheduler/task_utils.hpp
@@ -394,13 +400,9 @@ set(
     sql/sql_plan_cache.hpp
     sql/sql_translator.cpp
     sql/sql_translator.hpp
-    statistics/abstract_cardinality_estimator.cpp
-    statistics/abstract_cardinality_estimator.hpp
     statistics/attribute_statistics.cpp
     statistics/attribute_statistics.hpp
-    statistics/base_attribute_statistics.cpp
     statistics/base_attribute_statistics.hpp
-    statistics/cardinality_estimation_cache.hpp
     statistics/cardinality_estimator.cpp
     statistics/cardinality_estimator.hpp
     statistics/generate_pruning_statistics.cpp
@@ -409,7 +411,6 @@ set(
     statistics/join_graph_statistics_cache.hpp
     statistics/statistics_objects/abstract_histogram.cpp
     statistics/statistics_objects/abstract_histogram.hpp
-    statistics/statistics_objects/abstract_statistics_object.cpp
     statistics/statistics_objects/abstract_statistics_object.hpp
     statistics/statistics_objects/distinct_value_count.cpp
     statistics/statistics_objects/distinct_value_count.hpp
@@ -427,9 +428,10 @@ set(
     statistics/statistics_objects/null_value_ratio_statistics.hpp
     statistics/statistics_objects/range_filter.cpp
     statistics/statistics_objects/range_filter.hpp
+    statistics/statistics_objects/scaled_histogram.cpp
+    statistics/statistics_objects/scaled_histogram.hpp
     statistics/table_statistics.cpp
     statistics/table_statistics.hpp
-    storage/abstract_encoded_segment.cpp
     storage/abstract_encoded_segment.hpp
     storage/abstract_segment.cpp
     storage/abstract_segment.hpp
@@ -437,12 +439,17 @@ set(
     storage/base_segment_accessor.hpp
     storage/base_segment_encoder.hpp
     storage/base_value_segment.hpp
+    storage/buffer/frame.cpp
+    storage/buffer/frame.hpp
+    storage/buffer/page_id.hpp
     storage/chunk.cpp
     storage/chunk.hpp
     storage/chunk_encoder.cpp
     storage/chunk_encoder.hpp
     storage/constraints/abstract_table_constraint.cpp
     storage/constraints/abstract_table_constraint.hpp
+    storage/constraints/constraint_utils.cpp
+    storage/constraints/constraint_utils.hpp
     storage/constraints/foreign_key_constraint.cpp
     storage/constraints/foreign_key_constraint.hpp
     storage/constraints/table_key_constraint.cpp
@@ -452,6 +459,7 @@ set(
     storage/create_iterable_from_reference_segment.ipp
     storage/create_iterable_from_segment.hpp
     storage/create_iterable_from_segment.ipp
+    storage/create_iterable_from_non_reference_segment.hpp
     storage/dictionary_segment.cpp
     storage/dictionary_segment.hpp
     storage/dictionary_segment/attribute_vector_iterable.hpp
@@ -476,10 +484,6 @@ set(
     storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_nodes.cpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_nodes.hpp
-    storage/index/b_tree/b_tree_index.cpp
-    storage/index/b_tree/b_tree_index.hpp
-    storage/index/b_tree/b_tree_index_impl.cpp
-    storage/index/b_tree/b_tree_index_impl.hpp
     storage/index/group_key/composite_group_key_index.cpp
     storage/index/group_key/composite_group_key_index.hpp
     storage/index/group_key/group_key_index.cpp
@@ -504,6 +508,7 @@ set(
     storage/index/partial_hash/partial_hash_index.hpp
     storage/index/partial_hash/partial_hash_index_impl.cpp
     storage/index/partial_hash/partial_hash_index_impl.hpp
+    storage/index/chunk_index_map.hpp
     storage/index/chunk_index_type.hpp
     storage/lqp_view.cpp
     storage/lqp_view.hpp
@@ -587,12 +592,9 @@ set(
     utils/abstract_plugin.hpp
     utils/aligned_size.hpp
     utils/assert.hpp
+    utils/atomic_max.hpp
     utils/check_table_equal.cpp
     utils/check_table_equal.hpp
-    utils/chunk_pruning_utils.cpp
-    utils/chunk_pruning_utils.hpp
-    utils/column_pruning_utils.cpp
-    utils/column_pruning_utils.hpp
     utils/copyable_atomic.hpp
     utils/date_time_utils.cpp
     utils/date_time_utils.hpp
@@ -602,8 +604,6 @@ set(
     utils/format_duration.cpp
     utils/format_duration.hpp
     utils/invalid_input_exception.hpp
-    utils/list_directory.cpp
-    utils/list_directory.hpp
     utils/load_table.cpp
     utils/load_table.hpp
     utils/log_manager.cpp
@@ -611,6 +611,7 @@ set(
     utils/lossless_predicate_cast.cpp
     utils/lossless_predicate_cast.hpp
     utils/make_bimap.hpp
+    utils/map_prunable_subquery_predicates.hpp
     utils/meta_table_manager.cpp
     utils/meta_table_manager.hpp
     utils/meta_tables/abstract_meta_table.cpp
@@ -649,6 +650,8 @@ set(
     utils/plugin_manager.hpp
     utils/print_utils.cpp
     utils/print_utils.hpp
+    utils/pruning_utils.cpp
+    utils/pruning_utils.hpp
     utils/settings/abstract_setting.cpp
     utils/settings/abstract_setting.hpp
     utils/settings_manager.cpp
@@ -707,21 +710,13 @@ if (NOT "${ERASE_SEGMENT_TYPES_UPPER}" STREQUAL "")
 endif()
 
 # hyrise_impl should not be directly used, as linking to it regularly excludes unused symbols. See hyrise below.
-if(NOT ENABLE_COVERAGE AND NOT (APPLE AND (ENABLE_ADDR_UB_SANITIZATION OR ENABLE_THREAD_SANITIZATION)))
+if(NOT ENABLE_COVERAGE AND NOT (APPLE AND (ENABLE_ADDR_UB_LEAK_SANITIZATION OR ENABLE_THREAD_SANITIZATION)))
     add_library(hyrise_impl SHARED ${SOURCES})
 else()
-    # Use a static build for coverage information - otherwise .cpp files are missing from the report
-    # Also, the sanitizer builds on Mac require static linkage
+    # Use a static build for coverage information - otherwise .cpp files are missing from the report.
+    # Also, the sanitizer builds on Mac require static linkage.
     add_library(hyrise_impl STATIC ${SOURCES})
 endif()
-
-# Work around an stdlibc++ bug, see list_directory.hpp for details
-set_source_files_properties(
-    utils/list_directory.cpp
-    PROPERTIES
-    COMPILE_FLAGS -O0
-    SKIP_PRECOMPILE_HEADERS TRUE
-)
 
 # -rdynamic tells the linker to export the library's symbols so that plugins can use them.
 target_link_libraries(hyrise_impl PUBLIC ${LIBRARIES} -rdynamic)
@@ -741,11 +736,9 @@ target_link_libraries_system(
     hyrise_impl
 
     ${BOOST_LIBS}
-    cpp-btree
+    concurrentqueue
     cxxopts
-    flat-hash-map
     nlohmann_json::nlohmann_json
-    robin_map
     sparse_map
     SQLite::SQLite3
     tbb

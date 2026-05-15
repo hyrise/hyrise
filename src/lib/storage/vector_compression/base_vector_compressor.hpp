@@ -3,9 +3,8 @@
 #include <cstdint>
 #include <memory>
 
-#include "vector_compression.hpp"
-
 #include "types.hpp"
+#include "vector_compression.hpp"
 
 namespace hyrise {
 

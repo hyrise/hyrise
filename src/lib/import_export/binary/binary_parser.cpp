@@ -1,26 +1,44 @@
 #include "binary_parser.hpp"
 
+#include <cstddef>
 #include <cstdint>
+#include <format>
 #include <fstream>
+#include <ios>
 #include <memory>
 #include <numeric>
 #include <optional>
 #include <string>
+#include <type_traits>
 #include <utility>
+#include <vector>
 
-#include "hyrise.hpp"
+#include "all_type_variant.hpp"
 #include "resolve_type.hpp"
 #include "storage/chunk.hpp"
+#include "storage/dictionary_segment.hpp"
 #include "storage/encoding_type.hpp"
+#include "storage/fixed_string_dictionary_segment.hpp"
+#include "storage/fixed_string_dictionary_segment/fixed_string_vector.hpp"
+#include "storage/frame_of_reference_segment.hpp"
+#include "storage/lz4_segment.hpp"
+#include "storage/mvcc_data.hpp"
+#include "storage/run_length_segment.hpp"
+#include "storage/table.hpp"
+#include "storage/table_column_definition.hpp"
+#include "storage/value_segment.hpp"
 #include "storage/vector_compression/bitpacking/bitpacking_vector.hpp"
+#include "storage/vector_compression/bitpacking/bitpacking_vector_type.hpp"
+#include "storage/vector_compression/compressed_vector_type.hpp"
 #include "storage/vector_compression/fixed_width_integer/fixed_width_integer_vector.hpp"
-
+#include "types.hpp"
 #include "utils/assert.hpp"
+#include "utils/enum_constant.hpp"
 
 namespace hyrise {
 
 std::shared_ptr<Table> BinaryParser::parse(const std::string& filename) {
-  std::ifstream file;
+  auto file = std::ifstream{};
   file.open(filename, std::ios::binary);
   file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
 
@@ -42,7 +60,7 @@ pmr_compact_vector BinaryParser::_read_values_compact_vector(std::ifstream& file
 
 template <typename T>
 pmr_vector<T> BinaryParser::_read_values(std::ifstream& file, const size_t count) {
-  pmr_vector<T> values(count);
+  auto values = pmr_vector<T>(count);
   file.read(reinterpret_cast<char*>(values.data()), values.size() * sizeof(T));
   return values;
 }
@@ -56,7 +74,7 @@ pmr_vector<pmr_string> BinaryParser::_read_values(std::ifstream& file, const siz
 // specialized implementation for bool values
 template <>
 pmr_vector<bool> BinaryParser::_read_values(std::ifstream& file, const size_t count) {
-  pmr_vector<BoolAsByteType> readable_bools(count);
+  auto readable_bools = pmr_vector<BoolAsByteType>(count);
   file.read(reinterpret_cast<char*>(readable_bools.data()),
             static_cast<int64_t>(readable_bools.size() * sizeof(BoolAsByteType)));
   return {readable_bools.begin(), readable_bools.end()};
@@ -79,7 +97,7 @@ pmr_vector<pmr_string> BinaryParser::_read_string_values(std::ifstream& file, co
 
 template <typename T>
 T BinaryParser::_read_value(std::ifstream& file) {
-  T result;
+  auto result = T{};
   file.read(reinterpret_cast<char*>(&result), sizeof(T));
   return result;
 }
@@ -116,15 +134,15 @@ void BinaryParser::_import_chunk(std::ifstream& file, std::shared_ptr<Table>& ta
     sorted_columns.emplace_back(column_id, sort_mode);
   }
 
-  Segments output_segments;
+  auto output_segments = Segments{};
   for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
     output_segments.push_back(
         _import_segment(file, row_count, table->column_data_type(column_id), table->column_is_nullable(column_id)));
   }
 
-  const auto mvcc_data = std::make_shared<MvccData>(row_count, CommitID{0});
+  const auto mvcc_data = std::make_shared<MvccData>(row_count, UNSET_COMMIT_ID);
   table->append_chunk(output_segments, mvcc_data);
-  table->last_chunk()->finalize();
+  table->last_chunk()->set_immutable();
   if (num_sorted_columns > 0) {
     table->last_chunk()->set_individually_sorted_by(sorted_columns);
   }
@@ -277,7 +295,7 @@ std::shared_ptr<LZ4Segment<T>> BinaryParser::_import_lz4_segment(std::ifstream& 
                                            num_elements);
   }
 
-  if (std::is_same<T, pmr_string>::value) {
+  if constexpr (std::is_same_v<T, pmr_string>) {
     return std::make_shared<LZ4Segment<T>>(std::move(lz4_blocks), std::move(null_values), std::move(dictionary),
                                            nullptr, block_size, last_block_size, compressed_size, num_elements);
   }
@@ -299,8 +317,8 @@ std::shared_ptr<BaseCompressedVector> BinaryParser::_import_attribute_vector(
     case CompressedVectorType::FixedWidthInteger4Byte:
       return std::make_shared<FixedWidthIntegerVector<uint32_t>>(_read_values<uint32_t>(file, row_count));
     default:
-      Fail("Cannot import attribute vector with compressed vector type id: " +
-           std::to_string(compressed_vector_type_id));
+      Fail(std::format("Cannot import attribute vector with compressed vector type id: '{}'.",
+                       compressed_vector_type_id));
   }
 }
 
@@ -317,16 +335,16 @@ std::unique_ptr<const BaseCompressedVector> BinaryParser::_import_offset_value_v
     case CompressedVectorType::FixedWidthInteger4Byte:
       return std::make_unique<FixedWidthIntegerVector<uint32_t>>(_read_values<uint32_t>(file, row_count));
     default:
-      Fail("Cannot import attribute vector with compressed vector type id: " +
-           std::to_string(compressed_vector_type_id));
+      Fail(std::format("Cannot import attribute vector with compressed vector type id: '{}'.",
+                       compressed_vector_type_id));
   }
 }
 
 std::shared_ptr<FixedStringVector> BinaryParser::_import_fixed_string_vector(std::ifstream& file, const size_t count) {
   const auto string_length = _read_value<uint32_t>(file);
-  pmr_vector<char> values(string_length * count);
+  auto values = pmr_vector<char>(string_length * count);
   file.read(values.data(), static_cast<int64_t>(values.size()));
-  return std::make_shared<FixedStringVector>(std::move(values), string_length);
+  return std::make_shared<FixedStringVector>(std::move(values), string_length, count);
 }
 
 }  // namespace hyrise

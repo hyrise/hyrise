@@ -1,14 +1,19 @@
 #include "abstract_read_write_operator.hpp"
 
 #include <memory>
-#include <vector>
+#include <ostream>
+
+#include "concurrency/transaction_context.hpp"
+#include "operators/abstract_operator.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
 AbstractReadWriteOperator::AbstractReadWriteOperator(const OperatorType type,
                                                      const std::shared_ptr<const AbstractOperator>& left,
                                                      const std::shared_ptr<const AbstractOperator>& right)
-    : AbstractOperator(type, left, right), _rw_state(ReadWriteOperatorState::Pending) {}
+    : AbstractOperator(type, left, right) {}
 
 void AbstractReadWriteOperator::execute() {
   Assert(static_cast<bool>(transaction_context()),

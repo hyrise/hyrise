@@ -1,7 +1,12 @@
 #include "expression_evaluator_table_scan_impl.hpp"
 
+#include <memory>
+#include <string>
+
+#include "expression/abstract_expression.hpp"
 #include "expression/evaluation/expression_evaluator.hpp"
-#include "expression/expression_utils.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 

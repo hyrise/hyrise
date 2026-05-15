@@ -1,26 +1,32 @@
+#include <cstdint>
+#include <initializer_list>
 #include <memory>
+#include <stdexcept>
 #include <string>
-#include <utility>
 #include <vector>
 
 #include "base_test.hpp"
-
 #include "concurrency/transaction_context.hpp"
 #include "expression/expression_functional.hpp"
-#include "operators/abstract_read_only_operator.hpp"
+#include "expression/pqp_column_expression.hpp"
 #include "operators/delete.hpp"
 #include "operators/get_table.hpp"
-#include "operators/print.hpp"
-#include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/validate.hpp"
+#include "storage/chunk.hpp"
+#include "storage/mvcc_data.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
+#include "storage/reference_segment.hpp"
 #include "storage/table.hpp"
+#include "storage/value_segment.hpp"
+#include "testing_assert.hpp"
 #include "types.hpp"
+#include "utils/load_table.hpp"
 
 namespace hyrise {
 
-using namespace expression_functional;  // NOLINT(build/namespaces)
+using namespace expression_functional;
 
 class OperatorsValidateTest : public BaseTest {
  protected:
@@ -67,7 +73,7 @@ void OperatorsValidateTest::set_all_records_visible(Table& table) {
     const auto chunk_size = chunk->size();
     for (auto index = ChunkOffset{0}; index < chunk_size; ++index) {
       mvcc_data->set_begin_cid(index, CommitID{0});
-      mvcc_data->set_end_cid(index, MvccData::MAX_COMMIT_ID);
+      mvcc_data->set_end_cid(index, MAX_COMMIT_ID);
     }
   }
 }
@@ -159,7 +165,7 @@ TEST_F(OperatorsValidateTest, ChunkNotEntirelyVisibleWithoutMaxBeginCid) {
   auto vs_int = std::make_shared<ValueSegment<int32_t>>();
   vs_int->append(4);
   auto chunk = std::make_shared<Chunk>(Segments{vs_int}, std::make_shared<MvccData>(1, CommitID{0}));
-  // We explicitly do not finalize the chunk so that max_begin_cid remains emtpy
+  // We explicitly do not mark the chunk as immutable so that max_begin_cid remains unset.
 
   auto validate = std::make_shared<Validate>(nullptr);
 
@@ -173,7 +179,7 @@ TEST_F(OperatorsValidateTest, ChunkNotEntirelyVisibleWithLowerSnapshotCid) {
   vs_int->append(4);
 
   auto chunk = std::make_shared<Chunk>(Segments{vs_int}, std::make_shared<MvccData>(1, begin_cid));
-  chunk->finalize();
+  chunk->set_immutable();
 
   auto validate = std::make_shared<Validate>(nullptr);
 
@@ -188,7 +194,7 @@ TEST_F(OperatorsValidateTest, ChunkNotEntirelyVisibleWithInvalidRows) {
 
   auto chunk = std::make_shared<Chunk>(Segments{vs_int}, std::make_shared<MvccData>(1, begin_cid));
   chunk->increase_invalid_row_count(ChunkOffset{1});
-  chunk->finalize();
+  chunk->set_immutable();
 
   auto validate = std::make_shared<Validate>(nullptr);
 
@@ -201,7 +207,7 @@ TEST_F(OperatorsValidateTest, ChunkEntirelyVisible) {
   auto vs_int = std::make_shared<ValueSegment<int32_t>>();
   vs_int->append(4);
   auto chunk = std::make_shared<Chunk>(Segments{vs_int}, std::make_shared<MvccData>(1, begin_cid));
-  chunk->finalize();
+  chunk->set_immutable();
 
   auto validate = std::make_shared<Validate>(nullptr);
 
@@ -260,10 +266,10 @@ TEST_F(OperatorsValidateTest, ForwardSortedByFlag) {
     EXPECT_TRUE(sorted_by.empty());
   }
 
-  // Verify that the sorted_by flag is set when it's present in left input.
-  // Since Validate can not be executed after Sort, we need to load a sorted table.
+  // Verify that the sorted_by flag is set when it's present in left input. Because Validate can not be executed after
+  // Sort, we need to load a sorted table.
   const auto sorted_table = load_table("resources/test_data/tbl/int_sorted.tbl", ChunkOffset{2});
-  const auto sort_column_definition = SortColumnDefinition(ColumnID{0}, SortMode::Ascending);
+  const auto sort_column_definition = SortColumnDefinition(ColumnID{0}, SortMode::AscendingNullsFirst);
   const auto chunk_count = sorted_table->chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto& chunk = sorted_table->get_chunk(chunk_id);

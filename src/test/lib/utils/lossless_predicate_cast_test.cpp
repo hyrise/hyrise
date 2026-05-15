@@ -1,5 +1,9 @@
-#include "base_test.hpp"
+#include <cstdint>
+#include <optional>
+#include <utility>
 
+#include "base_test.hpp"
+#include "types.hpp"
 #include "utils/lossless_predicate_cast.hpp"
 
 namespace hyrise {

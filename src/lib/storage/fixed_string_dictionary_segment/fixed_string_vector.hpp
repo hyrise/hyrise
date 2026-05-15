@@ -17,22 +17,29 @@ namespace hyrise {
 
 class FixedStringVector {
  public:
+  FixedStringVector& operator=(const FixedStringVector&) = default;
+  FixedStringVector& operator=(FixedStringVector&&) = default;
+  ~FixedStringVector() = default;
   // Create a FixedStringVector of FixedStrings with given values
   FixedStringVector(const FixedStringVector& other, const PolymorphicAllocator<char>& allocator = {});
+  FixedStringVector(FixedStringVector&& other) = default;
 
   // Create a FixedStringVector of FixedStrings with existing data
-  FixedStringVector(pmr_vector<char> chars, const size_t string_length)
-      : _string_length(string_length), _chars{std::move(chars)}, _size(_chars.size() / string_length) {}
+  FixedStringVector(pmr_vector<char> chars, const size_t string_length, const size_t size)
+      : _chars{std::move(chars)}, _size(size), _string_length(string_length) {
+    Assert(string_length * size == _chars.size(),
+           "Vector length does not match given number of strings in FixedStringVector.");
+  }
 
   // Create a FixedStringVector of FixedStrings with given values by iterating over other container
   template <typename Iter>
   FixedStringVector(Iter first, Iter last, const size_t string_length, const PolymorphicAllocator<char>& allocator = {})
-      : _string_length(string_length), _chars(allocator) {
+      : _chars(allocator), _string_length(string_length) {
     const auto value_count = std::distance(first, last);
     // If string_length equals 0 we would not have any elements in the vector. Hence, we would have to deal with null
     // pointers. In order to avoid this, we insert a null terminator to the vector by using resize.
     if (_string_length == 0) {
-      _chars.resize(1u);
+      _chars.resize(1);
       _size = value_count;
     } else {
       _chars.reserve(_string_length * value_count);
@@ -61,7 +68,7 @@ class FixedStringVector {
   FixedStringIterator<true> cbegin() const noexcept;
   FixedStringIterator<true> cend() const noexcept;
 
-  using ReverseIterator = boost::reverse_iterator<FixedStringIterator<false>>;
+  using ReverseIterator = std::reverse_iterator<FixedStringIterator<false>>;
   ReverseIterator rbegin() noexcept;
   ReverseIterator rend() noexcept;
 
@@ -92,9 +99,11 @@ class FixedStringVector {
   size_t data_size() const;
 
  protected:
-  const size_t _string_length;
   pmr_vector<char> _chars;
   size_t _size = 0;
+
+ private:
+  size_t _string_length;
 };
 
 }  // namespace hyrise

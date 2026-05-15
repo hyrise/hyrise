@@ -1,18 +1,31 @@
 #include "abstract_operator.hpp"
 
+#include <cstddef>
+#include <format>
+#include <memory>
+#include <mutex>
+#include <ostream>
+#include <string>
+#include <type_traits>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+
+#include "all_type_variant.hpp"
 #include "concurrency/transaction_context.hpp"
+#include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/pqp_subquery_expression.hpp"
-#include "logical_query_plan/abstract_non_query_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
-#include "operators/get_table.hpp"
+#include "operators/operator_performance_data.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/operator_task.hpp"
 #include "storage/table.hpp"
 #include "storage/value_segment.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/format_bytes.hpp"
-#include "utils/format_duration.hpp"
+#include "utils/map_prunable_subquery_predicates.hpp"
 #include "utils/print_utils.hpp"
 #include "utils/timer.hpp"
 
@@ -141,14 +154,14 @@ void AbstractOperator::execute() {
         // We cannot check the name of the column as LQP expressions do not know their alias.
         const auto column_count = _output->column_count();
         Assert(column_count == lqp_expressions.size(),
-               std::string{"Mismatching number of output columns for "} + name());
+               std::format("Mismatching number of output columns for '{}'.", name()));
         for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
           if (_type != OperatorType::Alias) {
             const auto lqp_type = lqp_expressions[column_id]->data_type();
             const auto pqp_type = _output->column_data_type(column_id);
             const auto pqp_name = _output->column_name(column_id);
             Assert(pqp_type == lqp_type,
-                   std::string{"Mismatching column type in "} + name() + " for PQP column '" + pqp_name + "'");
+                   std::format("Mismatching column type in '{}' for PQP column '{}'.", name(), pqp_name));
           }
         }
       }
@@ -167,8 +180,9 @@ void AbstractOperator::execute() {
             using SegmentType = std::decay_t<decltype(segment)>;
             if constexpr (std::is_same_v<SegmentType, ValueSegment<ColumnDataType>>) {
               // If segment is nullable, the column must be nullable as well
-              Assert(!segment.is_nullable() || _output->column_is_nullable(column_id),
-                     std::string{"Nullable segment found in non-nullable column "} + _output->column_name(column_id));
+              Assert(
+                  !segment.is_nullable() || _output->column_is_nullable(column_id),
+                  std::format("Nullable segment found in non-nullable column '{}'.", _output->column_name(column_id)));
             }
           });
         }
@@ -199,7 +213,14 @@ std::string AbstractOperator::description(DescriptionMode /*description_mode*/) 
 
 std::shared_ptr<AbstractOperator> AbstractOperator::deep_copy() const {
   auto copied_ops = std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>{};
-  return deep_copy(copied_ops);
+  auto copy = deep_copy(copied_ops);
+
+  // GetTable operators can store references to TableScans as prunable subquery predicates (see get_table.hpp for
+  // details). We must assign the copies of these TableScans after copying the entire PQP (see
+  // map_prunable_subquery_predicates.hpp).
+  map_prunable_subquery_predicates(copied_ops);
+
+  return copy;
 }
 
 std::shared_ptr<AbstractOperator> AbstractOperator::deep_copy(
@@ -249,18 +270,9 @@ void AbstractOperator::register_consumer() {
 }
 
 void AbstractOperator::deregister_consumer() {
-  DebugAssert(_consumer_count > 0, "Number of tracked consumer operators seems to be invalid.");
-  // The following section is locked to prevent clear_output() from being called twice. Otherwise, a race condition
-  // as follows might occur:
-  //  1) T1 decreases _consumer_count, making it equal to one. After this operation, T1 gets suspended.
-  //  2) T2 decreases _consumer_count as well, making it equal to zero. It enters the if statement and calls
-  //     clear_output() for the first time.
-  //  3) T1 wakes up and continues with the if statement. Since _consumer_count equals zero, it also calls
-  //     clear_output(), which leads to an illegal state transition ExecutedAndCleared -> ExecutedAndCleared.
-  const auto lock = std::lock_guard<std::mutex>{_deregister_consumer_mutex};
-
-  --_consumer_count;
-  if (_consumer_count == 0) {
+  const auto previous_consumers = _consumer_count--;
+  Assert(previous_consumers > 0, "Cannot decrement number of consumers when no consumers are left.");
+  if (previous_consumers == 1) {
     clear_output();
   }
 }
@@ -274,8 +286,9 @@ bool AbstractOperator::transaction_context_is_set() const {
 }
 
 std::shared_ptr<TransactionContext> AbstractOperator::transaction_context() const {
-  DebugAssert(!transaction_context_is_set() || !_transaction_context->expired(),
-              "TransactionContext is expired, but SQL Query Executor should still own it (Operator: " + name() + ")");
+  DebugAssert(
+      !transaction_context_is_set() || !_transaction_context->expired(),
+      std::format("TransactionContext is expired, but SQLQueryExecutor should still own it (operator: '{}')", name()));
   return transaction_context_is_set() ? _transaction_context->lock() : nullptr;
 }
 

@@ -1,5 +1,12 @@
 #include "histogram_domain.hpp"
 
+#include <algorithm>
+#include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <limits>
+
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
@@ -34,14 +41,16 @@ HistogramDomain<pmr_string>::IntegralType HistogramDomain<pmr_string>::string_to
   auto base = _base_number();
   auto value = IntegralType{0};
 
-  for (auto idx = size_t{0}; idx < std::min(string_value.size(), prefix_length); ++idx) {
+  const auto string_length = string_value.size();
+  const auto chars_to_consider = std::min(string_length, prefix_length);
+  for (auto idx = size_t{0}; idx < chars_to_consider; ++idx) {
     value += (string_value[idx] - min_char) * base + 1;
     base -= ipow(character_range_width(), prefix_length - idx - 1);
   }
 
   // If `value` is longer than `prefix_length` add 1 to the result.
   // This is required for the way EqualWidthHistograms calculate bin edges.
-  value += string_value.length() > prefix_length ? 1 : 0;
+  value += string_length > prefix_length ? 1 : 0;
 
   return value;
 }
@@ -55,12 +64,9 @@ pmr_string HistogramDomain<pmr_string>::string_to_domain(const pmr_string& strin
 }
 
 bool HistogramDomain<pmr_string>::contains(const pmr_string& string_value) const {
-  for (const auto char_value : string_value) {
-    if (char_value > max_char || char_value < min_char) {
-      return false;
-    }
-  }
-  return true;
+  return std::ranges::all_of(string_value, [&](const auto char_value) {
+    return min_char <= char_value && char_value <= max_char;
+  });
 }
 
 pmr_string HistogramDomain<pmr_string>::next_value_clamped(const pmr_string& string_in_domain) const {
@@ -115,13 +121,13 @@ uint64_t ipow(uint64_t base, uint64_t exp) {
   uint64_t result = 1;
 
   for (;;) {
-    if (exp & 1u) {
+    if ((exp & uint64_t{1}) != 0) {
       result *= base;
     }
 
-    exp >>= 1u;
+    exp >>= uint8_t{1};
 
-    if (!exp) {
+    if (exp == 0) {
       break;
     }
 

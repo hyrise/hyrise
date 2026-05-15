@@ -1,5 +1,18 @@
 #include "fixed_width_integer_compressor.hpp"
 
+#include <algorithm>
+#include <cstddef>
+#include <cstdint>
+#include <limits>
+#include <memory>
+#include <utility>
+
+#include "storage/vector_compression/base_compressed_vector.hpp"
+#include "storage/vector_compression/base_vector_compressor.hpp"
+#include "storage/vector_compression/fixed_width_integer/fixed_width_integer_vector.hpp"
+#include "storage/vector_compression/vector_compression.hpp"
+#include "types.hpp"
+
 namespace hyrise {
 
 std::unique_ptr<const BaseCompressedVector> FixedWidthIntegerCompressor::compress(
@@ -14,8 +27,7 @@ std::unique_ptr<BaseVectorCompressor> FixedWidthIntegerCompressor::create_new() 
 }
 
 uint32_t FixedWidthIntegerCompressor::_find_max_value(const pmr_vector<uint32_t>& vector) {
-  const auto iter = std::max_element(vector.cbegin(), vector.cend());
-  return *iter;
+  return std::ranges::max(vector);
 }
 
 std::unique_ptr<BaseCompressedVector> FixedWidthIntegerCompressor::_compress_using_max_value(

@@ -1,6 +1,8 @@
 #include "sql_identifier.hpp"
 
-#include <sstream>
+#include <format>
+#include <optional>
+#include <string>
 
 namespace hyrise {
 
@@ -12,12 +14,7 @@ bool SQLIdentifier::operator==(const SQLIdentifier& rhs) const {
 }
 
 std::string SQLIdentifier::as_string() const {
-  std::stringstream sstream;
-  if (table_name) {
-    sstream << *table_name << ".";
-  }
-  sstream << column_name;
-  return sstream.str();
+  return std::format("{}{}{}", table_name.value_or(""), table_name ? "." : "", column_name);
 }
 
 }  // namespace hyrise

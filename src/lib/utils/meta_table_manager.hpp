@@ -1,7 +1,10 @@
 #pragma once
 
 #include <functional>
+#include <memory>
+#include <string>
 #include <unordered_map>
+#include <vector>
 
 #include "types.hpp"
 #include "utils/meta_tables/abstract_meta_table.hpp"
@@ -12,7 +15,7 @@ class Table;
 
 class MetaTableManager : public Noncopyable {
  public:
-  static inline const auto META_PREFIX = std::string{"meta_"};
+  static constexpr auto META_PREFIX = std::string{"meta_"};
 
   static bool is_meta_table_name(const std::string& name);
 

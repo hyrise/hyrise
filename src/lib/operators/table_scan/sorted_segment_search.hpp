@@ -1,8 +1,10 @@
 #pragma once
 
 #include <functional>
+#include <memory>
 #include <optional>
 #include <type_traits>
+#include <utility>
 
 #include <boost/range.hpp>
 #include <boost/range/join.hpp>
@@ -17,35 +19,44 @@ namespace hyrise {
 template <typename IteratorType, typename SearchValueType>
 class SortedSegmentSearch {
  public:
-  SortedSegmentSearch(IteratorType begin, IteratorType end, const SortMode& sorted_by, const bool nullable,
-                      const PredicateCondition& predicate_condition, const SearchValueType& search_value)
+  SortedSegmentSearch(const IteratorType& begin, const IteratorType& end, const SortMode& sorted_by,
+                      const bool nullable, const PredicateCondition& predicate_condition,
+                      const SearchValueType& search_value)
       : _begin{begin},
         _end{end},
         _predicate_condition{predicate_condition},
         _first_search_value{search_value},
         _second_search_value{std::nullopt},
         _nullable{nullable},
-        _is_ascending{sorted_by == SortMode::Ascending} {}
+        _is_ascending{sorted_by == SortMode::AscendingNullsFirst || sorted_by == SortMode::AscendingNullsLast},
+        _is_nulls_last{sorted_by == SortMode::AscendingNullsLast || sorted_by == SortMode::DescendingNullsLast} {}
 
   // For SortedSegmentBetweenSearch
-  SortedSegmentSearch(IteratorType begin, IteratorType end, const SortMode& sorted_by, const bool nullable,
-                      const PredicateCondition& predicate_condition, const SearchValueType& left_value,
-                      const SearchValueType& right_value)
+  SortedSegmentSearch(const IteratorType& begin, const IteratorType& end, const SortMode& sorted_by,
+                      const bool nullable, const PredicateCondition& predicate_condition,
+                      const SearchValueType& left_value, const SearchValueType& right_value)
       : _begin{begin},
         _end{end},
         _predicate_condition{predicate_condition},
         _first_search_value{left_value},
         _second_search_value{right_value},
         _nullable{nullable},
-        _is_ascending{sorted_by == SortMode::Ascending} {}
+        _is_ascending{sorted_by == SortMode::AscendingNullsFirst || sorted_by == SortMode::AscendingNullsLast},
+        _is_nulls_last{sorted_by == SortMode::AscendingNullsLast || sorted_by == SortMode::DescendingNullsLast} {}
 
   void scan_sorted_segment(const ChunkID chunk_id, RowIDPosList& matches,
                            const std::shared_ptr<const AbstractPosList>& position_filter) {
     if (_nullable) {
-      // Decrease the effective sort range by excluding null values.
-      _begin = std::lower_bound(_begin, _end, false, [](const auto& segment_position, const auto& /* unused */) {
-        return segment_position.is_null();
-      });
+      // Decrease the effective sort range by excluding NULL values.
+      if (_is_nulls_last) {
+        _end = std::lower_bound(_begin, _end, false, [](const auto& segment_position, const auto& /* unused */) {
+          return !segment_position.is_null();
+        });
+      } else {
+        _begin = std::lower_bound(_begin, _end, false, [](const auto& segment_position, const auto& /* unused */) {
+          return segment_position.is_null();
+        });
+      }
     }
 
     // Early out if segment contains only NULLs.
@@ -81,30 +92,28 @@ class SortedSegmentSearch {
    * However, the first offset will always point to an entry matching the search value, whereas last offset points to
    * the entry behind the last matching one.
    */
-  IteratorType _get_first_bound(const SearchValueType& search_value, const IteratorType begin,
-                                const IteratorType end) const {
+  IteratorType _get_first_bound(const SearchValueType& search_value, const IteratorType& begin,
+                                const IteratorType& end) const {
     if (_is_ascending) {
       return std::lower_bound(begin, end, search_value, [](const auto& segment_position, const auto& value) {
         return segment_position.value() < value;
       });
-    } else {
-      return std::lower_bound(begin, end, search_value, [](const auto& segment_position, const auto& value) {
-        return segment_position.value() > value;
-      });
     }
+    return std::lower_bound(begin, end, search_value, [](const auto& segment_position, const auto& value) {
+      return segment_position.value() > value;
+    });
   }
 
-  IteratorType _get_last_bound(const SearchValueType& search_value, const IteratorType begin,
-                               const IteratorType end) const {
+  IteratorType _get_last_bound(const SearchValueType& search_value, const IteratorType& begin,
+                               const IteratorType& end) const {
     if (_is_ascending) {
       return std::upper_bound(begin, end, search_value, [](const auto& value, const auto& segment_position) {
         return segment_position.value() > value;
       });
-    } else {
-      return std::upper_bound(begin, end, search_value, [](const auto& value, const auto& segment_position) {
-        return segment_position.value() < value;
-      });
     }
+    return std::upper_bound(begin, end, search_value, [](const auto& value, const auto& segment_position) {
+      return segment_position.value() < value;
+    });
   }
 
   // This function sets the offset(s) which delimit the result set based on the predicate condition and the sort order
@@ -323,7 +332,7 @@ class SortedSegmentSearch {
   }
 
   template <typename ResultIteratorType>
-  void _write_rows_to_matches(ResultIteratorType begin, ResultIteratorType end, const ChunkID chunk_id,
+  void _write_rows_to_matches(ResultIteratorType begin, const ResultIteratorType& end, const ChunkID chunk_id,
                               RowIDPosList& matches,
                               const std::shared_ptr<const AbstractPosList>& position_filter) const {
     if (begin == end) {
@@ -369,6 +378,7 @@ class SortedSegmentSearch {
   const std::optional<SearchValueType> _second_search_value;
   const bool _nullable;
   const bool _is_ascending;
+  const bool _is_nulls_last;
 };
 
 }  // namespace hyrise

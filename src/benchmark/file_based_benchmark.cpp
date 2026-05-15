@@ -1,32 +1,41 @@
-#include <filesystem>
+#include <iostream>
+#include <memory>
+#include <optional>
+#include <string>
+#include <unordered_set>
+#include <utility>
+#include <vector>
 
 #include <boost/algorithm/string.hpp>
+
 #include "cxxopts.hpp"
 
+#include "benchmark_config.hpp"
 #include "benchmark_runner.hpp"
 #include "cli_config_parser.hpp"
 #include "file_based_benchmark_item_runner.hpp"
 #include "file_based_table_generator.hpp"
 #include "hyrise.hpp"
-#include "utils/performance_warning.hpp"
 
-using namespace hyrise;  // NOLINT
+using namespace hyrise;
 
 int main(int argc, char* argv[]) {
   auto cli_options = BenchmarkRunner::get_basic_cli_options("Hyrise Benchmark Runner");
 
+  // NOLINTBEGIN(whitespace/line_length)
   // clang-format off
   cli_options.add_options()
-      ("table_path", "Directory containing the Tables as csv, tbl or binary files. CSV files require meta-files, see csv_meta.hpp or any *.csv.json file.", cxxopts::value<std::string>()->default_value(".")) // NOLINT
-      ("query_path", "A specific .sql file or a directory containing .sql files", cxxopts::value<std::string>()->default_value(".")) // NOLINT
-      ("q,queries", "Subset of queries to run as a comma separated list", cxxopts::value<std::string>()->default_value("all")); // NOLINT
+      ("table_path", "Directory containing the Tables as csv, tbl or binary files. CSV files require meta-files, see csv_meta.hpp or any *.csv.json file.", cxxopts::value<std::string>()->default_value("."))
+      ("query_path", "A specific .sql file or a directory containing .sql files", cxxopts::value<std::string>()->default_value("."))
+      ("q,queries", "Subset of queries to run as a comma separated list", cxxopts::value<std::string>()->default_value("all"));
   // clang-format on
+  // NOLINTEND(whitespace/line_length)
 
-  std::shared_ptr<BenchmarkConfig> benchmark_config;
-  std::string query_path;
-  std::string table_path;
+  auto benchmark_config = std::shared_ptr<BenchmarkConfig>{};
+  auto query_path = std::string{};
+  auto table_path = std::string{};
   // Comma-separated query names or "all"
-  std::string queries_str;
+  auto queries_str = std::string{};
 
   // Parse command line args
   const auto cli_parse_result = cli_options.parse(argc, argv);
@@ -39,23 +48,23 @@ int main(int argc, char* argv[]) {
   table_path = cli_parse_result["table_path"].as<std::string>();
   queries_str = cli_parse_result["queries"].as<std::string>();
 
-  benchmark_config = std::make_shared<BenchmarkConfig>(CLIConfigParser::parse_cli_options(cli_parse_result));
+  benchmark_config = CLIConfigParser::parse_cli_options(cli_parse_result);
 
   // Check that the options "query_path" and "table_path" were specified
   if (query_path.empty() || table_path.empty()) {
-    std::cerr << "Need to specify --query_path=path/to/queries and --table_path=path/to/table_files" << std::endl;
-    std::cerr << cli_options.help({}) << std::endl;
+    std::cerr << "Need to specify --query_path=path/to/queries and --table_path=path/to/table_files\n";
+    std::cerr << cli_options.help({}) << '\n';
     return 1;
   }
 
-  std::cout << "- Benchmarking queries from " << query_path << std::endl;
-  std::cout << "- Running on tables from " << table_path << std::endl;
+  std::cout << "- Benchmarking queries from " << query_path << '\n';
+  std::cout << "- Running on tables from " << table_path << '\n';
 
   std::optional<std::unordered_set<std::string>> query_subset;
   if (queries_str == "all") {
-    std::cout << "- Running all queries from specified path" << std::endl;
+    std::cout << "- Running all queries from specified path\n";
   } else {
-    std::cout << "- Running subset of queries: " << queries_str << std::endl;
+    std::cout << "- Running subset of queries: " << queries_str << '\n';
 
     // "a, b, c, d" -> ["a", " b", " c", " d"]
     auto query_subset_untrimmed = std::vector<std::string>{};
@@ -69,13 +78,13 @@ int main(int argc, char* argv[]) {
   }
 
   // Ignore no .sql files in the directory for now (TODO(anybody): add CLI option if required)
-  const auto query_filename_blacklist = std::unordered_set<std::string>{};
+  const auto query_filename_excludelist = std::unordered_set<std::string>{};
 
   // Run the benchmark
   auto context = BenchmarkRunner::create_context(*benchmark_config);
   auto table_generator = std::make_unique<FileBasedTableGenerator>(benchmark_config, table_path);
   auto benchmark_item_runner = std::make_unique<FileBasedBenchmarkItemRunner>(benchmark_config, query_path,
-                                                                              query_filename_blacklist, query_subset);
+                                                                              query_filename_excludelist, query_subset);
 
   auto benchmark_runner = std::make_shared<BenchmarkRunner>(*benchmark_config, std::move(benchmark_item_runner),
                                                             std::move(table_generator), context);

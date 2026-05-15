@@ -1,15 +1,25 @@
-#include "base_test.hpp"
+#include <memory>
+#include <stdexcept>
+#include <utility>
+#include <vector>
 
+#include "all_type_variant.hpp"
+#include "base_test.hpp"
+#include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
+#include "expression/window_expression.hpp"
+#include "expression/window_function_expression.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
+#include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "logical_query_plan/mock_node.hpp"
+#include "storage/constraints/table_key_constraint.hpp"
 #include "types.hpp"
 #include "utils/data_dependency_test_utils.hpp"
 
 namespace hyrise {
 
-using namespace expression_functional;  // NOLINT(build/namespaces)
+using namespace expression_functional;
 
 class AggregateNodeTest : public BaseTest {
  protected:
@@ -129,17 +139,21 @@ TEST_F(AggregateNodeTest, UniqueColumnCombinationsAdd) {
     const auto& unique_column_combinations = agg_node_a->unique_column_combinations();
     EXPECT_EQ(unique_column_combinations.size(), 1);
     EXPECT_TRUE(unique_column_combinations.contains(UniqueColumnCombination{{_a}}));
+    EXPECT_TRUE(unique_column_combinations.cbegin()->is_genuine());
   }
   {
     const auto& unique_column_combinations = agg_node_b->unique_column_combinations();
     EXPECT_EQ(unique_column_combinations.size(), 1);
     EXPECT_TRUE(unique_column_combinations.contains(UniqueColumnCombination{{_a, _b}}));
+    EXPECT_TRUE(unique_column_combinations.cbegin()->is_genuine());
   }
 }
 
 TEST_F(AggregateNodeTest, UniqueColumnCombinationsForwardingSimple) {
-  const auto key_constraint_b = TableKeyConstraint{{_b->original_column_id}, KeyConstraintType::UNIQUE};
-  const auto key_constraint_c = TableKeyConstraint{{_c->original_column_id}, KeyConstraintType::UNIQUE};
+  const auto key_constraint_b =
+      TableKeyConstraint{{_b->original_column_id}, KeyConstraintType::UNIQUE, INITIAL_COMMIT_ID};
+  const auto key_constraint_c =
+      TableKeyConstraint{{_c->original_column_id}, KeyConstraintType::UNIQUE, INITIAL_COMMIT_ID};
   _mock_node->set_key_constraints({key_constraint_b, key_constraint_c});
   EXPECT_EQ(_mock_node->unique_column_combinations().size(), 2);
 
@@ -150,13 +164,26 @@ TEST_F(AggregateNodeTest, UniqueColumnCombinationsForwardingSimple) {
   /**
    * Expected behaviour:
    *  - UCC from key_constraint_b remains valid since _b is part of the group-by columns.
+   *  - UCC from key_constraint_b should remain not genuine.
    *  - UCC from key_constraint_c, however, should be discarded because _c gets aggregated.
+   *  - Also, we should gain a new genuine UCC covering all group-by columns.
    */
 
   // Basic check.
-  EXPECT_EQ(unique_column_combinations.size(), 1);
+  EXPECT_EQ(unique_column_combinations.size(), 2);
   // In-depth check.
-  EXPECT_TRUE(find_ucc_by_key_constraint(key_constraint_b, unique_column_combinations));
+  const auto ucc_b = find_ucc(unique_column_combinations, {_b});
+  const auto ucc_c = find_ucc(unique_column_combinations, {_c});
+  const auto ucc_a_b = find_ucc(unique_column_combinations, {_a, _b});
+
+  ASSERT_NE(ucc_b, unique_column_combinations.end());
+  EXPECT_FALSE(ucc_b->is_genuine());
+
+  EXPECT_EQ(ucc_c, unique_column_combinations.end());
+
+  ASSERT_NE(ucc_a_b, unique_column_combinations.end());
+  EXPECT_TRUE(ucc_a_b->is_genuine());
+  EXPECT_EQ(ucc_a_b->expressions.size(), 2);
 }
 
 TEST_F(AggregateNodeTest, UniqueColumnCombinationsForwardingAnyAggregates) {
@@ -189,7 +216,8 @@ TEST_F(AggregateNodeTest, UniqueColumnCombinationsForwardingAnyAggregates) {
 
 TEST_F(AggregateNodeTest, UniqueColumnCombinationsNoDuplicates) {
   // Prepare single UCC.
-  const auto table_key_constraint = TableKeyConstraint{{_a->original_column_id}, KeyConstraintType::UNIQUE};
+  const auto table_key_constraint =
+      TableKeyConstraint{{_a->original_column_id}, KeyConstraintType::UNIQUE, INITIAL_COMMIT_ID};
   _mock_node->set_key_constraints({table_key_constraint});
   EXPECT_EQ(_mock_node->unique_column_combinations().size(), 1);
 
@@ -199,7 +227,7 @@ TEST_F(AggregateNodeTest, UniqueColumnCombinationsNoDuplicates) {
 
   /**
    * AggregateNode should try to create a new UCC from its group-by-column _a. It is the same as MockNode's UCC, which
-   * is forwarded.
+   * is forwarded. Note that because the UCC and the group-by column are an exact match, the result is genuine.
    *
    * Expected behaviour: AggregateNode should not output the same UCC twice.
    */
@@ -209,11 +237,14 @@ TEST_F(AggregateNodeTest, UniqueColumnCombinationsNoDuplicates) {
   EXPECT_EQ(unique_column_combinations.size(), 1);
   // In-depth check.
   EXPECT_TRUE(find_ucc_by_key_constraint(table_key_constraint, unique_column_combinations));
+  // Due to the exact match, the UCC is marked as genuine.
+  EXPECT_TRUE(unique_column_combinations.cbegin()->is_genuine());
 }
 
 TEST_F(AggregateNodeTest, UniqueColumnCombinationsNoSupersets) {
   // Prepare single UCC.
-  const auto table_key_constraint = TableKeyConstraint{{_a->original_column_id}, KeyConstraintType::UNIQUE};
+  const auto table_key_constraint =
+      TableKeyConstraint{{_a->original_column_id}, KeyConstraintType::UNIQUE, INITIAL_COMMIT_ID};
   _mock_node->set_key_constraints({table_key_constraint});
   EXPECT_EQ(_mock_node->unique_column_combinations().size(), 1);
 
@@ -224,14 +255,26 @@ TEST_F(AggregateNodeTest, UniqueColumnCombinationsNoSupersets) {
    * AggregateNode should try to create a new UCC from both group-by-columns _a and _b. However, MockNode already has a
    * UCC for _a, which is forwarded. It is shorter, and thus preferred over the UCC covering both _a and _b.
    *
-   * Expected behaviour: AggregateNode should only forward the input UCC.
+   * Expected behaviour: AggregateNode should only forward the input UCC. Additionally, it should create a new
+   * genuine UCC covering both _a and _b.
    */
 
   // Basic check.
   const auto& unique_column_combinations = _aggregate_node->unique_column_combinations();
-  EXPECT_EQ(unique_column_combinations.size(), 1);
+  EXPECT_EQ(unique_column_combinations.size(), 2);
+
   // In-depth check.
-  EXPECT_TRUE(find_ucc_by_key_constraint(table_key_constraint, unique_column_combinations));
+  const auto ucc_a = find_ucc(unique_column_combinations, {_a});
+  const auto ucc_a_b = find_ucc(unique_column_combinations, {_a, _b});
+
+  ASSERT_NE(ucc_a, unique_column_combinations.end());
+  ASSERT_NE(ucc_a_b, unique_column_combinations.end());
+  EXPECT_EQ(ucc_a_b->expressions.size(), 2);
+
+  // The input UCC is not marked as genuine, as it is not created by the AggregateNode.
+  EXPECT_FALSE(ucc_a->is_genuine());
+  // The new UCC covering both _a and _b is marked as genuine.
+  EXPECT_TRUE(ucc_a_b->is_genuine());
 }
 
 TEST_F(AggregateNodeTest, FunctionalDependenciesForwarding) {
@@ -277,6 +320,56 @@ TEST_F(AggregateNodeTest, FunctionalDependenciesAdd) {
       ExpressionUnorderedSet{_aggregate_expressions.cbegin(), _aggregate_expressions.cend()};
   EXPECT_EQ(fd.determinants, expected_determinants);
   EXPECT_EQ(fd.dependents, expected_dependents);
+}
+
+TEST_F(AggregateNodeTest, ForwardOrderDependencies) {
+  EXPECT_TRUE(_mock_node->order_dependencies().empty());
+  EXPECT_TRUE(_aggregate_node->order_dependencies().empty());
+
+  const auto od_a_to_b = OrderDependency{{_a}, {_b}};
+  const auto od_a_to_b_c = OrderDependency{{_a}, {_b, _c}};
+  const auto od_a_b_to_c = OrderDependency{{_a, _b}, {_c}};
+  const auto order_constraint_a_to_b = TableOrderConstraint{{ColumnID{0}}, {ColumnID{1}}};
+  const auto order_constraint_a_to_b_c = TableOrderConstraint{{ColumnID{0}}, {ColumnID{1}, ColumnID{2}}};
+  const auto order_constraint_a_b_to_c = TableOrderConstraint{{ColumnID{0}, ColumnID{1}}, {ColumnID{2}}};
+  _mock_node->set_order_constraints({order_constraint_a_to_b, order_constraint_a_to_b_c, order_constraint_a_b_to_c});
+  EXPECT_EQ(_mock_node->order_dependencies().size(), 3);
+
+  {
+    // All expressions are either grouped or have an ANY aggregate. All ODs should remain valid.
+    const auto& aggregate_node =
+        AggregateNode::make(expression_vector(_a, _b), expression_vector(any_(_c)), _mock_node);
+    const auto& order_dependencies = aggregate_node->order_dependencies();
+    EXPECT_EQ(order_dependencies.size(), 3);
+    EXPECT_TRUE(order_dependencies.contains(od_a_to_b));
+    EXPECT_TRUE(order_dependencies.contains(od_a_to_b_c));
+    EXPECT_TRUE(order_dependencies.contains(od_a_b_to_c));
+  }
+  {
+    // All expressions are either grouped or have an ANY aggregate. All ODs should remain valid.
+    const auto& aggregate_node =
+        AggregateNode::make(expression_vector(_a, _c), expression_vector(any_(_b)), _mock_node);
+    const auto& order_dependencies = aggregate_node->order_dependencies();
+    EXPECT_EQ(order_dependencies.size(), 3);
+    EXPECT_TRUE(order_dependencies.contains(od_a_to_b));
+    EXPECT_TRUE(order_dependencies.contains(od_a_to_b_c));
+    EXPECT_TRUE(order_dependencies.contains(od_a_b_to_c));
+  }
+  {
+    // All columns are aggregated, no ODs remain valid.
+    const auto& aggregate_node =
+        AggregateNode::make(expression_vector(), expression_vector(sum_(_a), max_(_b), min_(_c)), _mock_node);
+    const auto& order_dependencies = aggregate_node->order_dependencies();
+    EXPECT_TRUE(order_dependencies.empty());
+  }
+  {
+    // c is aggregated, a is the group key, b has an ANY aggregate. Only the first OD remains valid.
+    const auto& aggregate_node =
+        AggregateNode::make(expression_vector(_a), expression_vector(any_(_b), avg_(_c)), _mock_node);
+    const auto& order_dependencies = aggregate_node->order_dependencies();
+    EXPECT_EQ(order_dependencies.size(), 1);
+    EXPECT_TRUE(order_dependencies.contains(od_a_to_b));
+  }
 }
 
 }  // namespace hyrise

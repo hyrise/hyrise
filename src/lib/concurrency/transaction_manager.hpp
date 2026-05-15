@@ -4,6 +4,7 @@
 #include <functional>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <unordered_set>
 
 #include "types.hpp"
@@ -51,6 +52,8 @@ class TransactionManager : public Noncopyable {
   friend class TransactionManagerTest;
 
  public:
+  TransactionManager(const TransactionManager&) = delete;
+  TransactionManager& operator=(const TransactionManager&) = delete;
   CommitID last_commit_id() const;
 
   /**
@@ -66,13 +69,15 @@ class TransactionManager : public Noncopyable {
    */
   std::optional<CommitID> get_lowest_active_snapshot_commit_id() const;
 
+  ~TransactionManager() override;
+
  private:
   TransactionManager();
-  ~TransactionManager();
 
   friend class Hyrise;
   friend class TransactionContext;
 
+  TransactionManager(TransactionManager&& transaction_manager) noexcept;
   TransactionManager& operator=(TransactionManager&& transaction_manager) noexcept;
 
   std::shared_ptr<CommitContext> _new_commit_context();
@@ -92,9 +97,6 @@ class TransactionManager : public Noncopyable {
   std::atomic<TransactionID::base_type> _next_transaction_id;
 
   std::atomic<CommitID> _last_commit_id;
-  // We use commit_id=0 for rows that were inserted and then rolled back. Also, this can be used for rows that have
-  // been there "from the beginning of time".
-  static constexpr auto INITIAL_COMMIT_ID = CommitID{1};
 
   std::shared_ptr<CommitContext> _last_commit_context;
 

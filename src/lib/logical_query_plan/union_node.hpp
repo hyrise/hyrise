@@ -5,7 +5,6 @@
 #include <vector>
 
 #include "abstract_lqp_node.hpp"
-#include "types.hpp"
 
 namespace hyrise {
 
@@ -32,6 +31,8 @@ class UnionNode : public EnableMakeForLQPNode<UnionNode>, public AbstractLQPNode
    * (3) Fails for SetOperationMode::Unique, which is not yet implemented.
    */
   UniqueColumnCombinations unique_column_combinations() const override;
+
+  OrderDependencies order_dependencies() const override;
 
   // Implementation is limited to SetOperationMode::Positions only. Passes FDs from the left input node.
   FunctionalDependencies non_trivial_functional_dependencies() const override;

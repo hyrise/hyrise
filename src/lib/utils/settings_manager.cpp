@@ -1,5 +1,14 @@
 #include "settings_manager.hpp"
 
+#include <algorithm>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "utils/assert.hpp"
+#include "utils/settings/abstract_setting.hpp"
+
 namespace hyrise {
 
 bool SettingsManager::has_setting(const std::string& name) const {
@@ -29,7 +38,7 @@ std::vector<std::string> SettingsManager::setting_names() const {
     setting_names.emplace_back(setting_name);
   }
 
-  std::sort(setting_names.begin(), setting_names.end());
+  std::ranges::sort(setting_names);
   return setting_names;
 }
 

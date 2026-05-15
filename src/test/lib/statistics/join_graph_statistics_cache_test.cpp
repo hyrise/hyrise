@@ -1,19 +1,25 @@
-#include "base_test.hpp"
+#include <cstddef>
+#include <cstdint>
+#include <memory>
+#include <optional>
+#include <utility>
+#include <vector>
 
+#include "all_type_variant.hpp"
+#include "base_test.hpp"
 #include "expression/expression_functional.hpp"
-#include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
-#include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
 #include "statistics/attribute_statistics.hpp"
 #include "statistics/join_graph_statistics_cache.hpp"
 #include "statistics/table_statistics.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
-using namespace expression_functional;  // NOLINT(build/namespaces)
+using namespace expression_functional;
 
 class JoinGraphStatisticsCacheTest : public BaseTest {
  public:
@@ -33,8 +39,8 @@ class JoinGraphStatisticsCacheTest : public BaseTest {
     statistics_b_a = std::make_shared<AttributeStatistics<int32_t>>();
     statistics_b_b = std::make_shared<AttributeStatistics<int32_t>>();
 
-    auto column_statistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>{statistics_a_a, statistics_a_b,
-                                                                                   statistics_b_a, statistics_b_b};
+    auto column_statistics = std::vector<std::shared_ptr<const BaseAttributeStatistics>>{
+        statistics_a_a, statistics_a_b, statistics_b_a, statistics_b_b};
 
     table_statistics_a_b = std::make_shared<TableStatistics>(std::move(column_statistics), 5);
 

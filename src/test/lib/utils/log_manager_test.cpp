@@ -1,5 +1,4 @@
 #include "base_test.hpp"
-
 #include "utils/log_manager.hpp"
 
 namespace hyrise {

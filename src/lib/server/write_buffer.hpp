@@ -1,5 +1,8 @@
 #pragma once
 
+#include <memory>
+#include <string>
+
 #include "ring_buffer_iterator.hpp"
 #include "server_types.hpp"
 #include "types.hpp"
@@ -13,7 +16,7 @@ namespace hyrise {
 template <typename SocketType>
 class WriteBuffer {
  public:
-  explicit WriteBuffer(const std::shared_ptr<SocketType> socket) : _socket(socket) {}
+  explicit WriteBuffer(const std::shared_ptr<SocketType>& socket) : _socket(socket) {}
 
   // Problem: full and empty might be same state, so head == tail
   // Solution: Full state is tail + 1 == head
@@ -51,7 +54,7 @@ class WriteBuffer {
  private:
   void _flush_if_necessary(const size_t bytes_required);
 
-  std::array<char, SERVER_BUFFER_SIZE> _data;
+  std::array<char, SERVER_BUFFER_SIZE> _data{};
   // This iterator points to the first element that has not been flushed yet.
   RingBufferIterator _start_position{_data};
   // This iterator points to the field after the last unflushed element of the array.

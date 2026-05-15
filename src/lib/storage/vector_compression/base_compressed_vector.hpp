@@ -6,7 +6,6 @@
 
 #include "base_vector_decompressor.hpp"
 #include "compressed_vector_type.hpp"
-
 #include "types.hpp"
 
 namespace hyrise {
@@ -28,8 +27,6 @@ namespace hyrise {
  */
 class BaseCompressedVector : private Noncopyable {
  public:
-  virtual ~BaseCompressedVector() = default;
-
   /**
    * @brief Returns the number of elements in the vector
    */
@@ -44,8 +41,8 @@ class BaseCompressedVector : private Noncopyable {
 
   virtual std::unique_ptr<BaseVectorDecompressor> create_base_decompressor() const = 0;
 
-  virtual std::unique_ptr<const BaseCompressedVector> copy_using_allocator(
-      const PolymorphicAllocator<size_t>& alloc) const = 0;
+  virtual std::unique_ptr<const BaseCompressedVector> copy_using_memory_resource(
+      MemoryResource& memory_resource) const = 0;
 };
 
 /**
@@ -63,6 +60,8 @@ using BaseCompressedVectorIterator =
  */
 template <typename Derived>
 class CompressedVector : public BaseCompressedVector {
+  CompressedVector() = default;
+
  public:
   /**
    * @defgroup Non-virtual interface
@@ -103,7 +102,6 @@ class CompressedVector : public BaseCompressedVector {
 
   /**@}*/
 
- public:
   /**
    * @defgroup Virtual interface implementation
    * @{
@@ -125,9 +123,8 @@ class CompressedVector : public BaseCompressedVector {
     return _self().on_create_base_decompressor();
   }
 
-  std::unique_ptr<const BaseCompressedVector> copy_using_allocator(
-      const PolymorphicAllocator<size_t>& alloc) const final {
-    return _self().on_copy_using_allocator(alloc);
+  std::unique_ptr<const BaseCompressedVector> copy_using_memory_resource(MemoryResource& memory_resource) const final {
+    return _self().on_copy_using_memory_resource(memory_resource);
   }
 
   /**@}*/
@@ -136,6 +133,8 @@ class CompressedVector : public BaseCompressedVector {
   const Derived& _self() const {
     return static_cast<const Derived&>(*this);
   }
+
+  friend Derived;
 };
 
 }  // namespace hyrise

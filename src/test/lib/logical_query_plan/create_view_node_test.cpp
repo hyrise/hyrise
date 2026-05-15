@@ -1,9 +1,15 @@
-#include "base_test.hpp"
+#include <memory>
+#include <stdexcept>
+#include <string>
+#include <unordered_map>
 
+#include "all_type_variant.hpp"
+#include "base_test.hpp"
 #include "logical_query_plan/create_view_node.hpp"
-#include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "storage/lqp_view.hpp"
+#include "types.hpp"
+#include "utils/string_utils.hpp"
 
 namespace hyrise {
 
@@ -70,6 +76,10 @@ TEST_F(CreateViewNodeTest, NodeExpressions) {
 
 TEST_F(CreateViewNodeTest, NoUniqueColumnCombinations) {
   EXPECT_THROW(_create_view_node->unique_column_combinations(), std::logic_error);
+}
+
+TEST_F(CreateViewNodeTest, NoOrderDependencies) {
+  EXPECT_THROW(_create_view_node->order_dependencies(), std::logic_error);
 }
 
 }  // namespace hyrise

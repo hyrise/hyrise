@@ -1,5 +1,10 @@
 #pragma once
 
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <unordered_set>
+
 #include "abstract_expression.hpp"
 #include "utils/make_bimap.hpp"
 
@@ -11,7 +16,7 @@ namespace hyrise {
  * terms, this would be an additional, but unnecessary GROUP BY column. This function is only used by the optimizer in
  * case that all values of the group are known to be equal (see DependentGroupByReductionRule).
  */
-enum class WindowFunction {
+enum class WindowFunction : uint8_t {
   Min,
   Max,
   Sum,

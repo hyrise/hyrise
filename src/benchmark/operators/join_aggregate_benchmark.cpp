@@ -1,10 +1,16 @@
+#include <algorithm>
+#include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <random>
+#include <utility>
 #include <vector>
 
-#include "../micro_benchmark_basic_fixture.hpp"
 #include "benchmark/benchmark.h"
+
+#include "all_type_variant.hpp"
 #include "expression/expression_functional.hpp"
+#include "expression/window_function_expression.hpp"
 #include "operators/aggregate_hash.hpp"
 #include "operators/aggregate_sort.hpp"
 #include "operators/join_hash.hpp"
@@ -15,6 +21,8 @@
 #include "types.hpp"
 
 namespace {
+using namespace hyrise;
+using namespace hyrise::expression_functional;
 
 constexpr auto SEED = size_t{17};
 constexpr auto TABLE_SIZE = size_t{1'000};
@@ -24,26 +32,20 @@ constexpr auto NUMBER_OF_CHUNKS_JOIN_AGGREGATE = size_t{1};
 // values are equal in the join columns
 constexpr auto SELECTIVITY = 0.2;
 
-}  // namespace
-
-namespace hyrise {
-
-using namespace expression_functional;  // NOLINT(build/namespaces)
-
 pmr_vector<int32_t> generate_ids(const size_t table_size) {
   auto values = pmr_vector<int32_t>(table_size);
 
   const auto max_value = static_cast<int32_t>(TABLE_SIZE * SELECTIVITY) + 1;
   // Use const seed to always generate the same tables. This is important to
   // compare benchmarks
-  std::default_random_engine random_engine(SEED);
-  std::uniform_int_distribution<int32_t> dist(1, max_value);
+  auto random_engine = std::default_random_engine(SEED);
+  auto dist = std::uniform_int_distribution<int32_t>(1, max_value);
 
-  for (size_t row_index = 0; row_index < table_size; ++row_index) {
+  for (auto row_index = size_t{0}; row_index < table_size; ++row_index) {
     values[row_index] = dist(random_engine);
   }
 
-  std::sort(values.begin(), values.end());
+  std::ranges::sort(values);
 
   return values;
 }
@@ -76,15 +78,15 @@ pmr_vector<int32_t> generate_zip_codes(const size_t table_size) {
 
 pmr_vector<int32_t> generate_ages(const size_t table_size) {
   auto values = pmr_vector<int32_t>(table_size);
-  std::default_random_engine random_engine(SEED);
+  auto random_engine = std::default_random_engine(SEED);
 
   // The result ages are always the same in each table because of the constant seed
-  std::uniform_int_distribution<int32_t> dist(1, 100);
-  for (size_t row_index = 0; row_index < table_size; ++row_index) {
+  auto dist = std::uniform_int_distribution<int32_t>(1, 100);
+  for (auto row_index = size_t{0}; row_index < table_size; ++row_index) {
     values[row_index] = dist(random_engine);
   }
 
-  std::sort(values.begin(), values.end());
+  std::ranges::sort(values);
 
   return values;
 }
@@ -92,13 +94,13 @@ pmr_vector<int32_t> generate_ages(const size_t table_size) {
 std::shared_ptr<Table> create_table(const size_t table_size, const pmr_vector<int32_t>& values) {
   const auto chunk_size = static_cast<ChunkOffset>(table_size / NUMBER_OF_CHUNKS_JOIN_AGGREGATE);
 
-  auto table_column_definitions = TableColumnDefinitions();
+  auto table_column_definitions = TableColumnDefinitions{};
   table_column_definitions.emplace_back("a", DataType::Int, false);
   table_column_definitions.emplace_back("b", DataType::Int, false);
 
   auto ids_vector = generate_ids(table_size);
 
-  std::shared_ptr<Table> table = std::make_shared<Table>(table_column_definitions, TableType::Data, chunk_size);
+  auto table = std::make_shared<Table>(table_column_definitions, TableType::Data, chunk_size);
 
   for (auto chunk_index = size_t{0}; chunk_index < NUMBER_OF_CHUNKS_JOIN_AGGREGATE; ++chunk_index) {
     const auto ids_value_segment = std::make_shared<ValueSegment<int32_t>>(pmr_vector<int32_t>(
@@ -123,9 +125,9 @@ std::shared_ptr<TableWrapper> create_zip_table(const size_t table_size) {
   const auto chunk_count = zip_table->chunk_count();
   for (auto chunk_index = ChunkID{0}; chunk_index < chunk_count; ++chunk_index) {
     auto chunk = zip_table->get_chunk(chunk_index);
-    chunk->finalize();
-    chunk->set_individually_sorted_by({SortColumnDefinition(ColumnID{0}, SortMode::Ascending),
-                                       SortColumnDefinition(ColumnID{1}, SortMode::Ascending)});
+    chunk->set_immutable();
+    chunk->set_individually_sorted_by({SortColumnDefinition(ColumnID{0}, SortMode::AscendingNullsFirst),
+                                       SortColumnDefinition(ColumnID{1}, SortMode::AscendingNullsFirst)});
   }
 
   return std::make_shared<TableWrapper>(zip_table);
@@ -139,8 +141,8 @@ std::shared_ptr<TableWrapper> create_ages_table(const size_t table_size) {
   const auto chunk_count = ages_table->chunk_count();
   for (auto chunk_index = ChunkID{0}; chunk_index < chunk_count; ++chunk_index) {
     auto chunk = ages_table->get_chunk(chunk_index);
-    chunk->finalize();
-    chunk->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending));
+    chunk->set_immutable();
+    chunk->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::AscendingNullsFirst));
   }
 
   return std::make_shared<TableWrapper>(ages_table);
@@ -159,9 +161,9 @@ void BM_Join_Aggregate(benchmark::State& state) {
       OperatorJoinPredicate(std::make_pair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals);
 
   auto aggregates = std::vector<std::shared_ptr<WindowFunctionExpression>>{
-      std::static_pointer_cast<WindowFunctionExpression>(avg_(pqp_column_(ColumnID{0}, DataType::Int, false, "b")))};
+      std::static_pointer_cast<WindowFunctionExpression>(avg_(pqp_column_(ColumnID{0}, DataType::Int, "b")))};
 
-  std::vector<ColumnID> groupby = {ColumnID{0}, ColumnID{2}};
+  const auto groupby = std::vector<ColumnID>{ColumnID{0}, ColumnID{2}};
 
   auto warmup_join =
       std::make_shared<JoinType>(table_wrapper_left, table_wrapper_right, JoinMode::Inner, operator_join_predicate);
@@ -178,6 +180,10 @@ void BM_Join_Aggregate(benchmark::State& state) {
     aggregate->execute();
   }
 }
+
+}  // namespace
+
+namespace hyrise {
 
 BENCHMARK_TEMPLATE(BM_Join_Aggregate, AggregateSort, JoinSortMerge);
 BENCHMARK_TEMPLATE(BM_Join_Aggregate, AggregateSort, JoinHash);

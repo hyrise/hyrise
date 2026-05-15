@@ -1,47 +1,68 @@
 #include "file_based_benchmark_item_runner.hpp"
 
+#include <algorithm>
+#include <cstddef>
 #include <filesystem>
+#include <format>
 #include <fstream>
+#include <iterator>
+#include <memory>
+#include <numeric>
+#include <optional>
+#include <string>
+#include <unordered_set>
+#include <vector>
 
-#include <boost/algorithm/string.hpp>
+#include <boost/algorithm/string/trim.hpp>
 
 #include "SQLParser.h"
+#include "SQLParserResult.h"
+
+#include "abstract_benchmark_item_runner.hpp"
+#include "benchmark_config.hpp"
+#include "benchmark_sql_executor.hpp"
 #include "sql/create_sql_parser_error_message.hpp"
+#include "sql/sql_pipeline_statement.hpp"
+#include "storage/table.hpp"
 #include "utils/assert.hpp"
-#include "utils/list_directory.hpp"
 
 namespace hyrise {
 
 FileBasedBenchmarkItemRunner::FileBasedBenchmarkItemRunner(
     const std::shared_ptr<BenchmarkConfig>& config, const std::string& query_path,
-    const std::unordered_set<std::string>& filename_blacklist,
+    const std::unordered_set<std::string>& filename_excludelist,
     const std::optional<std::unordered_set<std::string>>& query_subset)
     : AbstractBenchmarkItemRunner(config) {
-  const auto is_sql_file = [](const std::string& filename) { return boost::algorithm::ends_with(filename, ".sql"); };
+  const auto is_sql_file = [](const std::filesystem::path& file_path) {
+    return std::filesystem::is_regular_file(file_path) && file_path.extension() == ".sql";
+  };
 
   const auto path = std::filesystem::path{query_path};
-  Assert(std::filesystem::exists(path), "No such file or directory '" + query_path + "'");
+  Assert(std::filesystem::exists(path), std::format("No such file or directory '{}'.", query_path));
 
   if (std::filesystem::is_regular_file(path)) {
-    Assert(is_sql_file(query_path), "Specified file '" + query_path + "' is not an .sql file");
+    Assert(is_sql_file(query_path), std::format("Specified file '{}' is not a .sql file.", query_path));
     _parse_query_file(query_path, query_subset);
   } else {
-    // Recursively walk through the specified directory and add all files on the way
-    for (const auto& entry : list_directory(path)) {
-      if (is_sql_file(entry)) {
-        if (filename_blacklist.find(entry.filename()) != filename_blacklist.end()) {
-          continue;
-        }
-        _parse_query_file(entry, query_subset);
+    // Recursively walk through the specified directory and add all files on the way.
+    for (const auto& entry : std::filesystem::recursive_directory_iterator(path)) {
+      const auto& file_path = entry.path();
+      if (!is_sql_file(entry) || filename_excludelist.contains(file_path.filename())) {
+        continue;
       }
+
+      _parse_query_file(file_path, query_subset);
     }
   }
 
   _items.resize(_queries.size());
+  // NOLINTNEXTLINE(modernize-use-ranges): We need LLVM 21's libc++ for std::ranges::iota.
   std::iota(_items.begin(), _items.end(), BenchmarkItemID{0});
 
-  // Sort queries by name
-  std::sort(_queries.begin(), _queries.end(), [](const Query& lhs, const Query& rhs) { return lhs.name < rhs.name; });
+  // Sort queries by name.
+  std::ranges::sort(_queries, [](const auto& lhs, const auto& rhs) {
+    return lhs.name < rhs.name;
+  });
 }
 
 bool FileBasedBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor) {
@@ -64,7 +85,7 @@ const std::vector<BenchmarkItemID>& FileBasedBenchmarkItemRunner::items() const 
 
 void FileBasedBenchmarkItemRunner::_parse_query_file(
     const std::filesystem::path& query_file_path, const std::optional<std::unordered_set<std::string>>& query_subset) {
-  std::ifstream file(query_file_path);
+  auto file = std::ifstream{query_file_path};
 
   // The names of queries from, e.g., "queries/TPCH-7.sql" will be prefixed with "TPCH-7."
   const auto item_name_prefix = query_file_path.stem().string();
@@ -76,19 +97,19 @@ void FileBasedBenchmarkItemRunner::_parse_query_file(
    * We use the SQLParser to split up the content of the file into the individual SQL statements.
    */
 
-  hsql::SQLParserResult parse_result;
+  auto parse_result = hsql::SQLParserResult{};
   hsql::SQLParser::parse(content, &parse_result);
   Assert(parse_result.isValid(), create_sql_parser_error_message(content, parse_result));
 
-  std::vector<Query> queries_in_file{parse_result.size()};
+  auto queries_in_file = std::vector<Query>{parse_result.size()};
 
-  size_t sql_string_offset{0u};
+  auto sql_string_offset = size_t{0};
   for (auto statement_idx = size_t{0}; statement_idx < parse_result.size(); ++statement_idx) {
-    const auto item_name = item_name_prefix + '.' + std::to_string(statement_idx);
+    const auto item_name = std::format("{}.{}", item_name_prefix, statement_idx);
     const auto statement_string_length = parse_result.getStatement(statement_idx)->stringLength;
     const auto statement_string = boost::trim_copy(content.substr(sql_string_offset, statement_string_length));
     sql_string_offset += statement_string_length;
-    queries_in_file[statement_idx] = {item_name, statement_string};
+    queries_in_file[statement_idx] = {.name = item_name, .sql = statement_string};
   }
 
   // Remove ".0" from the end of the query name if there is only one file
@@ -100,7 +121,7 @@ void FileBasedBenchmarkItemRunner::_parse_query_file(
    * Add queries to _queries and _item_names if query_subset allows it
    */
   for (const auto& query : queries_in_file) {
-    if (!query_subset || query_subset->count(query.name)) {
+    if (!query_subset || query_subset->contains(query.name)) {
       _queries.emplace_back(query);
     }
   }

@@ -1,5 +1,8 @@
 #pragma once
 
+#include <memory>
+#include <vector>
+
 #include "abstract_lqp_node.hpp"
 
 namespace hyrise {
@@ -16,6 +19,8 @@ class AbstractNonQueryNode : public AbstractLQPNode {
   std::vector<std::shared_ptr<AbstractExpression>> output_expressions() const override;
 
   UniqueColumnCombinations unique_column_combinations() const override;
+
+  OrderDependencies order_dependencies() const override;
 
   FunctionalDependencies non_trivial_functional_dependencies() const override;
 

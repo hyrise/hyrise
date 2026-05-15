@@ -1,10 +1,18 @@
-#include "base_test.hpp"
+#include <algorithm>
+#include <cctype>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 
-#include "./meta_tables/meta_mock_table.hpp"
+#include "base_test.hpp"
+#include "meta_tables/meta_mock_table.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk_encoder.hpp"
+#include "types.hpp"
 #include "utils/load_table.hpp"
 #include "utils/meta_table_manager.hpp"
+#include "utils/meta_tables/abstract_meta_table.hpp"
 #include "utils/meta_tables/meta_chunk_sort_orders_table.hpp"
 #include "utils/meta_tables/meta_chunks_table.hpp"
 #include "utils/meta_tables/meta_columns_table.hpp"
@@ -66,11 +74,12 @@ class MetaTableManagerTest : public BaseTest {
 class MetaTableManagerMultiTablesTest : public MetaTableManagerTest, public ::testing::WithParamInterface<MetaTable> {};
 
 auto meta_table_manager_test_formatter = [](const ::testing::TestParamInfo<MetaTable> info) {
-  auto stream = std::stringstream{};
-  stream << info.param->name();
-
-  auto string = stream.str();
-  string.erase(std::remove_if(string.begin(), string.end(), [](char c) { return !std::isalnum(c); }), string.end());
+  auto string = info.param->name();
+  string.erase(std::remove_if(string.begin(), string.end(),
+                              [](char c) {
+                                return !std::isalnum(c);
+                              }),
+               string.end());
 
   return string;
 };

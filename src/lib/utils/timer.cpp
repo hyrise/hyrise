@@ -1,5 +1,8 @@
 #include "timer.hpp"
 
+#include <chrono>
+#include <string>
+
 #include "utils/format_duration.hpp"
 
 namespace hyrise {

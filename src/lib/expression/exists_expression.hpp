@@ -1,10 +1,14 @@
 #pragma once
 
+#include <memory>
+#include <string>
+#include <unordered_map>
+
 #include "abstract_expression.hpp"
 
 namespace hyrise {
 
-enum class ExistsExpressionType { Exists, NotExists };
+enum class ExistsExpressionType : uint8_t { Exists, NotExists };
 
 /**
  * SQL's EXISTS()

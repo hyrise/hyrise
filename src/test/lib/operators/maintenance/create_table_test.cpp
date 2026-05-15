@@ -1,9 +1,9 @@
 #include <memory>
+#include <stdexcept>
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
-#include "utils/assert.hpp"
-
-#include "concurrency/transaction_context.hpp"
+#include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "hyrise.hpp"
@@ -12,11 +12,15 @@
 #include "operators/projection.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/validate.hpp"
+#include "storage/constraints/table_key_constraint.hpp"
 #include "storage/table.hpp"
+#include "testing_assert.hpp"
+#include "types.hpp"
+#include "utils/load_table.hpp"
 
 namespace hyrise {
 
-using namespace expression_functional;  // NOLINT(build/namespaces)
+using namespace expression_functional;
 
 class CreateTableTest : public BaseTest {
  public:
@@ -53,8 +57,10 @@ TEST_F(CreateTableTest, NameAndDescription) {
 
 TEST_F(CreateTableTest, NameAndDescriptionWithConstraints) {
   const auto& input_table = std::const_pointer_cast<Table>(dummy_table_wrapper->table);
-  input_table->add_soft_key_constraint({{input_table->column_id_by_name("a")}, KeyConstraintType::PRIMARY_KEY});
-  input_table->add_soft_key_constraint({{input_table->column_id_by_name("b")}, KeyConstraintType::UNIQUE});
+  input_table->add_soft_constraint(
+      TableKeyConstraint{{input_table->column_id_by_name("a")}, KeyConstraintType::PRIMARY_KEY});
+  input_table->add_soft_constraint(
+      TableKeyConstraint{{input_table->column_id_by_name("b")}, KeyConstraintType::UNIQUE});
 
   EXPECT_EQ(create_table->name(), "CreateTable");
   // Case (i): CreateTable operator can retrieve the columns' information from the input operator's output table.
@@ -93,7 +99,7 @@ TEST_F(CreateTableTest, Execute) {
 TEST_F(CreateTableTest, SoftKeyConstraints) {
   const auto input_table = const_pointer_cast<Table>(dummy_table_wrapper->table);
   const auto unique_constraint = TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE};
-  input_table->add_soft_key_constraint(unique_constraint);
+  input_table->add_soft_constraint(unique_constraint);
 
   const auto context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   create_table->set_transaction_context(context);

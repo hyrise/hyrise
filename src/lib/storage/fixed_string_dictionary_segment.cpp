@@ -1,11 +1,24 @@
 #include "fixed_string_dictionary_segment.hpp"
 
 #include <algorithm>
+#include <cstddef>
+#include <iterator>
 #include <memory>
+#include <optional>
 #include <string>
+#include <utility>
 
+#include <boost/variant/get.hpp>
+
+#include "all_type_variant.hpp"
 #include "resolve_type.hpp"
+#include "storage/abstract_segment.hpp"
+#include "storage/base_dictionary_segment.hpp"
+#include "storage/encoding_type.hpp"
+#include "storage/fixed_string_dictionary_segment/fixed_string_vector.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
+#include "storage/vector_compression/compressed_vector_type.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 
@@ -54,10 +67,10 @@ ChunkOffset FixedStringDictionarySegment<T>::size() const {
 }
 
 template <typename T>
-std::shared_ptr<AbstractSegment> FixedStringDictionarySegment<T>::copy_using_allocator(
-    const PolymorphicAllocator<size_t>& alloc) const {
-  auto new_dictionary = std::make_shared<FixedStringVector>(*_dictionary, alloc);
-  auto new_attribute_vector = _attribute_vector->copy_using_allocator(alloc);
+std::shared_ptr<AbstractSegment> FixedStringDictionarySegment<T>::copy_using_memory_resource(
+    MemoryResource& memory_resource) const {
+  auto new_dictionary = std::make_shared<FixedStringVector>(*_dictionary, &memory_resource);
+  auto new_attribute_vector = _attribute_vector->copy_using_memory_resource(memory_resource);
 
   auto copy = std::make_shared<FixedStringDictionarySegment<T>>(new_dictionary, std::move(new_attribute_vector));
 

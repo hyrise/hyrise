@@ -1,8 +1,19 @@
 #include "meta_exec_table.hpp"
 
-#include <boost/algorithm/string.hpp>
+#include <memory>
+#include <string>
+#include <vector>
 
+#include <boost/variant/get.hpp>
+
+#include "all_type_variant.hpp"
 #include "hyrise.hpp"
+#include "storage/table.hpp"
+#include "storage/table_column_definition.hpp"
+#include "types.hpp"
+#include "utils/abstract_plugin.hpp"
+#include "utils/meta_tables/abstract_meta_table.hpp"
+#include "utils/plugin_manager.hpp"
 
 namespace hyrise {
 
@@ -20,7 +31,7 @@ bool MetaExecTable::can_insert() const {
 }
 
 std::shared_ptr<Table> MetaExecTable::_on_generate() const {
-  auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data, std::nullopt, UseMvcc::Yes);
+  auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data);
 
   for (const auto& [key, _] : Hyrise::get().plugin_manager.user_executable_functions()) {
     const auto& [plugin_name, function_name] = key;

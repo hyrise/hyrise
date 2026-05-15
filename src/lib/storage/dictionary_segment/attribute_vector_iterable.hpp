@@ -1,12 +1,15 @@
 #pragma once
 
+#include <memory>
 #include <utility>
 
 #include "storage/segment_iterables.hpp"
 #include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 
 namespace hyrise {
-
+// Our function naming for iterables is not correct. `_on_with` is a public function and should not start with `_`,
+// whereas the iterator functions should start with `_` as they are private (but can't, because boost requires them).
+// NOLINTBEGIN(readability-identifier-naming)
 class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeVectorIterable> {
  public:
   using ValueType = ValueID;
@@ -21,7 +24,7 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
     resolve_compressed_vector_type(_attribute_vector, [&](const auto& vector) {
       using CompressedVectorIterator = decltype(vector.cbegin());
 
-      auto begin = Iterator<CompressedVectorIterator>{_null_value_id, vector.cbegin(), ChunkOffset{0u}};
+      auto begin = Iterator<CompressedVectorIterator>{_null_value_id, vector.cbegin(), ChunkOffset{0}};
       auto end = Iterator<CompressedVectorIterator>{_null_value_id, vector.cend(),
                                                     static_cast<ChunkOffset>(_attribute_vector.size())};
       functor(begin, end);
@@ -55,7 +58,6 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
   const ValueID _null_value_id;
   SegmentAccessCounter& _access_counter;
 
- private:
   template <typename CompressedVectorIterator>
   class Iterator : public AbstractSegmentIterator<Iterator<CompressedVectorIterator>, SegmentPosition<ValueID>> {
    public:
@@ -81,9 +83,9 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
       return _attribute_it == other._attribute_it;
     }
 
-    void advance(std::ptrdiff_t n) {
-      _attribute_it += n;
-      _chunk_offset += n;
+    void advance(std::ptrdiff_t distance) {
+      _attribute_it += distance;
+      _chunk_offset += distance;
     }
 
     std::ptrdiff_t distance_to(const Iterator& other) const {
@@ -97,7 +99,6 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
       return {value_id, is_null, _chunk_offset};
     }
 
-   private:
     const ValueID _null_value_id;
     CompressedVectorIterator _attribute_it;
     ChunkOffset _chunk_offset;
@@ -124,7 +125,7 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
     SegmentPosition<ValueID> dereference() const {
-      const auto& chunk_offsets = this->chunk_offsets();
+      const auto& chunk_offsets = this->_chunk_offsets();
 
       const auto value_id = static_cast<ValueID>(_attribute_decompressor.get(chunk_offsets.offset_in_referenced_chunk));
       const auto is_null = (value_id == _null_value_id);
@@ -132,10 +133,11 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
       return {value_id, is_null, chunk_offsets.offset_in_poslist};
     }
 
-   private:
     const ValueID _null_value_id;
     mutable Decompressor _attribute_decompressor;
   };
 };
 
 }  // namespace hyrise
+
+// NOLINTEND(readability-identifier-naming)

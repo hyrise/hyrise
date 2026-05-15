@@ -1,5 +1,7 @@
 #include <memory>
+#include <vector>
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
@@ -9,10 +11,11 @@
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "optimizer/join_ordering/join_graph_builder.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
-using namespace expression_functional;  // NOLINT(build/namespaces)
+using namespace expression_functional;
 
 class JoinGraphBuilderTest : public BaseTest {
  public:
@@ -41,7 +44,7 @@ TEST_F(JoinGraphBuilderTest, None) {
 
   // clang-format off
   const auto lqp =
-  SortNode::make(expression_vector(a_a), std::vector<SortMode>{SortMode::Ascending},
+  SortNode::make(expression_vector(a_a), std::vector<SortMode>{SortMode::AscendingNullsFirst},
     PredicateNode::make(equals_(a_a, b_a),
       JoinNode::make(JoinMode::Inner, greater_than_(b_b, a_b),
         node_a,
@@ -55,7 +58,7 @@ TEST_F(JoinGraphBuilderTest, None) {
 TEST_F(JoinGraphBuilderTest, Basic) {
   // clang-format off
   const auto sort_node =
-  SortNode::make(expression_vector(a_a), std::vector<SortMode>{SortMode::Ascending},
+  SortNode::make(expression_vector(a_a), std::vector<SortMode>{SortMode::AscendingNullsFirst},
     node_a);
 
   const auto lqp =

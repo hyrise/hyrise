@@ -1,10 +1,11 @@
 #include <memory>
+#include <stdexcept>
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
-
-#include "expression/expression_utils.hpp"
 #include "import_export/file_type.hpp"
 #include "logical_query_plan/export_node.hpp"
+#include "logical_query_plan/mock_node.hpp"
 
 namespace hyrise {
 
@@ -46,6 +47,10 @@ TEST_F(ExportNodeTest, Copy) {
 
 TEST_F(ExportNodeTest, NoUniqueColumnCombinations) {
   EXPECT_THROW(_export_node->unique_column_combinations(), std::logic_error);
+}
+
+TEST_F(ExportNodeTest, NoOrderDependencies) {
+  EXPECT_THROW(_export_node->order_dependencies(), std::logic_error);
 }
 
 }  // namespace hyrise

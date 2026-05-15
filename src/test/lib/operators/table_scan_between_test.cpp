@@ -1,14 +1,21 @@
+#include <algorithm>
+#include <memory>
+#include <string>
 #include <tuple>
 #include <utility>
+#include <vector>
 
-#include "operators/operator_scan_predicate.hpp"
-#include "operators/print.hpp"
+#include "all_type_variant.hpp"
+#include "null_value.hpp"
+#include "operators/abstract_operator.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "resolve_type.hpp"
 #include "storage/chunk_encoder.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/table.hpp"
 #include "typed_operator_base_test.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
@@ -35,15 +42,14 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
 
     const auto& [data_type, encoding, sort_mode, nullable] = GetParam();
 
-    const bool descending = sort_mode == SortMode::Descending;
+    const bool descending = sort_mode == SortMode::DescendingNullsFirst;
     const int number_of_nulls = nullable && sort_mode ? 3 : 0;
 
     auto column_definitions = TableColumnDefinitions{{"a", data_type, nullable}, {"b", DataType::Int, nullable}};
 
     const auto data_table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{6});
 
-    // `nullable=nullable` is a dirty hack to work around C++ defect 2313.
-    resolve_data_type(data_type, [&, nullable = nullable, sort_mode = sort_mode](const auto type) {
+    resolve_data_type(data_type, [&, nullable, sort_mode](const auto type) {
       using Type = typename decltype(type)::type;
       if (nullable) {
         for (int i = 0; i < number_of_nulls; ++i) {
@@ -70,7 +76,7 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
       }
     });
 
-    data_table->last_chunk()->finalize();
+    data_table->last_chunk()->set_immutable();
 
     if (sort_mode) {
       for (ChunkID chunk_id{0}; chunk_id < data_table->chunk_count(); ++chunk_id) {
@@ -103,11 +109,11 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
   void _test_between_scan(std::vector<std::tuple<AllTypeVariant, AllTypeVariant, std::vector<int>>>& tests,
                           PredicateCondition predicate_condition) {
     const auto& [data_type, encoding, sort_mode, nullable] = GetParam();
-    const bool ascending = sort_mode == SortMode::Ascending;
-    const bool descending = sort_mode == SortMode::Descending;
+    const bool ascending = sort_mode == SortMode::AscendingNullsFirst;
+    const bool descending = sort_mode == SortMode::DescendingNullsFirst;
     const int number_of_nulls = nullable && sort_mode ? 3 : 0;
     std::ignore = encoding;
-    resolve_data_type(data_type, [&, nullable = nullable](const auto data_type_t) {
+    resolve_data_type(data_type, [&, nullable](const auto data_type_t) {
       using ColumnDataType = typename decltype(data_type_t)::type;
 
       for (const auto& [left, right, expected_with_null] : tests) {
@@ -155,21 +161,27 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
           // towards the added nulls.
 
           const int max_index = 10 + number_of_nulls;
-          std::transform(expected.begin(), expected.end(), expected.begin(),
-                         [max_index](int expected_index) -> int { return max_index - expected_index; });
+          std::transform(expected.begin(), expected.end(), expected.begin(), [max_index](int expected_index) -> int {
+            return max_index - expected_index;
+          });
           std::reverse(expected.begin(), expected.end());
         }
 
         if (ascending) {
           // Since we prepended three Null values we need to correct our indices
           std::transform(expected.begin(), expected.end(), expected.begin(),
-                         [number_of_nulls](int expected_index) -> int { return expected_index + number_of_nulls; });
+                         [number_of_nulls](int expected_index) -> int {
+                           return expected_index + number_of_nulls;
+                         });
         }
 
         if (nullable && !ascending && !descending) {
           // Remove the positions that should not be included because they are meant to be NULL
           // In this case, remove every third value.
-          expected.erase(std::remove_if(expected.begin(), expected.end(), [](int x) { return x % 3 == 2; }),
+          expected.erase(std::remove_if(expected.begin(), expected.end(),
+                                        [](int x) {
+                                          return x % 3 == 2;
+                                        }),
                          expected.end());
         }
 

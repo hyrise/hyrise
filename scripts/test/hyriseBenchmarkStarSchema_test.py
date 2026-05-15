@@ -34,10 +34,10 @@ def main():
     benchmark.expect_exact("- Max duration per item is 10 seconds")
     benchmark.expect_exact("- No warmup runs are performed")
     benchmark.expect_exact(
-        "- Automatically verifying results with SQLite. This will make the performance numbers invalid."
+        "- Automatically verifying results with SQLite. This will make the performance numbers invalid"
     )
     benchmark.expect_exact("- Not caching tables as binary files")
-    benchmark.expect_exact("- Not tracking SQL metrics")
+    benchmark.expect_exact("- Not tracking SQL pipeline metrics")
     benchmark.expect_exact("- Running subset of queries: 1.1,1.2,2.2,3.3")
     benchmark.expect_exact("- SSB scale factor is 0.01")
     benchmark.expect_exact("- Using SSB dbgen")

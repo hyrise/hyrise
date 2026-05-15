@@ -1,10 +1,10 @@
 #include "null_scan_removal_rule.hpp"
 
-#include <algorithm>
 #include <memory>
 #include <string>
 #include <vector>
 
+#include "abstract_rule.hpp"
 #include "cost_estimation/abstract_cost_estimator.hpp"
 #include "expression/is_null_expression.hpp"
 #include "expression/lqp_column_expression.hpp"
@@ -14,10 +14,8 @@
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
-#include "optimizer/join_ordering/join_graph.hpp"
-#include "statistics/cardinality_estimation_cache.hpp"
 #include "statistics/cardinality_estimator.hpp"
-#include "statistics/table_statistics.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
@@ -27,8 +25,9 @@ std::string NullScanRemovalRule::name() const {
   return name;
 }
 
-void NullScanRemovalRule::apply_to_plan(const std::shared_ptr<LogicalPlanRootNode>& root) const {
-  Assert(root->type == LQPNodeType::Root, "NullScanRemovalRule needs root to hold onto");
+void NullScanRemovalRule::apply_to_plan(const std::shared_ptr<LogicalPlanRootNode>& root,
+                                        OptimizationContext& /*optimization_context*/) const {
+  Assert(root->type == LQPNodeType::Root, "NullScanRemovalRule needs root to hold onto.");
 
   std::vector<std::shared_ptr<AbstractLQPNode>> nodes_to_remove;
 
@@ -94,8 +93,8 @@ void NullScanRemovalRule::_remove_nodes(const std::vector<std::shared_ptr<Abstra
   }
 }
 
-void NullScanRemovalRule::_apply_to_plan_without_subqueries(
-    const std::shared_ptr<AbstractLQPNode>& /*lqp_root*/) const {
+void NullScanRemovalRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& /*lqp_root*/,
+                                                            OptimizationContext& /*optimization_context*/) const {
   Fail("Did not expect this function to be called.");
 }
 

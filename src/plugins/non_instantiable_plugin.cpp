@@ -1,3 +1,5 @@
+#include <string>
+
 #include "utils/abstract_plugin.hpp"
 #include "utils/singleton.hpp"
 

@@ -3,7 +3,9 @@
 #include <atomic>
 #include <memory>
 #include <mutex>
+#include <string>
 #include <unordered_map>
+#include <vector>
 
 #include "all_parameter_variant.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
@@ -16,7 +18,7 @@ class Table;
 class TransactionContext;
 class PQPSubqueryExpression;
 
-enum class OperatorType {
+enum class OperatorType : uint8_t {
   Aggregate,
   Alias,
   ChangeMetaTable,
@@ -52,7 +54,7 @@ enum class OperatorType {
 };
 
 // The state enum values are declared in progressive order to allow for comparisons involving the >, >= operators.
-enum class OperatorState { Created, Running, ExecutedAndAvailable, ExecutedAndCleared };
+enum class OperatorState : uint8_t { Created, Running, ExecutedAndAvailable, ExecutedAndCleared };
 
 /**
  * AbstractOperator is the abstract super class for all operators. All operators have up to two input tables and one
@@ -112,12 +114,18 @@ enum class OperatorState { Created, Running, ExecutedAndAvailable, ExecutedAndCl
  */
 class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, private Noncopyable {
  public:
-  AbstractOperator(const OperatorType type, const std::shared_ptr<const AbstractOperator>& left = nullptr,
-                   const std::shared_ptr<const AbstractOperator>& right = nullptr,
-                   std::unique_ptr<AbstractOperatorPerformanceData> performance_data =
-                       std::make_unique<OperatorPerformanceData<AbstractOperatorPerformanceData::NoSteps>>());
+  explicit AbstractOperator(const OperatorType type, const std::shared_ptr<const AbstractOperator>& left = nullptr,
+                            const std::shared_ptr<const AbstractOperator>& right = nullptr,
+                            std::unique_ptr<AbstractOperatorPerformanceData> performance_data =
+                                std::make_unique<OperatorPerformanceData<AbstractOperatorPerformanceData::NoSteps>>());
 
-  virtual ~AbstractOperator();
+  ~AbstractOperator() override;
+  AbstractOperator(const AbstractOperator&) = delete;
+  AbstractOperator& operator=(const AbstractOperator&) = delete;
+  // These two need not be deleted, but they are for the same reason that std::atomic has them deleted.
+  // You can implement them, but you should think about the implications for this class.
+  AbstractOperator(AbstractOperator&&) = delete;
+  AbstractOperator& operator=(AbstractOperator&&) = delete;
 
   OperatorType type() const;
 
@@ -216,6 +224,7 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   std::unique_ptr<AbstractOperatorPerformanceData> performance_data;
 
  protected:
+  friend class OperatorTaskTest;
   // abstract method to actually execute the operator
   // execute and get_output are split into two methods to allow for easier
   // asynchronous execution
@@ -270,17 +279,16 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
 
  private:
   // We track the number of consuming operators to automate the clearing of operator results.
-  std::atomic_int32_t _consumer_count = 0;
-  std::mutex _deregister_consumer_mutex;
+  std::atomic_uint32_t _consumer_count{0};
 
-  // Determines whether operator results can be cleared via clear_output().
-  bool _never_clear_output = false;
+  // Determines whether operator results can be cleared via `clear_output()`.
+  bool _never_clear_output{false};
 
-  // State management
+  // State management.
   std::atomic<OperatorState> _state{OperatorState::Created};
   void _transition_to(const OperatorState new_state);
 
-  // To prevent race conditions in get_or_create_operator_task.
+  // To prevent race conditions in `get_or_create_operator_task()`.
   std::mutex _operator_task_mutex;
 };
 

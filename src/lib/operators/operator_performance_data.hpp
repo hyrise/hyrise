@@ -5,18 +5,24 @@
 #include <string>
 
 // Warning: In the past, magic_enum has led to problems with TSan. See #2154 for details.
-#include "magic_enum.hpp"
+#include "magic_enum/magic_enum.hpp"
 
 #include "types.hpp"
+#include "utils/assert.hpp"
 #include "utils/format_duration.hpp"
 
 namespace hyrise {
 struct AbstractOperatorPerformanceData : public Noncopyable {
-  enum class NoSteps {
+  enum class NoSteps : uint8_t {
     Invalid  // Needed by magic_enum for enum_count
   };
 
-  virtual ~AbstractOperatorPerformanceData() = default;
+  AbstractOperatorPerformanceData() = default;
+  ~AbstractOperatorPerformanceData() override = default;
+  AbstractOperatorPerformanceData(const AbstractOperatorPerformanceData&) = delete;
+  AbstractOperatorPerformanceData(AbstractOperatorPerformanceData&&) = default;
+  AbstractOperatorPerformanceData& operator=(const AbstractOperatorPerformanceData&) = delete;
+  AbstractOperatorPerformanceData& operator=(AbstractOperatorPerformanceData&&) = default;
 
   virtual void output_to_stream(std::ostream& stream, DescriptionMode description_mode) const = 0;
 

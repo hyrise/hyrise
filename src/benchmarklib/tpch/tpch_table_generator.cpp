@@ -1,55 +1,67 @@
 #include "tpch_table_generator.hpp"
 
+#include <algorithm>
+#include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <cstdlib>
+#include <filesystem>
+#include <format>
+#include <memory>
+#include <string>
+#include <type_traits>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+
 extern "C" {
-#include <dss.h>
-#include <dsstypes.h>
-#include <rnd.h>
+#include "dss.h"
+#include "dsstypes.h"
+#include "tpch_dbgen.h"
 }
 
-#include <filesystem>
-#include <utility>
-
+#include "abstract_table_generator.hpp"
 #include "benchmark_config.hpp"
-#include "storage/chunk.hpp"
-#include "storage/constraints/table_key_constraint.hpp"
+#include "storage/constraints/constraint_utils.hpp"
 #include "table_builder.hpp"
-#include "utils/timer.hpp"
+#include "tpch/tpch_constants.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
-extern const char** asc_date;  // NOLINT
-extern seed_t seed[];          // NOLINT
-
-#pragma clang diagnostic ignored "-Wshorten-64-to-32"
-#pragma clang diagnostic ignored "-Wfloat-conversion"
+extern const char** asc_date;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+extern const seed_t seed[];    // NOLINT(hicpp-avoid-c-arrays,cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
 
 namespace {
 
-using namespace hyrise;  // NOLINT
+using namespace hyrise;
 
+// NOLINTBEGIN(whitespace/line_length)
 // clang-format off
-const auto customer_column_types = boost::hana::tuple      <int32_t,    pmr_string,  pmr_string,  int32_t,       pmr_string,  float,       pmr_string,     pmr_string>();  // NOLINT
-const auto customer_column_names = boost::hana::make_tuple("c_custkey", "c_name",    "c_address", "c_nationkey", "c_phone",   "c_acctbal", "c_mktsegment", "c_comment"); // NOLINT
+const auto customer_column_types = boost::hana::tuple      <int32_t,    pmr_string,  pmr_string,  int32_t,       pmr_string,  float,       pmr_string,     pmr_string>();
+const auto customer_column_names = boost::hana::make_tuple("c_custkey", "c_name",    "c_address", "c_nationkey", "c_phone",   "c_acctbal", "c_mktsegment", "c_comment");
 
-const auto order_column_types = boost::hana::tuple      <int32_t,     int32_t,     pmr_string,      float,          pmr_string,    pmr_string,        pmr_string,  int32_t,          pmr_string>();  // NOLINT
-const auto order_column_names = boost::hana::make_tuple("o_orderkey", "o_custkey", "o_orderstatus", "o_totalprice", "o_orderdate", "o_orderpriority", "o_clerk",   "o_shippriority", "o_comment");  // NOLINT
+const auto order_column_types = boost::hana::tuple      <int32_t,     int32_t,     pmr_string,      float,          pmr_string,    pmr_string,        pmr_string,  int32_t,          pmr_string>();
+const auto order_column_names = boost::hana::make_tuple("o_orderkey", "o_custkey", "o_orderstatus", "o_totalprice", "o_orderdate", "o_orderpriority", "o_clerk",   "o_shippriority", "o_comment");
 
-const auto lineitem_column_types = boost::hana::tuple      <int32_t,     int32_t,     int32_t,     int32_t,        float,        float,             float,        float,   pmr_string,     pmr_string,     pmr_string,   pmr_string,     pmr_string,      pmr_string,       pmr_string,   pmr_string>();  // NOLINT
-const auto lineitem_column_names = boost::hana::make_tuple("l_orderkey", "l_partkey", "l_suppkey", "l_linenumber", "l_quantity", "l_extendedprice", "l_discount", "l_tax", "l_returnflag", "l_linestatus", "l_shipdate", "l_commitdate", "l_receiptdate", "l_shipinstruct", "l_shipmode", "l_comment");  // NOLINT
+const auto lineitem_column_types = boost::hana::tuple      <int32_t,     int32_t,     int32_t,     int32_t,        float,        float,             float,        float,   pmr_string,     pmr_string,     pmr_string,   pmr_string,     pmr_string,      pmr_string,       pmr_string,   pmr_string>();
+const auto lineitem_column_names = boost::hana::make_tuple("l_orderkey", "l_partkey", "l_suppkey", "l_linenumber", "l_quantity", "l_extendedprice", "l_discount", "l_tax", "l_returnflag", "l_linestatus", "l_shipdate", "l_commitdate", "l_receiptdate", "l_shipinstruct", "l_shipmode", "l_comment");
 
-const auto part_column_types = boost::hana::tuple      <int32_t,    pmr_string,  pmr_string,  pmr_string,  pmr_string,  int32_t,  pmr_string,    float,        pmr_string>();  // NOLINT
-const auto part_column_names = boost::hana::make_tuple("p_partkey", "p_name",    "p_mfgr",    "p_brand",   "p_type",    "p_size", "p_container", "p_retailprice", "p_comment");  // NOLINT
+const auto part_column_types = boost::hana::tuple      <int32_t,    pmr_string,  pmr_string,  pmr_string,  pmr_string,  int32_t,  pmr_string,    float,        pmr_string>();
+const auto part_column_names = boost::hana::make_tuple("p_partkey", "p_name",    "p_mfgr",    "p_brand",   "p_type",    "p_size", "p_container", "p_retailprice", "p_comment");
 
-const auto partsupp_column_types = boost::hana::tuple<     int32_t,      int32_t,      int32_t,       float,           pmr_string>();  // NOLINT
-const auto partsupp_column_names = boost::hana::make_tuple("ps_partkey", "ps_suppkey", "ps_availqty", "ps_supplycost", "ps_comment");  // NOLINT
+const auto partsupp_column_types = boost::hana::tuple<     int32_t,      int32_t,      int32_t,       float,           pmr_string>();
+const auto partsupp_column_names = boost::hana::make_tuple("ps_partkey", "ps_suppkey", "ps_availqty", "ps_supplycost", "ps_comment");
 
-const auto supplier_column_types = boost::hana::tuple<     int32_t,     pmr_string,  pmr_string,  int32_t,       pmr_string,  float,       pmr_string>();  // NOLINT
-const auto supplier_column_names = boost::hana::make_tuple("s_suppkey", "s_name",    "s_address", "s_nationkey", "s_phone",   "s_acctbal", "s_comment");  // NOLINT
+const auto supplier_column_types = boost::hana::tuple<     int32_t,     pmr_string,  pmr_string,  int32_t,       pmr_string,  float,       pmr_string>();
+const auto supplier_column_names = boost::hana::make_tuple("s_suppkey", "s_name",    "s_address", "s_nationkey", "s_phone",   "s_acctbal", "s_comment");
 
-const auto nation_column_types = boost::hana::tuple<     int32_t,       pmr_string,  int32_t,       pmr_string>();  // NOLINT
-const auto nation_column_names = boost::hana::make_tuple("n_nationkey", "n_name",    "n_regionkey", "n_comment");  // NOLINT
+const auto nation_column_types = boost::hana::tuple<     int32_t,       pmr_string,  int32_t,       pmr_string>();
+const auto nation_column_names = boost::hana::make_tuple("n_nationkey", "n_name",    "n_regionkey", "n_comment");
 
-const auto region_column_types = boost::hana::tuple<     int32_t,       pmr_string,  pmr_string>();  // NOLINT
-const auto region_column_names = boost::hana::make_tuple("r_regionkey", "r_name",    "r_comment");  // NOLINT
+const auto region_column_types = boost::hana::tuple<     int32_t,       pmr_string,  pmr_string>();
+const auto region_column_names = boost::hana::make_tuple("r_regionkey", "r_name",    "r_comment");
 // clang-format on
+// NOLINTEND(whitespace/line_length)
 
 const std::unordered_map<TPCHTable, std::underlying_type_t<TPCHTable>> tpch_table_to_dbgen_id = {
     {TPCHTable::Part, PART},    {TPCHTable::PartSupp, PSUPP}, {TPCHTable::Supplier, SUPP}, {TPCHTable::Customer, CUST},
@@ -76,11 +88,11 @@ DSSType call_dbgen_mk(size_t idx, MKRetType (*mk_fn)(DSS_HUGE, DSSType* val, Arg
 float convert_money(DSS_HUGE cents) {
   const auto dollars = cents / 100;
   cents %= 100;
-  return static_cast<float>(dollars) + (static_cast<float>(cents)) / 100.0f;
+  return static_cast<float>(dollars) + (static_cast<float>(cents) / 100.0f);
 }
 
 /**
- * Call this after using dbgen to avoid memory leaks
+ * Call this after using dbgen to avoid memory leaks.
  */
 void dbgen_cleanup() {
   for (auto* distribution : {&nations,     &regions,        &o_priority_set, &l_instruct_set,
@@ -89,15 +101,20 @@ void dbgen_cleanup() {
                              &nouns,       &adjectives,     &adverbs,        &prepositions,
                              &verbs,       &terminators,    &auxillaries,    &np,
                              &vp,          &grammar}) {
-    free(distribution->permute);  // NOLINT
+    // NOLINTNEXTLINE(cppcoreguidelines-no-malloc,hicpp-no-malloc,cppcoreguidelines-owning-memory)
+    std::free(distribution->permute);
     distribution->permute = nullptr;
   }
 
   if (asc_date) {
-    for (size_t idx = 0; idx < TOTDATE; ++idx) {
-      free((void*)asc_date[idx]);  // NOLINT
+    // NOLINTBEGIN(cppcoreguidelines-no-malloc,hicpp-no-malloc,cppcoreguidelines-owning-memory)
+    for (auto idx = size_t{0}; idx < TOTDATE; ++idx) {
+      // NOLINTBEGIN(cppcoreguidelines-pro-type-const-cast)
+      std::free(const_cast<char*>(asc_date[idx]));
+      // NOLINTEND(cppcoreguidelines-pro-type-const-cast)
     }
-    free(asc_date);  // NOLINT
+    std::free(asc_date);  // NOLINT(bugprone-multi-level-implicit-pointer-conversion)
+    // NOLINTEND(cppcoreguidelines-no-malloc,hicpp-no-malloc,cppcoreguidelines-owning-memory)
   }
   asc_date = nullptr;
 }
@@ -113,7 +130,7 @@ const std::unordered_map<TPCHTable, std::string> tpch_table_names = {
 
 TPCHTableGenerator::TPCHTableGenerator(float scale_factor, ClusteringConfiguration clustering_configuration,
                                        ChunkOffset chunk_size)
-    : TPCHTableGenerator(scale_factor, clustering_configuration, create_benchmark_config_with_chunk_size(chunk_size)) {}
+    : TPCHTableGenerator(scale_factor, clustering_configuration, std::make_shared<BenchmarkConfig>(chunk_size)) {}
 
 TPCHTableGenerator::TPCHTableGenerator(float scale_factor, ClusteringConfiguration clustering_configuration,
                                        const std::shared_ptr<BenchmarkConfig>& benchmark_config)
@@ -122,10 +139,10 @@ TPCHTableGenerator::TPCHTableGenerator(float scale_factor, ClusteringConfigurati
       _clustering_configuration(clustering_configuration) {}
 
 std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate() {
-  Assert(_scale_factor < 1.0f || std::round(_scale_factor) == _scale_factor,
+  Assert(_scale_factor < 1 || std::round(_scale_factor) == _scale_factor,
          "Due to tpch_dbgen limitations, only scale factors less than one can have a fractional part.");
 
-  const auto cache_directory = std::string{"tpch_cached_tables/sf-"} + std::to_string(_scale_factor);  // NOLINT
+  const auto cache_directory = std::format("tpch_cached_tables/sf-{}", std::to_string(_scale_factor));
   if (_benchmark_config->cache_binary_tables && std::filesystem::is_directory(cache_directory)) {
     return _load_binary_tables_from_path(cache_directory);
   }
@@ -142,24 +159,26 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
   const auto region_count = static_cast<ChunkOffset>(tdefs[REGION].base);
 
   // The `* 4` part is defined in the TPC-H specification.
-  TableBuilder customer_builder{_benchmark_config->chunk_size, customer_column_types, customer_column_names,
-                                customer_count};
-  TableBuilder order_builder{_benchmark_config->chunk_size, order_column_types, order_column_names, order_count};
-  TableBuilder lineitem_builder{_benchmark_config->chunk_size, lineitem_column_types, lineitem_column_names,
-                                ChunkOffset{order_count * 4}};
-  TableBuilder part_builder{_benchmark_config->chunk_size, part_column_types, part_column_names, part_count};
-  TableBuilder partsupp_builder{_benchmark_config->chunk_size, partsupp_column_types, partsupp_column_names,
-                                ChunkOffset{part_count * 4}};
-  TableBuilder supplier_builder{_benchmark_config->chunk_size, supplier_column_types, supplier_column_names,
-                                supplier_count};
-  TableBuilder nation_builder{_benchmark_config->chunk_size, nation_column_types, nation_column_names, nation_count};
-  TableBuilder region_builder{_benchmark_config->chunk_size, region_column_types, region_column_names, region_count};
+  auto customer_builder =
+      TableBuilder{_benchmark_config->chunk_size, customer_column_types, customer_column_names, customer_count};
+  auto order_builder = TableBuilder{_benchmark_config->chunk_size, order_column_types, order_column_names, order_count};
+  auto lineitem_builder = TableBuilder{_benchmark_config->chunk_size, lineitem_column_types, lineitem_column_names,
+                                       ChunkOffset{order_count * 4}};
+  auto part_builder = TableBuilder{_benchmark_config->chunk_size, part_column_types, part_column_names, part_count};
+  auto partsupp_builder = TableBuilder{_benchmark_config->chunk_size, partsupp_column_types, partsupp_column_names,
+                                       ChunkOffset{part_count * 4}};
+  auto supplier_builder =
+      TableBuilder{_benchmark_config->chunk_size, supplier_column_types, supplier_column_names, supplier_count};
+  auto nation_builder =
+      TableBuilder{_benchmark_config->chunk_size, nation_column_types, nation_column_names, nation_count};
+  auto region_builder =
+      TableBuilder{_benchmark_config->chunk_size, region_column_types, region_column_names, region_count};
 
   /**
    * CUSTOMER
    */
 
-  for (size_t row_idx = 0; row_idx < customer_count; row_idx++) {
+  for (auto row_idx = size_t{0}; row_idx < customer_count; row_idx++) {
     auto customer = call_dbgen_mk<customer_t>(row_idx + 1, mk_cust, TPCHTable::Customer);
     customer_builder.append_row(customer.custkey, customer.name, customer.address, customer.nation_code, customer.phone,
                                 convert_money(customer.acctbal), customer.mktsegment, customer.comment);
@@ -169,14 +188,15 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
    * ORDER and LINEITEM
    */
 
-  for (size_t order_idx = 0; order_idx < order_count; ++order_idx) {
-    const auto order = call_dbgen_mk<order_t>(order_idx + 1, mk_order, TPCHTable::Orders, 0l);
+  for (auto order_idx = size_t{0}; order_idx < order_count; ++order_idx) {
+    // NOLINTNEXTLINE(google-runtime-int,runtime/int) mk_order uses longs
+    const auto order = call_dbgen_mk<order_t>(order_idx + 1, mk_order, TPCHTable::Orders, long{0});
 
     order_builder.append_row(order.okey, order.custkey, pmr_string(1, order.orderstatus),
                              convert_money(order.totalprice), order.odate, order.opriority, order.clerk,
                              order.spriority, order.comment);
 
-    for (auto line_idx = 0; line_idx < order.lines; ++line_idx) {
+    for (auto line_idx = int64_t{0}; line_idx < order.lines; ++line_idx) {
       const auto& lineitem = order.l[line_idx];
 
       lineitem_builder.append_row(lineitem.okey, lineitem.partkey, lineitem.suppkey, lineitem.lcnt, lineitem.quantity,
@@ -191,7 +211,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
    * PART and PARTSUPP
    */
 
-  for (size_t part_idx = 0; part_idx < part_count; ++part_idx) {
+  for (auto part_idx = size_t{0}; part_idx < part_count; ++part_idx) {
     const auto part = call_dbgen_mk<part_t>(part_idx + 1, mk_part, TPCHTable::Part);
 
     part_builder.append_row(part.partkey, part.name, part.mfgr, part.brand, part.type, part.size, part.container,
@@ -208,11 +228,11 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
       {
         // Make sure we do not generate non-unique combinations (see above)
         if (partsupp.partkey != last_partkey) {
-          Assert(partsupp.partkey > last_partkey, "Expected partkey to be generated in ascending order");
+          Assert(partsupp.partkey > last_partkey, "Expected partkey to be generated in ascending order.");
           last_partkey = partsupp.partkey;
           suppkeys.clear();
         }
-        Assert(std::find(suppkeys.begin(), suppkeys.end(), partsupp.suppkey) == suppkeys.end(),
+        Assert(std::ranges::find(suppkeys, partsupp.suppkey) == suppkeys.end(),
                "Scale factor unsupported by tpch-dbgen. Consider choosing a \"round\" number.");
         suppkeys.emplace_back(partsupp.suppkey);
       }
@@ -226,7 +246,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
    * SUPPLIER
    */
 
-  for (size_t supplier_idx = 0; supplier_idx < supplier_count; ++supplier_idx) {
+  for (auto supplier_idx = size_t{0}; supplier_idx < supplier_count; ++supplier_idx) {
     const auto supplier = call_dbgen_mk<supplier_t>(supplier_idx + 1, mk_supp, TPCHTable::Supplier);
 
     supplier_builder.append_row(supplier.suppkey, supplier.name, supplier.address, supplier.nation_code, supplier.phone,
@@ -237,7 +257,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
    * NATION
    */
 
-  for (size_t nation_idx = 0; nation_idx < nation_count; ++nation_idx) {
+  for (auto nation_idx = size_t{0}; nation_idx < nation_count; ++nation_idx) {
     const auto nation = call_dbgen_mk<code_t>(nation_idx + 1, mk_nation, TPCHTable::Nation);
     nation_builder.append_row(nation.code, nation.text, nation.join, nation.comment);
   }
@@ -246,7 +266,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
    * REGION
    */
 
-  for (size_t region_idx = 0; region_idx < region_count; ++region_idx) {
+  for (auto region_idx = size_t{0}; region_idx < region_count; ++region_idx) {
     const auto region = call_dbgen_mk<code_t>(region_idx + 1, mk_region, TPCHTable::Region);
     region_builder.append_row(region.code, region.text, region.comment);
   }
@@ -288,7 +308,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
   if (_benchmark_config->cache_binary_tables) {
     std::filesystem::create_directories(cache_directory);
     for (auto& [table_name, table_info] : table_info_by_name) {
-      table_info.binary_file_path = cache_directory + "/" + table_name + ".bin";  // NOLINT
+      table_info.binary_file_path = std::format("{}/{}.bin", cache_directory, table_name);
     }
   }
 
@@ -296,17 +316,14 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
 }
 
 AbstractTableGenerator::IndexesByTable TPCHTableGenerator::_indexes_by_table() const {
-  return {
-      {"part", {{"p_partkey"}}},
-      {"supplier", {{"s_suppkey"}, {"s_nationkey"}}},
-      {"partsupp", {{"ps_partkey"}, {"ps_suppkey"}}},
-      // ps_partkey is subset of {ps_partkey, ps_suppkey}
-      {"customer", {{"c_custkey"}, {"c_nationkey"}}},
-      {"orders", {{"o_orderkey"}, {"o_custkey"}}},
-      {"lineitem", {{"l_orderkey"}, {"l_partkey"}}},
-      {"nation", {{"n_nationkey"}, {"n_regionkey"}}},
-      {"region", {{"r_regionkey"}}},
-  };
+  return {{"part", {{"p_partkey"}}},
+          {"supplier", {{"s_suppkey"}, {"s_nationkey"}}},
+          {"partsupp", {{"ps_partkey"}, {"ps_suppkey"}}},
+          {"customer", {{"c_custkey"}, {"c_nationkey"}}},
+          {"orders", {{"o_orderkey"}, {"o_custkey"}}},
+          {"lineitem", {{"l_orderkey"}, {"l_partkey"}}},
+          {"nation", {{"n_nationkey"}, {"n_regionkey"}}},
+          {"region", {{"r_regionkey"}}}};
 }
 
 AbstractTableGenerator::SortOrderByTable TPCHTableGenerator::_sort_order_by_table() const {
@@ -326,46 +343,57 @@ AbstractTableGenerator::SortOrderByTable TPCHTableGenerator::_sort_order_by_tabl
 
 void TPCHTableGenerator::_add_constraints(
     std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const {
-  const auto& customer_table = table_info_by_name.at("customer").table;
-  customer_table->add_soft_key_constraint(
-      {{customer_table->column_id_by_name("c_custkey")}, KeyConstraintType::PRIMARY_KEY});
+  // Set all primary (PK) and foreign keys (FK) as defined in the specification (Reision 3.0.1, 1.4.2. Constraints, p.
+  // 18).
 
-  const auto& orders_table = table_info_by_name.at("orders").table;
-  const auto orders_pk_constraint =
-      TableKeyConstraint{{orders_table->column_id_by_name("o_orderkey")}, KeyConstraintType::PRIMARY_KEY};
-  orders_table->add_soft_key_constraint(orders_pk_constraint);
-
-  const auto& lineitem_table = table_info_by_name.at("lineitem").table;
-  const auto lineitem_pk_constraint = TableKeyConstraint{
-      {lineitem_table->column_id_by_name("l_orderkey"), lineitem_table->column_id_by_name("l_linenumber")},
-      KeyConstraintType::PRIMARY_KEY};
-  lineitem_table->add_soft_key_constraint(lineitem_pk_constraint);
-
+  // Get all tables.
   const auto& part_table = table_info_by_name.at("part").table;
-  const auto part_table_pk_constraint =
-      TableKeyConstraint{{part_table->column_id_by_name("p_partkey")}, KeyConstraintType::PRIMARY_KEY};
-  part_table->add_soft_key_constraint(part_table_pk_constraint);
-
-  const auto& partsupp_table = table_info_by_name.at("partsupp").table;
-  const auto partsupp_pk_constraint = TableKeyConstraint{
-      {partsupp_table->column_id_by_name("ps_partkey"), partsupp_table->column_id_by_name("ps_suppkey")},
-      KeyConstraintType::PRIMARY_KEY};
-  partsupp_table->add_soft_key_constraint(partsupp_pk_constraint);
-
   const auto& supplier_table = table_info_by_name.at("supplier").table;
-  const auto supplier_pk_constraint =
-      TableKeyConstraint{{supplier_table->column_id_by_name("s_suppkey")}, KeyConstraintType::PRIMARY_KEY};
-  supplier_table->add_soft_key_constraint(supplier_pk_constraint);
-
+  const auto& partsupp_table = table_info_by_name.at("partsupp").table;
+  const auto& customer_table = table_info_by_name.at("customer").table;
+  const auto& orders_table = table_info_by_name.at("orders").table;
+  const auto& lineitem_table = table_info_by_name.at("lineitem").table;
   const auto& nation_table = table_info_by_name.at("nation").table;
-  const auto nation_pk_constraint =
-      TableKeyConstraint{{nation_table->column_id_by_name("n_nationkey")}, KeyConstraintType::PRIMARY_KEY};
-  nation_table->add_soft_key_constraint(nation_pk_constraint);
-
   const auto& region_table = table_info_by_name.at("region").table;
-  const auto region_pk_constraint =
-      TableKeyConstraint{{region_table->column_id_by_name("r_regionkey")}, KeyConstraintType::PRIMARY_KEY};
-  region_table->add_soft_key_constraint(region_pk_constraint);
+
+  // Set constraints.
+
+  // part - 1 PK.
+  primary_key_constraint(part_table, {"p_partkey"});
+
+  // supplier - 1 PK, 1 FK.
+  primary_key_constraint(supplier_table, {"s_suppkey"});
+  // The FK to n_nationkey is not listed in the list of FKs in 1.4.2, but in the part table layout in 1.4.1, p. 15.
+  foreign_key_constraint(supplier_table, {"s_nationkey"}, nation_table, {"n_nationkey"});
+
+  // partsupp - 1 composite PK, 2 FKs.
+  primary_key_constraint(partsupp_table, {"ps_partkey", "ps_suppkey"});
+  foreign_key_constraint(partsupp_table, {"ps_partkey"}, part_table, {"p_partkey"});
+  foreign_key_constraint(partsupp_table, {"ps_suppkey"}, supplier_table, {"s_suppkey"});
+
+  // customer - 1 PK, 1 FK.
+  primary_key_constraint(customer_table, {"c_custkey"});
+  foreign_key_constraint(customer_table, {"c_nationkey"}, nation_table, {"n_nationkey"});
+
+  // orders - 1 PK, 1 FK.
+  primary_key_constraint(orders_table, {"o_orderkey"});
+  foreign_key_constraint(orders_table, {"o_custkey"}, customer_table, {"c_custkey"});
+
+  // lineitem - 1 composite PK, 4 FKs.
+  primary_key_constraint(lineitem_table, {"l_orderkey", "l_linenumber"});
+  foreign_key_constraint(lineitem_table, {"l_orderkey"}, orders_table, {"o_orderkey"});
+  // The specification explicitly allows to set the FKs of l_partkey and s_suppkey as a compound FK to partsupp and
+  // directly to part/supplier.
+  foreign_key_constraint(lineitem_table, {"l_partkey", "l_suppkey"}, partsupp_table, {"ps_partkey", "ps_suppkey"});
+  foreign_key_constraint(lineitem_table, {"l_partkey"}, part_table, {"p_partkey"});
+  foreign_key_constraint(lineitem_table, {"l_suppkey"}, supplier_table, {"s_suppkey"});
+
+  // nation - 1 PK, 1 FK.
+  primary_key_constraint(nation_table, {"n_nationkey"});
+  foreign_key_constraint(nation_table, {"n_regionkey"}, region_table, {"r_regionkey"});
+
+  // region - 1 PK.
+  primary_key_constraint(region_table, {"r_regionkey"});
 }
 
 }  // namespace hyrise

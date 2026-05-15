@@ -1,11 +1,13 @@
 #pragma once
 
+#include <memory>
 #include <unordered_map>
 #include <vector>
 
+#include "uninitialized_vector.hpp"
+
 #include "storage/pos_lists/row_id_pos_list.hpp"
 #include "types.hpp"
-#include "uninitialized_vector.hpp"
 
 namespace hyrise {
 
@@ -23,9 +25,12 @@ using PosListsByChunkID = std::vector<SubPosList>;
 // The returned structs contains one of those PosList as well as the position of an entry within the original PosList.
 // For example, splitting [(1,3), (0,2), (1,2)] gives us two PosLists [(0,2)] and [(1,3), (1,2)] as well as the
 // original positions [1] and [0, 2]. These original positions are needed to reassemble the result.
-// The returned PosListsByChunkID has a guaranteed size of `number_of_chunks`, but the entries might be empty.
+// The returned PosListsByChunkID has a guaranteed size of `number_of_chunks`, but the entries might be empty. The
+// template parameter include_null_row_ids decides if NULL_ROW_IDs are skipped or if they are appended to an extra
+// SubPosList. When include_null_row_ids is true, PosListsByChunkID has a guaranteed size of `number_of_chunks + 1`.
 
+template <bool include_null_row_ids>
 PosListsByChunkID split_pos_list_by_chunk_id(const std::shared_ptr<const AbstractPosList>& input_pos_list,
-                                             const size_t number_of_chunks);
+                                             size_t number_of_chunks);
 
 }  // namespace hyrise

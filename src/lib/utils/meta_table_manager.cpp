@@ -1,5 +1,15 @@
 #include "meta_table_manager.hpp"
 
+#include <algorithm>
+#include <cstddef>
+#include <memory>
+#include <string>
+#include <string_view>
+#include <vector>
+
+#include "all_type_variant.hpp"
+#include "utils/assert.hpp"
+#include "utils/meta_tables/abstract_meta_table.hpp"
 #include "utils/meta_tables/meta_chunk_sort_orders_table.hpp"
 #include "utils/meta_tables/meta_chunks_table.hpp"
 #include "utils/meta_tables/meta_columns_table.hpp"
@@ -12,10 +22,11 @@
 #include "utils/meta_tables/meta_system_information_table.hpp"
 #include "utils/meta_tables/meta_system_utilization_table.hpp"
 #include "utils/meta_tables/meta_tables_table.hpp"
+#include "utils/performance_warning.hpp"
 
 namespace {
 
-using namespace hyrise;  // NOLINT
+using namespace hyrise;
 
 std::vector<std::vector<AllTypeVariant>> materialize_values(const std::shared_ptr<const Table>& values) {
   auto performance_warning_disabler = PerformanceWarningDisabler{};
@@ -32,25 +43,26 @@ std::string trim_table_name(const std::string& table_name) {
 namespace hyrise {
 
 MetaTableManager::MetaTableManager() {
-  const std::vector<std::shared_ptr<AbstractMetaTable>> meta_tables = {std::make_shared<MetaTablesTable>(),
-                                                                       std::make_shared<MetaColumnsTable>(),
-                                                                       std::make_shared<MetaChunksTable>(),
-                                                                       std::make_shared<MetaChunkSortOrdersTable>(),
-                                                                       std::make_shared<MetaExecTable>(),
-                                                                       std::make_shared<MetaLogTable>(),
-                                                                       std::make_shared<MetaSegmentsTable>(),
-                                                                       std::make_shared<MetaSegmentsAccurateTable>(),
-                                                                       std::make_shared<MetaPluginsTable>(),
-                                                                       std::make_shared<MetaSettingsTable>(),
-                                                                       std::make_shared<MetaSystemInformationTable>(),
-                                                                       std::make_shared<MetaSystemUtilizationTable>()};
+  const auto meta_tables =
+      std::vector<std::shared_ptr<AbstractMetaTable>>{std::make_shared<MetaTablesTable>(),
+                                                      std::make_shared<MetaColumnsTable>(),
+                                                      std::make_shared<MetaChunksTable>(),
+                                                      std::make_shared<MetaChunkSortOrdersTable>(),
+                                                      std::make_shared<MetaExecTable>(),
+                                                      std::make_shared<MetaLogTable>(),
+                                                      std::make_shared<MetaSegmentsTable>(),
+                                                      std::make_shared<MetaSegmentsAccurateTable>(),
+                                                      std::make_shared<MetaPluginsTable>(),
+                                                      std::make_shared<MetaSettingsTable>(),
+                                                      std::make_shared<MetaSystemInformationTable>(),
+                                                      std::make_shared<MetaSystemUtilizationTable>()};
 
   _table_names.reserve(_meta_tables.size());
   for (const auto& table : meta_tables) {
     _meta_tables[table->name()] = table;
     _table_names.emplace_back(table->name());
   }
-  std::sort(_table_names.begin(), _table_names.end());
+  std::ranges::sort(_table_names);
 }
 
 bool MetaTableManager::is_meta_table_name(const std::string& name) {
@@ -65,7 +77,7 @@ const std::vector<std::string>& MetaTableManager::table_names() const {
 void MetaTableManager::add_table(const std::shared_ptr<AbstractMetaTable>& table) {
   _meta_tables[table->name()] = table;
   _table_names.push_back(table->name());
-  std::sort(_table_names.begin(), _table_names.end());
+  std::ranges::sort(_table_names);
 }
 
 bool MetaTableManager::has_table(const std::string& table_name) const {

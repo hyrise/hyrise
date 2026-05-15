@@ -1,5 +1,6 @@
-#include "base_test.hpp"
+#include <string>
 
+#include "base_test.hpp"
 #include "utils/string_utils.hpp"
 
 namespace hyrise {

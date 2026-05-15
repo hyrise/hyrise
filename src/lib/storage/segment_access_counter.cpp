@@ -1,11 +1,20 @@
 #include "segment_access_counter.hpp"
 
-#include <sstream>
+#include <algorithm>
+#include <array>
+#include <cstddef>
+#include <cstdint>
+#include <string>
+
+#include "magic_enum/magic_enum.hpp"
+
+#include "storage/pos_lists/abstract_pos_list.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
 SegmentAccessCounter::SegmentAccessCounter() {
-  DebugAssert(static_cast<size_t>(AccessType::Count) == access_type_string_mapping.size(),
+  DebugAssert(magic_enum::enum_count<AccessType>() == access_type_string_mapping.size(),
               "access_type_string_mapping should contain as many entries as there are access types.");
 }
 
@@ -38,8 +47,8 @@ const SegmentAccessCounter::CounterType& SegmentAccessCounter::operator[](const 
 
 std::string SegmentAccessCounter::to_string() const {
   std::string result = std::to_string(_counters[0]);
-  result.reserve(static_cast<size_t>(AccessType::Count) * 19);
-  for (auto access_type = size_t{1}; access_type < static_cast<size_t>(AccessType::Count); ++access_type) {
+  result.reserve(magic_enum::enum_count<AccessType>() * 19);
+  for (auto access_type = size_t{1}; access_type < magic_enum::enum_count<AccessType>(); ++access_type) {
     result.append(",");
     result.append(std::to_string(_counters[access_type]));
   }
@@ -73,19 +82,21 @@ SegmentAccessCounter::AccessType SegmentAccessCounter::access_type(const Abstrac
 // acts as the transition function.
 SegmentAccessCounter::AccessPattern SegmentAccessCounter::_access_pattern(const AbstractPosList& positions) {
   // There are five possible inputs
-  enum class Input { Zero, One, Positive, NegativeOne, Negative };
+  enum class Input : uint8_t { Zero, One, Positive, NegativeOne, Negative };
 
+  // NOLINTBEGIN(whitespace/line_length)
   // clang-format off
   constexpr std::array<std::array<AccessPattern, 5 /*|Input|*/>, 6 /*|AccessPattern|*/> TRANSITIONS{{
-    //                         Input:   Zero                                    One                                     Positive,                               NegativeOne                             Negative                                  // NOLINT
-    /* FROM Point */                   {AccessPattern::Point,                   AccessPattern::SequentiallyIncreasing,  AccessPattern::MonotonicallyIncreasing, AccessPattern::SequentiallyDecreasing,  AccessPattern::MonotonicallyDecreasing},  // NOLINT
-    /* FROM SequentiallyIncreasing */  {AccessPattern::SequentiallyIncreasing,  AccessPattern::SequentiallyIncreasing,  AccessPattern::MonotonicallyIncreasing, AccessPattern::Random,                  AccessPattern::Random},                   // NOLINT
-    /* FROM MonotonicallyIncreasing */ {AccessPattern::MonotonicallyIncreasing, AccessPattern::MonotonicallyIncreasing, AccessPattern::MonotonicallyIncreasing, AccessPattern::Random,                  AccessPattern::Random},                   // NOLINT
-    /* FROM SequentiallyDecreasing */  {AccessPattern::SequentiallyDecreasing,  AccessPattern::Random,                  AccessPattern::Random,                  AccessPattern::SequentiallyDecreasing,  AccessPattern::MonotonicallyDecreasing},  // NOLINT
-    /* FROM MonotonicallyDecreasing */ {AccessPattern::MonotonicallyDecreasing, AccessPattern::Random,                  AccessPattern::Random,                  AccessPattern::MonotonicallyDecreasing, AccessPattern::MonotonicallyDecreasing},  // NOLINT
-    /* FROM Random */                  {AccessPattern::Random,                  AccessPattern::Random,                  AccessPattern::Random,                  AccessPattern::Random,                  AccessPattern::Random}                    // NOLINT
+    //                         Input:   Zero                                    One                                     Positive,                               NegativeOne                             Negative
+    /* FROM Point */                   {AccessPattern::Point,                   AccessPattern::SequentiallyIncreasing,  AccessPattern::MonotonicallyIncreasing, AccessPattern::SequentiallyDecreasing,  AccessPattern::MonotonicallyDecreasing},
+    /* FROM SequentiallyIncreasing */  {AccessPattern::SequentiallyIncreasing,  AccessPattern::SequentiallyIncreasing,  AccessPattern::MonotonicallyIncreasing, AccessPattern::Random,                  AccessPattern::Random},
+    /* FROM MonotonicallyIncreasing */ {AccessPattern::MonotonicallyIncreasing, AccessPattern::MonotonicallyIncreasing, AccessPattern::MonotonicallyIncreasing, AccessPattern::Random,                  AccessPattern::Random},
+    /* FROM SequentiallyDecreasing */  {AccessPattern::SequentiallyDecreasing,  AccessPattern::Random,                  AccessPattern::Random,                  AccessPattern::SequentiallyDecreasing,  AccessPattern::MonotonicallyDecreasing},
+    /* FROM MonotonicallyDecreasing */ {AccessPattern::MonotonicallyDecreasing, AccessPattern::Random,                  AccessPattern::Random,                  AccessPattern::MonotonicallyDecreasing, AccessPattern::MonotonicallyDecreasing},
+    /* FROM Random */                  {AccessPattern::Random,                  AccessPattern::Random,                  AccessPattern::Random,                  AccessPattern::Random,                  AccessPattern::Random}
   }};
   // clang-format on
+  // NOLINTEND(whitespace/line_length)
 
   const auto max_items_to_compare = std::min(positions.size(), size_t{100});
 

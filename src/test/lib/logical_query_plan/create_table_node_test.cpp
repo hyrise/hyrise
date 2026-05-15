@@ -1,8 +1,9 @@
-#include "base_test.hpp"
+#include <memory>
+#include <stdexcept>
 
+#include "all_type_variant.hpp"
+#include "base_test.hpp"
 #include "logical_query_plan/create_table_node.hpp"
-#include "logical_query_plan/lqp_utils.hpp"
-#include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/static_table_node.hpp"
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
@@ -61,6 +62,10 @@ TEST_F(CreateTableNodeTest, Copy) {
 
 TEST_F(CreateTableNodeTest, NoUniqueColumnCombinations) {
   EXPECT_THROW(create_table_node->unique_column_combinations(), std::logic_error);
+}
+
+TEST_F(CreateTableNodeTest, NoOrderDependencies) {
+  EXPECT_THROW(create_table_node->order_dependencies(), std::logic_error);
 }
 
 }  // namespace hyrise

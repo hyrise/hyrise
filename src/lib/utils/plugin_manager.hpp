@@ -1,7 +1,11 @@
 #pragma once
 
 #include <filesystem>
+#include <memory>
+#include <string>
 #include <unordered_map>
+#include <utility>
+#include <vector>
 
 #include "types.hpp"
 #include "utils/abstract_plugin.hpp"
@@ -9,26 +13,19 @@
 
 namespace hyrise {
 
-struct plugin_name_function_name_hash;
-
 using PluginHandle = void*;
 using PluginName = std::string;
-using UserExecutableFunctionMap = std::unordered_map<std::pair<PluginName, PluginFunctionName>, PluginFunctionPointer,
-                                                     plugin_name_function_name_hash>;
 
-struct PluginHandleWrapper {
-  PluginHandle handle;
-  std::unique_ptr<AbstractPlugin> plugin;
+struct PluginNameFunctionNameHash {
+  size_t operator()(const std::pair<PluginName, PluginFunctionName>& exec_function_identifier) const;
 };
 
-struct plugin_name_function_name_hash {
-  size_t operator()(const std::pair<PluginName, PluginFunctionName>& p) const {
-    auto hash = size_t{0};
-    boost::hash_combine(hash, p.first);
-    boost::hash_combine(hash, p.second);
+using UserExecutableFunctionMap =
+    std::unordered_map<std::pair<PluginName, PluginFunctionName>, PluginFunctionPointer, PluginNameFunctionNameHash>;
 
-    return hash;
-  }
+struct PluginHandleWrapper {
+  PluginHandle handle{};
+  std::unique_ptr<AbstractPlugin> plugin;
 };
 
 class PluginManager : public Noncopyable {
@@ -50,21 +47,22 @@ class PluginManager : public Noncopyable {
   bool has_pre_benchmark_hook(const PluginName& plugin_name) const;
   bool has_post_benchmark_hook(const PluginName& plugin_name) const;
 
-  ~PluginManager();
+  ~PluginManager() override;
+  PluginManager(const PluginManager&) = delete;
+  PluginManager& operator=(const PluginManager&) = delete;
 
  protected:
   PluginManager() = default;
   friend class Hyrise;
 
-  const PluginManager& operator=(const PluginManager&) = delete;
-  PluginManager& operator=(PluginManager&&) = default;
-
+  PluginManager(PluginManager&&) = default;
+  PluginManager& operator=(PluginManager&& other) noexcept;
   std::unordered_map<PluginName, PluginHandleWrapper> _plugins;
   UserExecutableFunctionMap _user_executable_functions;
   std::unordered_map<PluginName, PreBenchmarkHook> _pre_benchmark_hooks;
   std::unordered_map<PluginName, PostBenchmarkHook> _post_benchmark_hooks;
 
-  // This method is called during destruction and stops and unloads all currently loaded plugions.
+  // This method is called during destruction and stops and unloads all currently loaded plugins.
   void _clean_up();
   bool _is_duplicate(const std::unique_ptr<AbstractPlugin>& plugin) const;
   std::unordered_map<PluginName, PluginHandleWrapper>::iterator _unload_and_erase_plugin(

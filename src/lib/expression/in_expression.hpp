@@ -1,5 +1,9 @@
 #pragma once
 
+#include <memory>
+#include <string>
+#include <unordered_map>
+
 #include "abstract_predicate_expression.hpp"
 
 namespace hyrise {

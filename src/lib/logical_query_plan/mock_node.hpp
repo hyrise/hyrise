@@ -3,12 +3,15 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <utility>
+#include <vector>
 
 #include <boost/variant.hpp>
 
 #include "abstract_lqp_node.hpp"
-#include "all_type_variant.hpp"
 #include "storage/constraints/table_key_constraint.hpp"
+#include "storage/constraints/table_order_constraint.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
@@ -38,6 +41,9 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
   // Generates UCCs from table's key constraints and drops UCCs that include pruned columns.
   UniqueColumnCombinations unique_column_combinations() const override;
 
+  // Returns stored ODs and pays respect to pruned columns.
+  OrderDependencies order_dependencies() const override;
+
   /**
    * @defgroup ColumnIDs to be pruned from the mocked Table.
    * Vector passed to `set_pruned_column_ids()` needs to be sorted and unique
@@ -60,6 +66,8 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
   // Returns the specified set of non-trivial FDs.
   FunctionalDependencies non_trivial_functional_dependencies() const override;
 
+  void set_order_constraints(const TableOrderConstraints& order_constraints);
+
   std::optional<std::string> name;
 
  protected:
@@ -76,6 +84,7 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
   std::vector<ColumnID> _pruned_column_ids;
   FunctionalDependencies _functional_dependencies;
   TableKeyConstraints _table_key_constraints;
+  TableOrderConstraints _order_constraints;
 };
 
 }  // namespace hyrise

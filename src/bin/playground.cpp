@@ -2,9 +2,10 @@
 
 #include "types.hpp"
 
-using namespace hyrise;  // NOLINT(build/namespaces)
+using namespace hyrise;
 
 int main() {
-  std::cout << "Hello world!!" << std::endl;
+  const auto world = pmr_string{"world"};
+  std::cout << "Hello " << world << "!\n";
   return 0;
 }

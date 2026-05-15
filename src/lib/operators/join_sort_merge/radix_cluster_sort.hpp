@@ -8,7 +8,7 @@
 #include <utility>
 #include <vector>
 
-#include <boost/sort/sort.hpp>
+#include <boost/sort/pdqsort/pdqsort.hpp>
 
 #include "column_materializer.hpp"
 #include "hyrise.hpp"
@@ -47,7 +47,7 @@ struct RadixClusterOutput {
 template <typename T>
 class RadixClusterSort {
  public:
-  RadixClusterSort(const std::shared_ptr<const Table> left, const std::shared_ptr<const Table> right,
+  RadixClusterSort(const std::shared_ptr<const Table>& left, const std::shared_ptr<const Table>& right,
                    const ColumnIDPair& column_ids, bool equi_case, const bool materialize_null_left,
                    const bool materialize_null_right, size_t cluster_count,
                    OperatorPerformanceData<JoinSortMerge::OperatorSteps>& performance_data)
@@ -60,21 +60,21 @@ class RadixClusterSort {
         _cluster_count{cluster_count},
         _materialize_null_left{materialize_null_left},
         _materialize_null_right{materialize_null_right} {
-    DebugAssert(cluster_count > 0, "cluster_count must be > 0");
-    DebugAssert((cluster_count & (cluster_count - 1)) == 0, "cluster_count must be a power of two");
-    DebugAssert(left, "left input operator is null");
-    DebugAssert(right, "right input operator is null");
-  }
-
-  virtual ~RadixClusterSort() = default;
-
-  template <typename T2>
-  static std::enable_if_t<std::is_integral_v<T2>, size_t> get_radix(T2 value, size_t radix_bitmask) {
-    return static_cast<int64_t>(value) & radix_bitmask;
+    DebugAssert(cluster_count > 0, "cluster_count must be > 0.");
+    DebugAssert((cluster_count & (cluster_count - 1)) == 0, "cluster_count must be a power of two.");
+    DebugAssert(left, "left input operator is null.");
+    DebugAssert(right, "right input operator is null.");
   }
 
   template <typename T2>
-  static std::enable_if_t<!std::is_integral_v<T2>, size_t> get_radix(T2 value, size_t radix_bitmask) {
+    requires(std::is_integral_v<T2>)
+  static size_t get_radix(T2 value, size_t radix_bitmask) {
+    return static_cast<uint64_t>(value) & radix_bitmask;
+  }
+
+  template <typename T2>
+    requires(!std::is_integral_v<T2>)
+  static size_t get_radix(const T2& value, size_t radix_bitmask) {
     PerformanceWarning("Using hash to perform bit_cast/radix partitioning of floating point number and strings");
     return std::hash<T2>{}(value)&radix_bitmask;
   }
@@ -231,7 +231,9 @@ class RadixClusterSort {
   // Performs least significant bit radix clustering which is used in the equi join case.
   MaterializedSegmentList<T> _radix_cluster(const MaterializedSegmentList<T>& input_chunks) {
     auto radix_bitmask = _cluster_count - 1;
-    return _cluster(input_chunks, [radix_bitmask](const T& value) { return get_radix<T>(value, radix_bitmask); });
+    return _cluster(input_chunks, [radix_bitmask](const T& value) {
+      return get_radix<T>(value, radix_bitmask);
+    });
   }
 
   // Picks split values from the given sample values. Each split value denotes the inclusive upper bound of its
@@ -242,7 +244,7 @@ class RadixClusterSort {
   // distances. Repeated values are not removed. Thereby, they have a higher chance of being picked which should
   // cover skewed inputs. However, the final split values
   // are unique. As a consequence, the split value vector might contain less values than `_cluster_count - 1`.
-  const std::vector<T> _pick_split_values(std::vector<T>&& sample_values) const {
+  std::vector<T> _pick_split_values(std::vector<T>&& sample_values) const {
     boost::sort::pdqsort(sample_values.begin(), sample_values.end());
 
     if (sample_values.size() <= _cluster_count - 1) {
@@ -269,7 +271,7 @@ class RadixClusterSort {
   std::pair<MaterializedSegmentList<T>, MaterializedSegmentList<T>> _range_cluster(
       const MaterializedSegmentList<T>& left_input, const MaterializedSegmentList<T>& right_input,
       std::vector<T>&& sample_values) {
-    const std::vector<T> split_values = _pick_split_values(std::move(sample_values));
+    const auto split_values = _pick_split_values(std::move(sample_values));
 
     // Implements range clustering
     auto clusterer = [&split_values](const T& value) {
@@ -300,8 +302,9 @@ class RadixClusterSort {
       const auto cluster_size = clusters[cluster_id].size();
       auto sort_job = [&, cluster_id] {
         auto& cluster = clusters[cluster_id];
-        boost::sort::pdqsort(cluster.begin(), cluster.end(),
-                             [](const auto& left, const auto& right) { return left.value < right.value; });
+        boost::sort::pdqsort(cluster.begin(), cluster.end(), [](const auto& left, const auto& right) {
+          return left.value < right.value;
+        });
       };
 
       if (cluster_size > JoinSortMerge::JOB_SPAWN_THRESHOLD) {
@@ -315,25 +318,22 @@ class RadixClusterSort {
 
  public:
   RadixClusterOutput<T> execute() {
-    RadixClusterOutput<T> output;
+    auto output = RadixClusterOutput<T>{};
+    auto timer = Timer{};
 
-    Timer timer;
-    // Sort the chunks of the input tables in the non-equi cases
-    ColumnMaterializer<T> left_column_materializer(!_equi_case, _materialize_null_left);
+    // Sort the chunks of the input tables iff join is non-equi and when clustering.
+    const auto sort_materialized_chunks = !_equi_case && _cluster_count > 1;
+    auto left_column_materializer = ColumnMaterializer<T>(sort_materialized_chunks, _materialize_null_left);
     auto [materialized_left_segments, null_rows_left, samples_left] =
         left_column_materializer.materialize(_left_input_table, _left_column_id);
     output.null_rows_left = std::move(null_rows_left);
     _performance.set_step_runtime(JoinSortMerge::OperatorSteps::LeftSideMaterializing, timer.lap());
 
-    ColumnMaterializer<T> right_column_materializer(!_equi_case, _materialize_null_right);
+    auto right_column_materializer = ColumnMaterializer<T>(sort_materialized_chunks, _materialize_null_right);
     auto [materialized_right_segments, null_rows_right, samples_right] =
         right_column_materializer.materialize(_right_input_table, _right_column_id);
     output.null_rows_right = std::move(null_rows_right);
     _performance.set_step_runtime(JoinSortMerge::OperatorSteps::RightSideMaterializing, timer.lap());
-
-    // Append right samples to left samples and sort (reserve not necessary when insert can
-    // determine the new capacity from the iterator: https://stackoverflow.com/a/35359472/1147726)
-    samples_left.insert(samples_left.end(), samples_right.begin(), samples_right.end());
 
     if (_cluster_count == 1) {
       output.clusters_left = _concatenate_chunks(materialized_left_segments);
@@ -342,6 +342,10 @@ class RadixClusterSort {
       output.clusters_left = _radix_cluster(materialized_left_segments);
       output.clusters_right = _radix_cluster(materialized_right_segments);
     } else {
+      // Append right samples to left samples and sort (reserve not necessary when insert can
+      // determine the new capacity from the iterator: https://stackoverflow.com/a/35359472/1147726)
+      samples_left.insert(samples_left.end(), samples_right.begin(), samples_right.end());
+
       auto result = _range_cluster(materialized_left_segments, materialized_right_segments, std::move(samples_left));
       output.clusters_left = std::move(result.first);
       output.clusters_right = std::move(result.second);

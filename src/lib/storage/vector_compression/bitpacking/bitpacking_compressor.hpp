@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory>
+
 #include "bitpacking_vector.hpp"
 #include "storage/vector_compression/base_vector_compressor.hpp"
 

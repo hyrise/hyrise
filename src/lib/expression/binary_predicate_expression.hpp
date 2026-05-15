@@ -1,5 +1,9 @@
 #pragma once
 
+#include <memory>
+#include <string>
+#include <unordered_map>
+
 #include "abstract_expression.hpp"
 #include "abstract_predicate_expression.hpp"
 #include "types.hpp"

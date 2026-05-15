@@ -151,9 +151,10 @@ dbg_print(int format, FILE *target, void *data, int len, int sep)
 }
 
 int
-pr_cust(customer_t *c, int mode)
+pr_cust(void *t, int mode)
 {
-static FILE *fp = NULL;
+   static FILE *fp = NULL;
+   customer_t *c = (customer_t *) t;
         
    if (fp == NULL)
         fp = print_prep(CUST, 0);
@@ -179,10 +180,11 @@ static FILE *fp = NULL;
  * print the numbered order 
  */
 int
-pr_order(order_t *o, int mode)
+pr_order(void *t, int mode)
 {
     static FILE *fp_o = NULL;
     static int last_mode = 0;
+    order_t *o = (order_t *) t;
         
     if (fp_o == NULL || mode != last_mode)
         {
@@ -210,11 +212,12 @@ pr_order(order_t *o, int mode)
  * print an order's lineitems
  */
 int
-pr_line(order_t *o, int mode)
+pr_line(void *t, int mode)
 {
     static FILE *fp_l = NULL;
     static int last_mode = 0;
     long      i;
+    order_t *o = (order_t *) t;
         
     if (fp_l == NULL || mode != last_mode)
         {
@@ -253,7 +256,7 @@ pr_line(order_t *o, int mode)
  * print the numbered order *and* its associated lineitems
  */
 int
-pr_order_line(order_t *o, int mode)
+pr_order_line(void *o, int mode)
 {
     tdefs[ORDER].name = tdefs[ORDER_LINE].name;
     pr_order(o, mode);
@@ -266,9 +269,10 @@ pr_order_line(order_t *o, int mode)
  * print the given part
  */
 int
-pr_part(part_t *part, int mode)
+pr_part(void *t, int mode)
 {
-static FILE *p_fp = NULL;
+    static FILE *p_fp = NULL;
+    part_t *part = (part_t *) t;
 
     if (p_fp == NULL)
         p_fp = print_prep(PART, 0);
@@ -292,10 +296,11 @@ static FILE *p_fp = NULL;
  * print the given part's suppliers
  */
 int
-pr_psupp(part_t *part, int mode)
+pr_psupp(void *t, int mode)
 {
     static FILE *ps_fp = NULL;
     long      i;
+    part_t *part = (part_t *) t;
 
     if (ps_fp == NULL)
         ps_fp = print_prep(PSUPP, mode);
@@ -318,7 +323,7 @@ pr_psupp(part_t *part, int mode)
  * print the given part *and* its suppliers
  */
 int
-pr_part_psupp(part_t *part, int mode)
+pr_part_psupp(void *part, int mode)
 {
     tdefs[PART].name = tdefs[PART_PSUPP].name;
     pr_part(part, mode);
@@ -328,9 +333,10 @@ pr_part_psupp(part_t *part, int mode)
 }
 
 int
-pr_supp(supplier_t *supp, int mode)
+pr_supp(void *t, int mode)
 {
-static FILE *fp = NULL;
+   static FILE *fp = NULL;
+   supplier_t *supp = (supplier_t *) t;
         
    if (fp == NULL)
         fp = print_prep(SUPP, mode);
@@ -349,9 +355,10 @@ static FILE *fp = NULL;
 }
 
 int
-pr_nation(code_t *c, int mode)
+pr_nation(void *t, int mode)
 {
-static FILE *fp = NULL;
+   static FILE *fp = NULL;
+   code_t *c = (code_t *) t;
         
    if (fp == NULL)
         fp = print_prep(NATION, mode);
@@ -367,9 +374,10 @@ static FILE *fp = NULL;
 }
 
 int
-pr_region(code_t *c, int mode)
+pr_region(void *t, int mode)
 {
-static FILE *fp = NULL;
+   static FILE *fp = NULL;
+   code_t *c = (code_t *) t;
         
    if (fp == NULL)
         fp = print_prep(REGION, mode);

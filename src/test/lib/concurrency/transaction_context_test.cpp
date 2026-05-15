@@ -1,20 +1,22 @@
 #include <functional>
-#include <limits>
 #include <memory>
 #include <string>
-#include <utility>
-#include <vector>
+#include <unordered_map>
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
-
 #include "concurrency/transaction_context.hpp"
+#include "concurrency/transaction_manager.hpp"
 #include "hyrise.hpp"
+#include "operators/abstract_operator.hpp"
 #include "operators/abstract_read_write_operator.hpp"
 #include "operators/delete.hpp"
 #include "operators/get_table.hpp"
 #include "operators/validate.hpp"
+#include "storage/table.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
+#include "utils/load_table.hpp"
 
 namespace hyrise {
 
@@ -143,10 +145,14 @@ TEST_F(TransactionContextTest, CallbackFiresWhenCommitted) {
   auto context_2 = manager().new_transaction_context(AutoCommit::No);
 
   auto context_1_committed = false;
-  auto callback_1 = [&context_1_committed](TransactionID) { context_1_committed = true; };
+  auto callback_1 = [&context_1_committed](TransactionID) {
+    context_1_committed = true;
+  };
 
   auto context_2_committed = false;
-  auto callback_2 = [&context_2_committed](TransactionID) { context_2_committed = true; };
+  auto callback_2 = [&context_2_committed](TransactionID) {
+    context_2_committed = true;
+  };
 
   context_2->commit_async(callback_2);
   context_1->commit_async(callback_1);

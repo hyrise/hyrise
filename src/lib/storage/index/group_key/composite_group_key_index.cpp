@@ -2,18 +2,24 @@
 
 #include <algorithm>
 #include <climits>
+#include <cstddef>
 #include <cstdint>
 #include <iterator>
 #include <memory>
 #include <numeric>
-#include <string>
 #include <utility>
 #include <vector>
 
+#include "all_type_variant.hpp"
+#include "storage/abstract_segment.hpp"
 #include "storage/base_dictionary_segment.hpp"
-#include "storage/vector_compression/base_compressed_vector.hpp"
+#include "storage/index/abstract_chunk_index.hpp"
+#include "storage/index/chunk_index_map.hpp"
+#include "storage/index/group_key/variable_length_key_base.hpp"
+#include "storage/index/group_key/variable_length_key_store.hpp"
 #include "storage/vector_compression/base_vector_decompressor.hpp"
 #include "storage/vector_compression/fixed_width_integer/fixed_width_integer_utils.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 #include "variable_length_key_proxy.hpp"
 
@@ -21,7 +27,7 @@ namespace hyrise {
 
 size_t CompositeGroupKeyIndex::estimate_memory_consumption(ChunkOffset row_count, ChunkOffset distinct_count,
                                                            uint32_t value_bytes) {
-  return (static_cast<size_t>(row_count) + distinct_count) * sizeof(ChunkOffset) +
+  return ((static_cast<size_t>(row_count) + distinct_count) * sizeof(ChunkOffset)) +
          static_cast<size_t>(distinct_count * value_bytes);
 }
 
@@ -32,9 +38,9 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(
 
   if constexpr (HYRISE_DEBUG) {
     auto first_size = segments_to_index.front()->size();
-    auto all_segments_have_same_size =
-        std::all_of(segments_to_index.cbegin(), segments_to_index.cend(),
-                    [first_size](const auto& segment) { return segment->size() == first_size; });
+    auto all_segments_have_same_size = std::ranges::all_of(segments_to_index, [first_size](const auto& segment) {
+      return segment->size() == first_size;
+    });
 
     Assert(all_segments_have_same_size,
            "CompositeGroupKey requires same length of all segments that should be indexed.");
@@ -54,7 +60,7 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(
 
   // retrieve memory consumption by each concatenated key
   auto bytes_per_key =
-      std::accumulate(_indexed_segments.begin(), _indexed_segments.end(), CompositeKeyLength{0u},
+      std::accumulate(_indexed_segments.begin(), _indexed_segments.end(), CompositeKeyLength{0},
                       [](auto key_length, const auto& segment) {
                         return key_length + byte_width_for_fixed_width_integer_type(*segment->compressed_vector_type());
                       });
@@ -69,12 +75,11 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(
     auto decompressors =
         std::vector<std::pair<size_t, std::unique_ptr<BaseVectorDecompressor>>>(_indexed_segments.size());
 
-    std::transform(
-        _indexed_segments.cbegin(), _indexed_segments.cend(), decompressors.begin(), [](const auto& segment) {
-          const auto byte_width = byte_width_for_fixed_width_integer_type(*segment->compressed_vector_type());
-          auto decompressor = segment->attribute_vector()->create_base_decompressor();
-          return std::make_pair(byte_width, std::move(decompressor));
-        });
+    std::ranges::transform(_indexed_segments, decompressors.begin(), [](const auto& segment) {
+      const auto byte_width = byte_width_for_fixed_width_integer_type(*segment->compressed_vector_type());
+      auto decompressor = segment->attribute_vector()->create_base_decompressor();
+      return std::make_pair(byte_width, std::move(decompressor));
+    });
 
     return decompressors;
   }();
@@ -89,8 +94,9 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(
   }
 
   // sort keys and their positions
-  std::sort(_position_list.begin(), _position_list.end(),
-            [&keys](auto left, auto right) { return keys[left] < keys[right]; });
+  std::ranges::sort(_position_list, [&keys](auto left, auto right) {
+    return keys[left] < keys[right];
+  });
 
   _keys = VariableLengthKeyStore(static_cast<ChunkOffset>(segment_size), bytes_per_key);
   for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(segment_size); ++chunk_offset) {
@@ -107,8 +113,9 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(
   }
   _key_offsets.shrink_to_fit();
 
-  // remove duplicated keys
-  auto unique_keys_end = std::unique(_keys.begin(), _keys.end());
+  // Remove duplicated keys.
+  // NOLINTNEXTLINE(modernize-use-ranges): std::ranges::unique requires additional comparators. Keep it simple here.
+  const auto unique_keys_end = std::unique(_keys.begin(), _keys.end());
   _keys.erase(unique_keys_end, _keys.end());
   _keys.shrink_to_fit();
 }
@@ -157,7 +164,7 @@ VariableLengthKey CompositeGroupKeyIndex::_create_composite_key(const std::vecto
   auto empty_bits = std::accumulate(
       _indexed_segments.cbegin() + static_cast<int64_t>(values.size()), _indexed_segments.cend(), uint8_t{0},
       [](const auto& value, const auto& segment) {
-        return value + byte_width_for_fixed_width_integer_type(*segment->compressed_vector_type()) * CHAR_BIT;
+        return value + (byte_width_for_fixed_width_integer_type(*segment->compressed_vector_type()) * CHAR_BIT);
       });
   result <<= empty_bits;
 
@@ -166,19 +173,20 @@ VariableLengthKey CompositeGroupKeyIndex::_create_composite_key(const std::vecto
 
 AbstractChunkIndex::Iterator CompositeGroupKeyIndex::_get_position_iterator_for_key(
     const VariableLengthKey& key) const {
-  // get an iterator pointing to the search-key in the keystore
-  // (use always lower_bound() since the search method is already handled within creation of composite key)
-  auto key_it = std::lower_bound(_keys.cbegin(), _keys.cend(), key);
+  // Get an iterator pointing to the search-key in the keystore (use always lower_bound() since the search method is
+  // already handled within creation of composite key).
+  // NOLINTNEXTLINE(modernize-use-ranges): iterator is not std::ranges-compliant.
+  const auto key_it = std::lower_bound(_keys.begin(), _keys.end(), key);
   if (key_it == _keys.cend()) {
     return _position_list.cend();
   }
 
-  // get the start position in the position-vector, ie the offset, by getting the offset_iterator for the key
-  // (which is at the same position as the iterator for the key in the keystore)
+  // Get the start position in the position vector, i.e., the offset, by getting the offset_iterator for the key
+  // (which is at the same position as the iterator for the key in the keystore).
   auto offset_it = _key_offsets.cbegin();
   std::advance(offset_it, std::distance(_keys.cbegin(), key_it));
 
-  // get an iterator pointing to that start position
+  // Get an iterator pointing to that start position.
   auto position_it = _position_list.cbegin();
   std::advance(position_it, *offset_it);
 

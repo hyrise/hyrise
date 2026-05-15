@@ -1,11 +1,24 @@
 #include "abstract_benchmark_item_runner.hpp"
 
-#include <boost/algorithm/string.hpp>
+#include <algorithm>
+#include <filesystem>
+#include <format>
+#include <iostream>
+#include <memory>
+#include <optional>
+#include <string>
+#include <tuple>
+#include <utility>
+#include <vector>
 
+#include <boost/algorithm/string/replace.hpp>
+
+#include "benchmark_config.hpp"
 #include "benchmark_sql_executor.hpp"
-#include "sql/sql_pipeline_builder.hpp"
-#include "utils/list_directory.hpp"
+#include "sql/sql_pipeline.hpp"
+#include "utils/assert.hpp"
 #include "utils/load_table.hpp"
+#include "utils/sqlite_wrapper.hpp"
 
 namespace hyrise {
 
@@ -15,56 +28,53 @@ AbstractBenchmarkItemRunner::AbstractBenchmarkItemRunner(const std::shared_ptr<B
 void AbstractBenchmarkItemRunner::load_dedicated_expected_results(
     const std::filesystem::path& expected_results_directory_path) {
   Assert(std::filesystem::is_directory(expected_results_directory_path),
-         "Expected results path (" + expected_results_directory_path.string() + ") has to be a directory.");
-
-  const auto is_tbl_file = [](const std::string& filename) { return boost::algorithm::ends_with(filename, ".tbl"); };
+         std::format("Expected results path '{}' has to be a directory.", expected_results_directory_path.string()));
 
   _dedicated_expected_results.resize(items().size());
 
-  std::cout << "- Loading expected result tables"
-            << "\n";
+  std::cout << "- Loading expected result tables\n";
 
-  for (const auto& entry : list_directory(expected_results_directory_path)) {
-    if (is_tbl_file(entry)) {
-      const auto item_name = entry.stem().string();
+  for (const auto& entry : std::filesystem::directory_iterator(expected_results_directory_path)) {
+    const auto& file_path = entry.path();
+    if (!entry.is_regular_file() || file_path.extension() != ".tbl") {
+      continue;
+    }
 
-      const auto iter = std::find_if(items().cbegin(), items().cend(), [this, &item_name](const auto& item) {
-        return this->item_name(item) == item_name;
-      });
-      if (iter != items().cend()) {
-        std::cout << "-  Loading result table " + entry.string() << "\n";
-        _dedicated_expected_results[*iter] = load_table(entry.string());
-      }
+    const auto item_name = file_path.stem().string();
+    const auto iter = std::find_if(items().cbegin(), items().cend(), [this, &item_name](const auto& item) {
+      return this->item_name(item) == item_name;
+    });
+    if (iter != items().cend()) {
+      std::cout << std::format("-  Loading result table '{}'\n", file_path.string());
+      _dedicated_expected_results[*iter] = load_table(file_path.string());
     }
   }
 }
 
 bool AbstractBenchmarkItemRunner::has_item_without_dedicated_result() {
-  // `_dedicated_expected_results` is either empty if `load_dedicated_expected_results` was not called
-  // or a sparse vector with the same size as `items()`.
+  // `_dedicated_expected_results` is either empty if `load_dedicated_expected_results` was not called or a sparse
+  // vector with the same size as `items()`.
   if (!items().empty() && _dedicated_expected_results.empty()) {
     return true;
   }
-  for (const auto& dedicated_result : _dedicated_expected_results) {
-    if (!dedicated_result) {
-      return true;
-    }
-  }
-  return false;
+
+  return std::ranges::any_of(_dedicated_expected_results, [](const auto& dedicated_result) {
+    return !dedicated_result;
+  });
 }
 
 void AbstractBenchmarkItemRunner::on_tables_loaded() {}
 
 std::tuple<bool, std::vector<SQLPipelineMetrics>, bool> AbstractBenchmarkItemRunner::execute_item(
     const BenchmarkItemID item_id) {
-  std::optional<std::string> visualize_prefix;
+  auto visualize_prefix = std::optional<std::string>{};
   if (_config->enable_visualization) {
     auto name = item_name(item_id);
     boost::replace_all(name, " ", "_");
     visualize_prefix = std::move(name);
   }
 
-  BenchmarkSQLExecutor sql_executor(_sqlite_wrapper, visualize_prefix);
+  auto sql_executor = BenchmarkSQLExecutor(_sqlite_wrapper, visualize_prefix);
   auto success = _on_execute_item(item_id, sql_executor);
   return {success, std::move(sql_executor.metrics), sql_executor.any_verification_failed};
 }
@@ -74,7 +84,7 @@ void AbstractBenchmarkItemRunner::set_sqlite_wrapper(const std::shared_ptr<SQLit
 }
 
 const std::vector<int>& AbstractBenchmarkItemRunner::weights() const {
-  static const std::vector<int> empty_vector;
+  static const auto empty_vector = std::vector<int>{};
   return empty_vector;
 }
 

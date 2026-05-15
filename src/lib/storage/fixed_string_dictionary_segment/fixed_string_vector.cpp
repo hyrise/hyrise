@@ -1,28 +1,34 @@
 #include "fixed_string_vector.hpp"
 
-#include <limits>
-#include <memory>
-#include <sstream>
-#include <string>
-#include <utility>
+#include <cstddef>
+#include <iterator>
 #include <vector>
+// We require this header when we use pmr_string.
+#include <string>  // IWYU pragma: keep
 
+#include "fixed_string.hpp"
+#include "fixed_string_vector_iterator.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 
 namespace hyrise {
 
 FixedStringVector::FixedStringVector(const FixedStringVector& other, const PolymorphicAllocator<char>& allocator)
-    : _string_length(other._string_length), _chars(other._chars, allocator), _size(other._size) {
+    : _chars(other._chars, allocator), _size(other._size), _string_length(other._string_length) {
   // For pmr_vectors, operator= does not change the allocator. As such, we need to set _chars in the initializer list.
   // Otherwise, it would be created using the default allocator and ignore the passed-in allocator.
 }
 
 void FixedStringVector::push_back(const pmr_string& string) {
   Assert(string.size() <= _string_length, "Inserted string is too long to insert in FixedStringVector");
-  const auto pos = _chars.size();
-  // Default value of inserted elements using resize is null terminator ('\0')
-  _chars.resize(_chars.size() + _string_length);
-  string.copy(&_chars[pos], string.size());
+
+  if (_string_length > 0) {
+    const auto pos = _chars.size();
+    // Default value of inserted elements using resize is null terminator ('\0').
+    _chars.resize(_chars.size() + _string_length);
+    string.copy(&_chars[pos], string.size());
+  }
 
   ++_size;
 }
@@ -32,7 +38,7 @@ FixedStringIterator<false> FixedStringVector::begin() noexcept {
 }
 
 FixedStringIterator<false> FixedStringVector::end() noexcept {
-  return {_string_length, _chars, _string_length == 0 ? 0 : _chars.size()};
+  return {_string_length, _chars, _string_length == 0 ? 0 : static_cast<ptrdiff_t>(_chars.size())};
 }
 
 FixedStringIterator<true> FixedStringVector::begin() const noexcept {
@@ -40,7 +46,7 @@ FixedStringIterator<true> FixedStringVector::begin() const noexcept {
 }
 
 FixedStringIterator<true> FixedStringVector::end() const noexcept {
-  return {_string_length, _chars, _string_length == 0 ? 0 : _chars.size()};
+  return {_string_length, _chars, _string_length == 0 ? 0 : static_cast<ptrdiff_t>(_chars.size())};
 }
 
 FixedStringIterator<true> FixedStringVector::cbegin() const noexcept {
@@ -48,10 +54,10 @@ FixedStringIterator<true> FixedStringVector::cbegin() const noexcept {
 }
 
 FixedStringIterator<true> FixedStringVector::cend() const noexcept {
-  return {_string_length, _chars, _string_length == 0 ? 0 : _chars.size()};
+  return {_string_length, _chars, _string_length == 0 ? 0 : static_cast<ptrdiff_t>(_chars.size())};
 }
 
-using ReverseIterator = boost::reverse_iterator<FixedStringIterator<false>>;
+using ReverseIterator = std::reverse_iterator<FixedStringIterator<false>>;
 
 ReverseIterator FixedStringVector::rbegin() noexcept {
   return ReverseIterator(end());
@@ -109,7 +115,7 @@ void FixedStringVector::erase(const FixedStringIterator<false> start, const Fixe
   }
 
   auto iter = _chars.begin();
-  std::advance(iter, _chars.size() - count * _string_length);
+  std::advance(iter, _chars.size() - (count * _string_length));
   _chars.erase(iter, _chars.end());
   _size -= count;
 }

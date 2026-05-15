@@ -1,23 +1,18 @@
-#include <iostream>
-#include <map>
+#include <exception>
 #include <memory>
-#include <set>
 #include <string>
-#include <utility>
+#include <vector>
 
 #include "base_test.hpp"
-
-#include "expression/evaluation/like_matcher.hpp"
-#include "operators/abstract_read_only_operator.hpp"
-#include "operators/get_table.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_scan/column_like_table_scan_impl.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk_encoder.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/table.hpp"
+#include "testing_assert.hpp"
 #include "types.hpp"
-
-using namespace std::string_literals;  // NOLINT
+#include "utils/load_table.hpp"
 
 namespace hyrise {
 
@@ -48,10 +43,10 @@ class OperatorsTableScanStringTest : public BaseTest, public ::testing::WithPara
       // Not all tests are parameterized - only those using compressed segments are. We have to ask the testing
       // framework if a parameter is set. Otherwise, GetParam would fail.
       auto test_table_string_compressed = load_table("resources/test_data/tbl/int_string_like.tbl", ChunkOffset{5});
-      std::vector<ChunkEncodingSpec> spec = {
+      const auto specs = std::vector<ChunkEncodingSpec>{
           {SegmentEncodingSpec{EncodingType::Unencoded}, SegmentEncodingSpec{GetParam()}},
           {SegmentEncodingSpec{EncodingType::Unencoded}, SegmentEncodingSpec{GetParam()}}};
-      ChunkEncoder::encode_all_chunks(test_table_string_compressed, spec);
+      ChunkEncoder::encode_all_chunks(test_table_string_compressed, specs);
 
       _tw_string_compressed = std::make_shared<TableWrapper>(test_table_string_compressed);
       _tw_string_compressed->never_clear_output();

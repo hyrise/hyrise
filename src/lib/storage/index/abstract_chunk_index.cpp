@@ -1,12 +1,17 @@
 #include "abstract_chunk_index.hpp"
 
+#include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <vector>
 
+#include "all_type_variant.hpp"
 #include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
-#include "storage/index/b_tree/b_tree_index.hpp"
+#include "storage/index/chunk_index_type.hpp"
 #include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
@@ -19,8 +24,6 @@ size_t AbstractChunkIndex::estimate_memory_consumption(ChunkIndexType type, Chun
       return CompositeGroupKeyIndex::estimate_memory_consumption(row_count, distinct_count, value_bytes);
     case ChunkIndexType::AdaptiveRadixTree:
       return AdaptiveRadixTreeIndex::estimate_memory_consumption(row_count, distinct_count, value_bytes);
-    case ChunkIndexType::BTree:
-      return BTreeIndex::estimate_memory_consumption(row_count, distinct_count, value_bytes);
   }
   Fail("GCC thinks this is reachable.");
 }
@@ -78,7 +81,7 @@ ChunkIndexType AbstractChunkIndex::type() const {
 }
 
 size_t AbstractChunkIndex::memory_consumption() const {
-  size_t bytes{0u};
+  auto bytes = size_t{0};
   bytes += _memory_consumption();
   bytes += sizeof(std::vector<ChunkOffset>);  // _null_positions
   bytes += sizeof(ChunkOffset) * _null_positions.capacity();

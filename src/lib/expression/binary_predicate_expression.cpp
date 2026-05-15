@@ -1,7 +1,15 @@
 #include "binary_predicate_expression.hpp"
 
+#include <algorithm>
+#include <memory>
 #include <sstream>
+#include <string>
+#include <unordered_map>
 
+#include "expression/abstract_expression.hpp"
+#include "expression/abstract_predicate_expression.hpp"
+#include "expression/expression_precedence.hpp"
+#include "operators/abstract_operator.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -12,14 +20,19 @@ BinaryPredicateExpression::BinaryPredicateExpression(const PredicateCondition in
                                                      const std::shared_ptr<AbstractExpression>& right_operand)
     : AbstractPredicateExpression(init_predicate_condition, {left_operand, right_operand}) {
   if constexpr (HYRISE_DEBUG) {
-    const auto valid_predicate_conditions = {PredicateCondition::Equals,      PredicateCondition::NotEquals,
-                                             PredicateCondition::GreaterThan, PredicateCondition::GreaterThanEquals,
-                                             PredicateCondition::LessThan,    PredicateCondition::LessThanEquals,
-                                             PredicateCondition::Like,        PredicateCondition::NotLike};
-    const auto* const it =
-        std::find(valid_predicate_conditions.begin(), valid_predicate_conditions.end(), predicate_condition);
-    Assert(it != valid_predicate_conditions.end(),
-           "Specified PredicateCondition is not valid for a BinaryPredicateExpression");
+    const auto valid_predicate_conditions = {PredicateCondition::Equals,
+                                             PredicateCondition::NotEquals,
+                                             PredicateCondition::GreaterThan,
+                                             PredicateCondition::GreaterThanEquals,
+                                             PredicateCondition::LessThan,
+                                             PredicateCondition::LessThanEquals,
+                                             PredicateCondition::Like,
+                                             PredicateCondition::NotLike,
+                                             PredicateCondition::LikeInsensitive,
+                                             PredicateCondition::NotLikeInsensitive};
+    const auto* const iter = std::ranges::find(valid_predicate_conditions, predicate_condition);
+    Assert(iter != valid_predicate_conditions.end(),
+           "Specified PredicateCondition is not valid for a BinaryPredicateExpression.");
   }
 }
 
@@ -38,7 +51,7 @@ std::shared_ptr<AbstractExpression> BinaryPredicateExpression::_on_deep_copy(
 }
 
 std::string BinaryPredicateExpression::description(const DescriptionMode mode) const {
-  std::stringstream stream;
+  auto stream = std::stringstream{};
 
   stream << _enclose_argument(*left_operand(), mode) << " ";
   stream << predicate_condition << " ";

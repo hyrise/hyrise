@@ -1,17 +1,23 @@
 #include <memory>
-#include <utility>
+#include <stdexcept>
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
-
+#include "expression/expression_functional.hpp"
 #include "hyrise.hpp"
 #include "operators/get_table.hpp"
 #include "operators/join_nested_loop.hpp"
 #include "operators/operator_join_predicate.hpp"
-#include "operators/print.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/union_positions.hpp"
+#include "storage/chunk.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/reference_segment.hpp"
+#include "storage/table_column_definition.hpp"
+#include "testing_assert.hpp"
+#include "types.hpp"
+#include "utils/load_table.hpp"
 
 namespace hyrise {
 
@@ -27,8 +33,8 @@ class UnionPositionsTest : public BaseTest {
     Hyrise::get().storage_manager.add_table("int_int",
                                             load_table("resources/test_data/tbl/int_int.tbl", ChunkOffset{2}));
 
-    _int_column_0_non_nullable = pqp_column_(ColumnID{0}, DataType::Int, false, "");
-    _float_column_1_non_nullable = pqp_column_(ColumnID{1}, DataType::Float, false, "");
+    _int_column_0_non_nullable = pqp_column_(ColumnID{0}, DataType::Int, "");
+    _float_column_1_non_nullable = pqp_column_(ColumnID{1}, DataType::Float, "");
   }
 
   std::shared_ptr<Table> _table_10_ints;
@@ -194,7 +200,7 @@ TEST_F(UnionPositionsTest, MultipleReferencedTables) {
                                        OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals});
 
   auto table_scan_a_op =
-      std::make_shared<TableScan>(join, greater_than_equals_(pqp_column_(ColumnID{3}, DataType::Int, false, ""), 2));
+      std::make_shared<TableScan>(join, greater_than_equals_(pqp_column_(ColumnID{3}, DataType::Int, ""), 2));
   auto table_scan_b_op = std::make_shared<TableScan>(join, less_than_(_float_column_1_non_nullable, 457.0));
   auto union_unique_op = std::make_shared<UnionPositions>(table_scan_a_op, table_scan_b_op);
 

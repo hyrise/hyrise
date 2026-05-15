@@ -1,12 +1,15 @@
 #pragma once
 
 #include <iostream>
+#include <memory>
+#include <string>
+#include <unordered_map>
 
 #include "abstract_expression.hpp"
 
 namespace hyrise {
 
-enum class ArithmeticOperator { Addition, Subtraction, Multiplication, Division, Modulo };
+enum class ArithmeticOperator : uint8_t { Addition, Subtraction, Multiplication, Division, Modulo };
 
 std::ostream& operator<<(std::ostream& stream, const ArithmeticOperator arithmetic_operator);
 

@@ -1,13 +1,12 @@
-#include <bitset>
-#include <iostream>
+#include <cstddef>
+#include <cstdint>
 #include <memory>
 
 #include "base_test.hpp"
-
 #include "storage/segment_encoding_utils.hpp"
+#include "storage/vector_compression/base_compressed_vector.hpp"
 #include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 #include "storage/vector_compression/vector_compression.hpp"
-
 #include "types.hpp"
 
 namespace hyrise {
@@ -82,8 +81,9 @@ TEST_P(CompressedVectorTest, DecodeIncreasingSequenceUsingIterators) {
   const auto sequence = this->generate_sequence(4'200, 8u);
   const auto encoded_sequence_base = this->encode(sequence);
 
-  resolve_compressed_vector_type(*encoded_sequence_base,
-                                 [&](auto& encoded_sequence) { compare_using_iterator(encoded_sequence, sequence); });
+  resolve_compressed_vector_type(*encoded_sequence_base, [&](auto& encoded_sequence) {
+    compare_using_iterator(encoded_sequence, sequence);
+  });
 }
 
 TEST_P(CompressedVectorTest, DecodeIncreasingSequenceUsingDecompressor) {
@@ -104,8 +104,9 @@ TEST_P(CompressedVectorTest, DecodeSequenceOfZerosUsingIterators) {
   const auto sequence = pmr_vector<uint32_t>(2'200, 0u);
   const auto encoded_sequence_base = this->encode(sequence);
 
-  resolve_compressed_vector_type(*encoded_sequence_base,
-                                 [&](auto& encoded_sequence) { compare_using_iterator(encoded_sequence, sequence); });
+  resolve_compressed_vector_type(*encoded_sequence_base, [&](auto& encoded_sequence) {
+    compare_using_iterator(encoded_sequence, sequence);
+  });
 }
 
 TEST_P(CompressedVectorTest, DecodeSequenceOfZerosUsingDecompressor) {

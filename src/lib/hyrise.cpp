@@ -1,17 +1,29 @@
 #include "hyrise.hpp"
 
+#include <memory>
+#include <memory_resource>
+#include <utility>
+
+#include "concurrency/transaction_manager.hpp"
+#include "memory/default_memory_resource.hpp"
+#include "scheduler/abstract_scheduler.hpp"
+#include "scheduler/immediate_execution_scheduler.hpp"
+#include "scheduler/topology.hpp"
+#include "storage/storage_manager.hpp"
+#include "utils/log_manager.hpp"
+#include "utils/meta_table_manager.hpp"
+#include "utils/plugin_manager.hpp"
+#include "utils/settings_manager.hpp"
+
 namespace hyrise {
 
 Hyrise::Hyrise() {
-  // The default_memory_resource must be initialized before Hyrise's members so that
-  // it is destructed after them and remains accessible during their deconstruction.
-  // For example, when the StorageManager is destructed, it causes its stored tables
-  // to be deconstructed, too. As these might call deallocate on the
-  // default_memory_resource, it is important that the resource has not been
-  // destructed before. As objects are destructed in the reverse order of their
-  // construction, explicitly initializing the resource first means that it is
-  // destructed last.
-  boost::container::pmr::get_default_resource();
+  // The default_memory_resource must be initialized before Hyrise's members so that it is destructed after them and
+  // remains accessible during their deconstruction. For example, when the StorageManager is destructed, it causes its
+  // stored tables to be deconstructed, too. As these might call deallocate on the default_memory_resource, it is
+  // important that the resource has not been destructed before. As objects are destructed in the reverse order of their
+  // construction, explicitly initializing the resource first means that it is destructed last.
+  std::pmr::set_default_resource(&DefaultResource::get());
 
   storage_manager = StorageManager{};
   plugin_manager = PluginManager{};
@@ -21,6 +33,27 @@ Hyrise::Hyrise() {
   log_manager = LogManager{};
   topology = Topology{};
   _scheduler = std::make_shared<ImmediateExecutionScheduler>();
+}
+
+Hyrise& Hyrise::operator=(Hyrise&& other) noexcept {
+  if (this == &other) {
+    return *this;
+  }
+
+  // It is important to assign these values in the order that the old values of the old instance should be destructed.
+  set_scheduler(other.scheduler());
+  benchmark_runner = std::move(other.benchmark_runner);
+  default_lqp_cache = std::move(other.default_lqp_cache);
+  default_pqp_cache = std::move(other.default_pqp_cache);
+  topology = std::move(other.topology);
+  log_manager = std::move(other.log_manager);
+  settings_manager = std::move(other.settings_manager);
+  meta_table_manager = std::move(other.meta_table_manager);
+  transaction_manager = std::move(other.transaction_manager);
+  plugin_manager = std::move(other.plugin_manager);
+  storage_manager = std::move(other.storage_manager);
+
+  return *this;
 }
 
 void Hyrise::reset() {

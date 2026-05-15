@@ -1,5 +1,7 @@
-#include "base_test.hpp"
+#include <memory>
 
+#include "all_type_variant.hpp"
+#include "base_test.hpp"
 #include "logical_query_plan/data_dependencies/functional_dependency.hpp"
 #include "logical_query_plan/mock_node.hpp"
 
@@ -9,10 +11,13 @@ class FunctionalDependencyTest : public BaseTest {
  public:
   void SetUp() override {
     _mock_node_a = MockNode::make(
-        MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "mock_node_a");
+        MockNode::ColumnDefinitions{
+            {DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}, {DataType::Int, "d"}},
+        "mock_node_a");
     _a = _mock_node_a->get_column("a");
     _b = _mock_node_a->get_column("b");
     _c = _mock_node_a->get_column("c");
+    _d = _mock_node_a->get_column("d");
 
     _mock_node_b =
         MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "x"}, {DataType::Int, "y"}}, "mock_node_b");
@@ -21,20 +26,22 @@ class FunctionalDependencyTest : public BaseTest {
   }
 
  protected:
-  std::shared_ptr<MockNode> _mock_node_a, _mock_node_b;
-  std::shared_ptr<LQPColumnExpression> _a, _b, _c, _x, _y;
+  std::shared_ptr<MockNode> _mock_node_a;
+  std::shared_ptr<MockNode> _mock_node_b;
+  std::shared_ptr<LQPColumnExpression> _a, _b, _c, _d, _x, _y;
 };
 
 TEST_F(FunctionalDependencyTest, Equals) {
   const auto fd_a = FunctionalDependency({_a}, {_b, _c});
   const auto fd_a_b = FunctionalDependency({_a, _b}, {_c});
 
-  // Equal
+  // Equal.
   EXPECT_EQ(fd_a, FunctionalDependency({_a}, {_b, _c}));
   EXPECT_EQ(fd_a, FunctionalDependency({_a}, {_c, _b}));
   EXPECT_EQ(fd_a_b, FunctionalDependency({_a, _b}, {_c}));
   EXPECT_EQ(fd_a_b, FunctionalDependency({_b, _a}, {_c}));
-  // Not Equal
+
+  // Not Equal.
   EXPECT_NE(fd_a, FunctionalDependency({_a}, {_c}));
   EXPECT_NE(fd_a, FunctionalDependency({_a, _x}, {_b, _c}));
   EXPECT_NE(fd_a_b, FunctionalDependency({_a, _b}, {_c, _x}));
@@ -45,7 +52,6 @@ TEST_F(FunctionalDependencyTest, Hash) {
   const auto fd_a = FunctionalDependency({_a}, {_b, _c});
   const auto fd_a_b = FunctionalDependency({_a, _b}, {_c});
 
-  // Equal Hash
   EXPECT_EQ(fd_a.hash(), FunctionalDependency({_a}, {_b, _c}).hash());
   EXPECT_EQ(fd_a.hash(), FunctionalDependency({_a}, {_b}).hash());
   EXPECT_EQ(fd_a.hash(), FunctionalDependency({_a}, {_x, _y}).hash());
@@ -53,14 +59,24 @@ TEST_F(FunctionalDependencyTest, Hash) {
   EXPECT_EQ(fd_a_b.hash(), FunctionalDependency({_b, _a}, {_c}).hash());
   EXPECT_EQ(fd_a_b.hash(), FunctionalDependency({_a, _b}, {_c, _x}).hash());
   EXPECT_EQ(fd_a_b.hash(), FunctionalDependency({_a, _b}, {_x}).hash());
-  // Non-Equal Hash
-  EXPECT_NE(fd_a.hash(), FunctionalDependency({_a, _x}, {_b, _c}).hash());
-  EXPECT_NE(fd_a.hash(), FunctionalDependency({_x}, {_b, _c}).hash());
-  EXPECT_NE(fd_a_b.hash(), FunctionalDependency({_a}, {_c}).hash());
-  EXPECT_NE(fd_a_b.hash(), FunctionalDependency({_a, _b, _x}, {_c}).hash());
 }
 
-TEST_F(FunctionalDependencyTest, InflateFDs) {
+TEST_F(FunctionalDependencyTest, ToStream) {
+  auto stream = std::stringstream{};
+
+  stream << FunctionalDependency{{_a}, {_b}};
+  EXPECT_EQ(stream.str(), "{a} => {b}");
+  stream.str("");
+
+  stream << FunctionalDependency{{_a}, {_b, _c}};
+  EXPECT_EQ(stream.str(), "{a} => {b, c}");
+  stream.str("");
+
+  stream << FunctionalDependency{{_a, _b}, {_c}};
+  EXPECT_EQ(stream.str(), "{a, b} => {c}");
+}
+
+TEST_F(FunctionalDependencyTest, InflateFDsSimple) {
   const auto fd_a = FunctionalDependency({_a}, {_b, _c});
   const auto fd_a_1 = FunctionalDependency({_a}, {_b});
   const auto fd_a_2 = FunctionalDependency({_a}, {_c});
@@ -76,7 +92,38 @@ TEST_F(FunctionalDependencyTest, InflateFDs) {
   EXPECT_TRUE(inflated_fds.contains(fd_x));
 }
 
-TEST_F(FunctionalDependencyTest, DeflateFDs) {
+TEST_F(FunctionalDependencyTest, InflateFDsGenuineAndSpurious) {
+  const auto fd_a_bc = FunctionalDependency({_a}, {_b, _c}, /*is_genuine=*/true);
+  const auto fd_a_bc2 = FunctionalDependency({_a}, {_b, _c, _x}, /*is_genuine=*/false);
+  const auto fd_a_b = FunctionalDependency({_a}, {_b}, /*is_genuine=*/true);
+  const auto fd_a_c = FunctionalDependency({_a}, {_c}, /*is_genuine=*/true);
+  const auto fd_a_x = FunctionalDependency({_a}, {_x}, /*is_genuine=*/false);
+
+  const auto fd_b_ac = FunctionalDependency({_b}, {_a, _c}, /*is_genuine=*/false);
+  const auto fd_b_a = FunctionalDependency({_b}, {_a}, /*is_genuine=*/false);
+  const auto fd_b_c = FunctionalDependency({_b}, {_c}, /*is_genuine=*/false);
+
+  const auto& inflated_fds = inflate_fds({fd_a_bc, fd_a_bc2, fd_b_ac});
+  EXPECT_EQ(inflated_fds.size(), 5);
+  ASSERT_TRUE(inflated_fds.contains(fd_a_b));
+  ASSERT_TRUE(inflated_fds.contains(fd_a_c));
+  ASSERT_TRUE(inflated_fds.contains(fd_a_x));
+  ASSERT_TRUE(inflated_fds.contains(fd_b_c));
+  ASSERT_TRUE(inflated_fds.contains(fd_b_a));
+
+  // Also check that the genuine properties are correct. Note that FDs are not hashed by their genuine
+  // properties, so we cannot check the genuine property of the inflated FDs directly
+  EXPECT_TRUE(inflated_fds.find(fd_a_b)->is_genuine);
+  EXPECT_TRUE(inflated_fds.find(fd_a_c)->is_genuine);
+  EXPECT_FALSE(inflated_fds.find(fd_a_x)->is_genuine);
+  EXPECT_FALSE(inflated_fds.find(fd_b_a)->is_genuine);
+  EXPECT_FALSE(inflated_fds.find(fd_b_c)->is_genuine);
+
+  // An FD with multiple dependents is not inflated.
+  EXPECT_FALSE(inflated_fds.contains(fd_b_ac));
+}
+
+TEST_F(FunctionalDependencyTest, DeflateFDsSimple) {
   const auto fd_a = FunctionalDependency({_a}, {_b, _c});
   const auto fd_a_1 = FunctionalDependency({_a}, {_b});
   const auto fd_a_2 = FunctionalDependency({_a}, {_c});
@@ -86,6 +133,21 @@ TEST_F(FunctionalDependencyTest, DeflateFDs) {
   EXPECT_EQ(deflated_fds.size(), 2);
   EXPECT_TRUE(deflated_fds.contains(fd_a));
   EXPECT_TRUE(deflated_fds.contains(fd_b_c));
+}
+
+TEST_F(FunctionalDependencyTest, DeflateFDsGenuineAndSpurious) {
+  const auto fd_a = FunctionalDependency({_a}, {_b, _c}, /*is_genuine=*/false);
+  const auto fd_a_b = FunctionalDependency({_a}, {_b}, /*is_genuine=*/true);
+  const auto fd_a_c = FunctionalDependency({_a}, {_c}, /*is_genuine=*/false);
+
+  const auto& deflated_fds = deflate_fds({fd_a_b, fd_a_c});
+  EXPECT_EQ(deflated_fds.size(), 2);
+  ASSERT_TRUE(deflated_fds.contains(fd_a));    // We combine the genuine and non-genuine FDs into a non-genuine FD.
+  ASSERT_TRUE(deflated_fds.contains(fd_a_b));  // We keep the genuine FD.
+
+  // Check that the genuine property is correct.
+  EXPECT_FALSE(deflated_fds.find(fd_a)->is_genuine);
+  EXPECT_TRUE(deflated_fds.find(fd_a_b)->is_genuine);
 }
 
 TEST_F(FunctionalDependencyTest, UnionFDsEmpty) {
@@ -122,6 +184,24 @@ TEST_F(FunctionalDependencyTest, UnionFDsRemoveDuplicates) {
   EXPECT_TRUE(fds_unified.contains(fd_b));
 }
 
+TEST_F(FunctionalDependencyTest, UnionFDsGenuineAndSpurious) {
+  const auto fd_a = FunctionalDependency({_a}, {_b}, /*is_genuine=*/true);
+  const auto fd_a_b = FunctionalDependency({_a}, {_b, _c}, /*is_genuine=*/true);
+  const auto fd_a_b_spurious = FunctionalDependency({_a}, {_b, _c}, /*is_genuine=*/false);
+  const auto fd_c_d = FunctionalDependency({_c}, {_d}, /*is_genuine=*/false);
+
+  const auto fds_unified = union_fds({fd_a, fd_a_b}, {fd_a, fd_a_b_spurious, fd_c_d});
+  EXPECT_EQ(fds_unified.size(), 3);
+  ASSERT_TRUE(fds_unified.contains(fd_a));
+  ASSERT_TRUE(fds_unified.contains(fd_a_b));
+  ASSERT_TRUE(fds_unified.contains(fd_c_d));
+
+  // Check that the genuine property is correct.
+  EXPECT_TRUE(fds_unified.find(fd_a)->is_genuine);
+  EXPECT_FALSE(fds_unified.find(fd_a_b)->is_genuine);  // We keep a spurious FD if there is also a genuine one.
+  EXPECT_FALSE(fds_unified.find(fd_c_d)->is_genuine);
+}
+
 TEST_F(FunctionalDependencyTest, IntersectFDsEmpty) {
   const auto fd_x = FunctionalDependency({_x}, {_y});
 
@@ -141,6 +221,26 @@ TEST_F(FunctionalDependencyTest, IntersectFDs) {
   EXPECT_EQ(intersected_fds.size(), 2);
   EXPECT_TRUE(intersected_fds.contains(fd_a_b));
   EXPECT_TRUE(intersected_fds.contains(fd_a_2));
+}
+
+TEST_F(FunctionalDependencyTest, IntersectFDsGenuineAndSpurious) {
+  const auto fd_a = FunctionalDependency({_a},
+                                         {
+                                             _b,
+                                         },
+                                         /*is_genuine=*/true);
+  const auto fd_a_b = FunctionalDependency({_a}, {_b, _c}, /*is_genuine=*/true);
+  const auto fd_a_b_spurious = FunctionalDependency({_a}, {_b, _c}, /*is_genuine=*/false);
+  const auto fd_c_d = FunctionalDependency({_c}, {_d}, /*is_genuine=*/false);
+
+  const auto intersected_fds = intersect_fds({fd_a, fd_a_b}, {fd_a, fd_a_b_spurious, fd_c_d});
+  EXPECT_EQ(intersected_fds.size(), 2);
+  ASSERT_TRUE(intersected_fds.contains(fd_a));
+  ASSERT_TRUE(intersected_fds.contains(fd_a_b));
+
+  // Check that the genuine property is correct.
+  EXPECT_TRUE(intersected_fds.find(fd_a)->is_genuine);
+  EXPECT_FALSE(intersected_fds.find(fd_a_b)->is_genuine);  // We keep a spurious FD if there is also a genuine one.
 }
 
 }  // namespace hyrise

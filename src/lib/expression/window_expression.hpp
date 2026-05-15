@@ -1,10 +1,14 @@
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <vector>
 #pragma once
 
 #include "abstract_expression.hpp"
 
 namespace hyrise {
 
-enum class FrameBoundType { Preceding, Following, CurrentRow };
+enum class FrameBoundType : uint8_t { Preceding, Following, CurrentRow };
 std::ostream& operator<<(std::ostream& stream, const FrameBoundType frame_bound_type);
 
 struct FrameBound {
@@ -23,7 +27,7 @@ struct FrameBound {
 
 std::ostream& operator<<(std::ostream& stream, const FrameBound& frame_bound);
 
-enum class FrameType { Rows, Range, Groups };
+enum class FrameType : uint8_t { Rows, Range, Groups };
 std::ostream& operator<<(std::ostream& stream, const FrameType frame_type);
 
 struct FrameDescription {
@@ -50,9 +54,9 @@ std::ostream& operator<<(std::ostream& stream, const FrameDescription& frame_des
  */
 class WindowExpression : public AbstractExpression {
  public:
-  WindowExpression(std::vector<std::shared_ptr<AbstractExpression>>&& partition_by_expressions,
-                   std::vector<std::shared_ptr<AbstractExpression>>&& order_by_expressions,
-                   std::vector<SortMode>&& init_sort_modes, FrameDescription&& init_frame_description);
+  WindowExpression(const std::vector<std::shared_ptr<AbstractExpression>>& partition_by_expressions,
+                   const std::vector<std::shared_ptr<AbstractExpression>>& order_by_expressions,
+                   std::vector<SortMode>&& init_sort_modes, const FrameDescription init_frame_description);
 
   std::string description(const DescriptionMode mode) const override;
   DataType data_type() const override;

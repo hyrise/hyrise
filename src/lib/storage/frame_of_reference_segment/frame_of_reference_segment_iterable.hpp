@@ -1,12 +1,18 @@
 #pragma once
 
+#include <memory>
 #include <type_traits>
+#include <utility>
 
 #include "storage/abstract_segment.hpp"
 #include "storage/frame_of_reference_segment.hpp"
 #include "storage/segment_iterables.hpp"
 #include "storage/vector_compression/resolve_compressed_vector_type.hpp"
+#include "utils/assert.hpp"
 
+// Our function naming for iterables is not correct. `_on_with` is a public function and should not start with `_`,
+// whereas the iterator functions should start with `_` as they are private (but can't, because boost requires them).
+// NOLINTBEGIN(readability-identifier-naming)
 namespace hyrise {
 
 template <typename T>
@@ -22,14 +28,25 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
     resolve_compressed_vector_type(_segment.offset_values(), [&](const auto& offset_values) {
       using OffsetValueDecompressor = std::decay_t<decltype(offset_values.create_decompressor())>;
 
-      auto begin = Iterator<OffsetValueDecompressor>{&_segment.block_minima(), &_segment.null_values(),
-                                                     offset_values.create_decompressor(), ChunkOffset{0}};
+      const auto& null_values = _segment.null_values();
+      if (null_values) {
+        auto begin = Iterator<OffsetValueDecompressor>{&_segment.block_minima(), &*null_values,
+                                                       offset_values.create_decompressor(), ChunkOffset{0}};
 
-      auto end = Iterator<OffsetValueDecompressor>{&_segment.block_minima(), &_segment.null_values(),
-                                                   offset_values.create_decompressor(),
-                                                   static_cast<ChunkOffset>(_segment.size())};
+        auto end = Iterator<OffsetValueDecompressor>{&_segment.block_minima(), &*null_values,
+                                                     offset_values.create_decompressor(),
+                                                     static_cast<ChunkOffset>(_segment.size())};
 
-      functor(begin, end);
+        functor(begin, end);
+      } else {
+        auto begin = NonNullIterator<OffsetValueDecompressor>{&_segment.block_minima(),
+                                                              offset_values.create_decompressor(), ChunkOffset{0}};
+
+        auto end = NonNullIterator<OffsetValueDecompressor>{
+            &_segment.block_minima(), offset_values.create_decompressor(), static_cast<ChunkOffset>(_segment.size())};
+
+        functor(begin, end);
+      }
     });
   }
 
@@ -40,15 +57,28 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
       using OffsetValueDecompressor = std::decay_t<decltype(offset_values.create_decompressor())>;
       using PosListIteratorType = std::decay_t<decltype(position_filter->cbegin())>;
 
-      auto begin = PointAccessIterator<OffsetValueDecompressor, PosListIteratorType>{
-          &_segment.block_minima(), &_segment.null_values(), offset_values.create_decompressor(),
-          position_filter->cbegin(), position_filter->cbegin()};
+      const auto& null_values = _segment.null_values();
+      if (null_values) {
+        auto begin = PointAccessIterator<OffsetValueDecompressor, PosListIteratorType>{
+            &_segment.block_minima(), &*null_values, offset_values.create_decompressor(), position_filter->cbegin(),
+            position_filter->cbegin()};
 
-      auto end = PointAccessIterator<OffsetValueDecompressor, PosListIteratorType>{
-          &_segment.block_minima(), &_segment.null_values(), offset_values.create_decompressor(),
-          position_filter->cbegin(), position_filter->cend()};
+        auto end = PointAccessIterator<OffsetValueDecompressor, PosListIteratorType>{
+            &_segment.block_minima(), &*null_values, offset_values.create_decompressor(), position_filter->cbegin(),
+            position_filter->cend()};
 
-      functor(begin, end);
+        functor(begin, end);
+      } else {
+        auto begin = NonNullPointAccessIterator<OffsetValueDecompressor, PosListIteratorType>{
+            &_segment.block_minima(), offset_values.create_decompressor(), position_filter->cbegin(),
+            position_filter->cbegin()};
+
+        auto end = NonNullPointAccessIterator<OffsetValueDecompressor, PosListIteratorType>{
+            &_segment.block_minima(), offset_values.create_decompressor(), position_filter->cbegin(),
+            position_filter->cend()};
+
+        functor(begin, end);
+      }
     });
   }
 
@@ -59,18 +89,72 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
  private:
   const FrameOfReferenceSegment<T>& _segment;
 
- private:
   template <typename OffsetValueDecompressor>
   class Iterator : public AbstractSegmentIterator<Iterator<OffsetValueDecompressor>, SegmentPosition<T>> {
    public:
     using ValueType = T;
     using IterableType = FrameOfReferenceSegmentIterable<T>;
 
-   public:
-    explicit Iterator(const pmr_vector<T>* block_minima, const std::optional<pmr_vector<bool>>* null_values,
+    explicit Iterator(const pmr_vector<T>* block_minima, const pmr_vector<bool>* null_values,
                       OffsetValueDecompressor offset_value_decompressor, ChunkOffset chunk_offset)
         : _block_minima{block_minima},
           _null_values{null_values},
+          _offset_value_decompressor{std::move(offset_value_decompressor)},
+          _chunk_offset{chunk_offset} {
+      DebugAssert(offset_value_decompressor.size() == null_values->size(),
+                  "The null value vector should have the same lenght as the offset vector.");
+    }
+
+   private:
+    friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
+
+    void increment() {
+      ++_chunk_offset;
+    }
+
+    void decrement() {
+      --_chunk_offset;
+    }
+
+    void advance(std::ptrdiff_t distance) {
+      _chunk_offset += distance;
+    }
+
+    bool equal(const Iterator& other) const {
+      return _chunk_offset == other._chunk_offset;
+    }
+
+    std::ptrdiff_t distance_to(const Iterator& other) const {
+      return static_cast<std::ptrdiff_t>(other._chunk_offset) - _chunk_offset;
+    }
+
+    SegmentPosition<T> dereference() const {
+      static constexpr auto block_size = FrameOfReferenceSegment<T>::BLOCK_SIZE;
+
+      const auto is_null = (*_null_values)[_chunk_offset];
+      const auto block_minimum = (*_block_minima)[_chunk_offset / block_size];
+      const auto offset_value = _offset_value_decompressor.get(_chunk_offset);
+      const auto value = static_cast<T>(offset_value) + block_minimum;
+
+      return SegmentPosition<T>{value, is_null, _chunk_offset};
+    }
+
+    const pmr_vector<T>* _block_minima;
+    const pmr_vector<bool>* _null_values;
+    mutable OffsetValueDecompressor _offset_value_decompressor;
+    ChunkOffset _chunk_offset;
+  };
+
+  template <typename OffsetValueDecompressor>
+  class NonNullIterator
+      : public AbstractSegmentIterator<NonNullIterator<OffsetValueDecompressor>, NonNullSegmentPosition<T>> {
+   public:
+    using ValueType = T;
+    using IterableType = FrameOfReferenceSegmentIterable<T>;
+
+    explicit NonNullIterator(const pmr_vector<T>* block_minima, OffsetValueDecompressor offset_value_decompressor,
+                             ChunkOffset chunk_offset)
+        : _block_minima{block_minima},
           _offset_value_decompressor{std::move(offset_value_decompressor)},
           _chunk_offset{chunk_offset} {}
 
@@ -85,32 +169,29 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
       --_chunk_offset;
     }
 
-    void advance(std::ptrdiff_t n) {
-      _chunk_offset += n;
+    void advance(std::ptrdiff_t distance) {
+      _chunk_offset += distance;
     }
 
-    bool equal(const Iterator& other) const {
+    bool equal(const NonNullIterator& other) const {
       return _chunk_offset == other._chunk_offset;
     }
 
-    std::ptrdiff_t distance_to(const Iterator& other) const {
+    std::ptrdiff_t distance_to(const NonNullIterator& other) const {
       return static_cast<std::ptrdiff_t>(other._chunk_offset) - _chunk_offset;
     }
 
-    SegmentPosition<T> dereference() const {
-      static constexpr auto block_size = FrameOfReferenceSegment<T>::block_size;
+    NonNullSegmentPosition<T> dereference() const {
+      static constexpr auto block_size = FrameOfReferenceSegment<T>::BLOCK_SIZE;
 
-      const auto is_null = *_null_values ? (**_null_values)[_chunk_offset] : false;
       const auto block_minimum = (*_block_minima)[_chunk_offset / block_size];
       const auto offset_value = _offset_value_decompressor.get(_chunk_offset);
       const auto value = static_cast<T>(offset_value) + block_minimum;
 
-      return SegmentPosition<T>{value, is_null, _chunk_offset};
+      return NonNullSegmentPosition<T>{value, _chunk_offset};
     }
 
-   private:
     const pmr_vector<T>* _block_minima;
-    const std::optional<pmr_vector<bool>>* _null_values;
     mutable OffsetValueDecompressor _offset_value_decompressor;
     ChunkOffset _chunk_offset;
   };
@@ -123,7 +204,7 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
     using ValueType = T;
     using IterableType = FrameOfReferenceSegmentIterable<T>;
 
-    PointAccessIterator(const pmr_vector<T>* block_minima, const std::optional<pmr_vector<bool>>* null_values,
+    PointAccessIterator(const pmr_vector<T>* block_minima, const pmr_vector<bool>* null_values,
                         OffsetValueDecompressor offset_value_decompressor, PosListIteratorType position_filter_begin,
                         PosListIteratorType position_filter_it)
         : AbstractPointAccessSegmentIterator<PointAccessIterator<OffsetValueDecompressor, PosListIteratorType>,
@@ -137,12 +218,12 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
     SegmentPosition<T> dereference() const {
-      static constexpr auto block_size = FrameOfReferenceSegment<T>::block_size;
+      static constexpr auto block_size = FrameOfReferenceSegment<T>::BLOCK_SIZE;
 
-      const auto& chunk_offsets = this->chunk_offsets();
+      const auto& chunk_offsets = this->_chunk_offsets();
       const auto current_offset = chunk_offsets.offset_in_referenced_chunk;
 
-      const auto is_null = *_null_values ? (**_null_values)[current_offset] : false;
+      const auto is_null = (*_null_values)[current_offset];
       const auto block_minimum = (*_block_minima)[current_offset / block_size];
       const auto offset_value = _offset_value_decompressor.get(current_offset);
       const auto value = static_cast<T>(offset_value) + block_minimum;
@@ -150,11 +231,50 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
       return SegmentPosition<T>{value, is_null, chunk_offsets.offset_in_poslist};
     }
 
-   private:
     const pmr_vector<T>* _block_minima;
-    const std::optional<pmr_vector<bool>>* _null_values;
+    const pmr_vector<bool>* _null_values;
+    mutable OffsetValueDecompressor _offset_value_decompressor;
+  };
+
+  template <typename OffsetValueDecompressor, typename PosListIteratorType>
+  class NonNullPointAccessIterator : public AbstractPointAccessSegmentIterator<
+                                         NonNullPointAccessIterator<OffsetValueDecompressor, PosListIteratorType>,
+                                         NonNullSegmentPosition<T>, PosListIteratorType> {
+   public:
+    using ValueType = T;
+    using IterableType = FrameOfReferenceSegmentIterable<T>;
+
+    NonNullPointAccessIterator(const pmr_vector<T>* block_minima, OffsetValueDecompressor offset_value_decompressor,
+                               PosListIteratorType position_filter_begin, PosListIteratorType position_filter_it)
+        : AbstractPointAccessSegmentIterator<NonNullPointAccessIterator<OffsetValueDecompressor, PosListIteratorType>,
+                                             NonNullSegmentPosition<T>, PosListIteratorType>{std::move(
+                                                                                                 position_filter_begin),
+                                                                                             std::move(
+                                                                                                 position_filter_it)},
+          _block_minima{block_minima},
+          _offset_value_decompressor{std::move(offset_value_decompressor)} {}
+
+   private:
+    friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
+
+    NonNullSegmentPosition<T> dereference() const {
+      static constexpr auto block_size = FrameOfReferenceSegment<T>::BLOCK_SIZE;
+
+      const auto& chunk_offsets = this->_chunk_offsets();
+      const auto current_offset = chunk_offsets.offset_in_referenced_chunk;
+
+      const auto block_minimum = (*_block_minima)[current_offset / block_size];
+      const auto offset_value = _offset_value_decompressor.get(current_offset);
+      const auto value = static_cast<T>(offset_value) + block_minimum;
+
+      return NonNullSegmentPosition<T>{value, chunk_offsets.offset_in_poslist};
+    }
+
+    const pmr_vector<T>* _block_minima;
     mutable OffsetValueDecompressor _offset_value_decompressor;
   };
 };
 
 }  // namespace hyrise
+
+// NOLINTEND(readability-identifier-naming)

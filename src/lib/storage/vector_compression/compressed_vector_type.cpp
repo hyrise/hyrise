@@ -1,6 +1,8 @@
 #include "compressed_vector_type.hpp"
 
-#include "magic_enum.hpp"
+#include <ostream>
+
+#include "magic_enum/magic_enum.hpp"
 
 namespace hyrise {
 

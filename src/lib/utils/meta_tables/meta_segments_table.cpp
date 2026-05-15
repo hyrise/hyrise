@@ -1,6 +1,13 @@
 #include "meta_segments_table.hpp"
 
-#include "hyrise.hpp"
+#include <memory>
+#include <string>
+
+#include "all_type_variant.hpp"
+#include "storage/table.hpp"
+#include "storage/table_column_definition.hpp"
+#include "types.hpp"
+#include "utils/meta_tables/abstract_meta_table.hpp"
 #include "utils/meta_tables/segment_meta_data.hpp"
 
 namespace hyrise {
@@ -27,7 +34,7 @@ const std::string& MetaSegmentsTable::name() const {
 }
 
 std::shared_ptr<Table> MetaSegmentsTable::_on_generate() const {
-  auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data, std::nullopt, UseMvcc::Yes);
+  auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data);
   gather_segment_meta_data(output_table, MemoryUsageCalculationMode::Sampled);
 
   return output_table;

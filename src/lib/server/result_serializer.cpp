@@ -1,6 +1,21 @@
 #include "result_serializer.hpp"
+
+#include <cstdint>
+#include <format>
+#include <memory>
+#include <optional>
+#include <string>
+#include <vector>
+
+#include "all_type_variant.hpp"
 #include "lossy_cast.hpp"
+#include "operators/abstract_operator.hpp"
+#include "postgres_protocol_handler.hpp"
 #include "query_handler.hpp"
+#include "storage/chunk.hpp"
+#include "storage/table.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
@@ -119,7 +134,7 @@ std::string ResultSerializer::build_command_complete_message(const OperatorType 
     }
     default:
       // Assuming normal query
-      return "SELECT " + std::to_string(row_count);
+      return std::format("SELECT {}", row_count);
   }
 }
 

@@ -1,9 +1,13 @@
-#include "base_test.hpp"
+#include <memory>
+#include <stdexcept>
+#include <vector>
 
+#include "all_type_variant.hpp"
+#include "base_test.hpp"
 #include "logical_query_plan/create_prepared_plan_node.hpp"
-#include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "storage/prepared_plan.hpp"
+#include "types.hpp"
 #include "utils/string_utils.hpp"
 
 namespace hyrise {
@@ -58,6 +62,10 @@ TEST_F(CreatePreparedPlanNodeTest, NodeExpressions) {
 
 TEST_F(CreatePreparedPlanNodeTest, NoUniqueColumnCombinations) {
   EXPECT_THROW(create_prepared_plan_node->unique_column_combinations(), std::logic_error);
+}
+
+TEST_F(CreatePreparedPlanNodeTest, NoOrderDependencies) {
+  EXPECT_THROW(create_prepared_plan_node->order_dependencies(), std::logic_error);
 }
 
 }  // namespace hyrise

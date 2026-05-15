@@ -1,17 +1,26 @@
 #include "group_key_index.hpp"
 
+#include <cstddef>
+#include <cstdint>
+#include <iterator>
 #include <memory>
+#include <numeric>
+#include <utility>
 #include <vector>
 
+#include "all_type_variant.hpp"
 #include "storage/base_dictionary_segment.hpp"
 #include "storage/index/abstract_chunk_index.hpp"
+#include "storage/index/chunk_index_map.hpp"
 #include "storage/vector_compression/resolve_compressed_vector_type.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
 size_t GroupKeyIndex::estimate_memory_consumption(ChunkOffset row_count, ChunkOffset distinct_count,
                                                   uint32_t /*value_bytes*/) {
-  return row_count * sizeof(ChunkOffset) + distinct_count * sizeof(std::size_t);
+  return (row_count * sizeof(ChunkOffset)) + (distinct_count * sizeof(std::size_t));
 }
 
 GroupKeyIndex::GroupKeyIndex(const std::vector<std::shared_ptr<const AbstractSegment>>& segments_to_index)
@@ -32,7 +41,7 @@ GroupKeyIndex::GroupKeyIndex(const std::vector<std::shared_ptr<const AbstractSeg
   //    Therefore we have `unique_values_count` ValueIDs (NULL-value-id is not included)
   //    for which we want to count the occurrences.
   auto value_histogram = std::vector<ChunkOffset>{
-      _indexed_segment->unique_values_count() + 1u /*to mark the ending position */, ChunkOffset{0}};
+      _indexed_segment->unique_values_count() + 1 /*to mark the ending position */, ChunkOffset{0}};
 
   // 2) Count the occurrences of value-ids: Iterate once over the attribute vector (i.e. value ids)
   //    and count the occurrences of each value id at their respective position in the dictionary,

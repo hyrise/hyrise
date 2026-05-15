@@ -1,5 +1,8 @@
 #pragma once
 
+#include <memory>
+#include <string>
+
 #include "logical_query_plan/abstract_non_query_node.hpp"
 
 namespace hyrise {

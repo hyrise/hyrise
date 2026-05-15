@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <string>
 
 #include "abstract_lqp_node.hpp"
@@ -21,6 +22,8 @@ class LogicalPlanRootNode : public EnableMakeForLQPNode<LogicalPlanRootNode>, pu
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
 
   UniqueColumnCombinations unique_column_combinations() const override;
+
+  OrderDependencies order_dependencies() const override;
 
   FunctionalDependencies non_trivial_functional_dependencies() const override;
 

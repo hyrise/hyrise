@@ -1,21 +1,17 @@
 #pragma once
 
-#include <tbb/concurrent_vector.h>
-
+#include <cstddef>
 #include <cstdint>
-#include <iostream>
+#include <functional>
 #include <limits>
-#include <optional>
+#include <ostream>
 #include <string>
+#include <string_view>
 #include <tuple>
+#include <utility>
 #include <vector>
 
-#include <boost/circular_buffer.hpp>
-#include <boost/container/pmr/polymorphic_allocator.hpp>
-#include <boost/operators.hpp>
-
 #include "strong_typedef.hpp"
-#include "utils/assert.hpp"
 
 /**
  * We use STRONG_TYPEDEF to avoid things like adding chunk ids and value ids. Because implicit constructors are
@@ -46,7 +42,7 @@ STRONG_TYPEDEF(uint32_t, ChunkOffset);
 // std::atomics and not all platforms that Hyrise runs on support atomic 64-bit instructions. Any Intel and AMD CPU
 // since 2010 should work fine. For 64-bit atomics on ARM CPUs, the instruction set should be at least ARMv8.1-A.
 // Earlier instruction sets also work, but might yield less efficient code. More information can be found here:
-// https://community.arm.com/arm-community-blogs/b/tools-software-ides-blog/posts/making-the-most-of-the-arm-architecture-in-gcc-10  // NOLINT
+// https://community.arm.com/arm-community-blogs/b/tools-software-ides-blog/posts/making-the-most-of-the-arm-architecture-in-gcc-10  // NOLINT(whitespace/line_length)
 STRONG_TYPEDEF(uint32_t, CommitID);
 STRONG_TYPEDEF(uint32_t, TransactionID);
 
@@ -56,23 +52,24 @@ STRONG_TYPEDEF(uint16_t, ParameterID);
 
 namespace hyrise {
 
-// Float aliases used in cardinality estimations/statistics
-using Cardinality = float;
-using DistinctCount = float;
-using Selectivity = float;
+// Floating-point aliases used in cardinality estimations/statistics. Single-precision types (a.k.a, float) should be
+// used carefully because they soon reach a point where additions do not increment the value anymore (see #2676).
+using Cardinality = double;
+using DistinctCount = double;
+using Selectivity = double;
 
 // Cost that an AbstractCostModel assigns to an Operator/LQP node. The unit of the Cost is left to the Cost estimator
-// and could be, e.g., "Estimated Runtime" or "Estimated Memory Usage" (though the former is by far the most common)
-using Cost = float;
+// and could be, e.g., "Estimated Runtime" or "Estimated Memory Usage" (though the former is by far the most common).
+using Cost = double;
 
 // We use polymorphic memory resources to allow containers (e.g., vectors, or strings) to retrieve their memory from
 // different memory sources. These sources are, for example, specific NUMA nodes or non-volatile memory. Without PMR,
 // we would need to explicitly make the allocator part of the class. This would make DRAM and NVM containers type-
 // incompatible. Thanks to PMR, the type is erased and both can co-exist.
 //
-// TODO(anyone): replace this with std::pmr once libc++ supports PMR.
 template <typename T>
-using PolymorphicAllocator = boost::container::pmr::polymorphic_allocator<T>;
+using PolymorphicAllocator = std::pmr::polymorphic_allocator<T>;
+using MemoryResource = std::pmr::memory_resource;
 
 // The string type that is used internally to store data. It's hard to draw the line between this and std::string or
 // give advice when to use what. Generally, everything that is user-supplied data (mostly, data stored in a table) is a
@@ -94,9 +91,6 @@ using pmr_string = std::basic_string<char, std::char_traits<char>, PolymorphicAl
 template <typename T>
 using pmr_vector = std::vector<T, PolymorphicAllocator<T>>;
 
-template <typename T>
-using pmr_ring_buffer = boost::circular_buffer<T, PolymorphicAllocator<T>>;
-
 constexpr ChunkOffset INVALID_CHUNK_OFFSET{std::numeric_limits<ChunkOffset::base_type>::max()};
 constexpr ChunkID INVALID_CHUNK_ID{std::numeric_limits<ChunkID::base_type>::max()};
 
@@ -114,15 +108,7 @@ struct RowID {
     return chunk_offset == INVALID_CHUNK_OFFSET;
   }
 
-  // Joins need to use RowIDs as keys for maps.
-  bool operator<(const RowID& other) const {
-    return std::tie(chunk_id, chunk_offset) < std::tie(other.chunk_id, other.chunk_offset);
-  }
-
-  // Useful when comparing a row ID to NULL_ROW_ID
-  bool operator==(const RowID& other) const {
-    return std::tie(chunk_id, chunk_offset) == std::tie(other.chunk_id, other.chunk_offset);
-  }
+  auto operator<=>(const RowID&) const = default;
 
   friend std::ostream& operator<<(std::ostream& stream, const RowID& row_id) {
     stream << "RowID(" << row_id.chunk_id << "," << row_id.chunk_offset << ")";
@@ -140,6 +126,16 @@ constexpr CpuID INVALID_CPU_ID{std::numeric_limits<CpuID::base_type>::max()};
 constexpr WorkerID INVALID_WORKER_ID{std::numeric_limits<WorkerID::base_type>::max()};
 constexpr ColumnID INVALID_COLUMN_ID{std::numeric_limits<ColumnID::base_type>::max()};
 
+// The commit id 0 is used for loading data into a table. It is also used as a start value for the `_cleanup_commit_id`
+// of a chunk. See `Chunk::get_cleanup_commit_id()` for details.
+constexpr CommitID UNSET_COMMIT_ID = CommitID{0};
+// As commit_id=0 for rows indicates that they have been there "from the beginning of time". The first commit id that
+// is used for a transaction is 1.
+constexpr CommitID INITIAL_COMMIT_ID = CommitID{1};
+// The last commit id is reserved for uncommitted changes. It is also used to indicate that a `TableKeyConstraint` is
+// genuine.
+constexpr CommitID MAX_COMMIT_ID = CommitID{std::numeric_limits<CommitID::base_type>::max() - 1};
+
 // TransactionID = 0 means "not set" in the MVCC data. This is the case if the row has (a) just been reserved, but not
 // yet filled with content, (b) been inserted, committed and not marked for deletion, or (c) inserted but deleted in
 // the same transaction (which has not yet committed)
@@ -155,17 +151,13 @@ constexpr RowID NULL_ROW_ID = RowID{INVALID_CHUNK_ID, INVALID_CHUNK_OFFSET};
 
 constexpr ValueID INVALID_VALUE_ID{std::numeric_limits<ValueID::base_type>::max()};
 
-// Get the default pre-allocated capacity of SSO strings. Note that the empty string has an unspecified capacity, so we
-// use a really short one here.
-const size_t SSO_STRING_CAPACITY = pmr_string{"."}.capacity();
-
 // The Scheduler currently supports just these two priorities.
-enum class SchedulePriority {
+enum class SchedulePriority : uint8_t {
   Default = 1,  // Schedule task of normal priority.
   High = 0      // Schedule task of high priority, subject to be preferred in scheduling.
 };
 
-enum class PredicateCondition {
+enum class PredicateCondition : uint8_t {
   Equals,
   NotEquals,
   LessThan,
@@ -180,15 +172,17 @@ enum class PredicateCondition {
   NotIn,
   Like,
   NotLike,
+  LikeInsensitive,
+  NotLikeInsensitive,
   IsNull,
   IsNotNull
 };
 
 // @return whether the PredicateCondition takes exactly two arguments
-bool is_binary_predicate_condition(const PredicateCondition predicate_condition);
+bool is_binary_predicate_condition(PredicateCondition predicate_condition);
 
 // @return whether the PredicateCondition takes exactly two arguments and is not one of LIKE or IN
-bool is_binary_numeric_predicate_condition(const PredicateCondition predicate_condition);
+bool is_binary_numeric_predicate_condition(PredicateCondition predicate_condition);
 
 bool is_between_predicate_condition(PredicateCondition predicate_condition);
 
@@ -197,61 +191,59 @@ bool is_lower_inclusive_between(PredicateCondition predicate_condition);
 bool is_upper_inclusive_between(PredicateCondition predicate_condition);
 
 // ">" becomes "<" etc.
-PredicateCondition flip_predicate_condition(const PredicateCondition predicate_condition);
+PredicateCondition flip_predicate_condition(PredicateCondition predicate_condition);
 
 // ">" becomes "<=" etc.
-PredicateCondition inverse_predicate_condition(const PredicateCondition predicate_condition);
+PredicateCondition inverse_predicate_condition(PredicateCondition predicate_condition);
 
 // Split up, e.g., BetweenUpperExclusive into {GreaterThanEquals, LessThan}
-std::pair<PredicateCondition, PredicateCondition> between_to_conditions(const PredicateCondition predicate_condition);
+std::pair<PredicateCondition, PredicateCondition> between_to_conditions(PredicateCondition predicate_condition);
 
 // Join, e.g., {GreaterThanEquals, LessThan} into BetweenUpperExclusive
-PredicateCondition conditions_to_between(const PredicateCondition lower, const PredicateCondition upper);
+PredicateCondition conditions_to_between(PredicateCondition lower, PredicateCondition upper);
 
 // Let R and S be two tables and we want to perform `R <JoinMode> S ON <condition>`
 // AntiNullAsTrue:    If for a tuple Ri in R, there is a tuple Sj in S so that <condition> is NULL or TRUE, Ri is
 //                      dropped. This behavior mirrors NOT IN.
 // AntiNullAsFalse:   If for a tuple Ri in R, there is a tuple Sj in S so that <condition> is TRUE, Ri is
 //                      dropped. This behavior mirrors NOT EXISTS
-enum class JoinMode { Inner, Left, Right, FullOuter, Cross, Semi, AntiNullAsTrue, AntiNullAsFalse };
+enum class JoinMode : uint8_t { Inner, Left, Right, FullOuter, Cross, Semi, AntiNullAsTrue, AntiNullAsFalse };
 
-bool is_semi_or_anti_join(const JoinMode join_mode);
+bool is_semi_or_anti_join(JoinMode join_mode);
 
 // SQL set operations come in two flavors, with and without `ALL`, e.g., `UNION` and `UNION ALL`.
 // We have a third mode (Positions) that is used to intersect position lists that point to the same table,
 // see union_positions.hpp for details.
-enum class SetOperationMode { Unique, All, Positions };
+enum class SetOperationMode : uint8_t { Unique, All, Positions };
 
-// According to the SQL standard, the position of NULLs is implementation-defined. In Hyrise, NULLs come before all
-// values, both for ascending and descending sorts. See sort.cpp for details.
-enum class SortMode { Ascending, Descending };
+enum class SortMode : uint8_t { AscendingNullsFirst, DescendingNullsFirst, AscendingNullsLast, DescendingNullsLast };
 
-enum class TableType { References, Data };
+enum class TableType : uint8_t { References, Data };
 
-enum class DescriptionMode { SingleLine, MultiLine };
+enum class DescriptionMode : uint8_t { SingleLine, MultiLine };
 
 enum class UseMvcc : bool { Yes = true, No = false };
 
 enum class RollbackReason : bool { User, Conflict };
 
-enum class MemoryUsageCalculationMode { Sampled, Full };
+enum class MemoryUsageCalculationMode : uint8_t { Sampled, Full };
 
 enum class EraseReferencedSegmentType : bool { Yes = true, No = false };
 
-enum class MetaTableChangeType { Insert, Delete, Update };
+enum class MetaTableChangeType : uint8_t { Insert, Delete, Update };
 
 enum class AutoCommit : bool { Yes = true, No = false };
 
-enum class DatetimeComponent { Year, Month, Day, Hour, Minute, Second };
+enum class DatetimeComponent : uint8_t { Year, Month, Day, Hour, Minute, Second };
 
 // Used as a template parameter that is passed whenever we conditionally erase the type of a template. This is done to
 // reduce the compile time at the cost of the runtime performance. Examples are iterators, which are replaced by
 // AnySegmentIterators that use virtual method calls.
-enum class EraseTypes { OnlyInDebugBuild, Always };
+enum class EraseTypes : uint8_t { OnlyInDebugBuild, Always };
 
 // Defines in which order a certain column should be or is sorted.
 struct SortColumnDefinition final {
-  explicit SortColumnDefinition(ColumnID init_column, SortMode init_sort_mode = SortMode::Ascending)
+  explicit SortColumnDefinition(ColumnID init_column, SortMode init_sort_mode = SortMode::AscendingNullsFirst)
       : column(init_column), sort_mode(init_sort_mode) {}
 
   ColumnID column;
@@ -263,13 +255,15 @@ inline bool operator==(const SortColumnDefinition& lhs, const SortColumnDefiniti
 }
 
 class Noncopyable {
+ public:
+  Noncopyable(const Noncopyable&) = delete;
+  Noncopyable& operator=(const Noncopyable&) = delete;
+  virtual ~Noncopyable() = default;
+
  protected:
   Noncopyable() = default;
   Noncopyable(Noncopyable&&) noexcept = default;
   Noncopyable& operator=(Noncopyable&&) noexcept = default;
-  ~Noncopyable() = default;
-  Noncopyable(const Noncopyable&) = delete;
-  const Noncopyable& operator=(const Noncopyable&) = delete;
 };
 
 // Dummy type, can be used to overload functions with a variant accepting a Null value
@@ -293,7 +287,7 @@ template <>
 struct hash<std::basic_string<char, std::char_traits<char>, hyrise::PolymorphicAllocator<char>>> {
   size_t operator()(
       const std::basic_string<char, std::char_traits<char>, hyrise::PolymorphicAllocator<char>>& string) const {
-    return std::hash<std::string_view>{}(string.c_str());
+    return std::hash<std::string_view>{}(string);
   }
 };
 }  // namespace std

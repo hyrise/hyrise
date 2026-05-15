@@ -1,13 +1,25 @@
+#include <algorithm>
 #include <filesystem>
 #include <memory>
+#include <sstream>
+#include <stdexcept>
 #include <string>
+#include <unordered_map>
+#include <utility>
 #include <vector>
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
-
 #include "hyrise.hpp"
+#include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
+#include "statistics/generate_pruning_statistics.hpp"
+#include "statistics/table_statistics.hpp"
+#include "storage/lqp_view.hpp"
+#include "storage/prepared_plan.hpp"
 #include "storage/table.hpp"
+#include "types.hpp"
+#include "utils/load_table.hpp"
 #include "utils/meta_table_manager.hpp"
 
 namespace hyrise {
@@ -51,16 +63,30 @@ TEST_F(StorageManagerTest, AddTableTwice) {
                std::logic_error);
 }
 
-TEST_F(StorageManagerTest, StatisticCreationOnAddTable) {
+TEST_F(StorageManagerTest, StatisticsCreationOnAddTable) {
   auto& sm = Hyrise::get().storage_manager;
   sm.add_table("int_float", load_table("resources/test_data/tbl/int_float.tbl"));
 
   const auto table = sm.get_table("int_float");
-  EXPECT_EQ(table->table_statistics()->row_count, 3.0f);
+  EXPECT_EQ(table->table_statistics()->row_count, 3.0);
   const auto chunk = table->get_chunk(ChunkID{0});
   EXPECT_TRUE(chunk->pruning_statistics());
-  EXPECT_EQ(chunk->pruning_statistics()->at(0)->data_type, DataType::Int);
-  EXPECT_EQ(chunk->pruning_statistics()->at(1)->data_type, DataType::Float);
+  EXPECT_EQ(chunk->pruning_statistics()->at(0)->data_type(), DataType::Int);
+  EXPECT_EQ(chunk->pruning_statistics()->at(1)->data_type(), DataType::Float);
+}
+
+TEST_F(StorageManagerTest, NoSuperfluousStatisticsGeneration) {
+  // Do not re-create table/pruning statistics if the table already has them.
+  const auto table = load_table("resources/test_data/tbl/int_float.tbl");
+  table->set_table_statistics(TableStatistics::from_table(*table));
+  generate_chunk_pruning_statistics(table);
+
+  const auto table_statistics = table->table_statistics();
+  const auto pruning_statistics = table->get_chunk(ChunkID{0})->pruning_statistics();
+
+  Hyrise::get().storage_manager.add_table("int_float", table);
+  EXPECT_EQ(table->table_statistics(), table_statistics);
+  EXPECT_EQ(table->get_chunk(ChunkID{0})->pruning_statistics(), pruning_statistics);
 }
 
 TEST_F(StorageManagerTest, TableNames) {

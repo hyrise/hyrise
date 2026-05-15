@@ -1,47 +1,70 @@
 #include "tpcds_table_generator.hpp"
 
-extern "C" {
-#include <tpcds-kit/tools/dbgen_version.h>
-#include <tpcds-kit/tools/decimal.h>
-#include <tpcds-kit/tools/genrand.h>
-#include <tpcds-kit/tools/nulls.h>
-#include <tpcds-kit/tools/parallel.h>
-#include <tpcds-kit/tools/r_params.h>
-#include <tpcds-kit/tools/tables.h>
-#include <tpcds-kit/tools/tdefs.h>
+#include <algorithm>
+#include <climits>
+#include <cstddef>
+#include <cstdint>
+#include <cstdio>
+#include <filesystem>
+#include <format>
+#include <limits>
+#include <memory>
+#include <optional>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 
-#include <tpcds-kit/tools/w_call_center.h>
-#include <tpcds-kit/tools/w_catalog_page.h>
-#include <tpcds-kit/tools/w_catalog_returns.h>
-#include <tpcds-kit/tools/w_catalog_sales.h>
-#include <tpcds-kit/tools/w_customer.h>
-#include <tpcds-kit/tools/w_customer_address.h>
-#include <tpcds-kit/tools/w_customer_demographics.h>
-#include <tpcds-kit/tools/w_datetbl.h>
-#include <tpcds-kit/tools/w_household_demographics.h>
-#include <tpcds-kit/tools/w_income_band.h>
-#include <tpcds-kit/tools/w_inventory.h>
-#include <tpcds-kit/tools/w_item.h>
-#include <tpcds-kit/tools/w_promotion.h>
-#include <tpcds-kit/tools/w_reason.h>
-#include <tpcds-kit/tools/w_ship_mode.h>
-#include <tpcds-kit/tools/w_store.h>
-#include <tpcds-kit/tools/w_store_returns.h>
-#include <tpcds-kit/tools/w_store_sales.h>
-#include <tpcds-kit/tools/w_timetbl.h>
-#include <tpcds-kit/tools/w_warehouse.h>
-#include <tpcds-kit/tools/w_web_page.h>
-#include <tpcds-kit/tools/w_web_returns.h>
-#include <tpcds-kit/tools/w_web_sales.h>
-#include <tpcds-kit/tools/w_web_site.h>
+extern "C" {
+#include "tpcds-kit/tools/address.h"
+#include "tpcds-kit/tools/columns.h"
+#include "tpcds-kit/tools/date.h"
+#include "tpcds-kit/tools/decimal.h"
+#include "tpcds-kit/tools/dist.h"
+#include "tpcds-kit/tools/genrand.h"
+#include "tpcds-kit/tools/nulls.h"
+#include "tpcds-kit/tools/parallel.h"
+#include "tpcds-kit/tools/porting.h"
+#include "tpcds-kit/tools/r_params.h"
+#include "tpcds-kit/tools/tables.h"
+#include "tpcds-kit/tools/tdefs.h"
+#include "tpcds-kit/tools/w_call_center.h"
+#include "tpcds-kit/tools/w_catalog_page.h"
+#include "tpcds-kit/tools/w_catalog_returns.h"
+#include "tpcds-kit/tools/w_catalog_sales.h"
+#include "tpcds-kit/tools/w_customer.h"
+#include "tpcds-kit/tools/w_customer_address.h"
+#include "tpcds-kit/tools/w_customer_demographics.h"
+#include "tpcds-kit/tools/w_datetbl.h"
+#include "tpcds-kit/tools/w_household_demographics.h"
+#include "tpcds-kit/tools/w_income_band.h"
+#include "tpcds-kit/tools/w_inventory.h"
+#include "tpcds-kit/tools/w_item.h"
+#include "tpcds-kit/tools/w_promotion.h"
+#include "tpcds-kit/tools/w_reason.h"
+#include "tpcds-kit/tools/w_ship_mode.h"
+#include "tpcds-kit/tools/w_store.h"
+#include "tpcds-kit/tools/w_store_returns.h"
+#include "tpcds-kit/tools/w_store_sales.h"
+#include "tpcds-kit/tools/w_timetbl.h"
+#include "tpcds-kit/tools/w_warehouse.h"
+#include "tpcds-kit/tools/w_web_page.h"
+#include "tpcds-kit/tools/w_web_returns.h"
+#include "tpcds-kit/tools/w_web_sales.h"
+#include "tpcds-kit/tools/w_web_site.h"
 }
 
+#include "abstract_table_generator.hpp"
 #include "benchmark_config.hpp"
+#include "storage/constraints/constraint_utils.hpp"
+#include "storage/table.hpp"
 #include "table_builder.hpp"
-#include "utils/timer.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace {
-using namespace hyrise;  // NOLINT
+
+using namespace hyrise;
 
 using tpcds_key_t = int32_t;
 
@@ -61,7 +84,7 @@ void init_tpcds_tools(uint32_t scale_factor, int rng_seed) {
     const auto n_seed = get_int(rng_seed_string.data());
     const auto skip = INT_MAX / MAX_COLUMN;
     for (auto index = 0; index < MAX_COLUMN; ++index) {
-      const auto seed = n_seed + skip * index;
+      const auto seed = n_seed + (skip * index);
       Streams[index].nInitialSeed = seed;
       Streams[index].nSeed = seed;
       Streams[index].nUsed = 0;
@@ -77,7 +100,7 @@ void init_tpcds_tools(uint32_t scale_factor, int rng_seed) {
   auto distributions_value = std::string{"resources/benchmark/tpcds/tpcds.idx"};
   set_str(distributions_string.data(), distributions_value.data());
 
-  for (auto table_id = int{0}; table_id <= MAX_TABLE; ++table_id) {
+  for (auto table_id = int32_t{0}; table_id <= MAX_TABLE; ++table_id) {
     resetSeeds(table_id);
     RNGReset(table_id);
   }
@@ -102,12 +125,12 @@ std::pair<ds_key_t, ds_key_t> prepare_for_table(int table_id) {
 
   if (k_first_row != 1) {
     row_skip(table_id, static_cast<int>(k_first_row - 1));
-    if (tdefs.flags & FL_PARENT) {  // NOLINT
+    if ((static_cast<uint32_t>(tdefs.flags) & uint32_t{FL_PARENT}) != 0) {
       row_skip(tdefs.nParam, static_cast<int>(k_first_row - 1));
     }
   }
 
-  if (tdefs.flags & FL_SMALL) {  // NOLINT
+  if ((static_cast<uint32_t>(tdefs.flags) & uint32_t{FL_SMALL}) != 0) {
     resetCountCount();
   }
 
@@ -131,7 +154,7 @@ pmr_string zip_to_string(int32_t zip) {
 
 // dsdgen deliberately creates NULL values if nullCheck(column_id) is true, resolve functions mimic that
 std::optional<pmr_string> resolve_date_id(int column_id, ds_key_t date_id) {
-  if (nullCheck(column_id) || date_id <= 0) {
+  if (nullCheck(column_id) != 0 || date_id <= 0) {
     return std::nullopt;
   }
 
@@ -149,123 +172,130 @@ std::optional<pmr_string> resolve_date_id(int column_id, ds_key_t date_id) {
 }
 
 std::optional<tpcds_key_t> resolve_key(int column_id, ds_key_t key) {
-  return nullCheck(column_id) || key == -1 ? std::nullopt : std::optional{static_cast<tpcds_key_t>(key)};
+  return nullCheck(column_id) != 0 || key == -1 ? std::nullopt : std::optional{static_cast<tpcds_key_t>(key)};
 }
 
 std::optional<pmr_string> resolve_string(int column_id, pmr_string string) {
-  return nullCheck(column_id) || string.empty() ? std::nullopt : std::optional{std::move(string)};
+  return nullCheck(column_id) != 0 || string.empty() ? std::nullopt : std::optional{std::move(string)};
 }
 
 std::optional<int32_t> resolve_integer(int column_id, int value) {
-  return nullCheck(column_id) ? std::nullopt : std::optional{int32_t{value}};
+  return nullCheck(column_id) != 0 ? std::nullopt : std::optional{int32_t{value}};
 }
 
 std::optional<float> resolve_decimal(int column_id, decimal_t decimal) {
   auto result = 0.0;
   dectof(&result, &decimal);
   // we have to divide by 10 after dectof to get the expected result
-  return nullCheck(column_id) ? std::nullopt : std::optional{static_cast<float>(result / 10)};
+  return nullCheck(column_id) != 0 ? std::nullopt : std::optional{static_cast<float>(result / 10)};
 }
 
 std::optional<float> resolve_gmt_offset(int column_id, int32_t gmt_offset) {
-  return nullCheck(column_id) ? std::nullopt : std::optional{static_cast<float>(gmt_offset)};
+  return nullCheck(column_id) != 0 ? std::nullopt : std::optional{static_cast<float>(gmt_offset)};
 }
 
 std::optional<pmr_string> resolve_street_name(int column_id, const ds_addr_t& address) {
-  return nullCheck(column_id) ? std::nullopt
-         : address.street_name2 == nullptr
-             ? std::optional{pmr_string{address.street_name1}}
-             : std::optional{pmr_string{address.street_name1} + " " + address.street_name2};
+  if (nullCheck(column_id) != 0) {
+    return std::nullopt;
+  }
+
+  if (!address.street_name2) {
+    return pmr_string{address.street_name1};
+  }
+
+  return pmr_string{std::format("{} {}", address.street_name1, address.street_name2)};
 }
 
-// mapping types used by tpcds-dbgen as follows (according to create table statements in tpcds.sql):
-// ds_key_t -> tpcds_key_t
-// int -> int32_t
-// char*, char[], bool, date (ds_key_t as date_id), time (ds_key_t as time_id) -> pmr_string
-// decimal, float -> float
-// ds_addr_t -> corresponding types for types in struct ds_addr_t, see address.h
+// Mapping types used by tpcds-dbgen as follows (according to create table statements in tpcds.sql):
+//   ds_key_t -> tpcds_key_t
+//   int -> int32_t
+//   char*, char[], bool, date (ds_key_t as date_id), time (ds_key_t as time_id) -> pmr_string
+//   decimal, float -> float
+//   ds_addr_t -> corresponding types for types in struct ds_addr_t, see address.h
 
-// in tpcds most columns are nullable, so we pass std::optional<?> as type
+// In TPC-DS, most columns are nullable, so we pass std::optional<?> as type.
 
+// NOLINTBEGIN(whitespace/line_length)
 // clang-format off
-const auto call_center_column_types = boost::hana::tuple<     tpcds_key_t         , pmr_string          , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<int32_t> , std::optional<int32_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<int32_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<int32_t> , std::optional<pmr_string> , std::optional<int32_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<float> , std::optional<float>>(); // NOLINT
-const auto call_center_column_names = boost::hana::make_tuple("cc_call_center_sk" , "cc_call_center_id" , "cc_rec_start_date"       , "cc_rec_end_date"         , "cc_closed_date_sk"        , "cc_open_date_sk"          , "cc_name"                 , "cc_class"                , "cc_employees"         , "cc_sq_ft"             , "cc_hours"                , "cc_manager"              , "cc_mkt_id"            , "cc_mkt_class"            , "cc_mkt_desc"             , "cc_market_manager"       , "cc_division"          , "cc_division_name"        , "cc_company"           , "cc_company_name"         , "cc_street_number"        , "cc_street_name"          , "cc_street_type"          , "cc_suite_number"         , "cc_city"                 , "cc_county"               , "cc_state"                , "cc_zip"                  , "cc_country"              , "cc_gmt_offset"      , "cc_tax_percentage"); // NOLINT
+const auto call_center_column_types = boost::hana::tuple<     tpcds_key_t         , pmr_string          , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<int32_t> , std::optional<int32_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<int32_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<int32_t> , std::optional<pmr_string> , std::optional<int32_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<float> , std::optional<float>>();
+const auto call_center_column_names = boost::hana::make_tuple("cc_call_center_sk" , "cc_call_center_id" , "cc_rec_start_date"       , "cc_rec_end_date"         , "cc_closed_date_sk"        , "cc_open_date_sk"          , "cc_name"                 , "cc_class"                , "cc_employees"         , "cc_sq_ft"             , "cc_hours"                , "cc_manager"              , "cc_mkt_id"            , "cc_mkt_class"            , "cc_mkt_desc"             , "cc_market_manager"       , "cc_division"          , "cc_division_name"        , "cc_company"           , "cc_company_name"         , "cc_street_number"        , "cc_street_name"          , "cc_street_type"          , "cc_suite_number"         , "cc_city"                 , "cc_county"               , "cc_state"                , "cc_zip"                  , "cc_country"              , "cc_gmt_offset"      , "cc_tax_percentage");
 
-const auto catalog_page_column_types = boost::hana::tuple<     tpcds_key_t          , pmr_string           , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<pmr_string> , std::optional<int32_t> , std::optional<int32_t>   , std::optional<pmr_string> , std::optional<pmr_string>>(); // NOLINT
-const auto catalog_page_column_names = boost::hana::make_tuple("cp_catalog_page_sk" , "cp_catalog_page_id" , "cp_start_date_sk"         , "cp_end_date_sk"           , "cp_department"           , "cp_catalog_number"    , "cp_catalog_page_number" , "cp_description"          , "cp_type"); // NOLINT
+const auto catalog_page_column_types = boost::hana::tuple<     tpcds_key_t          , pmr_string           , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<pmr_string> , std::optional<int32_t> , std::optional<int32_t>   , std::optional<pmr_string> , std::optional<pmr_string>>();
+const auto catalog_page_column_names = boost::hana::make_tuple("cp_catalog_page_sk" , "cp_catalog_page_id" , "cp_start_date_sk"         , "cp_end_date_sk"           , "cp_department"           , "cp_catalog_number"    , "cp_catalog_page_number" , "cp_description"          , "cp_type");
 
-const auto catalog_returns_column_types = boost::hana::tuple<     std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , tpcds_key_t  , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , tpcds_key_t       , std::optional<int32_t> , std::optional<float> , std::optional<float> , std::optional<float>    , std::optional<float> , std::optional<float>  , std::optional<float> , std::optional<float> , std::optional<float> , std::optional<float>>(); // NOLINT
-const auto catalog_returns_column_names = boost::hana::make_tuple("cr_returned_date_sk"      , "cr_returned_time_sk"      , "cr_item_sk" , "cr_refunded_customer_sk"  , "cr_refunded_cdemo_sk"     , "cr_refunded_hdemo_sk"     , "cr_refunded_addr_sk"      , "cr_returning_customer_sk" , "cr_returning_cdemo_sk"    , "cr_returning_hdemo_sk"    , "cr_returning_addr_sk"     , "cr_call_center_sk"        , "cr_catalog_page_sk"       , "cr_ship_mode_sk"          , "cr_warehouse_sk"          , "cr_reason_sk"             , "cr_order_number" , "cr_return_quantity"   , "cr_return_amount"   , "cr_return_tax"      , "cr_return_amt_inc_tax" , "cr_fee"             , "cr_return_ship_cost" , "cr_refunded_cash"   , "cr_reversed_charge" , "cr_store_credit"    , "cr_net_loss"); // NOLINT
+const auto catalog_returns_column_types = boost::hana::tuple<     std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , tpcds_key_t  , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , tpcds_key_t       , std::optional<int32_t> , std::optional<float> , std::optional<float> , std::optional<float>    , std::optional<float> , std::optional<float>  , std::optional<float> , std::optional<float> , std::optional<float> , std::optional<float>>();
+const auto catalog_returns_column_names = boost::hana::make_tuple("cr_returned_date_sk"      , "cr_returned_time_sk"      , "cr_item_sk" , "cr_refunded_customer_sk"  , "cr_refunded_cdemo_sk"     , "cr_refunded_hdemo_sk"     , "cr_refunded_addr_sk"      , "cr_returning_customer_sk" , "cr_returning_cdemo_sk"    , "cr_returning_hdemo_sk"    , "cr_returning_addr_sk"     , "cr_call_center_sk"        , "cr_catalog_page_sk"       , "cr_ship_mode_sk"          , "cr_warehouse_sk"          , "cr_reason_sk"             , "cr_order_number" , "cr_return_quantity"   , "cr_return_amount"   , "cr_return_tax"      , "cr_return_amt_inc_tax" , "cr_fee"             , "cr_return_ship_cost" , "cr_refunded_cash"   , "cr_reversed_charge" , "cr_store_credit"    , "cr_net_loss");
 
-const auto catalog_sales_column_types = boost::hana::tuple<     std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , tpcds_key_t  , std::optional<tpcds_key_t> , tpcds_key_t       , std::optional<int32_t> , std::optional<float> , std::optional<float> , std::optional<float> , std::optional<float>  , std::optional<float> , std::optional<float>    , std::optional<float> , std::optional<float> , std::optional<float> , std::optional<float> , std::optional<float> , std::optional<float>  , std::optional<float>   , std::optional<float>       , std::optional<float>>(); // NOLINT
-const auto catalog_sales_column_names = boost::hana::make_tuple("cs_sold_date_sk"          , "cs_sold_time_sk"          , "cs_ship_date_sk"          , "cs_bill_customer_sk"      , "cs_bill_cdemo_sk"         , "cs_bill_hdemo_sk"         , "cs_bill_addr_sk"          , "cs_ship_customer_sk"      , "cs_ship_cdemo_sk"         , "cs_ship_hdemo_sk"         , "cs_ship_addr_sk"          , "cs_call_center_sk"        , "cs_catalog_page_sk"       , "cs_ship_mode_sk"          , "cs_warehouse_sk"          , "cs_item_sk" , "cs_promo_sk"              , "cs_order_number" , "cs_quantity"          , "cs_wholesale_cost"  , "cs_list_price"      , "cs_sales_price"     , "cs_ext_discount_amt" , "cs_ext_sales_price" , "cs_ext_wholesale_cost" , "cs_ext_list_price"  , "cs_ext_tax"         , "cs_coupon_amt"      , "cs_ext_ship_cost"   , "cs_net_paid"        , "cs_net_paid_inc_tax" , "cs_net_paid_inc_ship" , "cs_net_paid_inc_ship_tax" , "cs_net_profit"); // NOLINT
+const auto catalog_sales_column_types = boost::hana::tuple<     std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , tpcds_key_t  , std::optional<tpcds_key_t> , tpcds_key_t       , std::optional<int32_t> , std::optional<float> , std::optional<float> , std::optional<float> , std::optional<float>  , std::optional<float> , std::optional<float>    , std::optional<float> , std::optional<float> , std::optional<float> , std::optional<float> , std::optional<float> , std::optional<float>  , std::optional<float>   , std::optional<float>       , std::optional<float>>();
+const auto catalog_sales_column_names = boost::hana::make_tuple("cs_sold_date_sk"          , "cs_sold_time_sk"          , "cs_ship_date_sk"          , "cs_bill_customer_sk"      , "cs_bill_cdemo_sk"         , "cs_bill_hdemo_sk"         , "cs_bill_addr_sk"          , "cs_ship_customer_sk"      , "cs_ship_cdemo_sk"         , "cs_ship_hdemo_sk"         , "cs_ship_addr_sk"          , "cs_call_center_sk"        , "cs_catalog_page_sk"       , "cs_ship_mode_sk"          , "cs_warehouse_sk"          , "cs_item_sk" , "cs_promo_sk"              , "cs_order_number" , "cs_quantity"          , "cs_wholesale_cost"  , "cs_list_price"      , "cs_sales_price"     , "cs_ext_discount_amt" , "cs_ext_sales_price" , "cs_ext_wholesale_cost" , "cs_ext_list_price"  , "cs_ext_tax"         , "cs_coupon_amt"      , "cs_ext_ship_cost"   , "cs_net_paid"        , "cs_net_paid_inc_tax" , "cs_net_paid_inc_ship" , "cs_net_paid_inc_ship_tax" , "cs_net_profit");
 
-const auto customer_column_types = boost::hana::tuple<     tpcds_key_t     , pmr_string      , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<int32_t>   , std::optional<int32_t>  , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<int32_t> , std::optional<int32_t> , std::optional<int32_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<int32_t>>(); // NOLINT
-const auto customer_column_names = boost::hana::make_tuple("c_customer_sk" , "c_customer_id" , "c_current_cdemo_sk"       , "c_current_hdemo_sk"       , "c_current_addr_sk"        , "c_first_shipto_date_sk" , "c_first_sales_date_sk" , "c_salutation"            , "c_first_name"            , "c_last_name"             , "c_preferred_cust_flag"   , "c_birth_day"          , "c_birth_month"        , "c_birth_year"         , "c_birth_country"         , "c_login"                 , "c_email_address"         , "c_last_review_date"); // NOLINT
+const auto customer_column_types = boost::hana::tuple<     tpcds_key_t     , pmr_string      , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<int32_t>   , std::optional<int32_t>  , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<int32_t> , std::optional<int32_t> , std::optional<int32_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<int32_t>>();
+const auto customer_column_names = boost::hana::make_tuple("c_customer_sk" , "c_customer_id" , "c_current_cdemo_sk"       , "c_current_hdemo_sk"       , "c_current_addr_sk"        , "c_first_shipto_date_sk" , "c_first_sales_date_sk" , "c_salutation"            , "c_first_name"            , "c_last_name"             , "c_preferred_cust_flag"   , "c_birth_day"          , "c_birth_month"        , "c_birth_year"         , "c_birth_country"         , "c_login"                 , "c_email_address"         , "c_last_review_date");
 
-const auto customer_address_column_types = boost::hana::tuple<     tpcds_key_t     , pmr_string      , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<float> , std::optional<pmr_string>>(); // NOLINT
-const auto customer_address_column_names = boost::hana::make_tuple("ca_address_sk" , "ca_address_id" , "ca_street_number"        , "ca_street_name"          , "ca_street_type"          , "ca_suite_number"         , "ca_city"                 , "ca_county"               , "ca_state"                , "ca_zip"                  , "ca_country"              , "ca_gmt_offset"      , "ca_location_type"); // NOLINT
+const auto customer_address_column_types = boost::hana::tuple<     tpcds_key_t     , pmr_string      , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<float> , std::optional<pmr_string>>();
+const auto customer_address_column_names = boost::hana::make_tuple("ca_address_sk" , "ca_address_id" , "ca_street_number"        , "ca_street_name"          , "ca_street_type"          , "ca_suite_number"         , "ca_city"                 , "ca_county"               , "ca_state"                , "ca_zip"                  , "ca_country"              , "ca_gmt_offset"      , "ca_location_type");
 
-const auto customer_demographics_column_types = boost::hana::tuple<     tpcds_key_t  , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<int32_t> , std::optional<pmr_string> , std::optional<int32_t> , std::optional<int32_t>  , std::optional<int32_t>>(); // NOLINT
-const auto customer_demographics_column_names = boost::hana::make_tuple("cd_demo_sk" , "cd_gender"               , "cd_marital_status"       , "cd_education_status"     , "cd_purchase_estimate" , "cd_credit_rating"        , "cd_dep_count"         , "cd_dep_employed_count" , "cd_dep_college_count"); // NOLINT
+const auto customer_demographics_column_types = boost::hana::tuple<     tpcds_key_t  , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<int32_t> , std::optional<pmr_string> , std::optional<int32_t> , std::optional<int32_t>  , std::optional<int32_t>>();
+const auto customer_demographics_column_names = boost::hana::make_tuple("cd_demo_sk" , "cd_gender"               , "cd_marital_status"       , "cd_education_status"     , "cd_purchase_estimate" , "cd_credit_rating"        , "cd_dep_count"         , "cd_dep_employed_count" , "cd_dep_college_count");
 
-const auto date_column_types = boost::hana::tuple<     tpcds_key_t , pmr_string  , std::optional<pmr_string> , std::optional<int32_t> , std::optional<int32_t> , std::optional<int32_t> , std::optional<int32_t> , std::optional<int32_t> , std::optional<int32_t> , std::optional<int32_t> , std::optional<int32_t> , std::optional<int32_t> , std::optional<int32_t> , std::optional<int32_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<int32_t> , std::optional<int32_t> , std::optional<int32_t> , std::optional<int32_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string>>(); // NOLINT
-const auto date_column_names = boost::hana::make_tuple("d_date_sk" , "d_date_id" , "d_date"                  , "d_month_seq"          , "d_week_seq"           , "d_quarter_seq"        , "d_year"               , "d_dow"                , "d_moy"                , "d_dom"                , "d_qoy"                , "d_fy_year"            , "d_fy_quarter_seq"     , "d_fy_week_seq"        , "d_day_name"              , "d_quarter_name"          , "d_holiday"               , "d_weekend"               , "d_following_holiday"     , "d_first_dom"          , "d_last_dom"           , "d_same_day_ly"        , "d_same_day_lq"        , "d_current_day"           , "d_current_week"          , "d_current_month"         , "d_current_quarter"       , "d_current_year"); // NOLINT
+const auto date_column_types = boost::hana::tuple<     tpcds_key_t , pmr_string  , std::optional<pmr_string> , std::optional<int32_t> , std::optional<int32_t> , std::optional<int32_t> , std::optional<int32_t> , std::optional<int32_t> , std::optional<int32_t> , std::optional<int32_t> , std::optional<int32_t> , std::optional<int32_t> , std::optional<int32_t> , std::optional<int32_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<int32_t> , std::optional<int32_t> , std::optional<int32_t> , std::optional<int32_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string>>();
+const auto date_column_names = boost::hana::make_tuple("d_date_sk" , "d_date_id" , "d_date"                  , "d_month_seq"          , "d_week_seq"           , "d_quarter_seq"        , "d_year"               , "d_dow"                , "d_moy"                , "d_dom"                , "d_qoy"                , "d_fy_year"            , "d_fy_quarter_seq"     , "d_fy_week_seq"        , "d_day_name"              , "d_quarter_name"          , "d_holiday"               , "d_weekend"               , "d_following_holiday"     , "d_first_dom"          , "d_last_dom"           , "d_same_day_ly"        , "d_same_day_lq"        , "d_current_day"           , "d_current_week"          , "d_current_month"         , "d_current_quarter"       , "d_current_year");
 
-const auto household_demographics_column_types = boost::hana::tuple<     tpcds_key_t  , std::optional<tpcds_key_t> , std::optional<pmr_string> , std::optional<int32_t> , std::optional<int32_t>>(); // NOLINT
-const auto household_demographics_column_names = boost::hana::make_tuple("hd_demo_sk" , "hd_income_band_sk"        , "hd_buy_potential"        , "hd_dep_count"         , "hd_vehicle_count"); // NOLINT
+const auto household_demographics_column_types = boost::hana::tuple<     tpcds_key_t  , std::optional<tpcds_key_t> , std::optional<pmr_string> , std::optional<int32_t> , std::optional<int32_t>>();
+const auto household_demographics_column_names = boost::hana::make_tuple("hd_demo_sk" , "hd_income_band_sk"        , "hd_buy_potential"        , "hd_dep_count"         , "hd_vehicle_count");
 
-const auto income_band_column_types = boost::hana::tuple<     int32_t             , std::optional<int32_t> , std::optional<int32_t>>(); // NOLINT
-const auto income_band_column_names = boost::hana::make_tuple("ib_income_band_sk" , "ib_lower_bound"       , "ib_upper_bound"); // NOLINT
+const auto income_band_column_types = boost::hana::tuple<     int32_t             , std::optional<int32_t> , std::optional<int32_t>>();
+const auto income_band_column_names = boost::hana::make_tuple("ib_income_band_sk" , "ib_lower_bound"       , "ib_upper_bound");
 
-const auto inventory_column_types = boost::hana::tuple<     tpcds_key_t   , tpcds_key_t   , tpcds_key_t        , std::optional<int32_t>>(); // NOLINT
-const auto inventory_column_names = boost::hana::make_tuple("inv_date_sk" , "inv_item_sk" , "inv_warehouse_sk" , "inv_quantity_on_hand"); // NOLINT
+const auto inventory_column_types = boost::hana::tuple<     tpcds_key_t   , tpcds_key_t   , tpcds_key_t        , std::optional<int32_t>>();
+const auto inventory_column_names = boost::hana::make_tuple("inv_date_sk" , "inv_item_sk" , "inv_warehouse_sk" , "inv_quantity_on_hand");
 
-const auto item_column_types = boost::hana::tuple<     tpcds_key_t , pmr_string  , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<float> , std::optional<float> , std::optional<tpcds_key_t> , std::optional<pmr_string> , std::optional<tpcds_key_t> , std::optional<pmr_string> , std::optional<tpcds_key_t> , std::optional<pmr_string> , std::optional<tpcds_key_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<tpcds_key_t> , std::optional<pmr_string>>(); // NOLINT
-const auto item_column_names = boost::hana::make_tuple("i_item_sk" , "i_item_id" , "i_rec_start_date"        , "i_rec_end_date"          , "i_item_desc"             , "i_current_price"    , "i_wholesale_cost"   , "i_brand_id"               , "i_brand"                 , "i_class_id"               , "i_class"                 , "i_category_id"            , "i_category"              , "i_manufact_id"            , "i_manufact"              , "i_size"                  , "i_formulation"           , "i_color"                 , "i_units"                 , "i_container"             , "i_manager_id"             , "i_product_name"); // NOLINT
+const auto item_column_types = boost::hana::tuple<     tpcds_key_t , pmr_string  , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<float> , std::optional<float> , std::optional<tpcds_key_t> , std::optional<pmr_string> , std::optional<tpcds_key_t> , std::optional<pmr_string> , std::optional<tpcds_key_t> , std::optional<pmr_string> , std::optional<tpcds_key_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<tpcds_key_t> , std::optional<pmr_string>>();
+const auto item_column_names = boost::hana::make_tuple("i_item_sk" , "i_item_id" , "i_rec_start_date"        , "i_rec_end_date"          , "i_item_desc"             , "i_current_price"    , "i_wholesale_cost"   , "i_brand_id"               , "i_brand"                 , "i_class_id"               , "i_class"                 , "i_category_id"            , "i_category"              , "i_manufact_id"            , "i_manufact"              , "i_size"                  , "i_formulation"           , "i_color"                 , "i_units"                 , "i_container"             , "i_manager_id"             , "i_product_name");
 
-const auto promotion_column_types = boost::hana::tuple<     tpcds_key_t  , pmr_string   , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<float> , std::optional<int32_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string>>(); // NOLINT
-const auto promotion_column_names = boost::hana::make_tuple("p_promo_sk" , "p_promo_id" , "p_start_date_sk"          , "p_end_date_sk"            , "p_item_sk"                , "p_cost"             , "p_response_target"    , "p_promo_name"            , "p_channel_dmail"         , "p_channel_email"         , "p_channel_catalog"       , "p_channel_tv"            , "p_channel_radio"         , "p_channel_press"         , "p_channel_event"         , "p_channel_demo"          , "p_channel_details"       , "p_purpose"               , "p_discount_active"); // NOLINT
+const auto promotion_column_types = boost::hana::tuple<     tpcds_key_t  , pmr_string   , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<float> , std::optional<int32_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string>>();
+const auto promotion_column_names = boost::hana::make_tuple("p_promo_sk" , "p_promo_id" , "p_start_date_sk"          , "p_end_date_sk"            , "p_item_sk"                , "p_cost"             , "p_response_target"    , "p_promo_name"            , "p_channel_dmail"         , "p_channel_email"         , "p_channel_catalog"       , "p_channel_tv"            , "p_channel_radio"         , "p_channel_press"         , "p_channel_event"         , "p_channel_demo"          , "p_channel_details"       , "p_purpose"               , "p_discount_active");
 
-const auto reason_column_types = boost::hana::tuple<     tpcds_key_t   , pmr_string    , std::optional<pmr_string>>(); // NOLINT
-const auto reason_column_names = boost::hana::make_tuple("r_reason_sk" , "r_reason_id" , "r_reason_desc"); // NOLINT
+const auto reason_column_types = boost::hana::tuple<     tpcds_key_t   , pmr_string    , std::optional<pmr_string>>();
+const auto reason_column_names = boost::hana::make_tuple("r_reason_sk" , "r_reason_id" , "r_reason_desc");
 
-const auto ship_mode_column_types = boost::hana::tuple<     tpcds_key_t       , pmr_string        , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string>>(); // NOLINT
-const auto ship_mode_column_names = boost::hana::make_tuple("sm_ship_mode_sk" , "sm_ship_mode_id" , "sm_type"                 , "sm_code"                 , "sm_carrier"              , "sm_contract"); // NOLINT
+const auto ship_mode_column_types = boost::hana::tuple<     tpcds_key_t       , pmr_string        , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string>>();
+const auto ship_mode_column_names = boost::hana::make_tuple("sm_ship_mode_sk" , "sm_ship_mode_id" , "sm_type"                 , "sm_code"                 , "sm_carrier"              , "sm_contract");
 
-const auto store_column_types = boost::hana::tuple<     tpcds_key_t  , pmr_string   , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<tpcds_key_t> , std::optional<pmr_string> , std::optional<int32_t> , std::optional<int32_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<int32_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<tpcds_key_t> , std::optional<pmr_string> , std::optional<tpcds_key_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<float> , std::optional<float>>(); // NOLINT
-const auto store_column_names = boost::hana::make_tuple("s_store_sk" , "s_store_id" , "s_rec_start_date"        , "s_rec_end_date"          , "s_closed_date_sk"         , "s_store_name"            , "s_number_employees"   , "s_floor_space"        , "s_hours"                 , "s_manager"               , "s_market_id"          , "s_geography_class"       , "s_market_desc"           , "s_market_manager"        , "s_division_id"            , "s_division_name"         , "s_company_id"             , "s_company_name"          , "s_street_number"         , "s_street_name"           , "s_street_type"           , "s_suite_number"          , "s_city"                  , "s_county"                , "s_state"                 , "s_zip"                   , "s_country"               , "s_gmt_offset"       , "s_tax_precentage"); // NOLINT
+const auto store_column_types = boost::hana::tuple<     tpcds_key_t  , pmr_string   , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<tpcds_key_t> , std::optional<pmr_string> , std::optional<int32_t> , std::optional<int32_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<int32_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<tpcds_key_t> , std::optional<pmr_string> , std::optional<tpcds_key_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<float> , std::optional<float>>();
+const auto store_column_names = boost::hana::make_tuple("s_store_sk" , "s_store_id" , "s_rec_start_date"        , "s_rec_end_date"          , "s_closed_date_sk"         , "s_store_name"            , "s_number_employees"   , "s_floor_space"        , "s_hours"                 , "s_manager"               , "s_market_id"          , "s_geography_class"       , "s_market_desc"           , "s_market_manager"        , "s_division_id"            , "s_division_name"         , "s_company_id"             , "s_company_name"          , "s_street_number"         , "s_street_name"           , "s_street_type"           , "s_suite_number"          , "s_city"                  , "s_county"                , "s_state"                 , "s_zip"                   , "s_country"               , "s_gmt_offset"       , "s_tax_precentage");
 
-const auto store_returns_column_types = boost::hana::tuple<     std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , tpcds_key_t  , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , tpcds_key_t        , std::optional<int32_t> , std::optional<float> , std::optional<float> , std::optional<float>    , std::optional<float> , std::optional<float>  , std::optional<float> , std::optional<float> , std::optional<float> , std::optional<float>>(); // NOLINT
-const auto store_returns_column_names = boost::hana::make_tuple("sr_returned_date_sk"      , "sr_return_time_sk"        , "sr_item_sk" , "sr_customer_sk"           , "sr_cdemo_sk"              , "sr_hdemo_sk"              , "sr_addr_sk"               , "sr_store_sk"              , "sr_reason_sk"             , "sr_ticket_number" , "sr_return_quantity"   , "sr_return_amt"      , "sr_return_tax"      , "sr_return_amt_inc_tax" , "sr_fee"             , "sr_return_ship_cost" , "sr_refunded_cash"   , "sr_reversed_charge" , "sr_store_credit"    , "sr_net_loss"); // NOLINT
+const auto store_returns_column_types = boost::hana::tuple<     std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , tpcds_key_t  , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , tpcds_key_t        , std::optional<int32_t> , std::optional<float> , std::optional<float> , std::optional<float>    , std::optional<float> , std::optional<float>  , std::optional<float> , std::optional<float> , std::optional<float> , std::optional<float>>();
+const auto store_returns_column_names = boost::hana::make_tuple("sr_returned_date_sk"      , "sr_return_time_sk"        , "sr_item_sk" , "sr_customer_sk"           , "sr_cdemo_sk"              , "sr_hdemo_sk"              , "sr_addr_sk"               , "sr_store_sk"              , "sr_reason_sk"             , "sr_ticket_number" , "sr_return_quantity"   , "sr_return_amt"      , "sr_return_tax"      , "sr_return_amt_inc_tax" , "sr_fee"             , "sr_return_ship_cost" , "sr_refunded_cash"   , "sr_reversed_charge" , "sr_store_credit"    , "sr_net_loss");
 
-const auto store_sales_column_types = boost::hana::tuple<     std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , tpcds_key_t  , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , tpcds_key_t        , std::optional<int32_t> , std::optional<float> , std::optional<float> , std::optional<float> , std::optional<float>  , std::optional<float> , std::optional<float>    , std::optional<float> , std::optional<float> , std::optional<float> , std::optional<float> , std::optional<float>  , std::optional<float>>(); // NOLINT
-const auto store_sales_column_names = boost::hana::make_tuple("ss_sold_date_sk"          , "ss_sold_time_sk"          , "ss_item_sk" , "ss_customer_sk"           , "ss_cdemo_sk"              , "ss_hdemo_sk"              , "ss_addr_sk"               , "ss_store_sk"              , "ss_promo_sk"              , "ss_ticket_number" , "ss_quantity"          , "ss_wholesale_cost"  , "ss_list_price"      , "ss_sales_price"     , "ss_ext_discount_amt" , "ss_ext_sales_price" , "ss_ext_wholesale_cost" , "ss_ext_list_price"  , "ss_ext_tax"         , "ss_coupon_amt"      , "ss_net_paid"        , "ss_net_paid_inc_tax" , "ss_net_profit"); // NOLINT
+const auto store_sales_column_types = boost::hana::tuple<     std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , tpcds_key_t  , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , tpcds_key_t        , std::optional<int32_t> , std::optional<float> , std::optional<float> , std::optional<float> , std::optional<float>  , std::optional<float> , std::optional<float>    , std::optional<float> , std::optional<float> , std::optional<float> , std::optional<float> , std::optional<float>  , std::optional<float>>();
+const auto store_sales_column_names = boost::hana::make_tuple("ss_sold_date_sk"          , "ss_sold_time_sk"          , "ss_item_sk" , "ss_customer_sk"           , "ss_cdemo_sk"              , "ss_hdemo_sk"              , "ss_addr_sk"               , "ss_store_sk"              , "ss_promo_sk"              , "ss_ticket_number" , "ss_quantity"          , "ss_wholesale_cost"  , "ss_list_price"      , "ss_sales_price"     , "ss_ext_discount_amt" , "ss_ext_sales_price" , "ss_ext_wholesale_cost" , "ss_ext_list_price"  , "ss_ext_tax"         , "ss_coupon_amt"      , "ss_net_paid"        , "ss_net_paid_inc_tax" , "ss_net_profit");
 
-const auto time_column_types = boost::hana::tuple<     tpcds_key_t      , pmr_string  , std::optional<int32_t> , std::optional<int32_t> , std::optional<int32_t> , std::optional<int32_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string>>(); // NOLINT
-const auto time_column_names = boost::hana::make_tuple("t_time_sk"      , "t_time_id" , "t_time"               , "t_hour"               , "t_minute"             , "t_second"             , "t_am_pm"                 , "t_shift"                 , "t_sub_shift"             , "t_meal_time"); // NOLINT
+const auto time_column_types = boost::hana::tuple<     tpcds_key_t      , pmr_string  , std::optional<int32_t> , std::optional<int32_t> , std::optional<int32_t> , std::optional<int32_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string>>();
+const auto time_column_names = boost::hana::make_tuple("t_time_sk"      , "t_time_id" , "t_time"               , "t_hour"               , "t_minute"             , "t_second"             , "t_am_pm"                 , "t_shift"                 , "t_sub_shift"             , "t_meal_time");
 
-const auto warehouse_column_types = boost::hana::tuple<     tpcds_key_t      , pmr_string       , std::optional<pmr_string> , std::optional<int32_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<float>>(); // NOLINT
-const auto warehouse_column_names = boost::hana::make_tuple("w_warehouse_sk" , "w_warehouse_id" , "w_warehouse_name"        , "w_warehouse_sq_ft"    , "w_street_number"         , "w_street_name"           , "w_street_type"           , "w_suite_number"          , "w_city"                  , "w_county"                , "w_state"                 , "w_zip"                   , "w_country"               , "w_gmt_offset"); // NOLINT
+const auto warehouse_column_types = boost::hana::tuple<     tpcds_key_t      , pmr_string       , std::optional<pmr_string> , std::optional<int32_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<float>>();
+const auto warehouse_column_names = boost::hana::make_tuple("w_warehouse_sk" , "w_warehouse_id" , "w_warehouse_name"        , "w_warehouse_sq_ft"    , "w_street_number"         , "w_street_name"           , "w_street_type"           , "w_suite_number"          , "w_city"                  , "w_county"                , "w_state"                 , "w_zip"                   , "w_country"               , "w_gmt_offset");
 
-const auto web_page_column_types = boost::hana::tuple<     tpcds_key_t      , pmr_string       , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<pmr_string> , std::optional<tpcds_key_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<int32_t> , std::optional<int32_t> , std::optional<int32_t> , std::optional<int32_t>>(); // NOLINT
-const auto web_page_column_names = boost::hana::make_tuple("wp_web_page_sk" , "wp_web_page_id" , "wp_rec_start_date"       , "wp_rec_end_date"         , "wp_creation_date_sk"      , "wp_access_date_sk"        , "wp_autogen_flag"         , "wp_customer_sk"           , "wp_url"                  , "wp_type"                 , "wp_char_count"        , "wp_link_count"        , "wp_image_count"       , "wp_max_ad_count"); // NOLINT
+const auto web_page_column_types = boost::hana::tuple<     tpcds_key_t      , pmr_string       , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<pmr_string> , std::optional<tpcds_key_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<int32_t> , std::optional<int32_t> , std::optional<int32_t> , std::optional<int32_t>>();
+const auto web_page_column_names = boost::hana::make_tuple("wp_web_page_sk" , "wp_web_page_id" , "wp_rec_start_date"       , "wp_rec_end_date"         , "wp_creation_date_sk"      , "wp_access_date_sk"        , "wp_autogen_flag"         , "wp_customer_sk"           , "wp_url"                  , "wp_type"                 , "wp_char_count"        , "wp_link_count"        , "wp_image_count"       , "wp_max_ad_count");
 
-const auto web_returns_column_types = boost::hana::tuple<     std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , tpcds_key_t  , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , tpcds_key_t       , std::optional<int32_t> , std::optional<float> , std::optional<float> , std::optional<float>    , std::optional<float> , std::optional<float>  , std::optional<float> , std::optional<float> , std::optional<float> , std::optional<float>>(); // NOLINT
-const auto web_returns_column_names = boost::hana::make_tuple("wr_returned_date_sk"      , "wr_returned_time_sk"      , "wr_item_sk" , "wr_refunded_customer_sk"  , "wr_refunded_cdemo_sk"     , "wr_refunded_hdemo_sk"     , "wr_refunded_addr_sk"      , "wr_returning_customer_sk" , "wr_returning_cdemo_sk"    , "wr_returning_hdemo_sk"    , "wr_returning_addr_sk"     , "wr_web_page_sk"           , "wr_reason_sk"             , "wr_order_number" , "wr_return_quantity"   , "wr_return_amt"      , "wr_return_tax"      , "wr_return_amt_inc_tax" , "wr_fee"             , "wr_return_ship_cost" , "wr_refunded_cash"   , "wr_reversed_charge" , "wr_account_credit"  , "wr_net_loss"); // NOLINT
+const auto web_returns_column_types = boost::hana::tuple<     std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , tpcds_key_t  , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , tpcds_key_t       , std::optional<int32_t> , std::optional<float> , std::optional<float> , std::optional<float>    , std::optional<float> , std::optional<float>  , std::optional<float> , std::optional<float> , std::optional<float> , std::optional<float>>();
+const auto web_returns_column_names = boost::hana::make_tuple("wr_returned_date_sk"      , "wr_returned_time_sk"      , "wr_item_sk" , "wr_refunded_customer_sk"  , "wr_refunded_cdemo_sk"     , "wr_refunded_hdemo_sk"     , "wr_refunded_addr_sk"      , "wr_returning_customer_sk" , "wr_returning_cdemo_sk"    , "wr_returning_hdemo_sk"    , "wr_returning_addr_sk"     , "wr_web_page_sk"           , "wr_reason_sk"             , "wr_order_number" , "wr_return_quantity"   , "wr_return_amt"      , "wr_return_tax"      , "wr_return_amt_inc_tax" , "wr_fee"             , "wr_return_ship_cost" , "wr_refunded_cash"   , "wr_reversed_charge" , "wr_account_credit"  , "wr_net_loss");
 
-const auto web_sales_column_types = boost::hana::tuple<     std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , tpcds_key_t  , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , tpcds_key_t       , std::optional<int32_t> , std::optional<float> , std::optional<float> , std::optional<float> , std::optional<float>  , std::optional<float> , std::optional<float>    , std::optional<float> , std::optional<float> , std::optional<float> , std::optional<float> , std::optional<float> , std::optional<float>  , std::optional<float>   , std::optional<float>       , std::optional<float>>(); // NOLINT
-const auto web_sales_column_names = boost::hana::make_tuple("ws_sold_date_sk"          , "ws_sold_time_sk"          , "ws_ship_date_sk"          , "ws_item_sk" , "ws_bill_customer_sk"      , "ws_bill_cdemo_sk"         , "ws_bill_hdemo_sk"         , "ws_bill_addr_sk"          , "ws_ship_customer_sk"      , "ws_ship_cdemo_sk"         , "ws_ship_hdemo_sk"         , "ws_ship_addr_sk"          , "ws_web_page_sk"           , "ws_web_site_sk"           , "ws_ship_mode_sk"          , "ws_warehouse_sk"          , "ws_promo_sk"              , "ws_order_number" , "ws_quantity"          , "ws_wholesale_cost"  , "ws_list_price"      , "ws_sales_price"     , "ws_ext_discount_amt" , "ws_ext_sales_price" , "ws_ext_wholesale_cost" , "ws_ext_list_price"  , "ws_ext_tax"         , "ws_coupon_amt"      , "ws_ext_ship_cost"   , "ws_net_paid"        , "ws_net_paid_inc_tax" , "ws_net_paid_inc_ship" , "ws_net_paid_inc_ship_tax" , "ws_net_profit"); // NOLINT
+const auto web_sales_column_types = boost::hana::tuple<     std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , tpcds_key_t  , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , tpcds_key_t       , std::optional<int32_t> , std::optional<float> , std::optional<float> , std::optional<float> , std::optional<float>  , std::optional<float> , std::optional<float>    , std::optional<float> , std::optional<float> , std::optional<float> , std::optional<float> , std::optional<float> , std::optional<float>  , std::optional<float>   , std::optional<float>       , std::optional<float>>();
+const auto web_sales_column_names = boost::hana::make_tuple("ws_sold_date_sk"          , "ws_sold_time_sk"          , "ws_ship_date_sk"          , "ws_item_sk" , "ws_bill_customer_sk"      , "ws_bill_cdemo_sk"         , "ws_bill_hdemo_sk"         , "ws_bill_addr_sk"          , "ws_ship_customer_sk"      , "ws_ship_cdemo_sk"         , "ws_ship_hdemo_sk"         , "ws_ship_addr_sk"          , "ws_web_page_sk"           , "ws_web_site_sk"           , "ws_ship_mode_sk"          , "ws_warehouse_sk"          , "ws_promo_sk"              , "ws_order_number" , "ws_quantity"          , "ws_wholesale_cost"  , "ws_list_price"      , "ws_sales_price"     , "ws_ext_discount_amt" , "ws_ext_sales_price" , "ws_ext_wholesale_cost" , "ws_ext_list_price"  , "ws_ext_tax"         , "ws_coupon_amt"      , "ws_ext_ship_cost"   , "ws_net_paid"        , "ws_net_paid_inc_tax" , "ws_net_paid_inc_ship" , "ws_net_paid_inc_ship_tax" , "ws_net_profit");
 
-const auto web_site_column_types = boost::hana::tuple<     tpcds_key_t   , pmr_string    , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<int32_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<int32_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<float> , std::optional<float>>(); // NOLINT
-const auto web_site_column_names = boost::hana::make_tuple("web_site_sk" , "web_site_id" , "web_rec_start_date"      , "web_rec_end_date"        , "web_name"                , "web_open_date_sk"         , "web_close_date_sk"        , "web_class"               , "web_manager"             , "web_mkt_id"           , "web_mkt_class"           , "web_mkt_desc"            , "web_market_manager"      , "web_company_id"       , "web_company_name"        , "web_street_number"       , "web_street_name"         , "web_street_type"         , "web_suite_number"        , "web_city"                , "web_county"              , "web_state"               , "web_zip"                 , "web_country"             , "web_gmt_offset"     , "web_tax_percentage"); // NOLINT
+const auto web_site_column_types = boost::hana::tuple<     tpcds_key_t   , pmr_string    , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<int32_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<int32_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<float> , std::optional<float>>();
+const auto web_site_column_names = boost::hana::make_tuple("web_site_sk" , "web_site_id" , "web_rec_start_date"      , "web_rec_end_date"        , "web_name"                , "web_open_date_sk"         , "web_close_date_sk"        , "web_class"               , "web_manager"             , "web_mkt_id"           , "web_mkt_class"           , "web_mkt_desc"            , "web_market_manager"      , "web_company_id"       , "web_company_name"        , "web_street_number"       , "web_street_name"         , "web_street_type"         , "web_suite_number"        , "web_city"                , "web_county"              , "web_state"               , "web_zip"                 , "web_country"             , "web_gmt_offset"     , "web_tax_percentage");
 // clang-format on
+// NOLINTEND(whitespace/line_length)
 }  // namespace
 
 namespace hyrise {
 
 TPCDSTableGenerator::TPCDSTableGenerator(uint32_t scale_factor, ChunkOffset chunk_size, int rng_seed)
-    : AbstractTableGenerator(create_benchmark_config_with_chunk_size(chunk_size)), _scale_factor{scale_factor} {
+    : AbstractTableGenerator(std::make_shared<BenchmarkConfig>(chunk_size)), _scale_factor{scale_factor} {
   init_tpcds_tools(scale_factor, rng_seed);
 }
 
@@ -276,7 +306,7 @@ TPCDSTableGenerator::TPCDSTableGenerator(uint32_t scale_factor,
 }
 
 std::unordered_map<std::string, BenchmarkTableInfo> TPCDSTableGenerator::generate() {
-  const auto cache_directory = "tpcds_cached_tables/sf-" + std::to_string(_scale_factor);  // NOLINT
+  const auto cache_directory = std::format("tpcds_cached_tables/sf-{}", _scale_factor);
   if (_benchmark_config->cache_binary_tables && std::filesystem::is_directory(cache_directory)) {
     return _load_binary_tables_from_path(cache_directory);
   }
@@ -298,7 +328,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCDSTableGenerator::generat
   if (_benchmark_config->cache_binary_tables) {
     std::filesystem::create_directories(cache_directory);
     for (auto& [table_name, table_info] : table_info_by_name) {
-      table_info.binary_file_path = cache_directory + "/" + table_name + ".bin";  // NOLINT
+      table_info.binary_file_path = std::format("{}/{}.bin", cache_directory, table_name);
     }
   }
 
@@ -361,7 +391,7 @@ std::shared_ptr<Table> TPCDSTableGenerator::_generate_table(const std::string& t
     return generate_web_site();
   }
 
-  Fail("Unexpected table name: " + table_name);
+  Fail(std::format("Unexpected table name: '{}'.", table_name));
 }
 
 std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TPCDSTableGenerator::_generate_sales_and_returns_tables(
@@ -378,7 +408,7 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TPCDSTableGenerator::_
     return generate_web_sales_and_returns();
   }
 
-  Fail("Unexpected sales table name: " + sales_table_name);
+  Fail(std::format("Unexpected sales table name: '{}'.", sales_table_name));
 }
 
 std::shared_ptr<Table> TPCDSTableGenerator::generate_call_center(ds_key_t max_rows) const {
@@ -479,10 +509,10 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TPCDSTableGenerator::g
     //                                     &catalog_returns, &was_returned);
     {
       mk_w_catalog_sales_master(&catalog_sales, catalog_sales_first + catalog_sale_index, 0);
-      auto n_lineitems = int{0};
+      auto n_lineitems = int32_t{0};
       genrand_integer(&n_lineitems, DIST_UNIFORM, 4, 14, 0, CS_ORDER_NUMBER);
-      for (auto lineitem_index = int{0}; lineitem_index < n_lineitems; ++lineitem_index) {
-        auto was_returned = int{0};
+      for (auto lineitem_index = int32_t{0}; lineitem_index < n_lineitems; ++lineitem_index) {
+        auto was_returned = int32_t{0};
         mk_w_catalog_sales_detail(&catalog_sales, 0, &catalog_returns, &was_returned);
 
         if (catalog_sales_builder.row_count() < static_cast<size_t>(max_rows)) {
@@ -613,7 +643,7 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_customer(ds_key_t max_rows)
         resolve_integer(C_FIRST_SALES_DATE_ID, customer.c_first_sales_date_id),
         resolve_string(C_SALUTATION, customer.c_salutation), resolve_string(C_FIRST_NAME, customer.c_first_name),
         resolve_string(C_LAST_NAME, customer.c_last_name),
-        resolve_string(C_PREFERRED_CUST_FLAG, boolean_to_string(customer.c_preferred_cust_flag)),
+        resolve_string(C_PREFERRED_CUST_FLAG, boolean_to_string(customer.c_preferred_cust_flag != 0)),
         resolve_integer(C_BIRTH_DAY, customer.c_birth_day), resolve_integer(C_BIRTH_MONTH, customer.c_birth_month),
         resolve_integer(C_BIRTH_YEAR, customer.c_birth_year), resolve_string(C_BIRTH_COUNTRY, customer.c_birth_country),
         resolve_string(C_LOGIN, customer.c_login), resolve_string(C_EMAIL_ADDRESS, customer.c_email_address),
@@ -661,7 +691,7 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_date_dim(ds_key_t max_rows)
   for (auto date_index = ds_key_t{0}; date_index < date_count; ++date_index) {
     const auto date = call_dbgen_mk<W_DATE_TBL, &mk_w_date, DATE>(date_first + date_index);
 
-    auto quarter_name = pmr_string{std::to_string(date.d_year) + "Q" + std::to_string(date.d_qoy)};
+    auto quarter_name = pmr_string{std::format("{}Q{}", date.d_year, date.d_qoy)};
 
     date_builder.append_row(
         date.d_date_sk, date.d_date_id,
@@ -673,16 +703,16 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_date_dim(ds_key_t max_rows)
         resolve_integer(D_FY_YEAR, date.d_fy_year), resolve_integer(D_FY_QUARTER_SEQ, date.d_fy_quarter_seq),
         resolve_integer(D_FY_WEEK_SEQ, date.d_fy_week_seq), resolve_string(D_DAY_NAME, date.d_day_name),
         resolve_string(D_QUARTER_NAME, std::move(quarter_name)),
-        resolve_string(D_HOLIDAY, boolean_to_string(date.d_holiday)),
-        resolve_string(D_WEEKEND, boolean_to_string(date.d_weekend)),
-        resolve_string(D_FOLLOWING_HOLIDAY, boolean_to_string(date.d_following_holiday)),
+        resolve_string(D_HOLIDAY, boolean_to_string(date.d_holiday != 0)),
+        resolve_string(D_WEEKEND, boolean_to_string(date.d_weekend != 0)),
+        resolve_string(D_FOLLOWING_HOLIDAY, boolean_to_string(date.d_following_holiday != 0)),
         resolve_integer(D_FIRST_DOM, date.d_first_dom), resolve_integer(D_LAST_DOM, date.d_last_dom),
         resolve_integer(D_SAME_DAY_LY, date.d_same_day_ly), resolve_integer(D_SAME_DAY_LQ, date.d_same_day_lq),
-        resolve_string(D_CURRENT_DAY, boolean_to_string(date.d_current_day)),
-        resolve_string(D_CURRENT_WEEK, boolean_to_string(date.d_current_week)),
-        resolve_string(D_CURRENT_MONTH, boolean_to_string(date.d_current_month)),
-        resolve_string(D_CURRENT_QUARTER, boolean_to_string(date.d_current_quarter)),
-        resolve_string(D_CURRENT_YEAR, boolean_to_string(date.d_current_year)));
+        resolve_string(D_CURRENT_DAY, boolean_to_string(date.d_current_day != 0)),
+        resolve_string(D_CURRENT_WEEK, boolean_to_string(date.d_current_week != 0)),
+        resolve_string(D_CURRENT_MONTH, boolean_to_string(date.d_current_month != 0)),
+        resolve_string(D_CURRENT_QUARTER, boolean_to_string(date.d_current_quarter != 0)),
+        resolve_string(D_CURRENT_YEAR, boolean_to_string(date.d_current_year != 0)));
   }
 
   return date_builder.finish_table();
@@ -794,16 +824,16 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_promotion(ds_key_t max_rows
         resolve_key(P_END_DATE_ID, promotion.p_end_date_id), resolve_key(P_ITEM_SK, promotion.p_item_sk),
         resolve_decimal(P_COST, promotion.p_cost), resolve_integer(P_RESPONSE_TARGET, promotion.p_response_target),
         resolve_string(P_PROMO_NAME, promotion.p_promo_name),
-        resolve_string(P_CHANNEL_DMAIL, boolean_to_string(promotion.p_channel_dmail)),
-        resolve_string(P_CHANNEL_EMAIL, boolean_to_string(promotion.p_channel_email)),
-        resolve_string(P_CHANNEL_CATALOG, boolean_to_string(promotion.p_channel_catalog)),
-        resolve_string(P_CHANNEL_TV, boolean_to_string(promotion.p_channel_tv)),
-        resolve_string(P_CHANNEL_RADIO, boolean_to_string(promotion.p_channel_radio)),
-        resolve_string(P_CHANNEL_PRESS, boolean_to_string(promotion.p_channel_press)),
-        resolve_string(P_CHANNEL_EVENT, boolean_to_string(promotion.p_channel_event)),
-        resolve_string(P_CHANNEL_DEMO, boolean_to_string(promotion.p_channel_demo)),
+        resolve_string(P_CHANNEL_DMAIL, boolean_to_string(promotion.p_channel_dmail != 0)),
+        resolve_string(P_CHANNEL_EMAIL, boolean_to_string(promotion.p_channel_email != 0)),
+        resolve_string(P_CHANNEL_CATALOG, boolean_to_string(promotion.p_channel_catalog != 0)),
+        resolve_string(P_CHANNEL_TV, boolean_to_string(promotion.p_channel_tv != 0)),
+        resolve_string(P_CHANNEL_RADIO, boolean_to_string(promotion.p_channel_radio != 0)),
+        resolve_string(P_CHANNEL_PRESS, boolean_to_string(promotion.p_channel_press != 0)),
+        resolve_string(P_CHANNEL_EVENT, boolean_to_string(promotion.p_channel_event != 0)),
+        resolve_string(P_CHANNEL_DEMO, boolean_to_string(promotion.p_channel_demo != 0)),
         resolve_string(P_CHANNEL_DETAILS, promotion.p_channel_details), resolve_string(P_PURPOSE, promotion.p_purpose),
-        resolve_string(P_DISCOUNT_ACTIVE, boolean_to_string(promotion.p_discount_active)));
+        resolve_string(P_DISCOUNT_ACTIVE, boolean_to_string(promotion.p_discount_active != 0)));
   }
 
   return promotion_builder.finish_table();
@@ -904,10 +934,10 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TPCDSTableGenerator::g
     {
       mk_w_store_sales_master(&store_sales, store_sales_first + store_sale, 0);
 
-      auto n_lineitems = int{0};
+      auto n_lineitems = int32_t{0};
       genrand_integer(&n_lineitems, DIST_UNIFORM, 8, 16, 0, SS_TICKET_NUMBER);
-      for (auto lineitem_index = int{0}; lineitem_index < n_lineitems; ++lineitem_index) {
-        auto was_returned = int{0};
+      for (auto lineitem_index = int32_t{0}; lineitem_index < n_lineitems; ++lineitem_index) {
+        auto was_returned = int32_t{0};
         mk_w_store_sales_detail(&store_sales, 0, &store_returns, &was_returned);
 
         if (store_sales_builder.row_count() < static_cast<size_t>(max_rows)) {
@@ -1035,7 +1065,7 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_web_page(ds_key_t max_rows)
         resolve_date_id(WP_REC_END_DATE_ID, web_page.wp_rec_end_date_id),
         resolve_key(WP_CREATION_DATE_SK, web_page.wp_creation_date_sk),
         resolve_key(WP_ACCESS_DATE_SK, web_page.wp_access_date_sk),
-        resolve_string(WP_AUTOGEN_FLAG, boolean_to_string(web_page.wp_autogen_flag)),
+        resolve_string(WP_AUTOGEN_FLAG, boolean_to_string(web_page.wp_autogen_flag != 0)),
         resolve_key(WP_CUSTOMER_SK, web_page.wp_customer_sk), resolve_string(WP_URL, web_page.wp_url),
         resolve_string(WP_TYPE, web_page.wp_type), resolve_integer(WP_CHAR_COUNT, web_page.wp_char_count),
         resolve_integer(WP_LINK_COUNT, web_page.wp_link_count),
@@ -1063,9 +1093,9 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TPCDSTableGenerator::g
     {
       mk_w_web_sales_master(&web_sales, web_sales_first + web_sales_index, 0);
 
-      auto n_lineitems = int{0};
+      auto n_lineitems = int32_t{0};
       genrand_integer(&n_lineitems, DIST_UNIFORM, 8, 16, 9, WS_ORDER_NUMBER);
-      for (auto lineitem_index = int{0}; lineitem_index < n_lineitems; ++lineitem_index) {
+      for (auto lineitem_index = int32_t{0}; lineitem_index < n_lineitems; ++lineitem_index) {
         auto was_returned = 0;
         mk_w_web_sales_detail(&web_sales, 0, &web_returns, &was_returned, 0);
 
@@ -1189,117 +1219,258 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_web_site(ds_key_t max_rows)
   return web_site_builder.finish_table();
 }
 
+AbstractTableGenerator::IndexesByTable TPCDSTableGenerator::_indexes_by_table() const {
+  return {{"store_sales", {{"ss_item_sk"}, {"ss_ticket_number"}}},
+          {"store_returns", {{"sr_item_sk"}, {"sr_ticket_number"}}},
+          {"catalog_sales", {{"cs_item_sk"}, {"cs_order_number"}}},
+          {"catalog_returns", {{"cr_item_sk"}, {"cr_order_number"}}},
+          {"web_sales", {{"ws_item_sk"}, {"ws_order_number"}}},
+          {"web_returns", {{"wr_item_sk"}, {"wr_order_number"}}},
+          {"inventory", {{"inv_date_sk"}, {"inv_item_sk"}, {"inv_warehouse_sk"}}},
+          {"store", {{"s_store_sk"}}},
+          {"call_center", {{"cc_call_center_sk"}}},
+          {"catalog_page", {{"cp_catalog_page_sk"}}},
+          {"web_site", {{"web_site_sk"}}},
+          {"web_page", {{"wp_web_page_sk"}}},
+          {"warehouse", {{"w_warehouse_sk"}}},
+          {"customer", {{"c_customer_sk"}}},
+          {"customer_address", {{"ca_address_sk"}}},
+          {"customer_demographics", {{"cd_demo_sk"}}},
+          {"date_dim", {{"d_date_sk"}}},
+          {"household_demographics", {{"hd_demo_sk"}}},
+          {"item", {{"i_item_sk"}}},
+          {"income_band", {{"ib_income_band_sk"}}},
+          {"promotion", {{"p_promo_sk"}}},
+          {"reason", {{"r_reason_sk"}}},
+          {"ship_mode", {{"sm_ship_mode_sk"}}},
+          {"time_dim", {{"t_time_sk"}}}};
+}
+
 void TPCDSTableGenerator::_add_constraints(
     std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const {
-  /**
-   * Adds all PRIMARY KEY key constraints as described in the official TPC-DS specification.
-   * (Section 2: Logical Database Design)
-   */
+  // Set all primary (PK) and foreign keys (FK) as defined in the specification (Version 3.2.0, 2 Logical Database
+  // Design, p. 23-35).
+  // The standard specifies composite PKs for [store|catalog|web]_returns, were both PK columns are also foreign keys to
+  // the respective (composite) PK column in [store|catalog|web]_sales. These FKs are not set in the TPC-DS tools.
+  // However, we stick to the specification and interpret it in a sensible way by setting a composite FK (rather than
+  // none or individual ones).
 
-  // Fact Tables (7)
+  // Get all tables.
+  // Fact Tables (7).
   const auto& store_sales_table = table_info_by_name.at("store_sales").table;
-  store_sales_table->add_soft_key_constraint(
-      {{store_sales_table->column_id_by_name("ss_item_sk"), store_sales_table->column_id_by_name("ss_ticket_number")},
-       KeyConstraintType::PRIMARY_KEY});
-
   const auto& store_returns_table = table_info_by_name.at("store_returns").table;
-  store_returns_table->add_soft_key_constraint({{store_returns_table->column_id_by_name("sr_item_sk"),
-                                                 store_returns_table->column_id_by_name("sr_ticket_number")},
-                                                KeyConstraintType::PRIMARY_KEY});
-
   const auto& catalog_sales_table = table_info_by_name.at("catalog_sales").table;
-  catalog_sales_table->add_soft_key_constraint({{catalog_sales_table->column_id_by_name("cs_item_sk"),
-                                                 catalog_sales_table->column_id_by_name("cs_order_number")},
-                                                KeyConstraintType::PRIMARY_KEY});
-
   const auto& catalog_returns_table = table_info_by_name.at("catalog_returns").table;
-  catalog_returns_table->add_soft_key_constraint({{catalog_returns_table->column_id_by_name("cr_item_sk"),
-                                                   catalog_returns_table->column_id_by_name("cr_order_number")},
-                                                  KeyConstraintType::PRIMARY_KEY});
-
   const auto& web_sales_table = table_info_by_name.at("web_sales").table;
-  web_sales_table->add_soft_key_constraint(
-      {{web_sales_table->column_id_by_name("ws_item_sk"), web_sales_table->column_id_by_name("ws_order_number")},
-       KeyConstraintType::PRIMARY_KEY});
-
   const auto& web_returns_table = table_info_by_name.at("web_returns").table;
-  web_returns_table->add_soft_key_constraint(
-      {{web_returns_table->column_id_by_name("wr_item_sk"), web_returns_table->column_id_by_name("wr_order_number")},
-       KeyConstraintType::PRIMARY_KEY});
-
   const auto& inventory_table = table_info_by_name.at("inventory").table;
-  inventory_table->add_soft_key_constraint(
-      {{inventory_table->column_id_by_name("inv_date_sk"), inventory_table->column_id_by_name("inv_item_sk"),
-        inventory_table->column_id_by_name("inv_warehouse_sk")},
-       KeyConstraintType::PRIMARY_KEY});
-
-  // Dimension Tables (17)
+  // Dimension Tables (17).
   const auto& store_table = table_info_by_name.at("store").table;
-  store_table->add_soft_key_constraint(
-      {{store_table->column_id_by_name("s_store_sk")}, KeyConstraintType::PRIMARY_KEY});
-
   const auto& call_center_table = table_info_by_name.at("call_center").table;
-  call_center_table->add_soft_key_constraint(
-      {{call_center_table->column_id_by_name("cc_call_center_sk")}, KeyConstraintType::PRIMARY_KEY});
-
   const auto& catalog_page_table = table_info_by_name.at("catalog_page").table;
-  catalog_page_table->add_soft_key_constraint(
-      {{catalog_page_table->column_id_by_name("cp_catalog_page_sk")}, KeyConstraintType::PRIMARY_KEY});
-
   const auto& web_site_table = table_info_by_name.at("web_site").table;
-  web_site_table->add_soft_key_constraint(
-      {{web_site_table->column_id_by_name("web_site_sk")}, KeyConstraintType::PRIMARY_KEY});
-
   const auto& web_page_table = table_info_by_name.at("web_page").table;
-  web_page_table->add_soft_key_constraint(
-      {{web_page_table->column_id_by_name("wp_web_page_sk")}, KeyConstraintType::PRIMARY_KEY});
-
   const auto& warehouse_table = table_info_by_name.at("warehouse").table;
-  warehouse_table->add_soft_key_constraint(
-      {{warehouse_table->column_id_by_name("w_warehouse_sk")}, KeyConstraintType::PRIMARY_KEY});
-
   const auto& customer_table = table_info_by_name.at("customer").table;
-  customer_table->add_soft_key_constraint(
-      {{customer_table->column_id_by_name("c_customer_sk")}, KeyConstraintType::PRIMARY_KEY});
-
   const auto& customer_address_table = table_info_by_name.at("customer_address").table;
-  customer_address_table->add_soft_key_constraint(
-      {{customer_address_table->column_id_by_name("ca_address_sk")}, KeyConstraintType::PRIMARY_KEY});
-
   const auto& customer_demographics_table = table_info_by_name.at("customer_demographics").table;
-  customer_demographics_table->add_soft_key_constraint(
-      {{customer_demographics_table->column_id_by_name("cd_demo_sk")}, KeyConstraintType::PRIMARY_KEY});
-
   const auto& date_dim_table = table_info_by_name.at("date_dim").table;
-  date_dim_table->add_soft_key_constraint(
-      {{date_dim_table->column_id_by_name("d_date_sk")}, KeyConstraintType::PRIMARY_KEY});
-
   const auto& household_demographics_table = table_info_by_name.at("household_demographics").table;
-  household_demographics_table->add_soft_key_constraint(
-      {{household_demographics_table->column_id_by_name("hd_demo_sk")}, KeyConstraintType::PRIMARY_KEY});
-
   const auto& item_table = table_info_by_name.at("item").table;
-  item_table->add_soft_key_constraint({{item_table->column_id_by_name("i_item_sk")}, KeyConstraintType::PRIMARY_KEY});
-
   const auto& income_band_table = table_info_by_name.at("income_band").table;
-  income_band_table->add_soft_key_constraint(
-      {{income_band_table->column_id_by_name("ib_income_band_sk")}, KeyConstraintType::PRIMARY_KEY});
-
   const auto& promotion_table = table_info_by_name.at("promotion").table;
-  promotion_table->add_soft_key_constraint(
-      {{promotion_table->column_id_by_name("p_promo_sk")}, KeyConstraintType::PRIMARY_KEY});
-
   const auto& reason_table = table_info_by_name.at("reason").table;
-  reason_table->add_soft_key_constraint(
-      {{reason_table->column_id_by_name("r_reason_sk")}, KeyConstraintType::PRIMARY_KEY});
-
   const auto& ship_mode_table = table_info_by_name.at("ship_mode").table;
-  ship_mode_table->add_soft_key_constraint(
-      {{ship_mode_table->column_id_by_name("sm_ship_mode_sk")}, KeyConstraintType::PRIMARY_KEY});
-
   const auto& time_dim_table = table_info_by_name.at("time_dim").table;
-  time_dim_table->add_soft_key_constraint(
-      {{time_dim_table->column_id_by_name("t_time_sk")}, KeyConstraintType::PRIMARY_KEY});
+
+  // store_sales - 1 composite PK, 9 FKs.
+  primary_key_constraint(store_sales_table, {"ss_item_sk", "ss_ticket_number"});
+  foreign_key_constraint(store_sales_table, {"ss_sold_date_sk"}, date_dim_table, {"d_date_sk"});
+  foreign_key_constraint(store_sales_table, {"ss_sold_time_sk"}, time_dim_table, {"t_time_sk"});
+  foreign_key_constraint(store_sales_table, {"ss_item_sk"}, item_table, {"i_item_sk"});
+  foreign_key_constraint(store_sales_table, {"ss_customer_sk"}, customer_table, {"c_customer_sk"});
+  foreign_key_constraint(store_sales_table, {"ss_cdemo_sk"}, customer_demographics_table, {"cd_demo_sk"});
+  foreign_key_constraint(store_sales_table, {"ss_hdemo_sk"}, household_demographics_table, {"hd_demo_sk"});
+  foreign_key_constraint(store_sales_table, {"ss_addr_sk"}, customer_address_table, {"ca_address_sk"});
+  foreign_key_constraint(store_sales_table, {"ss_store_sk"}, store_table, {"s_store_sk"});
+  foreign_key_constraint(store_sales_table, {"ss_promo_sk"}, promotion_table, {"p_promo_sk"});
+
+  // store_returns - 1 composite PK, 10 FKs.
+  primary_key_constraint(store_returns_table, {"sr_item_sk", "sr_ticket_number"});
+  foreign_key_constraint(store_returns_table, {"sr_returned_date_sk"}, date_dim_table, {"d_date_sk"});
+  foreign_key_constraint(store_returns_table, {"sr_return_time_sk"}, time_dim_table, {"t_time_sk"});
+  // The specification explicitly mentions the FK of sr_item_sk, sr_ticket_number as composite key to store_sales and as
+  // an FK to i_item_sk directly.
+  foreign_key_constraint(store_returns_table, {"sr_item_sk", "sr_ticket_number"}, store_sales_table,
+                         {"ss_item_sk", "ss_ticket_number"});
+  foreign_key_constraint(store_returns_table, {"sr_item_sk"}, item_table, {"i_item_sk"});
+  foreign_key_constraint(store_returns_table, {"sr_customer_sk"}, customer_table, {"c_customer_sk"});
+  foreign_key_constraint(store_returns_table, {"sr_cdemo_sk"}, customer_demographics_table, {"cd_demo_sk"});
+  foreign_key_constraint(store_returns_table, {"sr_hdemo_sk"}, household_demographics_table, {"hd_demo_sk"});
+  foreign_key_constraint(store_returns_table, {"sr_addr_sk"}, customer_address_table, {"ca_address_sk"});
+  foreign_key_constraint(store_returns_table, {"sr_store_sk"}, store_table, {"s_store_sk"});
+  foreign_key_constraint(store_returns_table, {"sr_reason_sk"}, reason_table, {"r_reason_sk"});
+
+  // catalog_sales - 1 composite PK, 17 FKs.
+  primary_key_constraint(catalog_sales_table, {"cs_item_sk", "cs_order_number"});
+  foreign_key_constraint(catalog_sales_table, {"cs_sold_date_sk"}, date_dim_table, {"d_date_sk"});
+  foreign_key_constraint(catalog_sales_table, {"cs_sold_time_sk"}, time_dim_table, {"t_time_sk"});
+  foreign_key_constraint(catalog_sales_table, {"cs_ship_date_sk"}, date_dim_table, {"d_date_sk"});
+  foreign_key_constraint(catalog_sales_table, {"cs_bill_customer_sk"}, customer_table, {"c_customer_sk"});
+  foreign_key_constraint(catalog_sales_table, {"cs_bill_cdemo_sk"}, customer_demographics_table, {"cd_demo_sk"});
+  foreign_key_constraint(catalog_sales_table, {"cs_bill_hdemo_sk"}, household_demographics_table, {"hd_demo_sk"});
+  foreign_key_constraint(catalog_sales_table, {"cs_bill_addr_sk"}, customer_address_table, {"ca_address_sk"});
+  foreign_key_constraint(catalog_sales_table, {"cs_ship_customer_sk"}, customer_table, {"c_customer_sk"});
+  foreign_key_constraint(catalog_sales_table, {"cs_ship_cdemo_sk"}, customer_demographics_table, {"cd_demo_sk"});
+  foreign_key_constraint(catalog_sales_table, {"cs_ship_hdemo_sk"}, household_demographics_table, {"hd_demo_sk"});
+  foreign_key_constraint(catalog_sales_table, {"cs_ship_addr_sk"}, customer_address_table, {"ca_address_sk"});
+  foreign_key_constraint(catalog_sales_table, {"cs_call_center_sk"}, call_center_table, {"cc_call_center_sk"});
+  foreign_key_constraint(catalog_sales_table, {"cs_catalog_page_sk"}, catalog_page_table, {"cp_catalog_page_sk"});
+  foreign_key_constraint(catalog_sales_table, {"cs_ship_mode_sk"}, ship_mode_table, {"sm_ship_mode_sk"});
+  foreign_key_constraint(catalog_sales_table, {"cs_warehouse_sk"}, warehouse_table, {"w_warehouse_sk"});
+  foreign_key_constraint(catalog_sales_table, {"cs_item_sk"}, item_table, {"i_item_sk"});
+  foreign_key_constraint(catalog_sales_table, {"cs_promo_sk"}, promotion_table, {"p_promo_sk"});
+
+  // catalog_returns - 1 composite PK, 17 FKs.
+  primary_key_constraint(catalog_returns_table, {"cr_item_sk", "cr_order_number"});
+  foreign_key_constraint(catalog_returns_table, {"cr_returned_date_sk"}, date_dim_table, {"d_date_sk"});
+  foreign_key_constraint(catalog_returns_table, {"cr_returned_time_sk"}, time_dim_table, {"t_time_sk"});
+  // The specification explicitly mentions the FK of cr_item_sk, cr_order_number as composite key to catalog_sales and
+  // as an FK to i_item_sk directly.
+  foreign_key_constraint(catalog_returns_table, {"cr_item_sk", "cr_order_number"}, catalog_sales_table,
+                         {"cs_item_sk", "cs_order_number"});
+  foreign_key_constraint(catalog_returns_table, {"cr_item_sk"}, item_table, {"i_item_sk"});
+  foreign_key_constraint(catalog_returns_table, {"cr_refunded_customer_sk"}, customer_table, {"c_customer_sk"});
+  foreign_key_constraint(catalog_returns_table, {"cr_refunded_cdemo_sk"}, customer_demographics_table, {"cd_demo_sk"});
+  foreign_key_constraint(catalog_returns_table, {"cr_refunded_hdemo_sk"}, household_demographics_table, {"hd_demo_sk"});
+  foreign_key_constraint(catalog_returns_table, {"cr_refunded_addr_sk"}, customer_address_table, {"ca_address_sk"});
+  foreign_key_constraint(catalog_returns_table, {"cr_returning_customer_sk"}, customer_table, {"c_customer_sk"});
+  foreign_key_constraint(catalog_returns_table, {"cr_returning_cdemo_sk"}, customer_demographics_table, {"cd_demo_sk"});
+  foreign_key_constraint(catalog_returns_table, {"cr_returning_hdemo_sk"}, household_demographics_table,
+                         {"hd_demo_sk"});
+  foreign_key_constraint(catalog_returns_table, {"cr_returning_addr_sk"}, customer_address_table, {"ca_address_sk"});
+  foreign_key_constraint(catalog_returns_table, {"cr_call_center_sk"}, call_center_table, {"cc_call_center_sk"});
+  foreign_key_constraint(catalog_returns_table, {"cr_catalog_page_sk"}, catalog_page_table, {"cp_catalog_page_sk"});
+  foreign_key_constraint(catalog_returns_table, {"cr_ship_mode_sk"}, ship_mode_table, {"sm_ship_mode_sk"});
+  foreign_key_constraint(catalog_returns_table, {"cr_warehouse_sk"}, warehouse_table, {"w_warehouse_sk"});
+  foreign_key_constraint(catalog_returns_table, {"cr_reason_sk"}, reason_table, {"r_reason_sk"});
+
+  // web_sales - 1 composite PK, 17 FKs.
+  primary_key_constraint(web_sales_table, {"ws_item_sk", "ws_order_number"});
+  foreign_key_constraint(web_sales_table, {"ws_sold_date_sk"}, date_dim_table, {"d_date_sk"});
+  foreign_key_constraint(web_sales_table, {"ws_sold_time_sk"}, time_dim_table, {"t_time_sk"});
+  foreign_key_constraint(web_sales_table, {"ws_ship_date_sk"}, date_dim_table, {"d_date_sk"});
+  foreign_key_constraint(web_sales_table, {"ws_item_sk"}, item_table, {"i_item_sk"});
+  foreign_key_constraint(web_sales_table, {"ws_bill_customer_sk"}, customer_table, {"c_customer_sk"});
+  foreign_key_constraint(web_sales_table, {"ws_bill_cdemo_sk"}, customer_demographics_table, {"cd_demo_sk"});
+  foreign_key_constraint(web_sales_table, {"ws_bill_hdemo_sk"}, household_demographics_table, {"hd_demo_sk"});
+  foreign_key_constraint(web_sales_table, {"ws_bill_addr_sk"}, customer_address_table, {"ca_address_sk"});
+  foreign_key_constraint(web_sales_table, {"ws_ship_customer_sk"}, customer_table, {"c_customer_sk"});
+  foreign_key_constraint(web_sales_table, {"ws_ship_cdemo_sk"}, customer_demographics_table, {"cd_demo_sk"});
+  foreign_key_constraint(web_sales_table, {"ws_ship_hdemo_sk"}, household_demographics_table, {"hd_demo_sk"});
+  foreign_key_constraint(web_sales_table, {"ws_ship_addr_sk"}, customer_address_table, {"ca_address_sk"});
+  foreign_key_constraint(web_sales_table, {"ws_web_page_sk"}, web_page_table, {"wp_web_page_sk"});
+  foreign_key_constraint(web_sales_table, {"ws_web_site_sk"}, web_site_table, {"web_site_sk"});
+  foreign_key_constraint(web_sales_table, {"ws_ship_mode_sk"}, ship_mode_table, {"sm_ship_mode_sk"});
+  foreign_key_constraint(web_sales_table, {"ws_warehouse_sk"}, warehouse_table, {"w_warehouse_sk"});
+  foreign_key_constraint(web_sales_table, {"ws_promo_sk"}, promotion_table, {"p_promo_sk"});
+
+  // web_returns - 1 composite PK, 14 FKs.
+  primary_key_constraint(web_returns_table, {"wr_item_sk", "wr_order_number"});
+  foreign_key_constraint(web_returns_table, {"wr_returned_date_sk"}, date_dim_table, {"d_date_sk"});
+  foreign_key_constraint(web_returns_table, {"wr_returned_time_sk"}, time_dim_table, {"t_time_sk"});
+  // The specification explicitly mentions the FK of wr_item_sk, wr_order_number as composite key to web_sales and as an
+  // FK to i_item_sk directly.
+  foreign_key_constraint(web_returns_table, {"wr_item_sk", "wr_order_number"}, web_sales_table,
+                         {"ws_item_sk", "ws_order_number"});
+  foreign_key_constraint(web_returns_table, {"wr_item_sk"}, item_table, {"i_item_sk"});
+  foreign_key_constraint(web_returns_table, {"wr_refunded_customer_sk"}, customer_table, {"c_customer_sk"});
+  foreign_key_constraint(web_returns_table, {"wr_refunded_cdemo_sk"}, customer_demographics_table, {"cd_demo_sk"});
+  foreign_key_constraint(web_returns_table, {"wr_refunded_hdemo_sk"}, household_demographics_table, {"hd_demo_sk"});
+  foreign_key_constraint(web_returns_table, {"wr_refunded_addr_sk"}, customer_address_table, {"ca_address_sk"});
+  foreign_key_constraint(web_returns_table, {"wr_returning_customer_sk"}, customer_table, {"c_customer_sk"});
+  foreign_key_constraint(web_returns_table, {"wr_returning_cdemo_sk"}, customer_demographics_table, {"cd_demo_sk"});
+  foreign_key_constraint(web_returns_table, {"wr_returning_hdemo_sk"}, household_demographics_table, {"hd_demo_sk"});
+  foreign_key_constraint(web_returns_table, {"wr_returning_addr_sk"}, customer_address_table, {"ca_address_sk"});
+  foreign_key_constraint(web_returns_table, {"wr_web_page_sk"}, web_page_table, {"wp_web_page_sk"});
+  foreign_key_constraint(web_returns_table, {"wr_reason_sk"}, reason_table, {"r_reason_sk"});
+
+  // inventory - 1 composite PK, 3 FKs.
+  primary_key_constraint(inventory_table, {"inv_date_sk", "inv_item_sk", "inv_warehouse_sk"});
+  foreign_key_constraint(inventory_table, {"inv_date_sk"}, date_dim_table, {"d_date_sk"});
+  foreign_key_constraint(inventory_table, {"inv_item_sk"}, item_table, {"i_item_sk"});
+  foreign_key_constraint(inventory_table, {"inv_warehouse_sk"}, warehouse_table, {"w_warehouse_sk"});
+
+  // store - 1 PK, 1 FK.
+  primary_key_constraint(store_table, {"s_store_sk"});
+  foreign_key_constraint(store_table, {"s_closed_date_sk"}, date_dim_table, {"d_date_sk"});
+
+  // call_center - 1 PK, 2 FKs.
+  primary_key_constraint(call_center_table, {"cc_call_center_sk"});
+  foreign_key_constraint(call_center_table, {"cc_closed_date_sk"}, date_dim_table, {"d_date_sk"});
+  foreign_key_constraint(call_center_table, {"cc_open_date_sk"}, date_dim_table, {"d_date_sk"});
+
+  // catalog_page - 1 PK, 2 FKs.
+  primary_key_constraint(catalog_page_table, {"cp_catalog_page_sk"});
+  foreign_key_constraint(catalog_page_table, {"cp_start_date_sk"}, date_dim_table, {"d_date_sk"});
+  foreign_key_constraint(catalog_page_table, {"cp_end_date_sk"}, date_dim_table, {"d_date_sk"});
+
+  // web_site - 1 PK, 2 FKs.
+  primary_key_constraint(web_site_table, {"web_site_sk"});
+  foreign_key_constraint(web_site_table, {"web_open_date_sk"}, date_dim_table, {"d_date_sk"});
+  foreign_key_constraint(web_site_table, {"web_close_date_sk"}, date_dim_table, {"d_date_sk"});
+
+  // web_page - 1 PK, 3 FKs.
+  primary_key_constraint(web_page_table, {"wp_web_page_sk"});
+  foreign_key_constraint(web_page_table, {"wp_creation_date_sk"}, date_dim_table, {"d_date_sk"});
+  foreign_key_constraint(web_page_table, {"wp_access_date_sk"}, date_dim_table, {"d_date_sk"});
+  foreign_key_constraint(web_page_table, {"wp_customer_sk"}, customer_table, {"c_customer_sk"});
+
+  // warehouse - 1 PK.
+  primary_key_constraint(warehouse_table, {"w_warehouse_sk"});
+
+  // customer - 1 PK, 6 FKs.
+  primary_key_constraint(customer_table, {"c_customer_sk"});
+  foreign_key_constraint(customer_table, {"c_current_cdemo_sk"}, customer_demographics_table, {"cd_demo_sk"});
+  foreign_key_constraint(customer_table, {"c_current_hdemo_sk"}, household_demographics_table, {"hd_demo_sk"});
+  foreign_key_constraint(customer_table, {"c_current_addr_sk"}, customer_address_table, {"ca_address_sk"});
+  foreign_key_constraint(customer_table, {"c_first_shipto_date_sk"}, date_dim_table, {"d_date_sk"});
+  foreign_key_constraint(customer_table, {"c_first_sales_date_sk"}, date_dim_table, {"d_date_sk"});
+  foreign_key_constraint(customer_table, {"c_last_review_date"}, date_dim_table, {"d_date_sk"});
+
+  // customer_address - 1 PK.
+  primary_key_constraint(customer_address_table, {"ca_address_sk"});
+
+  // customer_demographics - 1 PK.
+  primary_key_constraint(customer_demographics_table, {"cd_demo_sk"});
+
+  // date_dim - 1 PK.
+  primary_key_constraint(date_dim_table, {"d_date_sk"});
+
+  // household_demographics - 1 PK, 1 FK.
+  primary_key_constraint(household_demographics_table, {"hd_demo_sk"});
+  foreign_key_constraint(household_demographics_table, {"hd_income_band_sk"}, income_band_table, {"ib_income_band_sk"});
+
+  // item - 1 PK.
+  primary_key_constraint(item_table, {"i_item_sk"});
+
+  // income_band - 1 PK.
+  primary_key_constraint(income_band_table, {"ib_income_band_sk"});
+
+  // promotion - 1 PK, 3 FKs.
+  primary_key_constraint(promotion_table, {"p_promo_sk"});
+  foreign_key_constraint(promotion_table, {"p_start_date_sk"}, date_dim_table, {"d_date_sk"});
+  foreign_key_constraint(promotion_table, {"p_end_date_sk"}, date_dim_table, {"d_date_sk"});
+  foreign_key_constraint(promotion_table, {"p_item_sk"}, item_table, {"i_item_sk"});
+
+  // reason - 1 PK.
+  primary_key_constraint(reason_table, {"r_reason_sk"});
+
+  // ship_mode - 1 PK.
+  primary_key_constraint(ship_mode_table, {"sm_ship_mode_sk"});
+
+  // time_dim - 1 PK.
+  primary_key_constraint(time_dim_table, {"t_time_sk"});
 }
 
 }  // namespace hyrise

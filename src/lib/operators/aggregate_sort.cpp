@@ -1,29 +1,48 @@
 #include "aggregate_sort.hpp"
 
 #include <algorithm>
+#include <cstddef>
+#include <cstdint>
+#include <format>
 #include <memory>
+#include <optional>
+#include <set>
+#include <string>
+#include <unordered_map>
+#include <unordered_set>
+#include <utility>
 #include <vector>
 
 #include "aggregate/window_function_traits.hpp"
 #include "all_type_variant.hpp"
+#include "expression/abstract_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
+#include "expression/window_function_expression.hpp"
+#include "operators/abstract_aggregate_operator.hpp"
+#include "operators/abstract_operator.hpp"
 #include "operators/sort.hpp"
+#include "resolve_type.hpp"
+#include "storage/chunk.hpp"
 #include "storage/pos_lists/entire_chunk_pos_list.hpp"
+#include "storage/reference_segment.hpp"
 #include "storage/segment_iterate.hpp"
+#include "storage/table.hpp"
+#include "storage/value_segment.hpp"
 #include "table_wrapper.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace {
 
-using namespace hyrise;  // NOLINT
+using namespace hyrise;
 
 std::shared_ptr<const Table> sort_table_by_column_ids(const std::shared_ptr<const Table>& table_to_sort,
                                                       const std::vector<ColumnID>& column_ids) {
-  // Create sort definition vector from group by list for sort operator
+  // Create sort definition vector from group by list for sort operator.
   auto sort_definitions = std::vector<SortColumnDefinition>{};
   sort_definitions.reserve(column_ids.size());
   for (const auto& column_id : column_ids) {
-    sort_definitions.emplace_back(column_id, SortMode::Ascending);
+    sort_definitions.emplace_back(column_id, SortMode::AscendingNullsFirst);
   }
 
   const auto table_wrapper = std::make_shared<TableWrapper>(table_to_sort);
@@ -103,7 +122,7 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
      * by calculating the distance between the first and the last corresponding row (+1) in the table.
      * This results in a runtime of O(output rows) rather than O(input rows), which can be quite significant.
      */
-    auto current_group_begin_pointer = RowID{ChunkID{0u}, ChunkOffset{0}};
+    auto current_group_begin_pointer = RowID{ChunkID{0}, ChunkOffset{0}};
     for (const auto& group_boundary : group_boundaries) {
       if (current_group_begin_pointer.chunk_id == group_boundary.chunk_id) {
         // Group is located within a single chunk
@@ -320,9 +339,9 @@ std::shared_ptr<Table> AggregateSort::_sort_table_chunk_wise(const std::shared_p
     // values.
     const auto single_column_group_by = groupby_column_ids.size() == 1;
     const auto chunk_sorted_by_first_group_by_column =
-        std::find_if(chunk_sorted_by.cbegin(), chunk_sorted_by.cend(), [&](const auto& sort_definition) {
+        std::ranges::any_of(chunk_sorted_by, [&](const auto& sort_definition) {
           return groupby_column_ids[0] == sort_definition.column;
-        }) != chunk_sorted_by.cend();
+        });
 
     if (single_column_group_by && chunk_sorted_by_first_group_by_column) {
       if (input_table->type() == TableType::Data) {
@@ -468,8 +487,7 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
 
     if (!table_value_clustered_by.empty()) {
       for (const auto& value_clustered_by : table_value_clustered_by) {
-        if (std::find(_groupby_column_ids.begin(), _groupby_column_ids.end(), value_clustered_by) !=
-            _groupby_column_ids.end()) {
+        if (std::ranges::find(_groupby_column_ids, value_clustered_by) != _groupby_column_ids.end()) {
           is_value_clustered_by_groupby_column = true;
           break;
         }
@@ -570,7 +588,7 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
       auto null_values = pmr_vector<bool>(column_is_nullable ? group_boundaries.size() + 1 : 0);
 
       const auto value_count = values.size();
-      for (size_t value_index = 0; value_index < value_count; ++value_index) {
+      for (auto value_index = size_t{0}; value_index < value_count; ++value_index) {
         RowID group_start;
         if (value_index == 0) {
           // First group starts in the first row, but there is no corresponding entry in the set. See above for reasons.
@@ -699,7 +717,8 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
           case WindowFunction::PercentRank:
           case WindowFunction::Rank:
           case WindowFunction::RowNumber:
-            Fail("Unsupported aggregate function " + window_function_to_string.left.at(aggregate->window_function));
+            Fail(std::format("Unsupported aggregate function '{}'.",
+                             window_function_to_string.left.at(aggregate->window_function)));
         }
       }
     });
@@ -767,7 +786,7 @@ void AggregateSort::_create_aggregate_column_definitions(boost::hana::basic_type
     case WindowFunction::PercentRank:
     case WindowFunction::Rank:
     case WindowFunction::RowNumber:
-      Fail("Unsupported aggregate function " + window_function_to_string.left.at(aggregate_function));
+      Fail(std::format("Unsupported aggregate function '{}'.", window_function_to_string.left.at(aggregate_function)));
   }
 }
 
@@ -785,15 +804,15 @@ void AggregateSort::_create_aggregate_column_definitions(boost::hana::basic_type
 template <typename ColumnType, WindowFunction aggregate_function>
 void AggregateSort::create_aggregate_column_definitions(ColumnID column_index) {
   // retrieve type information from the aggregation traits
-  auto RESULT_TYPE = WindowFunctionTraits<ColumnType, aggregate_function>::RESULT_TYPE;
+  auto result_type = WindowFunctionTraits<ColumnType, aggregate_function>::RESULT_TYPE;
 
   const auto& aggregate = _aggregates[column_index];
   const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
   const auto input_column_id = pqp_column.column_id;
 
-  if (RESULT_TYPE == DataType::Null) {
+  if (result_type == DataType::Null) {
     // if not specified, it’s the input column’s type
-    RESULT_TYPE = left_input_table()->column_data_type(input_column_id);
+    result_type = left_input_table()->column_data_type(input_column_id);
   }
 
   const auto nullable =
@@ -802,6 +821,6 @@ void AggregateSort::create_aggregate_column_definitions(ColumnID column_index) {
       (aggregate_function == WindowFunction::Any && left_input_table()->column_is_nullable(input_column_id));
   const auto column_name =
       aggregate->window_function == WindowFunction::Any ? pqp_column.as_column_name() : aggregate->as_column_name();
-  _output_column_definitions.emplace_back(column_name, RESULT_TYPE, nullable);
+  _output_column_definitions.emplace_back(column_name, result_type, nullable);
 }
 }  // namespace hyrise

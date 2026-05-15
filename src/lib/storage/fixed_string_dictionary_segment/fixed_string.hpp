@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include "all_type_variant.hpp"
@@ -24,11 +25,15 @@ class FixedString {
 
   // Create a FixedString with an existing one
   FixedString(const FixedString& other);
+  // NOLINTNEXTLINE(cppcoreguidelines-noexcept-move-operations,hicpp-noexcept-move,performance-noexcept-move-constructor)
+  FixedString(FixedString&&);
 
   ~FixedString();
 
   // Copy assign
   FixedString& operator=(const FixedString& other);
+  // NOLINTNEXTLINE(cppcoreguidelines-noexcept-move-operations,hicpp-noexcept-move,performance-noexcept-move-constructor)
+  FixedString& operator=(FixedString&& other);
 
   // Returns the length of the string
   size_t size() const;
@@ -71,15 +76,15 @@ class FixedString {
   friend std::ostream& operator<<(std::ostream& stream, const FixedString& obj);
 
   // Support swappable concept needed for sorting values. See: http://en.cppreference.com/w/cpp/concept/Swappable
-  friend void swap(FixedString lhs, FixedString rhs);
+  friend void swap(FixedString lhs, FixedString rhs) noexcept;
 
   // Swap two FixedStrings by exchanging the underlying memory's content
-  void swap(FixedString& other);
+  void swap(FixedString& other) noexcept;
 
- protected:
-  char* const _mem;
-  const size_t _maximum_length;
-  const bool _owns_memory = true;
+ private:
+  char* _mem;
+  size_t _maximum_length;
+  bool _owns_memory;
 };
 
 }  // namespace hyrise

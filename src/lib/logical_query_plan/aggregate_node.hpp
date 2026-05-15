@@ -1,12 +1,10 @@
 #pragma once
 
 #include <memory>
-#include <optional>
 #include <string>
 #include <vector>
 
 #include "abstract_lqp_node.hpp"
-#include "types.hpp"
 
 namespace hyrise {
 
@@ -27,11 +25,13 @@ class AggregateNode : public EnableMakeForLQPNode<AggregateNode>, public Abstrac
   bool is_column_nullable(const ColumnID column_id) const override;
 
   /**
-   * (1) Forwards left input node's unique column combinations if its expressions are a subset of the group-by
+   * (1) Forwards left input node's unique column combinations if their expressions are a subset of the group-by
    *     expressions.
    * (2) Creates a new unique column combination from the group-by expressions if not already existing.
    */
   UniqueColumnCombinations unique_column_combinations() const override;
+
+  OrderDependencies order_dependencies() const override;
 
   // Returns non-trivial FDs from the left input node that remain valid.
   FunctionalDependencies non_trivial_functional_dependencies() const override;

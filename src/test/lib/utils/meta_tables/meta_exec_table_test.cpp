@@ -1,9 +1,15 @@
-#include "base_test.hpp"
-
-#include "operators/table_wrapper.hpp"
-#include "utils/meta_tables/meta_exec_table.hpp"
+#include <memory>
+#include <stdexcept>
+#include <utility>
 
 #include "../plugin_test_utils.hpp"
+#include "all_type_variant.hpp"
+#include "base_test.hpp"
+#include "operators/table_wrapper.hpp"
+#include "storage/table.hpp"
+#include "testing_assert.hpp"
+#include "types.hpp"
+#include "utils/meta_tables/meta_exec_table.hpp"
 
 namespace hyrise {
 
@@ -69,7 +75,7 @@ TEST_F(MetaExecTest, CallNotCallableUserExecutableFunctions) {
   auto& pm = Hyrise::get().plugin_manager;
 
   // We have to manually rollback the transaction contexts below because otherwise their destruction would cause an
-  // exeception to be thrown. This is due to an assert in the TransactionContext's destructor checking for failed
+  // exception to be thrown. This is due to an assert in the TransactionContext's destructor checking for failed
   // operators. See ~TransactionContext for details.
 
   // Call non-existing plugin (with non-existing function)

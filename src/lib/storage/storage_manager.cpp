@@ -1,18 +1,25 @@
 #include "storage_manager.hpp"
 
+#include <algorithm>
+#include <format>
 #include <memory>
+#include <ostream>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
 #include "hyrise.hpp"
 #include "import_export/file_type.hpp"
-#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "operators/export.hpp"
 #include "operators/table_wrapper.hpp"
+#include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 #include "statistics/generate_pruning_statistics.hpp"
 #include "statistics/table_statistics.hpp"
+#include "storage/lqp_view.hpp"
+#include "storage/prepared_plan.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/meta_table_manager.hpp"
 
@@ -22,9 +29,9 @@ void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> t
   const auto table_iter = _tables.find(name);
   const auto view_iter = _views.find(name);
   Assert(table_iter == _tables.end() || !table_iter->second,
-         "Cannot add table " + name + " - a table with the same name already exists");
+         std::format("Cannot add table '{}' - a table with the same name already exists.", name));
   Assert(view_iter == _views.end() || !view_iter->second,
-         "Cannot add table " + name + " - a view with the same name already exists");
+         std::format("Cannot add table '{}' - a view with the same name already exists.", name));
 
   const auto chunk_count = table->chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
@@ -35,8 +42,9 @@ void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> t
   }
 
   // Create table statistics and chunk pruning statistics for added table.
-
-  table->set_table_statistics(TableStatistics::from_table(*table));
+  if (!table->table_statistics()) {
+    table->set_table_statistics(TableStatistics::from_table(*table));
+  }
   generate_chunk_pruning_statistics(table);
 
   _tables[name] = std::move(table);
@@ -44,7 +52,8 @@ void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> t
 
 void StorageManager::drop_table(const std::string& name) {
   const auto table_iter = _tables.find(name);
-  Assert(table_iter != _tables.end() && table_iter->second, "Error deleting table. No such table named '" + name + "'");
+  Assert(table_iter != _tables.end() && table_iter->second,
+         std::format("Error deleting table. No such table named '{}'.", name));
 
   // The concurrent_unordered_map does not support concurrency-safe erasure. Thus, we simply reset the table pointer.
   _tables[name] = nullptr;
@@ -52,11 +61,12 @@ void StorageManager::drop_table(const std::string& name) {
 
 std::shared_ptr<Table> StorageManager::get_table(const std::string& name) const {
   const auto table_iter = _tables.find(name);
-  Assert(table_iter != _tables.end(), "No such table named '" + name + "'");
+  Assert(table_iter != _tables.end(), std::format("No such table named '{}'.", name));
 
   auto table = table_iter->second;
   Assert(table,
-         "Nullptr found when accessing table named '" + name + "'. This can happen if a dropped table is accessed.");
+         std::format("Nullptr found when accessing table named '{}'. This can happen if a dropped table is accessed.",
+                     name));
 
   return table;
 }
@@ -78,7 +88,7 @@ std::vector<std::string> StorageManager::table_names() const {
     table_names.emplace_back(table_item.first);
   }
 
-  std::sort(table_names.begin(), table_names.end());
+  std::ranges::sort(table_names);
   return table_names;
 }
 
@@ -101,27 +111,29 @@ void StorageManager::add_view(const std::string& name, const std::shared_ptr<LQP
   const auto table_iter = _tables.find(name);
   const auto view_iter = _views.find(name);
   Assert(table_iter == _tables.end() || !table_iter->second,
-         "Cannot add view " + name + " - a table with the same name already exists");
+         std::format("Cannot add view {} - a table with the same name already exists", name));
   Assert(view_iter == _views.end() || !view_iter->second,
-         "Cannot add view " + name + " - a view with the same name already exists");
+         std::format("Cannot add view {} - a view with the same name already exists", name));
 
   _views[name] = view;
 }
 
 void StorageManager::drop_view(const std::string& name) {
   const auto view_iter = _views.find(name);
-  Assert(view_iter != _views.end() && view_iter->second, "Error deleting view. No such view named '" + name + "'");
+  Assert(view_iter != _views.end() && view_iter->second,
+         std::format("Error deleting view. No such view named '{}'", name));
 
   _views[name] = nullptr;
 }
 
 std::shared_ptr<LQPView> StorageManager::get_view(const std::string& name) const {
   const auto view_iter = _views.find(name);
-  Assert(view_iter != _views.end(), "No such view named '" + name + "'");
+  Assert(view_iter != _views.end(), std::format("No such view named '{}'", name));
 
   const auto view = view_iter->second;
   Assert(view,
-         "Nullptr found when accessing view named '" + name + "'. This can happen if a dropped view is accessed.");
+         std::format("Nullptr found when accessing view named '{}'. This can happen if a dropped view is accessed.",
+                     name));
 
   return view->deep_copy();
 }
@@ -163,18 +175,19 @@ std::unordered_map<std::string, std::shared_ptr<LQPView>> StorageManager::views(
 void StorageManager::add_prepared_plan(const std::string& name, const std::shared_ptr<PreparedPlan>& prepared_plan) {
   const auto iter = _prepared_plans.find(name);
   Assert(iter == _prepared_plans.end() || !iter->second,
-         "Cannot add prepared plan " + name + " - a prepared plan with the same name already exists");
+         std::format("Cannot add prepared plan {} - a prepared plan with the same name already exists", name));
 
   _prepared_plans[name] = prepared_plan;
 }
 
 std::shared_ptr<PreparedPlan> StorageManager::get_prepared_plan(const std::string& name) const {
   const auto iter = _prepared_plans.find(name);
-  Assert(iter != _prepared_plans.end(), "No such prepared plan named '" + name + "'");
+  Assert(iter != _prepared_plans.end(), std::format("No such prepared plan named '{}'", name));
 
   auto prepared_plan = iter->second;
-  Assert(prepared_plan, "Nullptr found when accessing prepared plan named '" + name +
-                            "'. This can happen if a dropped prepared plan is accessed.");
+  Assert(prepared_plan, std::format("Nullptr found when accessing prepared plan named '{}'. This can happen if a "
+                                    "dropped prepared plan is accessed.",
+                                    name));
 
   return prepared_plan;
 }
@@ -187,7 +200,7 @@ bool StorageManager::has_prepared_plan(const std::string& name) const {
 void StorageManager::drop_prepared_plan(const std::string& name) {
   const auto iter = _prepared_plans.find(name);
   Assert(iter != _prepared_plans.end() && iter->second,
-         "Error deleting prepared plan. No such prepared plan named '" + name + "'");
+         std::format("Error deleting prepared plan. No such prepared plan named '{}'", name));
 
   _prepared_plans[name] = nullptr;
 }
@@ -223,7 +236,7 @@ void StorageManager::export_all_tables_as_csv(const std::string& path) {
       table_wrapper->execute();
 
       // NOLINTNEXTLINE(performance-inefficient-string-concatenation): not worth it, no performance-critical path.
-      auto export_csv = std::make_shared<Export>(table_wrapper, path + "/" + name + ".csv", FileType::Csv);
+      auto export_csv = std::make_shared<Export>(table_wrapper, std::format("{}/{}.csv", path, name), FileType::Csv);
       export_csv->execute();
     });
     tasks.push_back(job_task);
@@ -234,30 +247,27 @@ void StorageManager::export_all_tables_as_csv(const std::string& path) {
 }
 
 std::ostream& operator<<(std::ostream& stream, const StorageManager& storage_manager) {
-  stream << "==================" << std::endl;
-  stream << "===== Tables =====" << std::endl << std::endl;
+  stream << "==================\n";
+  stream << "===== Tables =====\n\n";
 
   for (auto const& table : storage_manager.tables()) {
     stream << "==== table >> " << table.first << " <<";
     stream << " (" << table.second->column_count() << " columns, " << table.second->row_count() << " rows in "
-           << table.second->chunk_count() << " chunks)";
-    stream << std::endl;
+           << table.second->chunk_count() << " chunks)\n";
   }
 
-  stream << "==================" << std::endl;
-  stream << "===== Views ======" << std::endl << std::endl;
+  stream << "==================\n";
+  stream << "===== Views ======\n\n";
 
   for (auto const& view : storage_manager.views()) {
-    stream << "==== view >> " << view.first << " <<";
-    stream << std::endl;
+    stream << "==== view >> " << view.first << " <<\n";
   }
 
-  stream << "==================" << std::endl;
-  stream << "= PreparedPlans ==" << std::endl << std::endl;
+  stream << "==================\n";
+  stream << "= PreparedPlans ==\n\n";
 
   for (auto const& prepared_plan : storage_manager.prepared_plans()) {
-    stream << "==== prepared plan >> " << prepared_plan.first << " <<";
-    stream << std::endl;
+    stream << "==== prepared plan >> " << prepared_plan.first << " <<\n";
   }
 
   return stream;

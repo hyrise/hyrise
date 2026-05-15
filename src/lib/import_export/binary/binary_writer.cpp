@@ -1,23 +1,38 @@
 #include "binary_writer.hpp"
 
+#include <cstddef>
+#include <cstdint>
 #include <cstring>
 #include <fstream>
-#include <memory>
+#include <ios>
 #include <string>
 #include <vector>
 
+#include "all_type_variant.hpp"
 #include "resolve_type.hpp"
+#include "storage/abstract_encoded_segment.hpp"
+#include "storage/chunk.hpp"
+#include "storage/dictionary_segment.hpp"
 #include "storage/encoding_type.hpp"
+#include "storage/fixed_string_dictionary_segment.hpp"
+#include "storage/fixed_string_dictionary_segment/fixed_string_vector.hpp"
+#include "storage/frame_of_reference_segment.hpp"
+#include "storage/lz4_segment.hpp"
+#include "storage/reference_segment.hpp"
+#include "storage/run_length_segment.hpp"
 #include "storage/segment_iterate.hpp"
+#include "storage/table.hpp"
+#include "storage/value_segment.hpp"
 #include "storage/vector_compression/bitpacking/bitpacking_vector.hpp"
+#include "storage/vector_compression/bitpacking/bitpacking_vector_type.hpp"
 #include "storage/vector_compression/compressed_vector_type.hpp"
-#include "storage/vector_compression/fixed_width_integer/fixed_width_integer_utils.hpp"
 #include "storage/vector_compression/fixed_width_integer/fixed_width_integer_vector.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace {
 
-using namespace hyrise;  // NOLINT
+using namespace hyrise;
 
 // Writes the content of the vector to the ofstream
 template <typename T, typename Alloc>
@@ -135,7 +150,7 @@ void BinaryWriter::_write_header(const Table& table, std::ofstream& ofstream) {
 void BinaryWriter::_write_chunk(const Table& table, std::ofstream& ofstream, const ChunkID& chunk_id) {
   const auto chunk = table.get_chunk(chunk_id);
   Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
-  export_value(ofstream, static_cast<ChunkOffset>(chunk->size()));
+  export_value(ofstream, chunk->size());
 
   // Export sort column definitions
   const auto& sorted_columns = chunk->individually_sorted_by();
@@ -338,7 +353,7 @@ void BinaryWriter::_write_segment(const LZ4Segment<T>& lz4_segment, bool /*colum
 template <typename T>
 CompressedVectorTypeID BinaryWriter::_compressed_vector_type_id(
     const AbstractEncodedSegment& abstract_encoded_segment) {
-  uint8_t compressed_vector_type_id = 0u;
+  auto compressed_vector_type_id = uint8_t{0};
   resolve_encoded_segment_type<T>(abstract_encoded_segment, [&compressed_vector_type_id](auto& typed_segment) {
     const auto compressed_vector_type = typed_segment.compressed_vector_type();
     Assert(compressed_vector_type, "Expected Segment to use vector compression");

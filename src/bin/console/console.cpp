@@ -1,23 +1,40 @@
 #include "console.hpp"
 
-#include <readline/history.h>
-#include <readline/readline.h>
+#include <setjmp.h>  // NOLINT(hicpp-deprecated-headers,modernize-deprecated-headers)
 
-#include <chrono>
-#include <csetjmp>
+#include <algorithm>
 #include <csignal>
+#include <cstdint>
+#include <cstdio>
 #include <cstdlib>
 #include <ctime>
+#include <exception>
 #include <filesystem>
+#include <format>
+#include <fstream>
+#include <functional>
 #include <iomanip>
+#include <iostream>
+#include <memory>
 #include <regex>
+#include <sstream>
+#include <string>
+#include <vector>
 
+#include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/join.hpp>
+#include <boost/algorithm/string/split.hpp>
+#include <boost/algorithm/string/trim.hpp>
+#include <boost/lexical_cast.hpp>
+#include <readline/history.h>   // NOLINT(build/include_order): cpplint considers readline headers as C system headers.
+#include <readline/readline.h>  // NOLINT(build/include_order)
 
+#include "magic_enum/magic_enum.hpp"
 #include "SQLParser.h"
-#include "concurrency/transaction_context.hpp"
+#include "SQLParserResult.h"
+
+#include "benchmark_config.hpp"
 #include "hyrise.hpp"
-#include "import_export/file_type.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "operators/export.hpp"
 #include "operators/get_table.hpp"
@@ -29,16 +46,20 @@
 #include "pagination.hpp"
 #include "scheduler/immediate_execution_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
+#include "sql/sql_pipeline.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_pipeline_statement.hpp"
 #include "sql/sql_plan_cache.hpp"
 #include "sql/sql_translator.hpp"
 #include "ssb/ssb_table_generator.hpp"
 #include "storage/chunk_encoder.hpp"
+#include "storage/encoding_type.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
 #include "tpcds/tpcds_table_generator.hpp"
 #include "tpch/tpch_constants.hpp"
 #include "tpch/tpch_table_generator.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 #include "utils/invalid_input_exception.hpp"
 #include "utils/load_table.hpp"
 #include "utils/meta_table_manager.hpp"
@@ -48,9 +69,9 @@
 #include "visualization/lqp_visualizer.hpp"
 #include "visualization/pqp_visualizer.hpp"
 
-#define ANSI_COLOR_RED "\x1B[31m"               // NOLINT(cppcoreguidelines-macro-usage)
-#define ANSI_COLOR_GREEN "\x1B[32m"             // NOLINT(cppcoreguidelines-macro-usage)
-#define ANSI_COLOR_RESET "\x1B[0m"              // NOLINT(cppcoreguidelines-macro-usage)
+#define ANSI_COLOR_RED "\x1B[31m"    // NOLINT(cppcoreguidelines-macro-usage)
+#define ANSI_COLOR_GREEN "\x1B[32m"  // NOLINT(cppcoreguidelines-macro-usage)
+#define ANSI_COLOR_RESET "\x1B[0m"   // NOLINT(cppcoreguidelines-macro-usage)
 
 #define ANSI_COLOR_RED_RL "\001\x1B[31m\002"    // NOLINT(cppcoreguidelines-macro-usage)
 #define ANSI_COLOR_GREEN_RL "\001\x1B[32m\002"  // NOLINT(cppcoreguidelines-macro-usage)
@@ -70,10 +91,10 @@ namespace {
  */
 sigjmp_buf jmp_env;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 
-// Returns a string containing a timestamp of the current date and time
+// Returns a string containing a timestamp of the current date and time.
 std::string current_timestamp() {
   auto time = std::time(nullptr);
-  const auto local_time = *std::localtime(&time);  // NOLINT(concurrency-mt-unsafe) - not called concurrently
+  const auto local_time = *std::localtime(&time);  // NOLINT(concurrency-mt-unsafe): not called concurrently.
 
   auto oss = std::ostringstream{};
   oss << std::put_time(&local_time, "%Y-%m-%d %H:%M:%S");
@@ -83,7 +104,7 @@ std::string current_timestamp() {
 // Removes the coloring commands (e.g. '\x1B[31m') from input, to have a clean logfile.
 // If remove_rl_codes_only is true, then it only removes the Readline specific escape sequences '\001' and '\002'
 std::string remove_coloring(const std::string& input, bool remove_rl_codes_only = false) {
-  // matches any characters that need to be escaped in RegEx except for '|'
+  // Matches any characters that need to be escaped in RegEx except for '|'.
   const auto special_chars = std::regex{R"([-[\]{}()*+?.,\^$#\s])"};
   auto sequences = std::string{"\x1B[31m|\x1B[32m|\x1B[0m|\001|\002"};
   if (remove_rl_codes_only) {
@@ -91,17 +112,20 @@ std::string remove_coloring(const std::string& input, bool remove_rl_codes_only 
   }
   const auto sanitized_sequences = std::regex_replace(sequences, special_chars, R"(\$&)");
 
-  // Remove coloring commands and escape sequences before writing to logfile
-  const auto expression = std::regex{"(" + sanitized_sequences + ")"};
+  // Remove coloring commands and escape sequences before writing to logfile.
+  const auto expression = std::regex{std::format("({})", sanitized_sequences)};
   return std::regex_replace(input, expression, "");
 }
 
 std::vector<std::string> tokenize(std::string input) {
   boost::algorithm::trim<std::string>(input);
 
-  // Remove whitespace duplicates to not get empty tokens after boost::algorithm::split
-  const auto both_are_spaces = [](char left, char right) { return (left == right) && (left == ' '); };
-  input.erase(std::unique(input.begin(), input.end(), both_are_spaces), input.end());
+  // Remove whitespace duplicates to not get empty tokens after boost::algorithm::split.
+  const auto both_are_spaces = [](char left, char right) {
+    return (left == right) && (left == ' ');
+  };
+  const auto unique_range = std::ranges::unique(input, both_are_spaces);
+  input.erase(unique_range.begin(), unique_range.end());
 
   auto tokens = std::vector<std::string>{};
   boost::algorithm::split(tokens, input, boost::is_space());
@@ -113,26 +137,21 @@ std::vector<std::string> tokenize(std::string input) {
 
 namespace hyrise {
 
-// Console implementation
-
 Console::Console()
-    : _prompt("> "),
-      _out(std::cout.rdbuf()),
-      _log("console.log", std::ios_base::app | std::ios_base::out),
-      _verbose(false),
-      _pagination_active(false),
-      _pqp_cache(std::make_shared<SQLPhysicalPlanCache>()),
-      _lqp_cache(std::make_shared<SQLLogicalPlanCache>()) {
-  // Init readline basics, tells readline to use our custom command completion function
+    : _prompt("> "), _out(std::cout.rdbuf()), _log("console.log", std::ios_base::app | std::ios_base::out) {
+  // Init readline basics, tells readline to use our custom command completion function.
   rl_attempted_completion_function = &Console::_command_completion;
   // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
   rl_completer_word_break_characters = const_cast<char*>(" \t\n\"\\'`@$><=;|&{(");
 
-  // Set Hyrise caches
-  Hyrise::get().default_pqp_cache = _pqp_cache;
-  Hyrise::get().default_lqp_cache = _lqp_cache;
+  // Set Hyrise caches.
+  Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
+  Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
 
-  // Register default commands to Console
+  // Use scheduler.
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+
+  // Register default commands.
   register_command("exit", std::bind(&Console::_exit, this, std::placeholders::_1));
   register_command("quit", std::bind(&Console::_exit, this, std::placeholders::_1));
 
@@ -156,17 +175,18 @@ Console::Console()
 
 Console::~Console() {
   _rollback();
+  Hyrise::get().scheduler()->finish();
 
   out("Bye.\n");
 
-  // Timestamp dump only to logfile
-  out("--- Session end --- " + current_timestamp() + "\n", false);
+  // Timestamp dump only to logfile.
+  out(std::format("--- Session end --- {}\n", current_timestamp()), false);
 }
 
 int Console::read() {
   char* buffer = nullptr;
 
-  // Prompt user for input
+  // Prompt user for input.
   buffer = readline(_prompt.c_str());
   if (!buffer) {
     return ReturnCode::Quit;
@@ -175,19 +195,19 @@ int Console::read() {
   auto input = std::string{buffer};
   boost::algorithm::trim<std::string>(input);
 
-  // Only save non-empty commands to history
+  // Only save non-empty commands to history.
   if (!input.empty()) {
     add_history(buffer);
-    // Save command to history file
+    // Save command to history file.
     if (!_history_file.empty()) {
       if (append_history(1, _history_file.c_str()) != 0) {
-        out("Error appending to history file: " + _history_file + "\n");
+        out(std::format("Error appending to history file: '{}'.\n", _history_file));
       }
     }
   }
 
-  // Free buffer, since readline() allocates new string every time
-  free(buffer);  // NOLINT (legacy API)
+  // Free buffer, since readline() allocates new string every time.
+  std::free(buffer);  // NOLINT(cppcoreguidelines-no-malloc,hicpp-no-malloc,cppcoreguidelines-owning-memory)
 
   return _eval(input);
 }
@@ -204,7 +224,7 @@ int Console::_eval(const std::string& input) {
 
   // Dump command to logfile, and to the Console if input comes from a script file. Also remove Readline specific
   // escape sequences ('\001' and '\002') to make it look normal.
-  out(remove_coloring(_prompt + input + "\n", true), _verbose);
+  out(remove_coloring(std::format("{}{}\n", _prompt, input), true), _verbose);
 
   // Check if we already are in multiline input.
   if (_multiline_input.empty()) {
@@ -245,16 +265,19 @@ int Console::_eval_command(const CommandFunction& func, const std::string& comma
   const auto first = cmd.find(' ');
   const auto last = cmd.find('\n');
 
-  // If no whitespace is found, zero arguments are provided
+  // If no whitespace is found, zero arguments are provided.
   if (std::string::npos == first) {
     return static_cast<int>(func(""));
   }
 
   auto args = cmd.substr(first + 1, last - (first + 1));
 
-  // Remove whitespace duplicates in args
-  const auto both_are_spaces = [](char left, char right) { return (left == right) && (left == ' '); };
-  args.erase(std::unique(args.begin(), args.end(), both_are_spaces), args.end());
+  // Remove whitespace duplicates in args.
+  const auto both_are_spaces = [](char left, char right) {
+    return (left == right) && (left == ' ');
+  };
+  const auto unique_range = std::ranges::unique(args, both_are_spaces);
+  args.erase(unique_range.begin(), unique_range.end());
 
   return static_cast<int>(func(args));
 }
@@ -267,7 +290,7 @@ bool Console::_initialize_pipeline(const std::string& sql) {
     }
     _sql_pipeline = std::make_unique<SQLPipeline>(builder.create_pipeline());
   } catch (const InvalidInputException& exception) {
-    out(std::string(exception.what()) + '\n');
+    out(std::format("{}\n", exception.what()));
     return false;
   }
 
@@ -282,7 +305,7 @@ int Console::_eval_sql(const std::string& sql) {
   try {
     _sql_pipeline->get_result_tables();
   } catch (const InvalidInputException& exception) {
-    out(std::string(exception.what()) + "\n");
+    out(std::format("{}\n", exception.what()));
     out("Following statements have not been executed.\n");
     if (!_explicitly_created_transaction_context && _sql_pipeline->statement_count() > 1) {
       out("All previous statements have been committed.\n");
@@ -298,18 +321,18 @@ int Console::_eval_sql(const std::string& sql) {
   _explicitly_created_transaction_context = _sql_pipeline->transaction_context();
 
   const auto [pipeline_status, table] = _sql_pipeline->get_result_table();
-  // Failed (i.e., conflicted) pipelines should be impossible in the single-user console
-  Assert(pipeline_status == SQLPipelineStatus::Success, "Unexpected pipeline status");
+  // Failed (i.e., conflicted) pipelines should be impossible in the single-user console.
+  Assert(pipeline_status == SQLPipelineStatus::Success, "Unexpected pipeline status.");
 
   const auto row_count = table ? table->row_count() : 0;
 
-  // Print result (to Console and logfile)
+  // Print result to console and logfile.
   if (table) {
     out(table);
   }
 
   out("===\n");
-  out(std::to_string(row_count) + " rows total\n");
+  out(std::format("{} rows total\n", row_count));
 
   auto stream = std::ostringstream{};
   stream << _sql_pipeline->metrics();
@@ -328,7 +351,7 @@ Console::RegisteredCommands Console::commands() {
 }
 
 void Console::set_prompt(const std::string& prompt) {
-  if (HYRISE_DEBUG) {
+  if constexpr (HYRISE_DEBUG) {
     _prompt = ANSI_COLOR_RED_RL "(debug)" ANSI_COLOR_RESET_RL + prompt;
   } else {
     _prompt = ANSI_COLOR_GREEN_RL "(release)" ANSI_COLOR_RESET_RL + prompt;
@@ -346,18 +369,18 @@ void Console::set_console_path(const std::string& path) {
 void Console::load_history(const std::string& history_file) {
   _history_file = history_file;
 
-  // Check if history file exist, create empty history file if not
+  // Check if history file exist, create empty history file if not.
   const auto file = std::ifstream{_history_file};
   if (!file.good()) {
-    out("Creating history file: " + _history_file + "\n");
+    out(std::format("Creating history file: '{}'\n", _history_file));
     if (write_history(_history_file.c_str()) != 0) {
-      out("Error creating history file: " + _history_file + "\n");
+      out(std::format("Error creating history file: '{}'.\n", _history_file));
       return;
     }
   }
 
   if (read_history(_history_file.c_str()) != 0) {
-    out("Error reading history file: " + _history_file + "\n");
+    out(std::format("Error reading history file: '{}'.\n", _history_file));
   }
 }
 
@@ -365,14 +388,14 @@ void Console::out(const std::string& output, bool console_print) {
   if (console_print) {
     _out << output;
   }
-  // Remove coloring commands like '\x1B[32m' when writing to logfile
+  // Remove coloring commands like '\x1B[32m' when writing to logfile.
   _log << remove_coloring(output);
   _log.flush();
 }
 
 void Console::out(const std::shared_ptr<const Table>& table, const PrintFlags flags) {
-  auto size_y = int{0};
-  auto size_x = int{0};
+  auto size_y = int32_t{0};
+  auto size_x = int32_t{0};
   rl_get_screen_size(&size_y, &size_x);
 
   auto stream = std::stringstream{};
@@ -398,7 +421,7 @@ void Console::out(const std::shared_ptr<const Table>& table, const PrintFlags fl
     pagination_disabled = true;
   }
 
-  // Paginate only if table has more rows or printed columns that fit in the terminal
+  // Paginate only if table has more rows or printed columns that fit in the terminal.
   if (fits_on_one_page || pagination_disabled) {
     _out << stream.rdbuf();
   } else {
@@ -410,7 +433,8 @@ void Console::out(const std::shared_ptr<const Table>& table, const PrintFlags fl
 
 // Command functions
 
-// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
+// While this particular method could be made static, others cannot.
+// NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 int Console::_exit(const std::string& /*args*/) {
   return ReturnCode::Quit;
 }
@@ -424,7 +448,7 @@ int Console::_help(const std::string& /*args*/) {
   const auto line_wrap = std::regex{"(.{1,120})(?: +|$)"};
   encoding_options =
       regex_replace(encoding_options, line_wrap, "$1\n                                                    ");
-  // Remove the 49 spaces and the new line added at the end
+  // Remove the 49 spaces and the new line added at the end.
   encoding_options.resize(encoding_options.size() - 50);
 
   // clang-format off
@@ -438,7 +462,7 @@ int Console::_help(const std::string& /*args*/) {
   out("                                                   The import type is chosen by the type of FILEPATH.\n");
   out("                                                     Supported types: '.bin', '.csv', '.tbl'\n");
   out("                                                   If no table name is specified, the filename without extension is used\n");  // NOLINT(whitespace/line_length)
-  out(encoding_options + "\n");
+  out(std::format("{}\n", encoding_options));
   out("  export TABLENAME FILEPATH                 - Export table named TABLENAME from storage manager to filepath FILEPATH\n");  // NOLINT(whitespace/line_length)
   out("                                                 The export type is chosen by the type of FILEPATH.\n");
   out("                                                   Supported types: '.bin', '.csv'\n");
@@ -462,7 +486,8 @@ int Console::_help(const std::string& /*args*/) {
   out("  help                                      - Show this message\n");
   out("  setting [property] [value]                - Change a runtime setting\n");
   out("           scheduler (on|off)               - Turn the scheduler on (default) or off\n");
-  out("  reset                                     - Clear all stored tables and cached query plans\n\n");
+  out("           binary_caching (on|off)          - Use cached binary tables for benchmarks (default) or not\n");
+  out("  reset                                     - Clear all stored tables and cached query plans and restore the default settings\n\n");  // NOLINT(whitespace/line_length)
   // clang-format on
 
   return ReturnCode::Ok;
@@ -472,11 +497,13 @@ int Console::_generate_tpcc(const std::string& args) {
   const auto arguments = tokenize(args);
 
   if (arguments.empty() || arguments.size() > 2) {
+    // NOLINTBEGIN(whitespace/line_length,whitespace/parens)
     // clang-format off
-    out("Usage: ");
-    out("  generate_tpcc NUM_WAREHOUSES [CHUNK_SIZE]   Generate TPC-C tables with the specified number of warehouses. \n");  // NOLINT(whitespace/line_length)
-    out("                                              Chunk size is " + std::to_string(Chunk::DEFAULT_SIZE) + " by default. \n");  // NOLINT(whitespace/line_length)
+    out(            "Usage: ");
+    out(            "  generate_tpcc NUM_WAREHOUSES [CHUNK_SIZE]   Generate TPC-C tables with the specified number of warehouses.\n");
+    out(std::format("                                              Chunk size is {} by default.\n", Chunk::DEFAULT_SIZE.t));
     // clang-format on
+    // NOLINTEND(whitespace/line_length,whitespace/parens)
     return ReturnCode::Error;
   }
 
@@ -488,7 +515,8 @@ int Console::_generate_tpcc(const std::string& args) {
   }
 
   out("Generating all TPCC tables (this might take a while) ...\n");
-  TPCCTableGenerator{num_warehouses, chunk_size}.generate_and_store();
+  const auto config = std::make_shared<BenchmarkConfig>(chunk_size, _binary_caching);
+  TPCCTableGenerator{num_warehouses, config}.generate_and_store();
 
   return ReturnCode::Ok;
 }
@@ -497,11 +525,13 @@ int Console::_generate_tpch(const std::string& args) {
   const auto arguments = tokenize(args);
 
   if (arguments.empty() || arguments.size() > 2) {
+    // NOLINTBEGIN(whitespace/line_length,whitespace/parens)
     // clang-format off
-    out("Usage: ");
-    out("  generate_tpch SCALE_FACTOR [CHUNK_SIZE]   Generate TPC-H tables with the specified scale factor. \n");
-    out("                                            Chunk size is " + std::to_string(Chunk::DEFAULT_SIZE) + " by default. \n");  // NOLINT(whitespace/line_length)
+    out(            "Usage: ");
+    out(            "  generate_tpch SCALE_FACTOR [CHUNK_SIZE]   Generate TPC-H tables with the specified scale factor.\n");
+    out(std::format("                                            Chunk size is {} by default.\n", Chunk::DEFAULT_SIZE.t));
     // clang-format on
+    // NOLINTEND(whitespace/line_length,whitespace/parens)
     return ReturnCode::Error;
   }
 
@@ -513,7 +543,8 @@ int Console::_generate_tpch(const std::string& args) {
   }
 
   out("Generating all TPCH tables (this might take a while) ...\n");
-  TPCHTableGenerator{scale_factor, ClusteringConfiguration::None, chunk_size}.generate_and_store();
+  const auto config = std::make_shared<BenchmarkConfig>(chunk_size, _binary_caching);
+  TPCHTableGenerator{scale_factor, ClusteringConfiguration::None, config}.generate_and_store();
 
   return ReturnCode::Ok;
 }
@@ -523,9 +554,9 @@ int Console::_generate_tpcds(const std::string& args) {
 
   if (arguments.empty() || arguments.size() > 2) {
     out("Usage: ");
-    out("  generate_tpcds SCALE_FACTOR [CHUNK_SIZE]   Generate TPC-DS tables with the specified scale factor. \n");
-    out("                                             Chunk size is " + std::to_string(Chunk::DEFAULT_SIZE) +
-        " by default. \n");
+    out("  generate_tpcds SCALE_FACTOR [CHUNK_SIZE]   Generate TPC-DS tables with the specified scale factor.\n");
+    out(std::format("                                             Chunk size is {} by default.\n",
+                    Chunk::DEFAULT_SIZE.t));
     return ReturnCode::Error;
   }
 
@@ -537,7 +568,8 @@ int Console::_generate_tpcds(const std::string& args) {
   }
 
   out("Generating all TPC-DS tables (this might take a while) ...\n");
-  TPCDSTableGenerator{scale_factor, chunk_size}.generate_and_store();
+  const auto config = std::make_shared<BenchmarkConfig>(chunk_size, _binary_caching);
+  TPCDSTableGenerator{scale_factor, config}.generate_and_store();
 
   return ReturnCode::Ok;
 }
@@ -547,9 +579,9 @@ int Console::_generate_ssb(const std::string& args) {
 
   if (arguments.empty() || arguments.size() > 2) {
     out("Usage: ");
-    out("  generate_ssb SCALE_FACTOR [CHUNK_SIZE]   Generate SSB tables with the specified scale factor. \n");
-    out("                                           Chunk size is " + std::to_string(Chunk::DEFAULT_SIZE) +
-        " by default. \n");
+    out("  generate_ssb SCALE_FACTOR [CHUNK_SIZE]   Generate SSB tables with the specified scale factor.\n");
+    out(std::format("                                           Chunk size is {} by default.\n",
+                    Chunk::DEFAULT_SIZE.t));
     return ReturnCode::Error;
   }
 
@@ -564,18 +596,19 @@ int Console::_generate_ssb(const std::string& args) {
   const auto executable_path = std::filesystem::canonical(_path).remove_filename();
   const auto ssb_dbgen_path = executable_path / "third_party/ssb-dbgen";
   const auto csv_meta_path = executable_path / "../resources/benchmark/ssb/schema";
+
   if (!std::filesystem::exists(ssb_dbgen_path / "dbgen")) {
-    out(std::string{"SSB dbgen not found at "} + ssb_dbgen_path.string() + "\n");
+    out(std::format("SSB dbgen not found at '{}'.\n", ssb_dbgen_path.string()));
     return ReturnCode::Error;
   }
 
   // Create the ssb_data directory (if needed) and generate the ssb_data/sf-... path.
-  auto ssb_data_path = std::stringstream{};
-  ssb_data_path << "ssb_data/sf-" << std::noshowpoint << scale_factor;
-  std::filesystem::create_directories(ssb_data_path.str());
+  const auto ssb_data_path = std::format("ssb_data/sf-{}", scale_factor);
+  std::filesystem::create_directories(ssb_data_path);
 
   out("Generating all SSB tables (this might take a while) ...\n");
-  SSBTableGenerator{ssb_dbgen_path, csv_meta_path, ssb_data_path.str(), scale_factor, chunk_size}.generate_and_store();
+  const auto config = std::make_shared<BenchmarkConfig>(chunk_size, _binary_caching);
+  SSBTableGenerator{ssb_dbgen_path, csv_meta_path, ssb_data_path, scale_factor, config}.generate_and_store();
 
   return ReturnCode::Ok;
 }
@@ -592,17 +625,17 @@ int Console::_load_table(const std::string& args) {
   const auto filepath = std::filesystem::path{arguments.at(0)};
   const auto tablename = arguments.size() >= 2 ? arguments.at(1) : std::string{filepath.stem()};
 
-  out("Loading " + filepath.string() + " into table \"" + tablename + "\"\n");
+  out(std::format("Loading '{}' into table '{}'.\n", filepath.string(), tablename));
 
   if (Hyrise::get().storage_manager.has_table(tablename)) {
-    out("Table \"" + tablename + "\" already existed. Replacing it.\n");
+    out(std::format("Table '{}' already existed. Replacing it.\n", tablename));
   }
 
   try {
     const auto importer = std::make_shared<Import>(filepath, tablename, Chunk::DEFAULT_SIZE);
     importer->execute();
   } catch (const std::exception& exception) {
-    out("Error: Exception thrown while importing table:\n  " + std::string(exception.what()) + "\n");
+    out(std::format("Error: Exception thrown while importing table:\n{}\n", exception.what()));
     return ReturnCode::Error;
   }
 
@@ -610,23 +643,23 @@ int Console::_load_table(const std::string& args) {
 
   const auto encoding_type = magic_enum::enum_cast<EncodingType>(encoding);
   if (!encoding_type) {
-    out("Error: Invalid encoding type: '" + encoding + "', try one of these: " + all_encoding_options() + "\n");
+    out(std::format("Error: Invalid encoding type: '{}', try one of these: {}.\n", encoding, all_encoding_options()));
     return ReturnCode::Error;
   }
 
-  // Check if the specified encoding can be used
+  // Check if the specified encoding can be used.
   const auto& table = Hyrise::get().storage_manager.get_table(tablename);
   auto supported = true;
   for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
     if (!encoding_supports_data_type(*encoding_type, table->column_data_type(column_id))) {
-      out("Encoding \"" + encoding + "\" not supported for column \"" + table->column_name(column_id) +
-          "\", table left unencoded\n");
+      out(std::format("Encoding '{}' not supported for column '{}', table left unencoded.\n", encoding,
+                      table->column_name(column_id)));
       supported = false;
     }
   }
 
   if (supported) {
-    out("Encoding \"" + tablename + "\" using " + encoding + "\n");
+    out(std::format("Encoding '{}' using '{}'\n", tablename, encoding));
     auto immutable_chunks = std::vector<ChunkID>{};
     for (ChunkID chunk_id(0); chunk_id < table->chunk_count(); ++chunk_id) {
       if (!table->get_chunk(chunk_id)->is_mutable()) {
@@ -657,26 +690,26 @@ int Console::_export_table(const std::string& args) {
   auto table_operator = std::shared_ptr<AbstractOperator>{};
   if (MetaTableManager::is_meta_table_name(tablename)) {
     if (!meta_table_manager.has_table(tablename)) {
-      out("Error: MetaTable does not exist in MetaTableManager\n");
+      out("Error: MetaTable does not exist in MetaTableManager.\n");
       return ReturnCode::Error;
     }
     table_operator = std::make_shared<TableWrapper>(meta_table_manager.generate_table(tablename));
   } else {
     if (!storage_manager.has_table(tablename)) {
-      out("Error: Table does not exist in StorageManager\n");
+      out("Error: Table does not exist in StorageManager.\n");
       return ReturnCode::Error;
     }
     table_operator = std::make_shared<GetTable>(tablename);
   }
 
   table_operator->execute();
-  out("Exporting \"" + tablename + "\" into \"" + filepath + "\" ...\n");
+  out(std::format("Exporting '{}' into '{}' ...\n", tablename, filepath));
 
   try {
     auto exporter = std::make_shared<Export>(table_operator, filepath);
     exporter->execute();
   } catch (const std::exception& exception) {
-    out("Error: Exception thrown while exporting:\n  " + std::string(exception.what()) + "\n");
+    out(std::format("Error: Exception thrown while exporting:\n{}\n", exception.what()));
     return ReturnCode::Error;
   }
 
@@ -696,7 +729,7 @@ int Console::_print_table(const std::string& args) {
 
   const auto& storage_manager = Hyrise::get().storage_manager;
   if (!storage_manager.has_table(tablename)) {
-    out("Error: Table does not exist in StorageManager\n");
+    out("Error: Table does not exist in StorageManager.\n");
     return ReturnCode::Error;
   }
 
@@ -713,7 +746,7 @@ int Console::_visualize(const std::string& input) {
    * "visualize" supports three dimensions of options:
    *    - "noexec"; or implicit "exec", the execution of the specified query
    *    - "lqp", "unoptlqp", "joins"; or implicit "pqp"
-   *    - a sql query can either be specified or not. If it isn't, the last previously executed query is visualized
+   *    - A sql query can either be specified or not. If it is not, the previously executed query is visualized.
    */
 
   auto input_words = std::vector<std::string>{};
@@ -726,15 +759,15 @@ int Console::_visualize(const std::string& input) {
   constexpr auto UNOPTLQP = "unoptlqp";
   constexpr auto JOINS = "joins";
 
-  // Determine whether the specified query is to be executed before visualization
+  // Determine whether the specified query is to be executed before visualization.
   auto no_execute = false;  // Default
   if (input_words.front() == NOEXEC || input_words.front() == EXEC) {
     no_execute = input_words.front() == NOEXEC;
     input_words.erase(input_words.begin());
   }
 
-  // Determine the plan type to visualize
-  enum class PlanType { LQP, UnoptLQP, PQP, Joins };
+  // Determine the plan type to visualize.
+  enum class PlanType : uint8_t { LQP, UnoptLQP, PQP, Joins };
   auto plan_type = PlanType::PQP;
   auto plan_type_str = std::string{"pqp"};
   if (input_words.front() == LQP || input_words.front() == UNOPTLQP || input_words.front() == PQP ||
@@ -759,8 +792,8 @@ int Console::_visualize(const std::string& input) {
     return ReturnCode::Error;
   }
 
-  // If there is no pipeline (i.e., neither was SQL passed in with the visualize command,
-  // nor was there a previous execution), return an error
+  // If there is no pipeline (i.e., neither was SQL passed in with the visualize command, nor was there a previous
+  // execution), return an error.
   if (!_sql_pipeline) {
     out("Error: Nothing to visualize.\n");
     return ReturnCode::Error;
@@ -771,7 +804,7 @@ int Console::_visualize(const std::string& input) {
     return ReturnCode::Error;
   }
 
-  const auto img_filename = plan_type_str + ".png";
+  const auto img_filename = std::format("{}.png", plan_type_str);
 
   try {
     switch (plan_type) {
@@ -828,27 +861,26 @@ int Console::_visualize(const std::string& input) {
       } break;
     }
   } catch (const InvalidInputException& exception) {
-    out(std::string(exception.what()) + '\n');
-    return false;
+    out(std::format("{}\n", exception.what()));
+    return 0;
   }
 
-  // NOLINTBEGIN(concurrency-mt-unsafe) - system() is not thread-safe, but it's not used concurrently here.
+  // NOLINTBEGIN(concurrency-mt-unsafe): system() is not thread-safe, but it is not used concurrently here.
   auto scripts_dir = std::string{"./scripts/"};
-  auto ret = system((scripts_dir + "planviz/is_iterm2.sh 2>/dev/null").c_str());
+  auto ret = system(std::format("{}planviz/is_iterm2.sh 2>/dev/null", scripts_dir).c_str());
   if (ret != 0) {
-    // Try in parent directory
-    scripts_dir = std::string{"."} + scripts_dir;
-    ret = system((scripts_dir + "planviz/is_iterm2.sh").c_str());
+    // Try in parent directory.
+    scripts_dir = std::format(".{}", scripts_dir);
+    ret = system(std::format("{}planviz/is_iterm2.sh", scripts_dir).c_str());
   }
   if (ret != 0) {
-    std::string msg{"Currently, only iTerm2 can print the visualization inline. You can find the plan at "};
-    msg += img_filename + "\n";
-    out(msg);
+    out(std::format("Currently, only iTerm2 can print the visualization inline. You can find the plan at {}.\n",
+                    img_filename));
 
     return ReturnCode::Ok;
   }
 
-  const auto cmd = scripts_dir + "/planviz/imgcat.sh " + img_filename;
+  const auto cmd = std::format("{}/planviz/imgcat.sh {}", scripts_dir, img_filename);
   ret = system(cmd.c_str());
   Assert(ret == 0, "Printing the image using ./scripts/imgcat.sh failed.");
   // NOLINTEND(concurrency-mt-unsafe)
@@ -874,7 +906,21 @@ int Console::_change_runtime_setting(const std::string& input) {
     return 0;
   }
 
-  out("Error: Unknown property\n");
+  if (property == "binary_caching") {
+    if (value == "on") {
+      _binary_caching = true;
+      out("Binary caching turned on\n");
+    } else if (value == "off") {
+      _binary_caching = false;
+      out("Binary caching turned off\n");
+    } else {
+      out("Usage: binary_caching (on|off)\n");
+      return 1;
+    }
+    return 0;
+  }
+
+  out("Error: Unknown property.\n");
   return 1;
 }
 
@@ -884,22 +930,22 @@ int Console::_exec_script(const std::string& script_file) {
   auto script = std::ifstream{filepath};
 
   if (!script.good()) {
-    out("Error: Script file '" + filepath + "' does not exist.\n");
+    out(std::format("Error: Script file '{}' does not exist.\n", filepath));
     return ReturnCode::Error;
   }
 
   if (!std::filesystem::is_regular_file(filepath)) {
-    out("Error: '" + filepath + "' is not a regular file.\n");
+    out(std::format("Error: '{}' is not a regular file.\n", filepath));
     return ReturnCode::Error;
   }
 
-  out("Executing script file: " + filepath + "\n");
+  out(std::format("Executing script file: '{}'\n", filepath));
   _verbose = true;
   auto command = std::string{};
   // TODO(anyone): Use std::to_underlying(ReturnCode::Ok) once we use C++23.
   auto return_code = magic_enum::enum_underlying(ReturnCode::Ok);
   while (std::getline(script, command)) {
-    return_code = _eval(command);
+    return_code = static_cast<int8_t>(_eval(command));
     if (return_code == ReturnCode::Error || return_code == ReturnCode::Quit) {
       break;
     }
@@ -912,7 +958,7 @@ int Console::_exec_script(const std::string& script_file) {
 void Console::handle_signal(int sig) {
   if (sig == SIGINT) {
     auto& console = Console::get();
-    // When in pagination mode, just quit pagination. Otherwise, reset Console.
+    // When in pagination mode, just quit pagination. Otherwise, reset console.
     if (console._pagination_active) {
       Pagination::push_ctrl_c();
     } else {
@@ -921,8 +967,7 @@ void Console::handle_signal(int sig) {
       console._multiline_input = "";
       console.set_prompt("!> ");
       console._verbose = false;
-      // Restore program state stored in jmp_env set with sigsetjmp(2).
-      // See comment on jmp_env for details
+      // Restore program state stored in jmp_env set with sigsetjmp(2). See comment on jmp_env for details.
       siglongjmp(jmp_env, 1);
     }
   }
@@ -934,15 +979,15 @@ int Console::_print_transaction_info() {
     return ReturnCode::Error;
   }
 
-  const auto transaction_id = std::to_string(_explicitly_created_transaction_context->transaction_id());
-  const auto snapshot_commit_id = std::to_string(_explicitly_created_transaction_context->snapshot_commit_id());
-  out("Active transaction: { transaction id = " + transaction_id + ", snapshot commit id = " + snapshot_commit_id +
-      " }\n");
+  const auto transaction_id = _explicitly_created_transaction_context->transaction_id();
+  const auto snapshot_commit_id = _explicitly_created_transaction_context->snapshot_commit_id();
+  out(std::format("Active transaction: {{ transaction id = {}, snapshot commit id = {} }}\n", transaction_id.t,
+                  snapshot_commit_id.t));
   return ReturnCode::Ok;
 }
 
 int Console::_print_current_working_directory() {
-  out(std::filesystem::current_path().string() + "\n");
+  out(std::format("{}\n", std::filesystem::current_path().string()));
   return ReturnCode::Ok;
 }
 
@@ -962,7 +1007,7 @@ int Console::_load_plugin(const std::string& args) {
 
   Hyrise::get().plugin_manager.load_plugin(plugin_path);
 
-  out("Plugin (" + plugin_name + ") successfully loaded.\n");
+  out(std::format("Plugin '{}' successfully loaded.\n", plugin_name));
 
   return ReturnCode::Ok;
 }
@@ -983,22 +1028,24 @@ int Console::_unload_plugin(const std::string& input) {
   // The presence of some plugins might cause certain query plans to be generated which will not work if the plugin
   // is stopped. Therefore, we clear the cache. For example, a plugin might create indexes which lead to query plans
   // using IndexScans, these query plans might become unusable after the plugin is unloaded.
-  _lqp_cache->clear();
-  _pqp_cache->clear();
+  Hyrise::get().default_lqp_cache->clear();
+  Hyrise::get().default_pqp_cache->clear();
 
-  out("Plugin (" + plugin_name + ") stopped.\n");
+  out(std::format("Plugin '{}' stopped.\n", plugin_name));
 
   return ReturnCode::Ok;
 }
 
 int Console::_reset() {
   _rollback();
-  _lqp_cache->clear();
-  _pqp_cache->clear();
 
   Hyrise::reset();
-  Hyrise::get().default_pqp_cache = _pqp_cache;
-  Hyrise::get().default_lqp_cache = _lqp_cache;
+  Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
+  Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
+
+  // Restore default settings.
+  _binary_caching = true;
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 
   return ReturnCode::Ok;
 }
@@ -1022,11 +1069,11 @@ char** Console::_command_completion(const char* text, const int start, const int
   // Choose completion function depending on the input.
   const auto& first_word = tokens[0];
   if (first_word == "visualize") {
-    // Completion only for three words, "visualize", and at most two options
+    // Completion only for three words, "visualize", and at most two options.
     if (tokens.size() <= 3) {
       completion_matches = rl_completion_matches(text, &Console::_command_generator_visualize);
     }
-    // Turn off filepath completion
+    // Turn off filepath completion.
     rl_attempted_completion_over = 1;
   } else if (first_word == "setting") {
     if (tokens.size() <= 2) {
@@ -1034,15 +1081,15 @@ char** Console::_command_completion(const char* text, const int start, const int
     } else if (tokens.size() <= 3 && tokens[1] == "scheduler") {
       completion_matches = rl_completion_matches(text, &Console::_command_generator_setting_scheduler);
     }
-    // Turn off filepath completion
+    // Turn off filepath completion.
     rl_attempted_completion_over = 1;
 
     // NOLINTNEXTLINE(bugprone-branch-clone)
   } else if (first_word == "quit" || first_word == "exit" || first_word == "help") {
-    // Turn off filepath completion
+    // Turn off filepath completion.
     rl_attempted_completion_over = 1;
   } else if ((first_word == "load" || first_word == "script") && tokens.size() > 2) {
-    // Turn off filepath completion after first argument for "load" and "script"
+    // Turn off filepath completion after first argument for "load" and "script".
     rl_attempted_completion_over = 1;
   } else if (start == 0) {
     completion_matches = rl_completion_matches(text, &Console::_command_generator_default);
@@ -1060,9 +1107,9 @@ char* Console::_command_generator(const char* text, int state, const std::vector
   for (; it != commands.end(); ++it) {
     const auto& command = *it;
     if (command.find(text) != std::string::npos) {
-      auto completion = new char[command.size()];  // NOLINT (legacy API)
+      auto* completion = new char[command.size()];  // NOLINT(cppcoreguidelines-owning-memory)
       // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg,hicpp-vararg)
-      static_cast<void>(snprintf(completion, command.size() + 1, "%s", command.c_str()));
+      static_cast<void>(std::snprintf(completion, command.size() + 1, "%s", command.c_str()));
       return completion;
     }
   }
@@ -1093,13 +1140,13 @@ char* Console::_command_generator_setting_scheduler(const char* text, int state)
 
 int main(int argc, char** argv) {
   // Make sure the TransactionManager is initialized before the console so that we don't run into destruction order
-  // problems (#1635)
+  // problems (#1635).
   hyrise::Hyrise::get();
 
   using Return = hyrise::Console::ReturnCode;
   auto& console = hyrise::Console::get();
 
-  // Bind CTRL-C to behaviour specified in Console::handle_signal
+  // Bind CTRL-C to behaviour specified in Console::handle_signal.
   static_cast<void>(std::signal(SIGINT, &hyrise::Console::handle_signal));
 
   console.set_prompt("> ");
@@ -1110,12 +1157,12 @@ int main(int argc, char** argv) {
   console.load_history(".repl_history");
 
   // Timestamp dump only to logfile
-  console.out("--- Session start --- " + current_timestamp() + "\n", false);
+  console.out(std::format("--- Session start --- {}\n", current_timestamp()), false);
 
   // TODO(anyone): Use std::to_underlying(ReturnCode::Ok) once we use C++23.
   auto return_code = magic_enum::enum_underlying(Return::Ok);
 
-  // Display Usage if too many arguments are provided
+  // Display usage if too many arguments are provided.
   if (argc > 2) {
     return_code = Return::Quit;
     console.out("Usage:\n");
@@ -1123,22 +1170,22 @@ int main(int argc, char** argv) {
     console.out("                                 Execute script if specified by SCRIPTFILE.\n");
   }
 
-  // Execute .sql script if specified
+  // Execute .sql script if specified.
   if (argc == 2) {
-    return_code = console.execute_script(std::string(argv[1]));
+    return_code = static_cast<int8_t>(console.execute_script(std::string(argv[1])));
     // Terminate Console if an error occured during script execution
     if (return_code == Return::Error) {
       return_code = Return::Quit;
     }
   }
 
-  // Display welcome message if Console started normally
+  // Display welcome message if console started normally.
   if (argc == 1) {
     console.out("HYRISE SQL Interface\n");
     console.out("Type 'help' for more information.\n\n");
 
     console.out("Hyrise is running a ");
-    if (HYRISE_DEBUG) {
+    if constexpr (HYRISE_DEBUG) {
       console.out(ANSI_COLOR_RED "(debug)" ANSI_COLOR_RESET);
     } else {
       console.out(ANSI_COLOR_GREEN "(release)" ANSI_COLOR_RESET);
@@ -1146,13 +1193,12 @@ int main(int argc, char** argv) {
     console.out(" build.\n\n");
   }
 
-  // Set jmp_env to current program state in preparation for siglongjmp(2)
-  // See comment on jmp_env for details
+  // Set jmp_env to current program state in preparation for siglongjmp(2). See comment on jmp_env for details.
   while (sigsetjmp(jmp_env, 1) != 0) {}
 
-  // Main REPL loop
+  // Main REPL loop.
   while (return_code != Return::Quit) {
-    return_code = console.read();
+    return_code = static_cast<int8_t>(console.read());
     if (return_code == Return::Ok) {
       console.set_prompt("> ");
     } else if (return_code == Return::Multiline) {

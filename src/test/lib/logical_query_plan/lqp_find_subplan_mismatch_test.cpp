@@ -1,17 +1,15 @@
-#include "base_test.hpp"
+#include <cstdint>
+#include <memory>
+#include <vector>
 
+#include "all_type_variant.hpp"
+#include "base_test.hpp"
 #include "expression/expression_functional.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
-#include "logical_query_plan/create_view_node.hpp"
-#include "logical_query_plan/delete_node.hpp"
-#include "logical_query_plan/drop_view_node.hpp"
-#include "logical_query_plan/dummy_table_node.hpp"
-#include "logical_query_plan/insert_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/limit_node.hpp"
-#include "logical_query_plan/logical_plan_root_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
@@ -19,13 +17,14 @@
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
-#include "logical_query_plan/update_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
+#include "testing_assert.hpp"
+#include "types.hpp"
 #include "utils/load_table.hpp"
 
 namespace hyrise {
 
-using namespace expression_functional;  // NOLINT(build/namespaces)
+using namespace expression_functional;
 
 class LQPFindSubplanMismatchTest : public BaseTest {
  protected:
@@ -78,7 +77,7 @@ class LQPFindSubplanMismatchTest : public BaseTest {
         AggregateNode::make(expression_vector(query_nodes.table_c_c), expression_vector(sum_(query_nodes.table_c_b)));
 
     query_nodes.sort_node =
-        SortNode::make(expression_vector(query_nodes.table_c_c), std::vector<SortMode>{SortMode::Ascending});
+        SortNode::make(expression_vector(query_nodes.table_c_c), std::vector<SortMode>{SortMode::AscendingNullsFirst});
     query_nodes.projection_node = ProjectionNode::make(expression_vector(query_nodes.table_a_a));
   }
 

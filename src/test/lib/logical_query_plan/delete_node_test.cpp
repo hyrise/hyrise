@@ -1,8 +1,7 @@
 #include <memory>
+#include <stdexcept>
 
 #include "base_test.hpp"
-
-#include "expression/expression_utils.hpp"
 #include "logical_query_plan/delete_node.hpp"
 
 namespace hyrise {
@@ -41,6 +40,10 @@ TEST_F(DeleteNodeTest, Copy) {
 
 TEST_F(DeleteNodeTest, NoUniqueColumnCombinations) {
   EXPECT_THROW(_delete_node->unique_column_combinations(), std::logic_error);
+}
+
+TEST_F(DeleteNodeTest, NoOrderDependencies) {
+  EXPECT_THROW(_delete_node->order_dependencies(), std::logic_error);
 }
 
 }  // namespace hyrise

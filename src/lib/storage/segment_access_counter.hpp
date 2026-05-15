@@ -6,6 +6,8 @@
 #include <memory>
 #include <string>
 
+#include "magic_enum/magic_enum.hpp"
+
 #include "storage/pos_lists/row_id_pos_list.hpp"
 #include "types.hpp"
 
@@ -19,15 +21,14 @@ class SegmentAccessCounter {
   friend class SegmentAccessCounterTest;
 
  public:
-  using CounterType = std::atomic_uint64_t;
+  using CounterType = std::atomic<uint64_t>;
 
-  enum class AccessType {
+  enum class AccessType : uint8_t {
     Point /* Single point access */,
     Sequential /* 0, 1, 1, 2, 3, 4 */,
     Monotonic /* 0, 0, 1, 2, 4, 8, 17 */,
     Random /* 0, 1, 0, 42 */,
-    Dictionary /* Used to count accesses to the dictionary of the dictionary segment */,
-    Count /* Dummy entry to describe the number of elements in this enum class. */
+    Dictionary /* Used to count accesses to the dictionary of the dictionary segment */
   };
 
   inline static const std::map<AccessType, const char*> access_type_string_mapping = {
@@ -38,8 +39,14 @@ class SegmentAccessCounter {
       {AccessType::Dictionary, "Dictionary"}};
 
   SegmentAccessCounter();
+  ~SegmentAccessCounter() = default;
   SegmentAccessCounter(const SegmentAccessCounter& other);
   SegmentAccessCounter& operator=(const SegmentAccessCounter& other);
+
+  // These two need not be deleted, but they are for the same reason that std::atomic has them deleted.
+  // You can implement them, but you should think about the implications for this class.
+  SegmentAccessCounter(SegmentAccessCounter&&) = delete;
+  SegmentAccessCounter& operator=(SegmentAccessCounter&&) = delete;
 
   bool operator==(const SegmentAccessCounter& other) const;
   bool operator!=(const SegmentAccessCounter& other) const;
@@ -54,7 +61,7 @@ class SegmentAccessCounter {
   std::string to_string() const;
 
  private:
-  std::array<CounterType, static_cast<size_t>(AccessType::Count)> _counters = {};
+  std::array<CounterType, magic_enum::enum_count<AccessType>()> _counters = {};
 
   // For access pattern analysis: The following enum is used used to determine how an iterator iterates over its
   // elements. This is done by analysing the first elements in a given PosList and a state machine, defined below.
@@ -65,7 +72,7 @@ class SegmentAccessCounter {
   // 3 (sequentially decreasing), difference between two neighboring elements is -1 or 0.
   // 4 (monotonically decreasing)
   // 5 (random access)
-  enum class AccessPattern {
+  enum class AccessPattern : uint8_t {
     Point,
     SequentiallyIncreasing,
     MonotonicallyIncreasing,

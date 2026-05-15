@@ -10,14 +10,12 @@
 #include <utility>
 #include <vector>
 
-#include <boost/container/pmr/monotonic_buffer_resource.hpp>
-#include <boost/container/pmr/polymorphic_allocator.hpp>
 #include <boost/container/scoped_allocator.hpp>
 #include <boost/container/small_vector.hpp>
 #include <boost/container_hash/hash.hpp>
+#include <boost/unordered/unordered_flat_map.hpp>
+#include <boost/unordered/unordered_flat_set.hpp>
 
-#include "bytell_hash_map.hpp"
-#include "tsl/robin_set.h"
 #include "uninitialized_vector.hpp"
 
 #include "abstract_aggregate_operator.hpp"
@@ -66,8 +64,8 @@ template <typename ColumnDataType, WindowFunction aggregate_function>
 struct AggregateResult {
   using AggregateType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
 
-  using DistinctValues = tsl::robin_set<ColumnDataType, std::hash<ColumnDataType>, std::equal_to<ColumnDataType>,
-                                        PolymorphicAllocator<ColumnDataType>>;
+  using DistinctValues = boost::unordered_flat_set<ColumnDataType, std::hash<ColumnDataType>, std::equal_to<>,
+                                                   PolymorphicAllocator<ColumnDataType>>;
 
   // Find the correct accumulator type using nested conditionals.
   using AccumulatorType = std::conditional_t<
@@ -101,8 +99,8 @@ using AggregateResultIdMapAllocator = PolymorphicAllocator<std::pair<const Aggre
 
 template <typename AggregateKey>
 using AggregateResultIdMap =
-    ska::bytell_hash_map<AggregateKey, AggregateResultId, std::hash<AggregateKey>, std::equal_to<AggregateKey>,
-                         AggregateResultIdMapAllocator<AggregateKey>>;
+    boost::unordered_flat_map<AggregateKey, AggregateResultId, std::hash<AggregateKey>, std::equal_to<AggregateKey>,
+                              AggregateResultIdMapAllocator<AggregateKey>>;
 
 // The key type that is used for the aggregation map.
 using AggregateKeyEntry = uint64_t;
@@ -183,15 +181,20 @@ class AggregateHash : public AbstractAggregateOperator {
   std::shared_ptr<SegmentVisitorContext> _create_aggregate_context(const DataType data_type,
                                                                    const WindowFunction aggregate_function) const;
 
+  // Data structure used to gather intermediate results of grouping and aggregation. This data structure stores both
+  // the PosLists for group-by columns as well as the materialized aggregate results that are later returned as
+  // EntirePosList ReferenceSegments in the output table.
+  std::vector<Segments> _intermediate_result;
+
   std::vector<std::shared_ptr<BaseValueSegment>> _groupby_segments;
   std::vector<std::shared_ptr<SegmentVisitorContext>> _contexts_per_column;
   bool _has_aggregate_functions;
 
-  std::atomic_size_t _expected_result_size{};
+  std::atomic_size_t _expected_result_size;
   bool _use_immediate_key_shortcut{};
 
-  std::chrono::nanoseconds groupby_columns_writing_duration{};
-  std::chrono::nanoseconds aggregate_columns_writing_duration{};
+  std::chrono::nanoseconds _groupby_columns_writing_duration{};
+  std::chrono::nanoseconds _aggregate_columns_writing_duration{};
 };
 
 }  // namespace hyrise
@@ -199,7 +202,7 @@ class AggregateHash : public AbstractAggregateOperator {
 namespace std {
 template <>
 struct hash<hyrise::EmptyAggregateKey> {
-  size_t operator()(const hyrise::EmptyAggregateKey& key) const {
+  size_t operator()(const hyrise::EmptyAggregateKey& /*key*/) const {
     return 0;
   }
 };

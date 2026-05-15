@@ -1,16 +1,32 @@
 #include "operator_scan_predicate.hpp"
 
+#include <format>
+#include <memory>
+#include <optional>
+#include <ostream>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include <boost/variant/get.hpp>
+
+#include "all_parameter_variant.hpp"
+#include "all_type_variant.hpp"
 #include "expression/abstract_predicate_expression.hpp"
+#include "expression/correlated_parameter_expression.hpp"
 #include "expression/expression_functional.hpp"
+#include "expression/placeholder_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
+#include "storage/table.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 
 namespace {
 
-using namespace hyrise;                         // NOLINT(build/namespaces)
-using namespace hyrise::expression_functional;  // NOLINT(build/namespaces)
+using namespace hyrise;
+using namespace hyrise::expression_functional;
 
 std::optional<AllParameterVariant> resolve_all_parameter_variant(const AbstractExpression& expression,
                                                                  const AbstractLQPNode& node) {
@@ -36,12 +52,12 @@ namespace hyrise {
 
 std::ostream& OperatorScanPredicate::output_to_stream(std::ostream& stream,
                                                       const std::shared_ptr<const Table>& table) const {
-  std::string column_name_left = std::string("Column #") + std::to_string(column_id);
+  std::string column_name_left = std::format("Column #{}", column_id.t);
   if (table) {
     column_name_left = table->column_name(column_id);
   }
 
-  stream << column_name_left << " " << predicate_condition;
+  stream << column_name_left << " " << predicate_condition << " ";
 
   if (table && is_column_id(value)) {
     stream << table->column_name(boost::get<ColumnID>(value));
@@ -106,7 +122,7 @@ std::optional<std::vector<OperatorScanPredicate>> OperatorScanPredicate::from_ex
         !variant_is_null(boost::get<AllTypeVariant>(*argument_c))) {
       // This is the BETWEEN case that we can handle
       return std::vector<OperatorScanPredicate>{
-          OperatorScanPredicate{boost::get<ColumnID>(*argument_a), predicate_condition, *argument_b, *argument_c}};
+          OperatorScanPredicate{boost::get<ColumnID>(*argument_a), predicate_condition, *argument_b, argument_c}};
     }
 
     PerformanceWarning("BETWEEN handled as two table scans because no BETWEEN specialization was available");

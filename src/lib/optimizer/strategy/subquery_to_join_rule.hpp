@@ -1,6 +1,10 @@
 #pragma once
 
 #include <map>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 
 #include "abstract_rule.hpp"
 #include "expression/abstract_expression.hpp"
@@ -64,7 +68,7 @@ class SubqueryToJoinRule : public AbstractRule {
      * This is a vector instead of an unordered_set so that tests are reproducible. Since correlation is usually very
      * low there shouldn't be much of a performance difference.
      */
-    std::vector<std::shared_ptr<AbstractExpression>> required_output_expressions = {};
+    std::vector<std::shared_ptr<AbstractExpression>> required_output_expressions;
   };
 
   /**
@@ -127,7 +131,8 @@ class SubqueryToJoinRule : public AbstractRule {
       const std::map<ParameterID, std::shared_ptr<AbstractExpression>>& parameter_mapping);
 
  protected:
-  void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
+  void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root,
+                                         OptimizationContext& optimization_context) const override;
 };
 
 }  // namespace hyrise

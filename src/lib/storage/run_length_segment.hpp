@@ -37,7 +37,7 @@ class BaseCompressedVector;
  * Actually stored data:
  *  values:          1 2 2 3  (note, repeating values)
  *  null values:     0 0 1 0
- *  end positions:   2 4 6 8
+ *  end positions:   2 4 7 8
  */
 template <typename T>
 class RunLengthSegment : public AbstractEncodedSegment {
@@ -72,7 +72,7 @@ class RunLengthSegment : public AbstractEncodedSegment {
 
   ChunkOffset size() const final;
 
-  std::shared_ptr<AbstractSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;
+  std::shared_ptr<AbstractSegment> copy_using_memory_resource(MemoryResource& memory_resource) const final;
 
   size_t memory_usage(const MemoryUsageCalculationMode mode) const final;
 

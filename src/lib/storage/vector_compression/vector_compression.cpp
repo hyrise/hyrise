@@ -1,16 +1,21 @@
 #include "vector_compression.hpp"
 
+#include <cstddef>
+#include <cstdint>
 #include <map>
 #include <memory>
+#include <ostream>
 
-#include "utils/assert.hpp"
-
+#include "base_compressed_vector.hpp"
+#include "base_vector_compressor.hpp"
 #include "bitpacking/bitpacking_compressor.hpp"
 #include "fixed_width_integer/fixed_width_integer_compressor.hpp"
-
-namespace hyrise {
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace {
+
+using namespace hyrise;
 
 /**
  * @brief Mapping of vector compression types to compressors
@@ -31,6 +36,8 @@ std::unique_ptr<BaseVectorCompressor> create_compressor_by_type(VectorCompressio
 }
 
 }  // namespace
+
+namespace hyrise {
 
 std::unique_ptr<const BaseCompressedVector> compress_vector(const pmr_vector<uint32_t>& vector,
                                                             const VectorCompressionType type,

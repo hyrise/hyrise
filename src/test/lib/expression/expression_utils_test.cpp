@@ -1,5 +1,11 @@
-#include "base_test.hpp"
+#include <cstdint>
+#include <memory>
+#include <optional>
+#include <stdexcept>
+#include <vector>
 
+#include "all_type_variant.hpp"
+#include "base_test.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/pqp_subquery_expression.hpp"
@@ -9,10 +15,11 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "operators/get_table.hpp"
 #include "operators/projection.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
-using namespace expression_functional;  // NOLINT(build/namespaces)
+using namespace expression_functional;
 
 class ExpressionUtilsTest : public BaseTest {
  public:

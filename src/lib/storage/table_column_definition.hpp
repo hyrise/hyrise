@@ -1,5 +1,8 @@
 #pragma once
 
+#include <string>
+#include <vector>
+
 #include "all_type_variant.hpp"
 #include "types.hpp"
 

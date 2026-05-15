@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory>
+#include <utility>
 #include <vector>
 
 #include "operators/operator_join_predicate.hpp"
@@ -23,7 +25,6 @@ class MultiPredicateJoinEvaluator {
   class BaseFieldComparator : public Noncopyable {
    public:
     virtual bool compare(const RowID& left, const RowID& right) const = 0;
-    virtual ~BaseFieldComparator() = default;
   };
 
   template <typename CompareFunctor, typename L, typename R>
@@ -48,9 +49,8 @@ class MultiPredicateJoinEvaluator {
       // for all other JoinModes.
       if (!left_value || !right_value) {
         return _join_mode == JoinMode::AntiNullAsTrue;
-      } else {
-        return _compare_functor(*left_value, *right_value);
       }
+      return _compare_functor(*left_value, *right_value);
     }
 
    private:

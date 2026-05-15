@@ -1,29 +1,27 @@
-#include "strategy_base_test.hpp"
+#include <memory>
 
+#include "all_type_variant.hpp"
 #include "expression/expression_functional.hpp"
-#include "logical_query_plan/aggregate_node.hpp"
-#include "logical_query_plan/change_meta_table_node.hpp"
-#include "logical_query_plan/delete_node.hpp"
-#include "logical_query_plan/export_node.hpp"
-#include "logical_query_plan/insert_node.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
-#include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
-#include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
-#include "logical_query_plan/union_node.hpp"
-#include "logical_query_plan/update_node.hpp"
-#include "optimizer/strategy/column_pruning_rule.hpp"
 #include "optimizer/strategy/join_to_semi_join_rule.hpp"
+#include "storage/constraints/table_key_constraint.hpp"
+#include "storage/table.hpp"
+#include "strategy_base_test.hpp"
+#include "testing_assert.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
-using namespace expression_functional;  // NOLINT(build/namespaces)
+using namespace expression_functional;
 
 class JoinToSemiJoinRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
+    StrategyBaseTest::SetUp();
     node_a = MockNode::make(
         MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "a");
     node_b = MockNode::make(
@@ -40,7 +38,8 @@ class JoinToSemiJoinRuleTest : public StrategyBaseTest {
   }
 
   std::shared_ptr<JoinToSemiJoinRule> rule;
-  std::shared_ptr<MockNode> node_a, node_b;
+  std::shared_ptr<MockNode> node_a;
+  std::shared_ptr<MockNode> node_b;
   std::shared_ptr<LQPColumnExpression> a, b, c, u, v, w;
 };
 
@@ -53,14 +52,15 @@ TEST_F(JoinToSemiJoinRuleTest, InnerJoinToSemiJoin) {
     auto& sm = Hyrise::get().storage_manager;
     sm.add_table("table", table);
 
-    table->add_soft_key_constraint({{ColumnID{0}}, KeyConstraintType::UNIQUE});
+    // Non-genuine UCC
+    table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE, INITIAL_COMMIT_ID});
   }
 
   const auto stored_table_node = StoredTableNode::make("table");
   const auto column0 = stored_table_node->get_column("column0");
 
   // clang-format off
-  const auto lqp =
+  _lqp =
   ProjectionNode::make(expression_vector(add_(a, 2)),
     JoinNode::make(JoinMode::Inner, equals_(a, column0),
       ProjectionNode::make(expression_vector(a),
@@ -75,10 +75,10 @@ TEST_F(JoinToSemiJoinRuleTest, InnerJoinToSemiJoin) {
       stored_table_node));
   // clang-format on
 
-  static_cast<JoinNode&>(*lqp->left_input()).mark_input_side_as_prunable(LQPInputSide::Right);
-  const auto actual_lqp = apply_rule(rule, lqp);
-
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  static_cast<JoinNode&>(*_lqp->left_input()).mark_input_side_as_prunable(LQPInputSide::Right);
+  _apply_rule(rule, _lqp);
+  EXPECT_FALSE(_optimization_context.is_cacheable());  // Not cacheable because UCC used is not genuine.
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(JoinToSemiJoinRuleTest, MultiPredicateInnerJoinToSemiJoinWithSingleEqui) {
@@ -93,7 +93,7 @@ TEST_F(JoinToSemiJoinRuleTest, MultiPredicateInnerJoinToSemiJoinWithSingleEqui) 
     auto& sm = Hyrise::get().storage_manager;
     sm.add_table("table", table);
 
-    table->add_soft_key_constraint({{ColumnID{0}}, KeyConstraintType::UNIQUE});
+    table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE, INITIAL_COMMIT_ID});
   }
 
   const auto stored_table_node = StoredTableNode::make("table");
@@ -101,7 +101,7 @@ TEST_F(JoinToSemiJoinRuleTest, MultiPredicateInnerJoinToSemiJoinWithSingleEqui) 
   const auto column1 = stored_table_node->get_column("column1");
 
   // clang-format off
-  const auto lqp =
+  _lqp =
   ProjectionNode::make(expression_vector(add_(a, 2)),
     JoinNode::make(JoinMode::Inner, expression_vector(equals_(a, column0), not_equals_(a, column1)),
       ProjectionNode::make(expression_vector(a),
@@ -116,10 +116,12 @@ TEST_F(JoinToSemiJoinRuleTest, MultiPredicateInnerJoinToSemiJoinWithSingleEqui) 
       stored_table_node));
   // clang-format on
 
-  static_cast<JoinNode&>(*lqp->left_input()).mark_input_side_as_prunable(LQPInputSide::Right);
-  const auto actual_lqp = apply_rule(rule, lqp);
+  static_cast<JoinNode&>(*_lqp->left_input()).mark_input_side_as_prunable(LQPInputSide::Right);
+  _apply_rule(rule, _lqp);
+  // Not cacheable because UCC used is not genuine.
+  EXPECT_FALSE(_optimization_context.is_cacheable());
 
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(JoinToSemiJoinRuleTest, MultiPredicateInnerJoinToSemiJoinWithMultiEqui) {
@@ -129,15 +131,15 @@ TEST_F(JoinToSemiJoinRuleTest, MultiPredicateInnerJoinToSemiJoinWithMultiEqui) {
    * inner join's predicate expressions.
    */
   {
-    auto column_definitions = TableColumnDefinitions{};
-    column_definitions.emplace_back("column0", DataType::Int, false);
-    column_definitions.emplace_back("column1", DataType::Int, false);
+    const auto column_definitions =
+        TableColumnDefinitions{{"column0", DataType::Int, false}, {"column1", DataType::Int, false}};
     const auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
 
-    auto& sm = Hyrise::get().storage_manager;
-    sm.add_table("table", table);
+    Hyrise::get().storage_manager.add_table("table", table);
 
-    table->add_soft_key_constraint({{ColumnID{0}, ColumnID{1}}, KeyConstraintType::UNIQUE});
+    // Add a spurious UCC. Thus, the rewritten plan should not be cacheable.
+    table->add_soft_constraint(
+        TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::UNIQUE, INITIAL_COMMIT_ID});
   }
 
   const auto stored_table_node = StoredTableNode::make("table");
@@ -145,7 +147,7 @@ TEST_F(JoinToSemiJoinRuleTest, MultiPredicateInnerJoinToSemiJoinWithMultiEqui) {
   const auto column1 = stored_table_node->get_column("column1");
 
   // clang-format off
-  const auto lqp =
+  _lqp =
   ProjectionNode::make(expression_vector(add_(a, 2)),
     JoinNode::make(JoinMode::Inner, expression_vector(equals_(a, column0), equals_(a, column1)),
       ProjectionNode::make(expression_vector(a),
@@ -160,10 +162,11 @@ TEST_F(JoinToSemiJoinRuleTest, MultiPredicateInnerJoinToSemiJoinWithMultiEqui) {
       stored_table_node));
   // clang-format on
 
-  static_cast<JoinNode&>(*lqp->left_input()).mark_input_side_as_prunable(LQPInputSide::Right);
-  const auto actual_lqp = apply_rule(rule, lqp);
-
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  static_cast<JoinNode&>(*_lqp->left_input()).mark_input_side_as_prunable(LQPInputSide::Right);
+  _apply_rule(rule, _lqp);
+  // Not cacheable because UCC used is not genuine.
+  EXPECT_FALSE(_optimization_context.is_cacheable());
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(JoinToSemiJoinRuleTest, DoNotTouchInnerJoinWithNonEqui) {
@@ -175,14 +178,14 @@ TEST_F(JoinToSemiJoinRuleTest, DoNotTouchInnerJoinWithNonEqui) {
     auto& sm = Hyrise::get().storage_manager;
     sm.add_table("table", table);
 
-    table->add_soft_key_constraint({{ColumnID{0}}, KeyConstraintType::UNIQUE});
+    table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE});
   }
 
   const auto stored_table_node = StoredTableNode::make("table");
   const auto column0 = stored_table_node->get_column("column0");
 
   // clang-format off
-  const auto lqp =
+  _lqp =
   ProjectionNode::make(expression_vector(add_(a, 2)),
     JoinNode::make(JoinMode::Inner, greater_than_(a, column0),
       ProjectionNode::make(expression_vector(a),
@@ -190,11 +193,11 @@ TEST_F(JoinToSemiJoinRuleTest, DoNotTouchInnerJoinWithNonEqui) {
       stored_table_node));
   // clang-format on
 
-  static_cast<JoinNode&>(*lqp->left_input()).mark_input_side_as_prunable(LQPInputSide::Right);
-  const auto expected_lqp = lqp->deep_copy();
-  const auto actual_lqp = apply_rule(rule, lqp);
-
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  static_cast<JoinNode&>(*_lqp->left_input()).mark_input_side_as_prunable(LQPInputSide::Right);
+  const auto expected_lqp = _lqp->deep_copy();
+  _apply_rule(rule, _lqp);
+  EXPECT_TRUE(_optimization_context.is_cacheable());  // Cacheable because rule was not applied.
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(JoinToSemiJoinRuleTest, DoNotTouchInnerJoinWithoutUcc) {
@@ -212,7 +215,7 @@ TEST_F(JoinToSemiJoinRuleTest, DoNotTouchInnerJoinWithoutUcc) {
   const auto column0 = stored_table_node->get_column("column0");
 
   // clang-format off
-  const auto lqp =
+  _lqp =
   ProjectionNode::make(expression_vector(add_(a, 2)),
     JoinNode::make(JoinMode::Inner, equals_(a, column0),
       ProjectionNode::make(expression_vector(a),
@@ -220,11 +223,11 @@ TEST_F(JoinToSemiJoinRuleTest, DoNotTouchInnerJoinWithoutUcc) {
       stored_table_node));
   // clang-format on
 
-  static_cast<JoinNode&>(*lqp->left_input()).mark_input_side_as_prunable(LQPInputSide::Right);
-  const auto expected_lqp = lqp->deep_copy();
-  const auto actual_lqp = apply_rule(rule, lqp);
-
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  static_cast<JoinNode&>(*_lqp->left_input()).mark_input_side_as_prunable(LQPInputSide::Right);
+  const auto expected_lqp = _lqp->deep_copy();
+  _apply_rule(rule, _lqp);
+  EXPECT_TRUE(_optimization_context.is_cacheable());  // Cacheable because rule was not applied.
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(JoinToSemiJoinRuleTest, DoNotTouchInnerJoinWithoutMatchingUcc) {
@@ -232,8 +235,8 @@ TEST_F(JoinToSemiJoinRuleTest, DoNotTouchInnerJoinWithoutMatchingUcc) {
    * Based on the InnerJoinToSemiJoin test.
    *
    * We define a multi-column UCC (column0, column1), but only a single Equals-predicate for the inner join
-   * (a == column0). Hence, the resulting unique column combination does not match the expressions of the single Equals-
-   * predicate and we should not see a semi join reformulation.
+   * `(a == column0)`. Hence, the resulting unique column combination does not match the expressions of the single
+   * equals predicate and we should not see a semi join reformulation.
    */
 
   {
@@ -245,14 +248,14 @@ TEST_F(JoinToSemiJoinRuleTest, DoNotTouchInnerJoinWithoutMatchingUcc) {
     auto& sm = Hyrise::get().storage_manager;
     sm.add_table("table", table);
 
-    table->add_soft_key_constraint({{ColumnID{0}, ColumnID{1}}, KeyConstraintType::UNIQUE});
+    table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::UNIQUE});
   }
 
   const auto stored_table_node = StoredTableNode::make("table");
   const auto column0 = stored_table_node->get_column("column0");
 
   // clang-format off
-  const auto lqp =
+  _lqp =
   ProjectionNode::make(expression_vector(add_(a, 2)),
     JoinNode::make(JoinMode::Inner, equals_(a, column0),
       ProjectionNode::make(expression_vector(a),
@@ -260,11 +263,11 @@ TEST_F(JoinToSemiJoinRuleTest, DoNotTouchInnerJoinWithoutMatchingUcc) {
       stored_table_node));
   // clang-format on
 
-  static_cast<JoinNode&>(*lqp->left_input()).mark_input_side_as_prunable(LQPInputSide::Right);
-  const auto expected_lqp = lqp->deep_copy();
-  const auto actual_lqp = apply_rule(rule, lqp);
-
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  static_cast<JoinNode&>(*_lqp->left_input()).mark_input_side_as_prunable(LQPInputSide::Right);
+  const auto expected_lqp = _lqp->deep_copy();
+  _apply_rule(rule, _lqp);
+  EXPECT_TRUE(_optimization_context.is_cacheable());  // Cacheable because rule was not applied.
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(JoinToSemiJoinRuleTest, DoNotTouchNonInnerJoin) {
@@ -277,14 +280,14 @@ TEST_F(JoinToSemiJoinRuleTest, DoNotTouchNonInnerJoin) {
     auto& sm = Hyrise::get().storage_manager;
     sm.add_table("table", table);
 
-    table->add_soft_key_constraint({{ColumnID{0}}, KeyConstraintType::PRIMARY_KEY});
+    table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::PRIMARY_KEY});
   }
 
   const auto stored_table_node = StoredTableNode::make("table");
   const auto column0 = stored_table_node->get_column("column0");
 
   // clang-format off
-  const auto lqp =
+  _lqp =
   ProjectionNode::make(expression_vector(add_(a, 2)),
     JoinNode::make(JoinMode::Left, equals_(a, column0),
       ProjectionNode::make(expression_vector(a),
@@ -292,11 +295,11 @@ TEST_F(JoinToSemiJoinRuleTest, DoNotTouchNonInnerJoin) {
       stored_table_node));
   // clang-format on
 
-  static_cast<JoinNode&>(*lqp->left_input()).mark_input_side_as_prunable(LQPInputSide::Right);
-  const auto expected_lqp = lqp->deep_copy();
-  const auto actual_lqp = apply_rule(rule, lqp);
-
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  static_cast<JoinNode&>(*_lqp->left_input()).mark_input_side_as_prunable(LQPInputSide::Right);
+  const auto expected_lqp = _lqp->deep_copy();
+  _apply_rule(rule, _lqp);
+  EXPECT_TRUE(_optimization_context.is_cacheable());  // Cacheable because rule was not applied.
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 }  // namespace hyrise

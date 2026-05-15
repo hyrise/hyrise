@@ -1,12 +1,29 @@
 #include "check_table_equal.hpp"
 
+#include <algorithm>
+#include <cstddef>
+#include <cstdint>
+#include <format>
 #include <iomanip>
-#include <iostream>
+#include <memory>
+#include <optional>
+#include <sstream>
+#include <string>
+#include <utility>
+#include <vector>
 
-#include <boost/algorithm/string.hpp>
+#include <boost/algorithm/string/predicate.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/variant/get.hpp>
 
+#include "all_type_variant.hpp"
 #include "lossless_cast.hpp"
+#include "storage/abstract_segment.hpp"
+#include "storage/reference_segment.hpp"
+#include "storage/table.hpp"
+#include "storage/table_column_definition.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 static constexpr auto ANSI_COLOR_RED = "\x1B[31m";
 static constexpr auto ANSI_COLOR_GREEN = "\x1B[32m";
@@ -18,7 +35,7 @@ static constexpr auto EPSILON = 0.0001;
 
 namespace {
 
-using namespace hyrise;  // NOLINT
+using namespace hyrise;
 
 constexpr int HEADER_SIZE = 3;
 
@@ -43,18 +60,19 @@ Matrix table_to_matrix(const std::shared_ptr<const Table>& table) {
 }
 
 std::string matrix_to_string(const Matrix& matrix, const std::vector<std::pair<uint64_t, uint16_t>>& highlight_cells,
-                             const std::string& highlight_color, const std::string& highlight_color_bg) {
-  std::stringstream stream;
+                             const auto& highlight_color, const auto& highlight_color_bg) {
+  auto stream = std::stringstream{};
   bool previous_row_highlighted = false;
 
   for (auto row_id = size_t{0}; row_id < matrix.size(); ++row_id) {
     auto highlight = false;
-    auto it = std::find_if(highlight_cells.begin(), highlight_cells.end(),
-                           [&](const auto& element) { return element.first == row_id; });
+    auto it = std::ranges::find_if(highlight_cells, [&](const auto& element) {
+      return element.first == row_id;
+    });
     if (it != highlight_cells.end()) {
       highlight = true;
       if (!previous_row_highlighted) {
-        stream << "<<<<<" << std::endl;
+        stream << "<<<<<\n";
         previous_row_highlighted = true;
       }
     } else {
@@ -82,7 +100,7 @@ std::string matrix_to_string(const Matrix& matrix, const std::vector<std::pair<u
       }
       stream << coloring << std::setw(8) << cell << ANSI_COLOR_RESET << " ";
     }
-    stream << std::endl;
+    stream << '\n';
   }
   return stream.str();
 }
@@ -157,26 +175,26 @@ std::optional<std::string> check_table_equal(const std::shared_ptr<const Table>&
     std::sort(expected_matrix.begin() + HEADER_SIZE, expected_matrix.end());
   }
 
-  const auto print_table_comparison = [&](const std::string& error_type, const std::string& error_msg,
+  const auto print_table_comparison = [&](const auto& error_type, const auto& error_msg,
                                           const std::vector<std::pair<uint64_t, uint16_t>>& highlighted_cells = {}) {
-    stream << "===================== Tables are not equal =====================" << std::endl;
-    stream << "------------------------- Actual Result ------------------------" << std::endl;
+    stream << "===================== Tables are not equal =====================\n";
+    stream << "------------------------- Actual Result ------------------------\n";
     stream << matrix_to_string(actual_matrix, highlighted_cells, ANSI_COLOR_RED, ANSI_COLOR_BG_RED);
-    stream << "----------------------------------------------------------------" << std::endl << std::endl;
-    stream << "------------------------ Expected Result -----------------------" << std::endl;
+    stream << "----------------------------------------------------------------\n\n";
+    stream << "------------------------ Expected Result -----------------------\n";
     stream << matrix_to_string(expected_matrix, highlighted_cells, ANSI_COLOR_GREEN, ANSI_COLOR_BG_GREEN);
-    stream << "----------------------------------------------------------------" << std::endl;
-    stream << "Type of error: " << error_type << std::endl;
-    stream << "================================================================" << std::endl << std::endl;
-    stream << error_msg << std::endl << std::endl;
+    stream << "----------------------------------------------------------------\n";
+    stream << "Type of error: " << error_type << '\n';
+    stream << "================================================================\n\n";
+    stream << error_msg << "\n\n";
   };
 
   // compare schema of tables
   //  - column count
   if (actual_table->column_count() != expected_table->column_count()) {
-    const std::string error_type = "Column count mismatch";
-    const std::string error_msg = "Actual number of columns: " + std::to_string(actual_table->column_count()) + "\n" +
-                                  "Expected number of columns: " + std::to_string(expected_table->column_count());
+    const auto error_type = std::string{"Column count mismatch"};
+    const auto error_msg = std::format("Actual number of columns: {}\nExpected number of columns: {}",
+                                       actual_table->column_count().t, expected_table->column_count().t);
 
     print_table_comparison(error_type, error_msg);
     return stream.str();
@@ -217,29 +235,29 @@ std::optional<std::string> check_table_equal(const std::shared_ptr<const Table>&
     }
 
     if (!boost::iequals(actual_table->column_name(column_id), expected_table->column_name(column_id))) {
-      const std::string error_type = "Column name mismatch (column " + std::to_string(column_id) + ")";
-      const std::string error_msg = "Actual column name: " + actual_table->column_name(column_id) + "\n" +
-                                    "Expected column name: " + expected_table->column_name(column_id);
+      const auto error_type = std::format("Column name mismatch (column {})", column_id.t);
+      const auto error_msg = std::format("Actual column name: '{}'\nExpected column name: '{}'",
+                                         actual_table->column_name(column_id), expected_table->column_name(column_id));
 
       print_table_comparison(error_type, error_msg, {{0, column_id}});
       return stream.str();
     }
 
     if (actual_column_type != expected_column_type) {
-      const std::string error_type = "Column type mismatch (column " + std::to_string(column_id) + ")";
-      const std::string error_msg =
-          "Actual column type: " + data_type_to_string.left.at(actual_table->column_data_type(column_id)) + "\n" +
-          "Expected column type: " + data_type_to_string.left.at(expected_table->column_data_type(column_id));
+      const auto error_type = std::format("Column type mismatch (column {})", column_id.t);
+      const auto error_msg = std::format("Actual column type: '{}'\nExpected column type: '{}'",
+                                         data_type_to_string.left.at(actual_table->column_data_type(column_id)),
+                                         data_type_to_string.left.at(expected_table->column_data_type(column_id)));
 
       print_table_comparison(error_type, error_msg, {{1, column_id}});
       return stream.str();
     }
 
     if (ignore_nullable == IgnoreNullable::No && actual_column_is_nullable != expected_column_is_nullable) {
-      const std::string error_type = "Column NULLable mismatch (column " + std::to_string(column_id) + ")";
-      const std::string error_msg = std::string{"Actual column is "} + (actual_column_is_nullable ? "" : "NOT ") +
-                                    "NULL\n" + std::string{"Expected column is "} +
-                                    (expected_column_is_nullable ? "" : "NOT ") + "NULL";
+      const auto error_type = std::format("Column NULLable mismatch (column {})", column_id.t);
+      const auto error_msg =
+          std::format("Actual column is {}NULL\nExpected column is {}NULL", actual_column_is_nullable ? "" : "NOT ",
+                      expected_column_is_nullable ? "" : "NOT ");
 
       print_table_comparison(error_type, error_msg, {{2, column_id}});
       return stream.str();
@@ -249,9 +267,9 @@ std::optional<std::string> check_table_equal(const std::shared_ptr<const Table>&
   // compare content of tables
   //  - row count for fast failure
   if (actual_table->row_count() != expected_table->row_count()) {
-    const std::string error_type = "Row count mismatch";
-    const std::string error_msg = "Actual number of rows: " + std::to_string(actual_table->row_count()) + "\n" +
-                                  "Expected number of rows: " + std::to_string(expected_table->row_count());
+    const auto error_type = std::string{"Row count mismatch"};
+    const auto error_msg = std::format("Actual number of rows: {}\n Expected number of rows: {})",
+                                       actual_table->row_count(), expected_table->row_count());
 
     print_table_comparison(error_type, error_msg);
     return stream.str();
@@ -284,13 +302,13 @@ std::optional<std::string> check_table_equal(const std::shared_ptr<const Table>&
       } else if (actual_table->column_data_type(column_id) == DataType::Float) {
         auto left_val = static_cast<double>(boost::get<float>(actual_matrix[row_id][column_id]));
         auto right_val = lossless_variant_cast<double>(expected_matrix[row_id][column_id]);
-        Assert(right_val, "Expected double or float in expected_matrix");
+        Assert(right_val, "Expected double or float in expected_matrix.");
 
         highlight_if(!almost_equals(left_val, *right_val, float_comparison_mode), row_id, column_id);
       } else if (actual_table->column_data_type(column_id) == DataType::Double) {
         auto left_val = boost::get<double>(actual_matrix[row_id][column_id]);
         auto right_val = lossless_variant_cast<double>(expected_matrix[row_id][column_id]);
-        Assert(right_val, "Expected double or float in expected_matrix");
+        Assert(right_val, "Expected double or float in expected_matrix.");
 
         highlight_if(!almost_equals(left_val, *right_val, float_comparison_mode), row_id, column_id);
       } else {
@@ -298,7 +316,7 @@ std::optional<std::string> check_table_equal(const std::shared_ptr<const Table>&
                                                       actual_table->column_data_type(column_id) == DataType::Long)) {
           auto left_val = lossless_variant_cast<int64_t>(actual_matrix[row_id][column_id]);
           auto right_val = lossless_variant_cast<int64_t>(expected_matrix[row_id][column_id]);
-          Assert(left_val && right_val, "Expected int or long in actual_matrix and expected_matrix");
+          Assert(left_val && right_val, "Expected int or long in actual_matrix and expected_matrix.");
 
           highlight_if(*left_val != *right_val, row_id, column_id);
         } else {
@@ -309,10 +327,10 @@ std::optional<std::string> check_table_equal(const std::shared_ptr<const Table>&
   }
 
   if (has_error) {
-    const std::string error_type = "Cell data mismatch";
+    const auto error_type = std::string{"Cell data mismatch"};
     std::string error_msg = "Mismatched cells (row,column): ";
     for (auto cell : mismatched_cells) {
-      error_msg += "(" + std::to_string(cell.first - HEADER_SIZE) + "," + std::to_string(cell.second) + ") ";
+      error_msg += std::format("({},{}) ", cell.first - HEADER_SIZE, cell.second);
     }
 
     print_table_comparison(error_type, error_msg, mismatched_cells);

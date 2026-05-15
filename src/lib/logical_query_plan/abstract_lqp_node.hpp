@@ -1,17 +1,23 @@
 #pragma once
 
 #include <array>
+#include <memory>
+#include <optional>
+#include <ostream>
+#include <string>
 #include <unordered_map>
+#include <utility>
+#include <vector>
 
 #include "enable_make_for_lqp_node.hpp"
-#include "expression/abstract_expression.hpp"
 #include "logical_query_plan/data_dependencies/functional_dependency.hpp"
+#include "logical_query_plan/data_dependencies/order_dependency.hpp"
 #include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
-#include "types.hpp"
+#include "optimizer/strategy/abstract_rule.hpp"
 
 namespace hyrise {
 
-enum class LQPNodeType {
+enum class LQPNodeType : uint8_t {
   Aggregate,
   Alias,
   ChangeMetaTable,
@@ -42,12 +48,14 @@ enum class LQPNodeType {
   Mock
 };
 
-enum class LQPInputSide { Left, Right };
+enum class LQPInputSide : uint8_t { Left, Right };
 
 // Describes the output of a Node and which of the output's inputs this Node is
 struct LQPOutputRelation {
   std::shared_ptr<AbstractLQPNode> output;
   LQPInputSide input_side{LQPInputSide::Left};
+
+  auto operator<=>(const LQPOutputRelation&) const = default;
 };
 
 using LQPNodeMapping = std::unordered_map<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<AbstractLQPNode>>;
@@ -56,14 +64,20 @@ class LQPColumnExpression;
 
 class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
  public:
-  AbstractLQPNode(const LQPNodeType node_type,
-                  const std::vector<std::shared_ptr<AbstractExpression>>& init_node_expressions = {});
+  explicit AbstractLQPNode(const LQPNodeType node_type,
+                           const std::vector<std::shared_ptr<AbstractExpression>>& init_node_expressions = {});
   virtual ~AbstractLQPNode();
+  // There is no specific reason why these are not implemented. There's (currently) no good reason to implement them.
+  // When implementing the assignment operators, please remember do to the same things as in the destructor.
+  AbstractLQPNode(const AbstractLQPNode&) = delete;
+  AbstractLQPNode(AbstractLQPNode&&) = delete;
+  AbstractLQPNode& operator=(const AbstractLQPNode&) = delete;
+  AbstractLQPNode& operator=(AbstractLQPNode&&) noexcept = delete;
 
   /**
    * @return a string describing this node, but nothing about its inputs.
    */
-  enum class DescriptionMode { Short, Detailed };
+  enum class DescriptionMode : uint8_t { Short, Detailed };
   virtual std::string description(const DescriptionMode mode = DescriptionMode::Short) const = 0;
 
   /**
@@ -98,9 +112,6 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    * Locks all outputs (as they are stored in weak_ptrs) and returns them as shared_ptrs
    */
   std::vector<std::shared_ptr<AbstractLQPNode>> outputs() const;
-
-  void remove_output(const std::shared_ptr<AbstractLQPNode>& output);
-  void clear_outputs();
 
   /**
    * @return {{outputs()[0], get_input_sides()[0]}, ..., {outputs()[n-1], get_input_sides()[n-1]}}
@@ -152,7 +163,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    */
   bool has_output_expressions(const ExpressionUnorderedSet& expressions) const;
 
-  enum class ExpressionIteration { Continue, Break };
+  enum class ExpressionIteration : uint8_t { Continue, Break };
 
   /**
    * Calls the passed @param visitor on each of the output expressions.
@@ -184,14 +195,14 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    *         documentation.
    */
   virtual UniqueColumnCombinations unique_column_combinations() const = 0;
-
   /**
-   * @return True if there is a unique column combination (UCC) matching the given subset of output expressions (i.e.,
+   * @return Searches for a unique column combination (UCC) matching the given subset of output expressions (i.e.,
    *         the rows are guaranteed to be unique). This is preferred over calling
-   *         contains_matching_unique_column_combination(unique_column_combinations(), ...) as it performs additional
-   *         sanity checks.
+   *         `find_ucc(unique_column_combinations(), ...)` as it performs additional
+   *         sanity checks. Provides a pair<bool, bool> indicating whether a UCC was found and whether it is
+   *         cacheable.
    */
-  bool has_matching_ucc(const ExpressionUnorderedSet& expressions) const;
+  std::pair<bool, bool> has_matching_ucc(const ExpressionUnorderedSet& expressions) const;
 
   /**
    * @return The functional dependencies valid for this node. See functional_dependency.hpp for documentation.
@@ -214,6 +225,19 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    *  - to specify forwarding of non-trivial FDs in case of two input nodes.
    */
   virtual FunctionalDependencies non_trivial_functional_dependencies() const;
+
+  virtual OrderDependencies order_dependencies() const = 0;
+
+  /**
+   * @return True if there is an order dependency (OD) matching the given lists of output expressions (i.e., sorting
+   *         the table by @param `ordering_expressions` also sorts @param `ordered_expressions`).
+   *
+   * Example: - @param ordering_expressions: [a, b]
+   *          - @param ordered_expressions: [c, d]
+   *          - possible matching ODs: [a] |-> [c, d], [a, b] |-> [c, d], [a, b] |-> [c, d, e]
+   */
+  bool has_matching_od(const std::vector<std::shared_ptr<AbstractExpression>>& ordering_expressions,
+                       const std::vector<std::shared_ptr<AbstractExpression>>& ordered_expressions) const;
 
   /**
    * Perform a deep equality check
@@ -243,7 +267,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    * the optimizer explaining that a node was added as a semi-join reduction node (see SubqueryToJoinRule). It is not
    * automatically added to the description.
    */
-  std::string comment{};
+  std::string comment;
 
  protected:
   /**
@@ -261,6 +285,12 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    */
   UniqueColumnCombinations _forward_left_unique_column_combinations() const;
 
+  /**
+   * This is a helper method for node types that do not have an effect on the ODs from input nodes.
+   * @return All order dependencies from the left input node.
+   */
+  OrderDependencies _forward_left_order_dependencies() const;
+
   /*
    * Converts an AbstractLQPNode::DescriptionMode to an AbstractExpression::DescriptionMode
    */
@@ -272,13 +302,17 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
 
   /**
    * @{
-   * For internal usage in set_left_input(), set_right_input(), set_input(), remove_output()
-   * Add or remove a output without manipulating this output's input ptr.
+   * For internal usage in `set_input()`. Adds or removes an output without manipulating this output's input ptr.
    */
   void _add_output_pointer(const std::shared_ptr<AbstractLQPNode>& output);
   void _remove_output_pointer(const AbstractLQPNode& output);
   /** @} */
 
+  // Output pointers can be expired. Usually, we remove output pointers when we untie output nodes from the plan, i.e.,
+  // via `set_input()`. However, some optimizer rules, such as join ordering, create new nodes and only attach subtrees
+  // to the new nodes without untying the former outputs. Thus, output nodes can expire when they are not needed
+  // anymore. Before #2730, we removed expired output nodes when they were destructed, but doing so created concurrency
+  // issues in some settings.
   std::vector<std::weak_ptr<AbstractLQPNode>> _outputs;
   std::array<std::shared_ptr<AbstractLQPNode>, 2> _inputs;
 };
@@ -296,7 +330,7 @@ struct LQPNodeSharedPtrHash final {
 // std::shared_ptr<AbstractLQPNode>
 struct LQPNodeSharedPtrEqual final {
   size_t operator()(const std::shared_ptr<AbstractLQPNode>& lhs, const std::shared_ptr<AbstractLQPNode>& rhs) const {
-    return lhs == rhs || *lhs == *rhs;
+    return static_cast<size_t>(lhs == rhs || *lhs == *rhs);
   }
 };
 

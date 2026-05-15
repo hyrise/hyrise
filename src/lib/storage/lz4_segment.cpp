@@ -1,15 +1,27 @@
 #include "lz4_segment.hpp"
 
-#include <lz4.h>
-
 #include <climits>
+#include <cstddef>
+#include <cstdint>
+#include <iterator>
+#include <memory>
+#include <optional>
 #include <sstream>
 #include <string>
+#include <type_traits>
+#include <utility>
+#include <vector>
 
+#include "lz4.h"
+
+#include "all_type_variant.hpp"
 #include "resolve_type.hpp"
+#include "storage/abstract_encoded_segment.hpp"
+#include "storage/abstract_segment.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
 #include "storage/vector_compression/base_vector_decompressor.hpp"
-#include "storage/vector_compression/resolve_compressed_vector_type.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 
@@ -134,7 +146,7 @@ std::vector<pmr_string> LZ4Segment<pmr_string>::decompress() const {
     return std::vector<pmr_string>(size());
   }
 
-  const auto decompressed_size = (_lz4_blocks.size() - 1) * _block_size + _last_block_size;
+  const auto decompressed_size = ((_lz4_blocks.size() - 1) * _block_size) + _last_block_size;
   auto decompressed_data = std::vector<char>(decompressed_size);
   using DecompressedDataDifferenceType =
       typename std::iterator_traits<decltype(decompressed_data)::iterator>::difference_type;
@@ -157,7 +169,7 @@ std::vector<pmr_string> LZ4Segment<pmr_string>::decompress() const {
    */
   auto offset_decompressor = _string_offsets->create_base_decompressor();
   auto decompressed_strings = std::vector<pmr_string>();
-  for (auto offset_index = size_t{0u}; offset_index < offset_decompressor->size(); ++offset_index) {
+  for (auto offset_index = size_t{0}; offset_index < offset_decompressor->size(); ++offset_index) {
     auto start_char_offset = offset_decompressor->get(offset_index);
     auto end_char_offset = size_t{0};
     if (offset_index + 1 == offset_decompressor->size()) {
@@ -183,7 +195,7 @@ void LZ4Segment<T>::_decompress_block(const size_t block_index, std::vector<T>& 
   const auto& compressed_block = _lz4_blocks[block_index];
   const auto compressed_block_size = compressed_block.size();
 
-  auto decompressed_result = int{0};
+  auto decompressed_result = int32_t{0};
   if (_dictionary.empty()) {
     /**
      * If the dictionary is empty, we either have only a single block or had not enough data for a dictionary.
@@ -209,7 +221,7 @@ void LZ4Segment<T>::_decompress_block(const size_t block_index, std::vector<T>& 
   }
 
   Assert(decompressed_result > 0, "LZ4 stream decompression failed");
-  DebugAssert(static_cast<size_t>(decompressed_result) == decompressed_block_size,
+  DebugAssert(std::cmp_equal(decompressed_result, decompressed_block_size),
               "Decompressed LZ4 block has different size than the initial source data.");
 }
 
@@ -221,7 +233,7 @@ void LZ4Segment<T>::_decompress_block_to_bytes(const size_t block_index, std::ve
   }
 
   // We use the string method since we handle a char-vector (even though the data is no necessarily string data).
-  _decompress_block_to_bytes(block_index, decompressed_data, 0u);
+  _decompress_block_to_bytes(block_index, decompressed_data, 0);
 
   /**
     * In the case of the last block, the decompressed data is possibly smaller than _block_size (its size equals
@@ -241,7 +253,7 @@ void LZ4Segment<T>::_decompress_block_to_bytes(const size_t block_index, std::ve
   const auto& compressed_block = _lz4_blocks.at(block_index);
   const auto compressed_block_size = compressed_block.size();
 
-  auto decompressed_result = int{0};
+  auto decompressed_result = int32_t{0};
   if (_dictionary.empty()) {
     /**
      * If the dictionary is empty, we either have only a single block or had not enough data for a dictionary.
@@ -265,7 +277,7 @@ void LZ4Segment<T>::_decompress_block_to_bytes(const size_t block_index, std::ve
   }
 
   Assert(decompressed_result > 0, "LZ4 stream decompression failed");
-  DebugAssert(static_cast<size_t>(decompressed_result) == decompressed_block_size,
+  DebugAssert(std::cmp_equal(decompressed_result, decompressed_block_size),
               "Decompressed LZ4 block has different size than the initial source data.");
 }
 
@@ -425,21 +437,21 @@ T LZ4Segment<T>::decompress(const ChunkOffset& chunk_offset) const {
 }
 
 template <typename T>
-std::shared_ptr<AbstractSegment> LZ4Segment<T>::copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
-  auto new_lz4_blocks = pmr_vector<pmr_vector<char>>{alloc};
+std::shared_ptr<AbstractSegment> LZ4Segment<T>::copy_using_memory_resource(MemoryResource& memory_resource) const {
+  auto new_lz4_blocks = pmr_vector<pmr_vector<char>>{&memory_resource};
   for (const auto& block : _lz4_blocks) {
-    auto block_copy = pmr_vector<char>{block, alloc};
+    auto block_copy = pmr_vector<char>{block, &memory_resource};
     new_lz4_blocks.emplace_back(std::move(block_copy));
   }
 
   auto new_null_values =
-      _null_values ? std::optional<pmr_vector<bool>>{pmr_vector<bool>{*_null_values, alloc}} : std::nullopt;
-  auto new_dictionary = pmr_vector<char>{_dictionary, alloc};
+      _null_values ? std::optional<pmr_vector<bool>>{pmr_vector<bool>{*_null_values, &memory_resource}} : std::nullopt;
+  auto new_dictionary = pmr_vector<char>{_dictionary, &memory_resource};
 
   auto copy = std::shared_ptr<LZ4Segment<T>>{};
 
   if (_string_offsets) {
-    auto new_string_offsets = _string_offsets ? _string_offsets->copy_using_allocator(alloc) : nullptr;
+    auto new_string_offsets = _string_offsets ? _string_offsets->copy_using_memory_resource(memory_resource) : nullptr;
     copy = std::make_shared<LZ4Segment<T>>(std::move(new_lz4_blocks), std::move(new_null_values),
                                            std::move(new_dictionary), std::move(new_string_offsets), _block_size,
                                            _last_block_size, _compressed_size, _num_elements);
@@ -460,7 +472,7 @@ size_t LZ4Segment<T>::memory_usage(const MemoryUsageCalculationMode /*mode*/) co
   // size of NULL values vector) or the actual size is already stored (e.g., data_size()).
 
   // The null value vector is only stored if there is at least 1 null value in the segment.
-  auto null_value_vector_size = size_t{0u};
+  auto null_value_vector_size = size_t{0};
   if (_null_values) {
     null_value_vector_size = _null_values->capacity() / CHAR_BIT;
   }

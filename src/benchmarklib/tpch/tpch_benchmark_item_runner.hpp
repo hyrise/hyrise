@@ -1,9 +1,11 @@
 #pragma once
-
 #include <atomic>
+#include <memory>
+#include <string>
+#include <vector>
 
 #include "abstract_benchmark_item_runner.hpp"
-#include "tpch_constants.hpp"
+#include "tpch/tpch_constants.hpp"
 
 namespace hyrise {
 
@@ -36,7 +38,7 @@ class TPCHBenchmarkItemRunner : public AbstractBenchmarkItemRunner {
   std::string _build_query(const BenchmarkItemID item_id);
 
   // Same as build_query, but uses the same parameters every time. Good for tests.
-  std::string _build_deterministic_query(const BenchmarkItemID item_id);
+  std::string _build_deterministic_query(const BenchmarkItemID item_id) const;
 
   // Runs either an EXECUTE query or fills the "?" placeholders with values and returns the resulting SQL string,
   // depending on _use_prepared_statements

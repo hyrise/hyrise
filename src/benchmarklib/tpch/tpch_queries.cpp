@@ -1,5 +1,8 @@
 #include "tpch_queries.hpp"
 
+#include <cstddef>
+#include <map>
+
 namespace {
 
 /**

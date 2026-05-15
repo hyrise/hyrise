@@ -2,12 +2,17 @@
 
 #include <memory>
 #include <string>
+#include <utility>
+#include <vector>
 
 #include "SQLParserResult.h"
+
 #include "cache/gdfs_cache.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "logical_query_plan/lqp_translator.hpp"
+#include "optimizer/optimization_context.hpp"
 #include "optimizer/optimizer.hpp"
+#include "optimizer/strategy/abstract_rule.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 #include "scheduler/operator_task.hpp"
@@ -21,14 +26,14 @@ namespace hyrise {
 struct SQLPipelineStatementMetrics {
   std::chrono::nanoseconds sql_translation_duration{};
   std::chrono::nanoseconds optimization_duration{};
-  std::vector<OptimizerRuleMetrics> optimizer_rule_durations{};
+  std::vector<OptimizerRuleMetrics> optimizer_rule_durations;
   std::chrono::nanoseconds lqp_translation_duration{};
   std::chrono::nanoseconds plan_execution_duration{};
 
   bool query_plan_cache_hit = false;
 };
 
-enum class SQLPipelineStatus {
+enum class SQLPipelineStatus : uint8_t {
   NotExecuted,  // The pipeline or the pipeline statement has not been executed yet.
   Success,      // The pipeline or the pipeline statement has been executed successfully. This includes user-initiated
                 //     rollbacks, conforming to PostgreSQL's behavior. If use_mvcc is set but no transaction_context
@@ -123,6 +128,7 @@ class SQLPipelineStatement : public Noncopyable {
   std::shared_ptr<hsql::SQLParserResult> _parsed_sql_statement;
   std::shared_ptr<AbstractLQPNode> _unoptimized_logical_plan;
   std::shared_ptr<AbstractLQPNode> _optimized_logical_plan;
+  std::unique_ptr<OptimizationContext> _optimization_context;
   std::shared_ptr<AbstractOperator> _physical_plan;
 
   std::shared_ptr<OperatorTask> _root_operator_task;

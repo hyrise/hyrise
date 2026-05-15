@@ -5,7 +5,7 @@
 #include <vector>
 
 #include "abstract_rule.hpp"
-#include "storage/index/chunk_index_statistics.hpp"
+#include "storage/index/table_index_statistics.hpp"
 #include "types.hpp"
 
 namespace hyrise {
@@ -30,10 +30,8 @@ class IndexScanRule : public AbstractRule {
   std::string name() const override;
 
  protected:
-  void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
-  bool _is_index_scan_applicable(const ChunkIndexStatistics& index_statistics,
-                                 const std::shared_ptr<PredicateNode>& predicate_node) const;
-  static bool _is_single_segment_index(const ChunkIndexStatistics& index_statistics);
+  void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root,
+                                         OptimizationContext& optimization_context) const override;
 };
 
 }  // namespace hyrise

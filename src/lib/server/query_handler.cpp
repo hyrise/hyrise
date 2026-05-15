@@ -1,9 +1,31 @@
 #include "query_handler.hpp"
 
+#include <cstddef>
+#include <format>
+#include <memory>
+#include <sstream>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "sql/SQLStatement.h"
+#include "sql/TransactionStatement.h"
+
+#include "expression/abstract_expression.hpp"
 #include "expression/value_expression.hpp"
+#include "hyrise.hpp"
+#include "logical_query_plan/lqp_translator.hpp"
+#include "operators/abstract_operator.hpp"
 #include "optimizer/optimizer.hpp"
+#include "server/postgres_message_type.hpp"
+#include "server/postgres_protocol_handler.hpp"
+#include "server/server_types.hpp"
+#include "sql/sql_pipeline.hpp"
 #include "sql/sql_pipeline_builder.hpp"
+#include "sql/sql_pipeline_statement.hpp"
 #include "sql/sql_translator.hpp"
+#include "storage/prepared_plan.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
@@ -17,31 +39,37 @@ std::pair<ExecutionInformation, std::shared_ptr<TransactionContext>> QueryHandle
   }
 
   DebugAssert(!transaction_context || !transaction_context->is_auto_commit(),
-              "Auto-commit transaction contexts should not be passed around this far");
+              "Auto-commit transaction contexts should not be passed around this far.");
 
-  auto execution_info = ExecutionInformation();
   auto sql_pipeline = SQLPipelineBuilder{query}.with_transaction_context(transaction_context).create_pipeline();
 
   const auto [pipeline_status, result_table] = sql_pipeline.get_result_table();
 
-  if (pipeline_status == SQLPipelineStatus::Success) {
-    execution_info.result_table = result_table;
-    execution_info.root_operator_type = sql_pipeline.get_physical_plans().back()->type();
-
-    _handle_transaction_statement_message(execution_info, sql_pipeline);
-
-    if (send_execution_info == SendExecutionInfo::Yes) {
-      std::stringstream stream;
-      stream << sql_pipeline.metrics();
-      execution_info.pipeline_metrics = stream.str();
-    }
-  } else if (pipeline_status == SQLPipelineStatus::Failure) {
+  if (pipeline_status == SQLPipelineStatus::Failure) {
     const std::string failed_statement = sql_pipeline.failed_pipeline_statement()->get_sql_string();
-    execution_info.error_messages = {{PostgresMessageType::HumanReadableError,
-                                      "Transaction conflict, transaction was rolled back. Following statements might "
-                                      "have still been sent and executed. Failed statement: " +
-                                          failed_statement},
-                                     {PostgresMessageType::SqlstateCodeError, TRANSACTION_CONFLICT}};
+    auto execution_info = ExecutionInformation(OperatorType::Mock);
+    execution_info.error_messages = {
+        {PostgresMessageType::HumanReadableError,
+         std::format("Transaction conflict, transaction was rolled back. Following statements might have still been "
+                     "sent and executed. Failed statement: '{}'",
+                     failed_statement)},
+        {PostgresMessageType::SqlstateCodeError, TRANSACTION_CONFLICT}};
+    return {execution_info, sql_pipeline.transaction_context()};
+  }
+
+  if (pipeline_status != SQLPipelineStatus::Success) {
+    return {ExecutionInformation(OperatorType::Mock), sql_pipeline.transaction_context()};
+  }
+
+  auto execution_info = ExecutionInformation(sql_pipeline.get_physical_plans().back()->type());
+  execution_info.result_table = result_table;
+
+  _handle_transaction_statement_message(execution_info, sql_pipeline);
+
+  if (send_execution_info == SendExecutionInfo::Yes) {
+    auto stream = std::stringstream{};
+    stream << sql_pipeline.metrics();
+    execution_info.pipeline_metrics = stream.str();
   }
   return {execution_info, sql_pipeline.transaction_context()};
 }
@@ -62,7 +90,7 @@ void QueryHandler::setup_prepared_plan(const std::string& statement_name, const 
 
   // The PostgreSQL communication protocol does not allow more than one prepared statement within the parse message.
   // See note at: https://www.postgresql.org/docs/12/protocol-flow.html#PROTOCOL-FLOW-EXT-QUERY
-  AssertInput(lqps.size() == 1u, "Only a single statement allowed in prepared statement");
+  AssertInput(lqps.size() == 1, "Only a single statement allowed in prepared statement.");
 
   const auto& translation_infos = pipeline.get_sql_translation_infos();
 
@@ -110,7 +138,7 @@ void QueryHandler::_handle_transaction_statement_message(ExecutionInformation& e
   auto sql_statement = sql_pipeline.get_parsed_sql_statements().back();
   const auto& statements = sql_statement->getStatements();
 
-  DebugAssert(statements.size() == 1, "SQL statements were not properly split");
+  DebugAssert(statements.size() == 1, "SQL statements were not properly split.");
   if (statements[0]->isType(hsql::StatementType::kStmtTransaction)) {
     const auto& transaction_statement = dynamic_cast<hsql::TransactionStatement&>(*statements.front());
 
@@ -128,7 +156,7 @@ void QueryHandler::_handle_transaction_statement_message(ExecutionInformation& e
         break;
       }
       default: {
-        FailInput("TransactionStatement command not supported");
+        FailInput("TransactionStatement command not supported.");
       }
     }
   }

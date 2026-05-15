@@ -6,7 +6,6 @@
 
 #include "abstract_rule.hpp"
 #include "expression/expression_functional.hpp"
-
 #include "types.hpp"
 
 namespace hyrise {
@@ -30,7 +29,8 @@ class BetweenCompositionRule : public AbstractRule {
   std::string name() const override;
 
  protected:
-  void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
+  void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root,
+                                         OptimizationContext& optimization_context) const override;
 
  private:
   using PredicateChain = std::vector<std::shared_ptr<PredicateNode>>;
@@ -40,7 +40,7 @@ class BetweenCompositionRule : public AbstractRule {
    * The ColumnBoundaryType defines whether a value represents a boundary for a column or not (NONE) and if it is a
    * boundary it also defines which kind of boundary it is including the inclusive and exclusive property.
    */
-  enum class ColumnBoundaryType {
+  enum class ColumnBoundaryType : uint8_t {
     None,
     LowerBoundaryInclusive,
     LowerBoundaryExclusive,
@@ -55,6 +55,18 @@ class BetweenCompositionRule : public AbstractRule {
    * boundary_is_column_expression flag has been added.
    */
   struct ColumnBoundary {
+    // Constructor only serves the purpose to avoid several long repeated designated initializers of ColumnBoundary (see
+    // contributor guidelines).
+    ColumnBoundary(const std::shared_ptr<LQPColumnExpression>& init_column_expression,
+                   const std::shared_ptr<AbstractExpression>& init_border_expression,
+                   const BetweenCompositionRule::ColumnBoundaryType init_type,
+                   const bool init_boundary_is_column_expression, size_t init_id)
+        : column_expression{init_column_expression},
+          border_expression{init_border_expression},
+          type{init_type},
+          boundary_is_column_expression{init_boundary_is_column_expression},
+          id{init_id} {}
+
     std::shared_ptr<LQPColumnExpression> column_expression;
     std::shared_ptr<AbstractExpression> border_expression;
     BetweenCompositionRule::ColumnBoundaryType type;
@@ -64,7 +76,8 @@ class BetweenCompositionRule : public AbstractRule {
 
   static ColumnBoundary _create_inverse_boundary(const std::shared_ptr<ColumnBoundary>& column_boundary);
 
-  static ColumnBoundary _get_boundary(const std::shared_ptr<BinaryPredicateExpression>& expression, const size_t id);
+  static ColumnBoundary _get_boundary(const std::shared_ptr<BinaryPredicateExpression>& expression,
+                                      const size_t expression_id);
 };
 
 }  // namespace hyrise

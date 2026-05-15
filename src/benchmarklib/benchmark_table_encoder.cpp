@@ -1,29 +1,37 @@
 #include "benchmark_table_encoder.hpp"
 
 #include <atomic>
+#include <iosfwd>
+#include <iostream>
+#include <memory>
+#include <string>
+#include <vector>
 
 #include "encoding_config.hpp"
 #include "hyrise.hpp"
-#include "resolve_type.hpp"
+#include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 #include "statistics/generate_pruning_statistics.hpp"
-#include "storage/abstract_encoded_segment.hpp"
-#include "storage/base_value_segment.hpp"
 #include "storage/chunk_encoder.hpp"
+#include "storage/constraints/constraint_utils.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/segment_encoding_utils.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace {
 
-using namespace hyrise;  // NOLINT
+using namespace hyrise;
 
 ChunkEncodingSpec get_chunk_encoding_spec(const Chunk& chunk) {
-  auto chunk_encoding_spec = ChunkEncodingSpec{chunk.column_count()};
+  auto chunk_encoding_spec = ChunkEncodingSpec{};
+  const auto column_count = chunk.column_count();
+  chunk_encoding_spec.reserve(column_count);
 
-  for (auto column_id = ColumnID{0}; column_id < chunk.column_count(); ++column_id) {
+  for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
     const auto& abstract_segment = chunk.get_segment(column_id);
-    chunk_encoding_spec[column_id] = get_segment_encoding_spec(abstract_segment);
+    chunk_encoding_spec.push_back(get_segment_encoding_spec(abstract_segment));
   }
 
   return chunk_encoding_spec;
@@ -64,11 +72,12 @@ bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
    */
   const auto& type_mapping = encoding_config.type_encoding_mapping;
   const auto& custom_mapping = encoding_config.custom_encoding_mapping;
+  const auto& preferred_encoding_spec = encoding_config.preferred_encoding_spec;
 
   const auto& column_mapping_it = custom_mapping.find(table_name);
   const auto table_has_custom_encoding = column_mapping_it != custom_mapping.end();
 
-  ChunkEncodingSpec chunk_encoding_spec;
+  auto chunk_encoding_spec = ChunkEncodingSpec{};
 
   for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
     // Check if a column specific encoding was specified
@@ -84,7 +93,7 @@ bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
     }
 
     // Check if a type specific encoding was specified
-    const auto& column_data_type = table->column_data_type(column_id);
+    const auto column_data_type = table->column_data_type(column_id);
     const auto& encoding_by_data_type = type_mapping.find(column_data_type);
     if (encoding_by_data_type != type_mapping.end()) {
       // The column type has a specific encoding
@@ -93,19 +102,22 @@ bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
     }
 
     // No column-specific or type-specific encoding was specified.
-    // Use default if it is compatible with the column type or leave column Unencoded if it is not.
-    if (encoding_supports_data_type(encoding_config.default_encoding_spec.encoding_type, column_data_type)) {
-      chunk_encoding_spec.push_back(encoding_config.default_encoding_spec);
-    } else {
+    if (preferred_encoding_spec) {
+      if (encoding_supports_data_type(preferred_encoding_spec->encoding_type, column_data_type)) {
+        chunk_encoding_spec.push_back(*preferred_encoding_spec);
+        continue;
+      }
+
       // Use a stringstream here to bundle all writes into a single one and avoid locking.
       auto output = std::ostringstream{};
-      output << " - Column '" << table_name << "." << table->column_name(column_id) << "' of type ";
-      output << column_data_type << " cannot be encoded as ";
-      output << encoding_config.default_encoding_spec.encoding_type << " and is ";
-      output << "left Unencoded." << std::endl;
+      output << " - Column '" << table_name << "." << table->column_name(column_id) << "' of type " << column_data_type
+             << " cannot be encoded as " << preferred_encoding_spec->encoding_type
+             << ". Hence, its encoding is chosen automatically.\n";
       std::cout << output.str();
-      chunk_encoding_spec.emplace_back(EncodingType::Unencoded);
     }
+
+    chunk_encoding_spec.push_back(
+        auto_select_segment_encoding_spec(column_data_type, column_is_unique(table, column_id)));
   }
 
   /**
@@ -113,15 +125,18 @@ bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
    */
   auto encoding_performed = std::atomic_bool{false};
   const auto column_data_types = table->column_data_types();
+  const auto chunk_count = table->chunk_count();
 
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
-  jobs.reserve(table->chunk_count());
+  jobs.reserve(chunk_count);
 
-  for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto encode = [&, chunk_id]() {
       const auto chunk = table->get_chunk(ChunkID{chunk_id});
       Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
       if (!is_chunk_encoding_spec_satisfied(chunk_encoding_spec, get_chunk_encoding_spec(*chunk))) {
+        // ChunkEncoder encodes the chunk using the provided encoding specification and creates pruning statistics (if
+        // not added before).
         ChunkEncoder::encode_chunk(chunk, column_data_types, chunk_encoding_spec);
         encoding_performed = true;
       }
@@ -130,6 +145,11 @@ bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
   }
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 
+  // Note: Chunk pruning statistics might have already been generated during chunk encoding above, in which case this
+  // call is (almost) a NoOp. However, encoding might not happen when loading binary table data, because that data is
+  // written after encoding, thus skipping statistic generation. Re-encoding will only be necessary in case different
+  // encoding schemes are requested by the user and might only affect certain chunks then. If no re-encoding happened,
+  // we still need to generate chunk pruning statistics, because those are not cached as part of the binary table data.
   generate_chunk_pruning_statistics(table);
 
   return encoding_performed;

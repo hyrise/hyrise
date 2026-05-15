@@ -1,14 +1,16 @@
 #include <memory>
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
-
 #include "expression/expression_functional.hpp"
+#include "expression/lqp_column_expression.hpp"
 #include "logical_query_plan/limit_node.hpp"
-#include "logical_query_plan/lqp_utils.hpp"
+#include "logical_query_plan/mock_node.hpp"
+#include "storage/constraints/table_key_constraint.hpp"
 
 namespace hyrise {
 
-using namespace expression_functional;  // NOLINT(build/namespaces)
+using namespace expression_functional;
 
 class LimitNodeTest : public BaseTest {
  protected:
@@ -61,6 +63,20 @@ TEST_F(LimitNodeTest, ForwardUniqueColumnCombinations) {
   const auto& unique_column_combinations = _limit_node->unique_column_combinations();
   EXPECT_EQ(unique_column_combinations.size(), 1);
   EXPECT_TRUE(unique_column_combinations.contains({UniqueColumnCombination{{_a}}}));
+}
+
+TEST_F(LimitNodeTest, ForwardOrderDependencies) {
+  EXPECT_TRUE(_mock_node->order_dependencies().empty());
+  EXPECT_TRUE(_limit_node->order_dependencies().empty());
+
+  const auto od = OrderDependency{{_a}, {_b}};
+  const auto order_constraint = TableOrderConstraint{{ColumnID{0}}, {ColumnID{1}}};
+  _mock_node->set_order_constraints({order_constraint});
+  EXPECT_EQ(_mock_node->order_dependencies().size(), 1);
+
+  const auto& order_dependencies = _limit_node->order_dependencies();
+  EXPECT_EQ(order_dependencies.size(), 1);
+  EXPECT_TRUE(order_dependencies.contains(od));
 }
 
 }  // namespace hyrise

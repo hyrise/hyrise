@@ -3,6 +3,7 @@
 #include <functional>
 #include <memory>
 #include <queue>
+#include <string>
 #include <unordered_map>
 #include <vector>
 
@@ -16,7 +17,7 @@ class AbstractLQPNode;
 class LQPColumnExpression;
 class TransactionContext;
 class PQPSubqueryExpression;
-enum class LogicalOperator;
+enum class LogicalOperator : uint8_t;
 
 /**
  * Utility to check whether two vectors of Expressions are equal according to AbstractExpression::operator==()
@@ -92,7 +93,7 @@ std::shared_ptr<LQPColumnExpression> expression_adapt_to_different_lqp(const LQP
 std::string expression_descriptions(const std::vector<std::shared_ptr<AbstractExpression>>& expressions,
                                     const AbstractExpression::DescriptionMode mode);
 
-enum class ExpressionVisitation { VisitArguments, DoNotVisitArguments };
+enum class ExpressionVisitation : uint8_t { VisitArguments, DoNotVisitArguments };
 
 /**
  * Calls the passed @param visitor on each sub-expression of the @param expression. The visitor returns
@@ -186,5 +187,12 @@ std::optional<ColumnID> find_expression_idx(const AbstractExpression& search_exp
 template <typename ExpressionContainer>
 bool contains_all_expressions(const ExpressionContainer& search_expressions,
                               const std::vector<std::shared_ptr<AbstractExpression>>& expression_vector);
+
+/**
+ * Checks that @param lhs_expressions is the head of @param rhs_expressions, i.e., all expressions of the left-hand
+ * side are the first expressions of the right-hand side in the same order.
+ */
+bool expression_list_is_prefix(const std::vector<std::shared_ptr<AbstractExpression>>& lhs_expressions,
+                               const std::vector<std::shared_ptr<AbstractExpression>>& rhs_expressions);
 
 }  // namespace hyrise

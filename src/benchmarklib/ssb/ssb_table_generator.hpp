@@ -1,11 +1,15 @@
 #pragma once
 
+#include <memory>
+#include <string>
+#include <unordered_map>
+
 #include "file_based_table_generator.hpp"
 
 namespace hyrise {
 
 // Generates the SSB data by calling SSB's dbgen binary. See ssb_benchmark.cpp for details.
-class SSBTableGenerator : virtual public FileBasedTableGenerator {
+class SSBTableGenerator : public FileBasedTableGenerator {
  public:
   // Convenience constructor for creating a SSBTableGenerator without a benchmarking context.
   explicit SSBTableGenerator(const std::string& dbgen_path, const std::string& csv_meta_path,

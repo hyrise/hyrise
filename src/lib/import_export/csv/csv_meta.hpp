@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 
-#include "nlohmann/json.hpp"
+#include "nlohmann/json_fwd.hpp"
 
 #include "storage/chunk.hpp"
 
@@ -21,7 +21,7 @@ struct ColumnMeta {
 //                    null value.
 // NullStringAsValue: An unquoted null string is parsed as a string - eg. "Null", case is not changed.
 // NullStringAsNull:  An unquoted null string (case-insensitive) is parsed as a null value.
-enum class NullHandling { RejectNullStrings, NullStringAsNull, NullStringAsValue };
+enum class NullHandling : uint8_t { RejectNullStrings, NullStringAsNull, NullStringAsValue };
 
 struct ParseConfig {
   char delimiter = '\n';
@@ -73,8 +73,10 @@ void from_json(const nlohmann::json& json, CsvMeta& meta);
 void to_json(nlohmann::json& json, const CsvMeta& meta);
 
 /*
- * Equals-operator for convenience and use in tests.
+ * Equals operators for convenience and use in tests.
  */
+bool operator==(const ColumnMeta& left, const ColumnMeta& right);
 bool operator==(const CsvMeta& left, const CsvMeta& right);
+bool operator==(const ParseConfig& left, const ParseConfig& right);
 
 }  // namespace hyrise

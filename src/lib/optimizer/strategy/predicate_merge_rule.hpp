@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory>
+#include <string>
 #include <vector>
 
 #include "abstract_rule.hpp"
@@ -15,8 +17,7 @@ namespace hyrise {
  * minimum_union_count, this rule reverts the PredicateSplitUpRule's changes by merging multiple PredicateNodes and
  * UnionNodes into single a PredicateNode.
  *
- * EXAMPLE:
- *   TPC-DS query 41 benefits from this rule because the PredicateSplitUpRule creates a huge LQP.
+ * Example: TPC-DS query 41 benefits from this rule because the PredicateSplitUpRule creates a huge LQP.
  */
 class PredicateMergeRule : public AbstractRule {
  public:
@@ -25,7 +26,8 @@ class PredicateMergeRule : public AbstractRule {
   size_t minimum_union_count{4};
 
  protected:
-  void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
+  void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root,
+                                         OptimizationContext& optimization_context) const override;
 
  private:
   void _merge_disjunction(const std::shared_ptr<UnionNode>& union_node) const;

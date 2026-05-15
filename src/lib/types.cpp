@@ -1,8 +1,13 @@
 #include "types.hpp"
 
+#include <ostream>
+#include <string>
 #include <unordered_map>
+#include <utility>
 
-#include "magic_enum.hpp"
+#include "magic_enum/magic_enum.hpp"
+
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
@@ -13,6 +18,8 @@ bool is_binary_predicate_condition(const PredicateCondition predicate_condition)
          predicate_condition == PredicateCondition::GreaterThan ||
          predicate_condition == PredicateCondition::GreaterThanEquals ||
          predicate_condition == PredicateCondition::NotLike || predicate_condition == PredicateCondition::Like ||
+         predicate_condition == PredicateCondition::LikeInsensitive ||
+         predicate_condition == PredicateCondition::NotLikeInsensitive ||
          predicate_condition == PredicateCondition::In || predicate_condition == PredicateCondition::NotIn;
 }
 
@@ -64,11 +71,13 @@ PredicateCondition flip_predicate_condition(const PredicateCondition predicate_c
     case PredicateCondition::NotIn:
     case PredicateCondition::Like:
     case PredicateCondition::NotLike:
+    case PredicateCondition::LikeInsensitive:
+    case PredicateCondition::NotLikeInsensitive:
     case PredicateCondition::IsNull:
     case PredicateCondition::IsNotNull:
-      Fail("Can't flip specified PredicateCondition");
+      Fail("Cannot flip specified PredicateCondition.");
   }
-  Fail("Invalid enum value");
+  Fail("Invalid enum value.");
 }
 
 PredicateCondition inverse_predicate_condition(const PredicateCondition predicate_condition) {
@@ -89,6 +98,10 @@ PredicateCondition inverse_predicate_condition(const PredicateCondition predicat
       return PredicateCondition::NotLike;
     case PredicateCondition::NotLike:
       return PredicateCondition::Like;
+    case PredicateCondition::LikeInsensitive:
+      return PredicateCondition::NotLikeInsensitive;
+    case PredicateCondition::NotLikeInsensitive:
+      return PredicateCondition::LikeInsensitive;
     case PredicateCondition::IsNull:
       return PredicateCondition::IsNotNull;
     case PredicateCondition::IsNotNull:
@@ -99,7 +112,7 @@ PredicateCondition inverse_predicate_condition(const PredicateCondition predicat
       return PredicateCondition::In;
 
     default:
-      Fail("Can't inverse the specified PredicateCondition");
+      Fail("Cannot inverse the specified PredicateCondition.");
   }
 }
 
@@ -114,7 +127,7 @@ std::pair<PredicateCondition, PredicateCondition> between_to_conditions(const Pr
     case PredicateCondition::BetweenExclusive:
       return {PredicateCondition::GreaterThan, PredicateCondition::LessThan};
     default:
-      Fail("Input was not a between condition");
+      Fail("Input was not a between condition.");
   }
 }
 
@@ -136,7 +149,7 @@ PredicateCondition conditions_to_between(const PredicateCondition lower, const P
       return PredicateCondition::BetweenInclusive;
     }
   }
-  Fail("Unexpected PredicateCondition");
+  Fail("Unexpected PredicateCondition.");
 }
 
 bool is_semi_or_anti_join(const JoinMode join_mode) {
@@ -157,6 +170,8 @@ std::ostream& operator<<(std::ostream& stream, PredicateCondition predicate_cond
       {PredicateCondition::BetweenExclusive, "BETWEEN EXCLUSIVE"},
       {PredicateCondition::Like, "LIKE"},
       {PredicateCondition::NotLike, "NOT LIKE"},
+      {PredicateCondition::LikeInsensitive, "ILIKE"},
+      {PredicateCondition::NotLikeInsensitive, "NOT ILIKE"},
       {PredicateCondition::In, "IN"},
       {PredicateCondition::NotIn, "NOT IN"},
       {PredicateCondition::IsNull, "IS NULL"},

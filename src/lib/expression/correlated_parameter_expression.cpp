@@ -1,12 +1,19 @@
 #include "correlated_parameter_expression.hpp"
 
-#include <sstream>
+#include <cstddef>
+#include <format>
+#include <memory>
+#include <optional>
 #include <string>
-#include <type_traits>
+#include <unordered_map>
 
 #include <boost/container_hash/hash.hpp>
 
-#include "resolve_type.hpp"
+#include "all_type_variant.hpp"
+#include "expression/abstract_expression.hpp"
+#include "operators/abstract_operator.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
@@ -30,13 +37,7 @@ std::shared_ptr<AbstractExpression> CorrelatedParameterExpression::_on_deep_copy
 }
 
 std::string CorrelatedParameterExpression::description(const DescriptionMode /*mode*/) const {
-  std::stringstream stream;
-  stream << "Parameter[";
-  stream << "name=" << _referenced_expression_info.column_name << "; ";
-  stream << "ParameterID=" << std::to_string(parameter_id);
-  stream << "]";
-
-  return stream.str();
+  return std::format("Parameter[name={}; ParameterID={}]", _referenced_expression_info.column_name, parameter_id.t);
 }
 
 bool CorrelatedParameterExpression::requires_computation() const {
@@ -69,9 +70,9 @@ bool CorrelatedParameterExpression::_shallow_equals(const AbstractExpression& ex
 }
 
 size_t CorrelatedParameterExpression::_shallow_hash() const {
-  auto hash = boost::hash_value(static_cast<ParameterID::base_type>(parameter_id));
-
-  boost::hash_combine(hash, static_cast<std::underlying_type_t<DataType>>(_referenced_expression_info.data_type));
+  auto hash = size_t{0};
+  boost::hash_combine(hash, parameter_id);
+  boost::hash_combine(hash, _referenced_expression_info.data_type);
   boost::hash_combine(hash, _referenced_expression_info.column_name);
   return hash;
 }

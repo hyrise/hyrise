@@ -1,17 +1,21 @@
 #include <algorithm>
+#include <array>
+#include <cstddef>
+#include <cstdint>
+#include <iterator>
 #include <limits>
 #include <memory>
+#include <optional>
 #include <set>
-#include <string>
-#include <unordered_set>
 #include <utility>
 #include <vector>
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
-#include "types.hpp"
-
 #include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
 #include "storage/index/adaptive_radix_tree/adaptive_radix_tree_nodes.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
@@ -67,17 +71,17 @@ class AdaptiveRadixTreeIndexTest : public BaseTest {
         // no match
         EXPECT_EQ(index->upper_bound({*search_value}), index->lower_bound({*search_value}));
       }
-
-      const auto begin = distinct_values.begin();
-      const auto rbegin = distinct_values.rbegin();
-
-      Assert(*begin && *rbegin, "Optional has no value.");
-      int32_t min = **begin;
-      int32_t max = **rbegin;
-
-      EXPECT_EQ(index->upper_bound({min - 1}), index->cbegin());
-      EXPECT_EQ(index->upper_bound({max + 1}), index->cend());
     }
+
+    const auto begin = distinct_values.begin();
+    const auto rbegin = distinct_values.rbegin();
+
+    Assert(*begin && *rbegin, "Optional has no value.");
+    auto min = **begin;
+    auto max = **rbegin;
+
+    EXPECT_EQ(index->lower_bound({min}), index->cbegin());
+    EXPECT_EQ(index->upper_bound({max}), index->cend());
   }
 
   // 0, 1, -1, the maximum int32_t value, the minimum int32_t value and 20 randomly generated int32_t values
@@ -220,7 +224,8 @@ TEST_F(AdaptiveRadixTreeIndexTest, VectorOfInts) {
 }
 
 TEST_F(AdaptiveRadixTreeIndexTest, SimpleTest) {
-  std::vector<std::optional<int32_t>> values = {0, 0, 0, 0, 0, 17, 17, 17, 99, std::numeric_limits<int32_t>::max()};
+  const auto values =
+      std::vector<std::optional<int32_t>>{0, 0, 0, 0, 0, 17, 17, 17, 99, std::numeric_limits<int32_t>::max()};
 
   auto segment = create_dict_segment_by_type<int32_t>(DataType::Int, values);
   auto index = std::make_shared<AdaptiveRadixTreeIndex>(std::vector<std::shared_ptr<const AbstractSegment>>({segment}));
@@ -246,7 +251,7 @@ TEST_F(AdaptiveRadixTreeIndexTest, SimpleTest) {
 TEST_F(AdaptiveRadixTreeIndexTest, SparseVectorOfInts) {
   const auto test_size = 1'000u;
   auto values = std::vector<std::optional<int32_t>>{};
-  values.reserve(test_size);
+  values.resize(test_size);
 
   for (auto value_index = 0u; value_index < test_size; ++value_index) {
     values[value_index] = _indexed_value_pool[value_index % _indexed_value_pool.size()];
@@ -264,7 +269,7 @@ TEST_F(AdaptiveRadixTreeIndexTest, DenseVectorOfInts) {
     overall_value_counter += counter;
   }
 
-  std::vector<std::optional<int32_t>> values{};
+  auto values = std::vector<std::optional<int32_t>>{};
   values.reserve(overall_value_counter);
 
   auto values_to_write = overall_value_counter;

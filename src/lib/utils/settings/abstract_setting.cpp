@@ -1,7 +1,9 @@
 #include "abstract_setting.hpp"
 
+#include <memory>
+#include <string>
+
 #include "hyrise.hpp"
-#include "utils/assert.hpp"
 
 namespace hyrise {
 

@@ -1,5 +1,8 @@
 #pragma once
 
+#include <memory>
+#include <string>
+
 #include "abstract_table_scan_impl.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/evaluation/expression_evaluator.hpp"

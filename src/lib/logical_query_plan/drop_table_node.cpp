@@ -1,16 +1,27 @@
 #include "drop_table_node.hpp"
 
+#include <cstddef>
+#include <format>
+#include <memory>
+#include <string>
+
+#include <boost/container_hash/hash.hpp>
+
+#include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/abstract_non_query_node.hpp"
+
 namespace hyrise {
 
 DropTableNode::DropTableNode(const std::string& init_table_name, const bool init_if_exists)
     : AbstractNonQueryNode(LQPNodeType::DropTable), table_name(init_table_name), if_exists(init_if_exists) {}
 
 std::string DropTableNode::description(const DescriptionMode /*mode*/) const {
-  return std::string("[DropTable] Name: '") + table_name + "'";
+  return std::format("[DropTable] Name: '{}'", table_name);
 }
 
 size_t DropTableNode::_on_shallow_hash() const {
-  auto hash = boost::hash_value(table_name);
+  auto hash = size_t{0};
+  boost::hash_combine(hash, table_name);
   boost::hash_combine(hash, if_exists);
   return hash;
 }

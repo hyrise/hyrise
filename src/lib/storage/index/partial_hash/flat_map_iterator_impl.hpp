@@ -1,6 +1,9 @@
 #pragma once
 
-#include <tsl/sparse_map.h>
+#include <memory>
+#include <vector>
+
+#include "tsl/sparse_map.h"
 
 #include "types.hpp"
 
@@ -14,7 +17,10 @@ class BaseFlatMapIteratorImpl {
   using pointer = const RowID*;
   using reference = const RowID&;
 
-  BaseFlatMapIteratorImpl(const BaseFlatMapIteratorImpl& it) = default;
+  BaseFlatMapIteratorImpl(const BaseFlatMapIteratorImpl&) = default;
+  BaseFlatMapIteratorImpl(BaseFlatMapIteratorImpl&&) = default;
+  BaseFlatMapIteratorImpl& operator=(const BaseFlatMapIteratorImpl&) = default;
+  BaseFlatMapIteratorImpl& operator=(BaseFlatMapIteratorImpl&&) = default;
   BaseFlatMapIteratorImpl() = default;
   virtual ~BaseFlatMapIteratorImpl() = default;
   virtual reference operator*() const = 0;

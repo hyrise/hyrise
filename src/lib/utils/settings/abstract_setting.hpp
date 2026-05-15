@@ -1,5 +1,8 @@
 #pragma once
 
+#include <memory>
+#include <string>
+
 #include "types.hpp"
 
 namespace hyrise {
@@ -23,8 +26,6 @@ namespace hyrise {
 class AbstractSetting : public Noncopyable, public std::enable_shared_from_this<AbstractSetting> {
  public:
   explicit AbstractSetting(const std::string& init_name);
-
-  virtual ~AbstractSetting() = default;
 
   virtual const std::string& description() const = 0;
 

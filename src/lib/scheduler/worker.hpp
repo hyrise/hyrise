@@ -14,13 +14,17 @@ namespace hyrise {
 class TaskQueue;
 
 /**
- * To be executed on a separate Thread, fetches and executes tasks until the queue is empty AND the shutdown flag is set
- * Ideally there should be one Worker actively doing work per CPU, but multiple might be active occasionally
+ * To be executed on a separate thread, fetches and executes tasks until the queue is empty.
  */
 class Worker : public std::enable_shared_from_this<Worker>, private Noncopyable {
   friend class AbstractScheduler;
 
  public:
+  /**
+   * Returns a shared pointer to the current worker, when called from a worker. When called from another context, a
+   * nullptr is returned. This can happen when the ImmediateExecutionScheduler is used or when the main thread calls
+   * this function (e.g., when testing).
+   */
   static std::shared_ptr<Worker> get_this_thread_worker();
 
   Worker(const std::shared_ptr<TaskQueue>& queue, WorkerID worker_id, CpuID cpu_id);
@@ -46,12 +50,12 @@ class Worker : public std::enable_shared_from_this<Worker>, private Noncopyable 
   // cautious when using this method in any other context (see comments in #2526).
   uint64_t num_finished_tasks() const;
 
-  void operator=(const Worker&) = delete;
-  void operator=(Worker&&) = delete;
-
  protected:
+  enum class AllowSleep : bool { Yes = true, No = false };
+
   void operator()();
-  void _work();
+
+  void _work(const AllowSleep allow_sleep);
 
   void _wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks);
 
@@ -62,15 +66,17 @@ class Worker : public std::enable_shared_from_this<Worker>, private Noncopyable 
    */
   void _set_affinity();
 
-  std::shared_ptr<AbstractTask> _next_task{};
+  std::shared_ptr<AbstractTask> _next_task;
   std::shared_ptr<TaskQueue> _queue;
-  WorkerID _id;
-  CpuID _cpu_id;
+  WorkerID _id{0};
+  CpuID _cpu_id{0};
   std::thread _thread;
   std::atomic_uint64_t _num_finished_tasks{0};
 
-  std::vector<int> _random{};
-  size_t _next_random{};
+  bool _active{true};
+
+  std::vector<uint32_t> _random;
+  size_t _next_random{0};
 };
 
 }  // namespace hyrise

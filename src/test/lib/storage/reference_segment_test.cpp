@@ -1,21 +1,19 @@
-#include <iostream>
-#include <map>
+#include <cstdint>
+#include <initializer_list>
 #include <memory>
-#include <set>
 #include <string>
-#include <utility>
 #include <vector>
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
-
 #include "hyrise.hpp"
 #include "operators/abstract_operator.hpp"
-#include "operators/get_table.hpp"
-#include "operators/print.hpp"
 #include "operators/table_scan.hpp"
 #include "storage/chunk_encoder.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/table.hpp"
+#include "storage/table_column_definition.hpp"
 #include "types.hpp"
 
 namespace hyrise {
@@ -98,7 +96,7 @@ TEST_F(ReferenceSegmentTest, RetrieveNullValueFromNullRowID) {
 
   auto ref_segment = ReferenceSegment(_test_table, ColumnID{0}, pos_list);
 
-  auto& segment = *(_test_table->get_chunk(ChunkID{0})->get_segment(ColumnID{0u}));
+  auto& segment = *(_test_table->get_chunk(ChunkID{0})->get_segment(ColumnID{0}));
 
   EXPECT_EQ(ref_segment[ChunkOffset{0}], segment[ChunkOffset{0}]);
   EXPECT_EQ(ref_segment[ChunkOffset{1}], segment[ChunkOffset{1}]);

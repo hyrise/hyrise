@@ -5,7 +5,9 @@
 #include <utility>
 #include <vector>
 
+// clang-format off
 #include "gtest/gtest.h"
+// clang-format on
 
 #include "cache/gdfs_cache.hpp"
 #include "expression/expression_functional.hpp"
@@ -28,11 +30,12 @@
 
 namespace hyrise {
 
-using namespace expression_functional;  // NOLINT(build/namespaces)
+using namespace expression_functional;
 
 class AbstractLQPNode;
 
 extern std::string test_data_path;
+extern std::string test_executable_path;
 
 template <typename ParamType>
 class BaseTestWithParam
@@ -106,8 +109,9 @@ const SegmentEncodingSpec all_segment_encoding_specs[]{
     SegmentEncodingSpec{EncodingType::RunLength}};
 
 template <typename EnumType>
-inline auto enum_formatter =
-    [](const ::testing::TestParamInfo<EnumType>& info) { return std::string{magic_enum::enum_name(info.param)}; };
+inline auto enum_formatter = [](const ::testing::TestParamInfo<EnumType>& info) {
+  return std::string{magic_enum::enum_name(info.param)};
+};
 
 inline auto segment_encoding_formatter = [](const ::testing::TestParamInfo<SegmentEncodingSpec>& info) {
   const auto& spec = info.param;

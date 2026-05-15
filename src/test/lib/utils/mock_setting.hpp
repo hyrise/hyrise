@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 #include "utils/settings/abstract_setting.hpp"
 
 namespace hyrise {

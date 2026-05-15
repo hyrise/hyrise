@@ -1,11 +1,14 @@
 #include <memory>
+#include <string>
 #include <vector>
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
-
-#include "expression/abstract_expression.hpp"
+#include "concurrency/transaction_context.hpp"
+#include "expression/expression_functional.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "expression/window_function_expression.hpp"
+#include "operators/abstract_operator.hpp"
 #include "operators/aggregate_hash.hpp"
 #include "operators/get_table.hpp"
 #include "operators/join_hash.hpp"
@@ -13,10 +16,12 @@
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/validate.hpp"
+#include "types.hpp"
+#include "utils/load_table.hpp"
 
 namespace hyrise {
 
-using namespace expression_functional;  // NOLINT(build/namespaces)
+using namespace expression_functional;
 
 class OperatorClearOutputTest : public BaseTest {
  protected:
@@ -109,9 +114,9 @@ TEST_F(OperatorClearOutputTest, ConsumerTrackingTableScanUncorrelatedSubquery) {
   // b > (SELECT 9 + 2)
   auto validate = std::make_shared<Validate>(_gt);
   validate->set_transaction_context(_ta_context);
-  auto pqp_subquery_expression = pqp_subquery_(projection_literals, DataType::Int, false);
+  auto pqp_subquery_expression = pqp_subquery_(projection_literals, DataType::Int);
   auto table_scan = std::make_shared<TableScan>(
-      validate, greater_than_(pqp_column_(ColumnID{1}, DataType::Int, false, "b"), pqp_subquery_expression));
+      validate, greater_than_(pqp_column_(ColumnID{1}, DataType::Int, "b"), pqp_subquery_expression));
 
   // a IN (SELECT 9 + 2)
   const auto semi_join_predicate = OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals};
@@ -164,9 +169,9 @@ TEST_F(OperatorClearOutputTest, ConsumerTrackingTableScanUncorrelatedSubqueryNes
   // b IN (9, 10, (SELECT 9 + 2))
   auto validate = std::make_shared<Validate>(_gt);
   validate->set_transaction_context(_ta_context);
-  auto pqp_subquery_expression = pqp_subquery_(projection_literals, DataType::Int, false);
+  auto pqp_subquery_expression = pqp_subquery_(projection_literals, DataType::Int);
   auto table_scan = std::make_shared<TableScan>(
-      validate, in_(pqp_column_(ColumnID{1}, DataType::Int, false, "b"), list_(9, 10, pqp_subquery_expression)));
+      validate, in_(pqp_column_(ColumnID{1}, DataType::Int, "b"), list_(9, 10, pqp_subquery_expression)));
 
   // a IN (SELECT 9 + 2)
   const auto semi_join_predicate = OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals};
@@ -214,7 +219,7 @@ TEST_F(OperatorClearOutputTest, ConsumerTrackingProjectionUncorrelatedSubquery) 
   validate->execute();
 
   // Left input node: COUNT(*)
-  const auto star = std::make_shared<PQPColumnExpression>(INVALID_COLUMN_ID, DataType::Long, false, "*");
+  const auto star = pqp_column_(INVALID_COLUMN_ID, DataType::Long, "*");
   auto aggregate_count_star = std::make_shared<WindowFunctionExpression>(WindowFunction::Count, star);
   auto aggregate_hash_count_star = std::make_shared<AggregateHash>(
       validate, std::vector<std::shared_ptr<WindowFunctionExpression>>{aggregate_count_star}, std::vector<ColumnID>{});
@@ -225,8 +230,8 @@ TEST_F(OperatorClearOutputTest, ConsumerTrackingProjectionUncorrelatedSubquery) 
 
   // Projection: COUNT(*), (SELECT MAX(a) FROM int_int_int)
   auto pqp_count_star =
-      pqp_column_(ColumnID{0}, aggregate_count_star->data_type(), false, aggregate_count_star->as_column_name());
-  auto pqp_subquery_max_id = pqp_subquery_(aggregate_hash_max_a, DataType::Int, false);
+      pqp_column_(ColumnID{0}, aggregate_count_star->data_type(), aggregate_count_star->as_column_name());
+  auto pqp_subquery_max_id = pqp_subquery_(aggregate_hash_max_a, DataType::Int);
   auto projection =
       std::make_shared<Projection>(aggregate_hash_count_star, expression_vector(pqp_count_star, pqp_subquery_max_id));
   // Check for consumer registration
@@ -261,7 +266,7 @@ TEST_F(OperatorClearOutputTest, ConsumerTrackingProjectionUncorrelatedSubqueryNe
   validate->execute();
 
   // Left input node: COUNT(*)
-  const auto star = std::make_shared<PQPColumnExpression>(INVALID_COLUMN_ID, DataType::Long, false, "*");
+  const auto star = pqp_column_(INVALID_COLUMN_ID, DataType::Long, "*");
   auto aggregate_count_star = std::make_shared<WindowFunctionExpression>(WindowFunction::Count, star);
   auto aggregate_hash_count_star = std::make_shared<AggregateHash>(
       validate, std::vector<std::shared_ptr<WindowFunctionExpression>>{aggregate_count_star}, std::vector<ColumnID>{});
@@ -272,8 +277,8 @@ TEST_F(OperatorClearOutputTest, ConsumerTrackingProjectionUncorrelatedSubqueryNe
 
   // Projection: COUNT(*) + (SELECT MAX(a) FROM int_int_int)
   auto pqp_count_star =
-      pqp_column_(ColumnID{0}, aggregate_count_star->data_type(), false, aggregate_count_star->as_column_name());
-  auto pqp_subquery_max_id = pqp_subquery_(aggregate_hash_max_a, DataType::Int, false);
+      pqp_column_(ColumnID{0}, aggregate_count_star->data_type(), aggregate_count_star->as_column_name());
+  auto pqp_subquery_max_id = pqp_subquery_(aggregate_hash_max_a, DataType::Int);
   auto projection = std::make_shared<Projection>(aggregate_hash_count_star,
                                                  expression_vector(add_(pqp_count_star, pqp_subquery_max_id)));
   // Check for consumer registration

@@ -1,13 +1,10 @@
 #include <algorithm>
+#include <cstdint>
 #include <iterator>
-#include <memory>
-#include <set>
-#include <string>
-#include <utility>
+#include <stdexcept>
 #include <vector>
 
 #include "base_test.hpp"
-
 #include "storage/index/group_key/variable_length_key_proxy.hpp"
 #include "storage/index/group_key/variable_length_key_store.hpp"
 #include "types.hpp"
@@ -198,6 +195,12 @@ TEST_F(VariableLengthKeyStoreTest, WriteNonFittingKeys) {
   EXPECT_THROW(_store[ChunkOffset{0}] = long_key, std::logic_error);
   EXPECT_THROW(*_store.begin() = short_key, std::logic_error);
   EXPECT_THROW(*_store.begin() = long_key, std::logic_error);
+}
+
+TEST_F(VariableLengthKeyStoreTest, Resize) {
+  EXPECT_EQ(_store.size(), ChunkOffset{4});
+  _store.resize(ChunkOffset{8});
+  EXPECT_EQ(_store.size(), ChunkOffset{8});
 }
 
 }  // namespace hyrise

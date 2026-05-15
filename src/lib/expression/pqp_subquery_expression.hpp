@@ -1,5 +1,11 @@
 #pragma once
 
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+
 #include "abstract_expression.hpp"
 #include "all_type_variant.hpp"
 
@@ -19,7 +25,7 @@ class PQPSubqueryExpression : public AbstractExpression {
 
   // Constructor for single-column PQPSubqueryExpressions as used in `a IN (SELECT ...)` or `SELECT (SELECT ...)`.
   PQPSubqueryExpression(const std::shared_ptr<AbstractOperator>& init_pqp, const DataType data_type,
-                        const bool nullable, const Parameters& init_parameters = {});
+                        const Parameters& init_parameters = {});
 
   // Constructor for (potentially) multi-column PQPSubqueryExpressions as used in `EXISTS(SELECT ...)`.
   explicit PQPSubqueryExpression(const std::shared_ptr<AbstractOperator>& init_pqp,
@@ -43,15 +49,8 @@ class PQPSubqueryExpression : public AbstractExpression {
   bool _on_is_nullable_on_lqp(const AbstractLQPNode& /*lqp*/) const override;
 
  private:
-  // If the PQPSubqueryExpression returns precisely one column, it "has" this column's data type and nullability.
-  struct DataTypeInfo {
-    DataTypeInfo(const DataType init_data_type, const bool init_nullable);
-
-    const DataType data_type;
-    const bool nullable;
-  };
-
-  const std::optional<DataTypeInfo> _data_type_info;
+  // If the PQPSubqueryExpression returns precisely one column, it "has" this column's data type.
+  const std::optional<DataType> _data_type;
 };
 
 }  // namespace hyrise

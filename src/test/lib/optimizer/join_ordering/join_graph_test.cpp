@@ -1,15 +1,15 @@
+#include <memory>
 #include <sstream>
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
-
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/mock_node.hpp"
-#include "logical_query_plan/predicate_node.hpp"
 #include "optimizer/join_ordering/join_graph.hpp"
 
 namespace hyrise {
 
-using namespace expression_functional;  // NOLINT(build/namespaces)
+using namespace expression_functional;
 
 class JoinGraphTest : public BaseTest {
  public:

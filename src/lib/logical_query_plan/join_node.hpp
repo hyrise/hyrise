@@ -6,10 +6,9 @@
 #include <utility>
 #include <vector>
 
-#include "types.hpp"
-
 #include "abstract_lqp_node.hpp"
 #include "expression/abstract_expression.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
@@ -37,6 +36,8 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
    * (3) Forwards selected input UCCs for Inner and Outer Equi-Joins based on join column uniqueness.
    */
   UniqueColumnCombinations unique_column_combinations() const override;
+
+  OrderDependencies order_dependencies() const override;
 
   /**
    * (a) Semi- & Anti-Joins:

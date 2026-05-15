@@ -1,6 +1,11 @@
 #pragma once
 
+#include <memory>
+#include <optional>
+#include <string>
+#include <utility>
 #include <variant>
+
 #include "hyrise.hpp"
 #include "operators/abstract_operator.hpp"
 #include "postgres_protocol_handler.hpp"
@@ -11,6 +16,10 @@ namespace hyrise {
 
 // Store relevant information after pipeline execution
 struct ExecutionInformation {
+  ExecutionInformation() = delete;
+
+  explicit ExecutionInformation(OperatorType init_root_operator_type) : root_operator_type(init_root_operator_type) {}
+
   std::shared_ptr<const Table> result_table;
   // Since the PostgreSQL Wire Protocol requires the query type (such as SELECT, INSERT, UPDATE,...) we need to store
   // the root operator's type.

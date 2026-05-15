@@ -1,5 +1,10 @@
 #include "entire_chunk_pos_list.hpp"
 
+#include <cstddef>
+
+#include "storage/pos_lists/abstract_pos_list.hpp"
+#include "types.hpp"
+
 namespace hyrise {
 
 bool EntireChunkPosList::references_single_chunk() const {

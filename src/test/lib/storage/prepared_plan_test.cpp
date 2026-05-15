@@ -1,18 +1,18 @@
-#include "base_test.hpp"
+#include <memory>
+#include <utility>
 
+#include "all_type_variant.hpp"
+#include "base_test.hpp"
 #include "expression/expression_functional.hpp"
-#include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
-#include "logical_query_plan/join_node.hpp"
-#include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
-#include "logical_query_plan/projection_node.hpp"
 #include "storage/prepared_plan.hpp"
+#include "testing_assert.hpp"
 
 namespace hyrise {
 
-using namespace expression_functional;  // NOLINT(build/namespaces)
+using namespace expression_functional;
 
 class PreparedPlanTest : public BaseTest {
  public:

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 #include "chunk_index_type.hpp"
 #include "types.hpp"

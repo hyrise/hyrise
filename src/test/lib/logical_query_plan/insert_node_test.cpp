@@ -1,9 +1,8 @@
 #include <memory>
+#include <stdexcept>
 
 #include "base_test.hpp"
-
 #include "logical_query_plan/insert_node.hpp"
-#include "logical_query_plan/lqp_utils.hpp"
 
 namespace hyrise {
 
@@ -43,6 +42,10 @@ TEST_F(InsertNodeTest, ColumnExpressions) {
 
 TEST_F(InsertNodeTest, NoUniqueColumnCombinations) {
   EXPECT_THROW(_insert_node->unique_column_combinations(), std::logic_error);
+}
+
+TEST_F(InsertNodeTest, NoOrderDependencies) {
+  EXPECT_THROW(_insert_node->order_dependencies(), std::logic_error);
 }
 
 }  // namespace hyrise

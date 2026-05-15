@@ -7,10 +7,9 @@
 #include <vector>
 
 #include "all_type_variant.hpp"
-#include "types.hpp"
-
 #include "storage/encoding_type.hpp"
 #include "storage/vector_compression/vector_compression.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
@@ -19,7 +18,7 @@ class Table;
 class AbstractSegment;
 
 /**
- * @brief Interface for encoding chunks
+ * @brief Interface for encoding chunks.
  *
  * NOT thread-safe. In a multi-threaded context, the ChunkCompressionTask should invoke the ChunkEncoder.
  *
@@ -33,7 +32,7 @@ class ChunkEncoder {
                                                          const SegmentEncodingSpec& encoding_spec);
 
   /**
-   * @brief Encodes a chunk
+   * @brief Encodes a chunk.
    *
    * Encodes a chunk using the passed encoding specifications. Reduces also the fragmentation of the chunk’s MVCC data.
    */
@@ -41,13 +40,13 @@ class ChunkEncoder {
                            const ChunkEncodingSpec& chunk_encoding_spec);
 
   /**
-   * @brief Encodes a chunk using the same SegmentEncodingSpec
+   * @brief Encodes a chunk using the same SegmentEncodingSpec.
    */
   static void encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::vector<DataType>& column_data_types,
-                           const SegmentEncodingSpec& segment_encoding_spec = {});
+                           const SegmentEncodingSpec& segment_encoding_spec);
 
   /**
-   * @brief Encodes the specified chunks of the passed table
+   * @brief Encodes the specified chunks of the passed table.
    *
    * The encoding is specified per segment (SegmentEncodingSpec) for each chunk.
    */
@@ -55,13 +54,26 @@ class ChunkEncoder {
                             const std::map<ChunkID, ChunkEncodingSpec>& chunk_encoding_specs);
 
   /**
-   * @brief Encodes the specified chunks of the passed table using a single SegmentEncodingSpec
+   * @brief Encodes the specified chunks of the passed table.
+   *
+   * The encoding is specified per segment (SegmentEncodingSpec) for all chunks.
    */
   static void encode_chunks(const std::shared_ptr<Table>& table, const std::vector<ChunkID>& chunk_ids,
-                            const SegmentEncodingSpec& segment_encoding_spec = {});
+                            const ChunkEncodingSpec& chunk_encoding_spec);
 
   /**
-   * @brief Encodes an entire table
+   * @brief Encodes the specified chunks of the passed table using a single SegmentEncodingSpec.
+   */
+  static void encode_chunks(const std::shared_ptr<Table>& table, const std::vector<ChunkID>& chunk_ids,
+                            const SegmentEncodingSpec& segment_encoding_spec);
+
+  /**
+   * @brief Encodes the specified chunks of the passed table using the automatic encoding selection.
+   */
+  static void encode_chunks(const std::shared_ptr<Table>& table, const std::vector<ChunkID>& chunk_ids);
+
+  /**
+   * @brief Encodes an entire table.
    *
    * The encoding is specified per segment for each chunk.
    */
@@ -69,17 +81,21 @@ class ChunkEncoder {
                                 const std::vector<ChunkEncodingSpec>& chunk_encoding_specs);
 
   /**
-   * @brief Encodes an entire table
+   * @brief Encodes an entire table.
    *
    * The encoding is specified per segment and is the same for each chunk.
    */
   static void encode_all_chunks(const std::shared_ptr<Table>& table, const ChunkEncodingSpec& chunk_encoding_spec);
 
   /**
-   * @brief Encodes an entire table using a single SegmentEncodingSpec
+   * @brief Encodes an entire table using a single SegmentEncodingSpec.
    */
-  static void encode_all_chunks(const std::shared_ptr<Table>& table,
-                                const SegmentEncodingSpec& segment_encoding_spec = {});
+  static void encode_all_chunks(const std::shared_ptr<Table>& table, const SegmentEncodingSpec& segment_encoding_spec);
+
+  /**
+   * @brief Encodes an entire table using the automatic encoding selection.
+   */
+  static void encode_all_chunks(const std::shared_ptr<Table>& table);
 };
 
 }  // namespace hyrise

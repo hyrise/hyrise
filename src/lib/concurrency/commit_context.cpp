@@ -1,6 +1,10 @@
+#include "commit_context.hpp"
+
+#include <atomic>
+#include <functional>
 #include <memory>
 
-#include "commit_context.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
@@ -18,7 +22,9 @@ bool CommitContext::is_pending() const {
 void CommitContext::make_pending(const TransactionID transaction_id,
                                  const std::function<void(TransactionID)>& callback) {
   if (callback) {
-    _callback = [callback, transaction_id]() { callback(transaction_id); };
+    _callback = [callback, transaction_id]() {
+      callback(transaction_id);
+    };
   }
 
   // This line MUST be AFTER setting the callback. Otherwise we run into a race condition while committing, because this
@@ -45,7 +51,7 @@ std::shared_ptr<const CommitContext> CommitContext::next() const {
 }
 
 bool CommitContext::try_set_next(const std::shared_ptr<CommitContext>& next) {
-  DebugAssert((next->commit_id() == commit_id() + 1u), "Next commit context's commit id needs to be incremented by 1.");
+  DebugAssert((next->commit_id() == commit_id() + 1), "Next commit context's commit id needs to be incremented by 1.");
 
   if (has_next()) {
     return false;

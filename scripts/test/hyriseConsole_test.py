@@ -52,20 +52,25 @@ def main():
     console.sendline("print test")
     console.expect("Table does not exist in StorageManager")
 
+    # Test changing a setting. Also, turn binary caching off to avoid problems with cached binaries (e.g.,
+    # `hyriseServer_test.py` requires a different chunk size for TPC-H).
+    console.sendline("setting binary_caching off")
+    console.expect("Binary caching turned off")
+
     # Test load command.
     console.sendline("load resources/test_data/tbl/10_ints.tbl test")
-    console.expect('Loading .*tbl/10_ints.tbl into table "test"')
-    console.expect('Encoding "test" using Unencoded')
+    console.expect("Loading '.*tbl/10_ints.tbl' into table 'test'")
+    console.expect("Encoding 'test' using 'Unencoded'")
 
     console.sendline("load resources/test_data/bin/float.bin test_bin")
-    console.expect('Loading .*bin/float.bin into table "test_bin"')
-    console.expect('Encoding "test_bin" using Unencoded')
+    console.expect("Loading '.*bin/float.bin' into table 'test_bin'")
+    console.expect("Encoding 'test_bin' using 'Unencoded'")
 
     # Reload table with a specified encoding and check meta tables for applied encoding.
     console.sendline("load resources/test_data/bin/float.bin test_bin RunLength")
-    console.expect('Loading .*bin/float.bin into table "test_bin"')
-    console.expect('Table "test_bin" already existed. Replacing it.')
-    console.expect('Encoding "test_bin" using RunLength')
+    console.expect("Loading '.*bin/float.bin' into table 'test_bin'")
+    console.expect("Table 'test_bin' already existed. Replacing it.")
+    console.expect("Encoding 'test_bin' using 'RunLength'")
     console.sendline(
         "select encoding_type from meta_segments where table_name='test_bin' and chunk_id=0 and column_id=0"
     )
@@ -112,11 +117,11 @@ def main():
     console.sendline("select sum(a) from test")
     console.expect("840")
 
-    # Test TPCH generation.
+    # Test TPC-H generation.
     console.sendline("generate_tpch     0.01   7")
     console.expect("Generating tables done", timeout=300)
 
-    # Test TPCH tables.
+    # Test TPC-H tables.
     console.sendline("select * from nation")
     console.expect("25 rows total")
 
@@ -124,20 +129,26 @@ def main():
     console.sendline("print nation")
     console.expect("=== Chunk 3 ===")
 
-    # Clear generated tables.
+    # Clear all generated tables and restore default configuration.
     console.sendline("reset")
     console.sendline("select * from meta_tables")
     console.expect("0 rows total")
 
-    # Test TPC-DS generation.
-    console.sendline("generate_tpcds 1")
+    # Make sure to turn off binary table caching again.
+    console.sendline("setting binary_caching off")
+    console.expect("Binary caching turned off")
+
+    # Test TPC-C generation. We also tried different benchmarks here. SSB and JCC-H are not thread-safe due to the
+    # external data generator, leading to problems since this test is executed multiple times. We consider TPC-DS data
+    # generation too slow to be run regularly within the CI pipeline.
+    console.sendline("generate_tpcc 1")
     console.expect("Generating tables done", timeout=600)
     console.sendline("select * from meta_tables")
-    console.expect("24 rows total")
+    console.expect("9 rows total")
 
     # Test meta table modification.
     console.sendline("insert into meta_settings values ('foo', 'bar', 'baz')")
-    console.expect("Invalid input error: Cannot insert into meta_settings")
+    console.expect("Invalid input error: Cannot insert into 'meta_settings'")
     console.sendline("select * from meta_plugins")
     console.expect("0 rows total")
     console.sendline("insert into meta_plugins values ('" + build_dir + "/lib/libhyriseTestPlugin" + lib_suffix + "')")

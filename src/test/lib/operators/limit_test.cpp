@@ -1,21 +1,21 @@
-#include <limits>
+#include <cstdint>
 #include <memory>
+#include <stdexcept>
 #include <string>
-#include <utility>
 #include <vector>
 
 #include "base_test.hpp"
-
 #include "expression/expression_functional.hpp"
 #include "operators/limit.hpp"
 #include "operators/sort.hpp"
-#include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
+#include "testing_assert.hpp"
 #include "types.hpp"
+#include "utils/load_table.hpp"
 
 namespace hyrise {
 
-using namespace expression_functional;  // NOLINT(build/namespaces)
+using namespace expression_functional;
 
 class OperatorsLimitTest : public BaseTest {
  protected:
@@ -132,7 +132,7 @@ TEST_F(OperatorsLimitTest, ForwardSortedByFlag) {
 
   // Verify that the sorted_by flag is set when it's present in input.
   const auto sort_definition =
-      std::vector<SortColumnDefinition>{SortColumnDefinition(ColumnID{0}, SortMode::Ascending)};
+      std::vector<SortColumnDefinition>{SortColumnDefinition(ColumnID{0}, SortMode::AscendingNullsFirst)};
   auto sort = std::make_shared<Sort>(_table_wrapper, sort_definition);
   sort->execute();
 

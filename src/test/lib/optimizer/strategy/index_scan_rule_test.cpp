@@ -1,14 +1,10 @@
+#include <cstdint>
 #include <memory>
-#include <optional>
+#include <numeric>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "base_test.hpp"
-#include "lib/optimizer/strategy/strategy_base_test.hpp"
-#include "utils/assert.hpp"
-
-#include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/mock_node.hpp"
@@ -16,21 +12,23 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "optimizer/strategy/index_scan_rule.hpp"
 #include "statistics/attribute_statistics.hpp"
+#include "statistics/base_attribute_statistics.hpp"
+#include "statistics/statistics_objects/generic_histogram.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/chunk_encoder.hpp"
-#include "storage/dictionary_segment.hpp"
-#include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
-#include "storage/index/group_key/composite_group_key_index.hpp"
-#include "storage/index/group_key/group_key_index.hpp"
+#include "strategy_base_test.hpp"
+#include "types.hpp"
+#include "utils/load_table.hpp"
 
 namespace hyrise {
 
-using namespace expression_functional;  // NOLINT(build/namespaces)
+using namespace expression_functional;
 
 class IndexScanRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
-    table = load_table("resources/test_data/tbl/int_int_int.tbl");
+    StrategyBaseTest::SetUp();
+    table = load_table("resources/test_data/tbl/int_float4.tbl");
     Hyrise::get().storage_manager.add_table("a", table);
     ChunkEncoder::encode_all_chunks(Hyrise::get().storage_manager.get_table("a"));
 
@@ -39,142 +37,174 @@ class IndexScanRuleTest : public StrategyBaseTest {
     stored_table_node = StoredTableNode::make("a");
     a = stored_table_node->get_column("a");
     b = stored_table_node->get_column("b");
-    c = stored_table_node->get_column("c");
   }
 
   void generate_mock_statistics(float row_count = 10.0f) {
-    const auto table_statistics = table->table_statistics();
-    table_statistics->row_count = row_count;
+    auto column_statistics = std::vector<std::shared_ptr<const BaseAttributeStatistics>>(2);
+    const auto statistics_a = std::make_shared<AttributeStatistics<int32_t>>();
+    statistics_a->set_statistics_object(GenericHistogram<int32_t>::with_single_bin(0, 20, row_count, 10));
+    column_statistics[0] = statistics_a;
+    const auto statistics_b = std::make_shared<AttributeStatistics<float>>();
+    statistics_b->set_statistics_object(GenericHistogram<float>::with_single_bin(0, 20, row_count, 10));
+    column_statistics[1] = statistics_b;
 
-    table_statistics->column_statistics.at(0)->set_statistics_object(
-        GenericHistogram<int32_t>::with_single_bin(0, 20, row_count, 10));
-    table_statistics->column_statistics.at(1)->set_statistics_object(
-        GenericHistogram<int32_t>::with_single_bin(0, 20, row_count, 10));
-    table_statistics->column_statistics.at(2)->set_statistics_object(
-        GenericHistogram<int32_t>::with_single_bin(0, 20'000, row_count, 10));
+    const auto table_statistics = std::make_shared<TableStatistics>(std::move(column_statistics), row_count);
+    table->set_table_statistics(table_statistics);
   }
 
   std::shared_ptr<IndexScanRule> rule;
   std::shared_ptr<StoredTableNode> stored_table_node;
   std::shared_ptr<Table> table;
-  std::shared_ptr<LQPColumnExpression> a, b, c;
+  std::shared_ptr<LQPColumnExpression> a;
+  std::shared_ptr<LQPColumnExpression> b;
 };
 
 TEST_F(IndexScanRuleTest, NoIndexScanWithoutIndex) {
   generate_mock_statistics();
 
-  auto predicate_node_0 = PredicateNode::make(greater_than_(a, 10));
-  predicate_node_0->set_left_input(stored_table_node);
+  _lqp = PredicateNode::make(equals_(a, 10));
+  _lqp->set_left_input(stored_table_node);
 
-  EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
-  auto reordered = StrategyBaseTest::apply_rule(rule, predicate_node_0);
-  EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
+  EXPECT_EQ(static_cast<PredicateNode&>(*_lqp).scan_type, ScanType::TableScan);
+  _apply_rule(rule, _lqp);
+
+  EXPECT_TRUE(_optimization_context.is_cacheable());
+  EXPECT_EQ(static_cast<PredicateNode&>(*_lqp).scan_type, ScanType::TableScan);
 }
 
 TEST_F(IndexScanRuleTest, NoIndexScanWithIndexOnOtherColumn) {
-  table->create_chunk_index<GroupKeyIndex>({ColumnID{2}});
+  auto chunk_ids = std::vector<ChunkID>(table->chunk_count());
+  // NOLINTNEXTLINE(modernize-use-ranges): We need LLVM 21's libc++ for std::ranges::iota.
+  std::iota(chunk_ids.begin(), chunk_ids.end(), 0);
+  table->create_partial_hash_index(ColumnID{1}, chunk_ids);
 
   generate_mock_statistics();
 
-  auto predicate_node_0 = PredicateNode::make(greater_than_(a, 10));
-  predicate_node_0->set_left_input(stored_table_node);
+  _lqp = PredicateNode::make(equals_(a, 10));
+  _lqp->set_left_input(stored_table_node);
 
-  EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
-  auto reordered = StrategyBaseTest::apply_rule(rule, predicate_node_0);
-  EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
-}
+  EXPECT_EQ(static_cast<PredicateNode&>(*_lqp).scan_type, ScanType::TableScan);
+  _apply_rule(rule, _lqp);
 
-TEST_F(IndexScanRuleTest, NoIndexScanWithMultiSegmentIndex) {
-  table->create_chunk_index<CompositeGroupKeyIndex>({ColumnID{2}, ColumnID{1}});
-
-  generate_mock_statistics();
-
-  auto predicate_node_0 = PredicateNode::make(greater_than_(c, 10));
-  predicate_node_0->set_left_input(stored_table_node);
-
-  EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
-  auto reordered = StrategyBaseTest::apply_rule(rule, predicate_node_0);
-  EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
+  EXPECT_TRUE(_optimization_context.is_cacheable());
+  EXPECT_EQ(static_cast<PredicateNode&>(*_lqp).scan_type, ScanType::TableScan);
 }
 
 TEST_F(IndexScanRuleTest, NoIndexScanWithTwoColumnPredicate) {
   generate_mock_statistics();
 
-  auto predicate_node_0 = PredicateNode::make(greater_than_(c, b));
-  predicate_node_0->set_left_input(stored_table_node);
+  _lqp = PredicateNode::make(equals_(b, b));
+  _lqp->set_left_input(stored_table_node);
 
-  EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
-  auto reordered = StrategyBaseTest::apply_rule(rule, predicate_node_0);
-  EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
+  EXPECT_EQ(static_cast<PredicateNode&>(*_lqp).scan_type, ScanType::TableScan);
+  _apply_rule(rule, _lqp);
+
+  EXPECT_TRUE(_optimization_context.is_cacheable());
+  EXPECT_EQ(static_cast<PredicateNode&>(*_lqp).scan_type, ScanType::TableScan);
 }
 
 TEST_F(IndexScanRuleTest, NoIndexScanWithHighSelectivity) {
-  table->create_chunk_index<GroupKeyIndex>({ColumnID{2}});
+  auto chunk_ids = std::vector<ChunkID>(table->chunk_count());
+  // NOLINTNEXTLINE(modernize-use-ranges): We need LLVM 21's libc++ for std::ranges::iota.
+  std::iota(chunk_ids.begin(), chunk_ids.end(), 0);
+  table->create_partial_hash_index(ColumnID{1}, chunk_ids);
 
   generate_mock_statistics(80'000);
 
-  auto predicate_node_0 = PredicateNode::make(greater_than_(c, 10));
-  predicate_node_0->set_left_input(stored_table_node);
+  _lqp = PredicateNode::make(not_equals_(b, 10));
+  _lqp->set_left_input(stored_table_node);
 
-  EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
-  auto reordered = StrategyBaseTest::apply_rule(rule, predicate_node_0);
-  EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
-}
+  EXPECT_EQ(static_cast<PredicateNode&>(*_lqp).scan_type, ScanType::TableScan);
+  _apply_rule(rule, _lqp);
 
-TEST_F(IndexScanRuleTest, NoIndexScanIfNotGroupKey) {
-  table->create_chunk_index<AdaptiveRadixTreeIndex>({ColumnID{2}});
-
-  generate_mock_statistics(1'000'000);
-
-  auto predicate_node_0 = PredicateNode::make(greater_than_(c, 10));
-  predicate_node_0->set_left_input(stored_table_node);
-
-  EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
-  auto reordered = StrategyBaseTest::apply_rule(rule, predicate_node_0);
-  EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
+  EXPECT_TRUE(_optimization_context.is_cacheable());
+  EXPECT_EQ(static_cast<PredicateNode&>(*_lqp).scan_type, ScanType::TableScan);
 }
 
 TEST_F(IndexScanRuleTest, IndexScanWithIndex) {
-  table->create_chunk_index<GroupKeyIndex>({ColumnID{2}});
+  auto chunk_ids = std::vector<ChunkID>(table->chunk_count());
+  // NOLINTNEXTLINE(modernize-use-ranges): We need LLVM 21's libc++ for std::ranges::iota.
+  std::iota(chunk_ids.begin(), chunk_ids.end(), 0);
+  table->create_partial_hash_index(ColumnID{1}, chunk_ids);
 
   generate_mock_statistics(1'000'000);
 
-  auto predicate_node_0 = PredicateNode::make(greater_than_(c, 19'900));
-  predicate_node_0->set_left_input(stored_table_node);
+  _lqp = PredicateNode::make(equals_(b, 19'900));
+  _lqp->set_left_input(stored_table_node);
 
-  EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
-  auto reordered = StrategyBaseTest::apply_rule(rule, predicate_node_0);
-  EXPECT_EQ(predicate_node_0->scan_type, ScanType::IndexScan);
+  EXPECT_EQ(static_cast<PredicateNode&>(*_lqp).scan_type, ScanType::TableScan);
+  _apply_rule(rule, _lqp);
+
+  EXPECT_TRUE(_optimization_context.is_cacheable());
+  EXPECT_EQ(static_cast<PredicateNode&>(*_lqp).scan_type, ScanType::IndexScan);
 }
 
 TEST_F(IndexScanRuleTest, IndexScanWithIndexPrunedColumn) {
-  table->create_chunk_index<GroupKeyIndex>({ColumnID{2}});
+  auto chunk_ids = std::vector<ChunkID>(table->chunk_count());
+  // NOLINTNEXTLINE(modernize-use-ranges): We need LLVM 21's libc++ for std::ranges::iota.
+  std::iota(chunk_ids.begin(), chunk_ids.end(), 0);
+  table->create_partial_hash_index(ColumnID{1}, chunk_ids);
+
   stored_table_node->set_pruned_column_ids({ColumnID{0}});
 
   generate_mock_statistics(1'000'000);
 
-  auto predicate_node_0 = PredicateNode::make(greater_than_(c, 19'900));
-  predicate_node_0->set_left_input(stored_table_node);
+  _lqp = PredicateNode::make(equals_(b, 19'900));
+  _lqp->set_left_input(stored_table_node);
 
-  EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
-  auto reordered = StrategyBaseTest::apply_rule(rule, predicate_node_0);
-  EXPECT_EQ(predicate_node_0->scan_type, ScanType::IndexScan);
+  EXPECT_EQ(static_cast<PredicateNode&>(*_lqp).scan_type, ScanType::TableScan);
+  _apply_rule(rule, _lqp);
+
+  EXPECT_TRUE(_optimization_context.is_cacheable());
+  EXPECT_EQ(static_cast<PredicateNode&>(*_lqp).scan_type, ScanType::IndexScan);
 }
 
 TEST_F(IndexScanRuleTest, IndexScanOnlyOnOutputOfStoredTableNode) {
-  table->create_chunk_index<GroupKeyIndex>({ColumnID{2}});
+  auto chunk_ids = std::vector<ChunkID>(table->chunk_count());
+  // NOLINTNEXTLINE(modernize-use-ranges): We need LLVM 21's libc++ for std::ranges::iota.
+  std::iota(chunk_ids.begin(), chunk_ids.end(), 0);
+  table->create_partial_hash_index(ColumnID{1}, chunk_ids);
 
   generate_mock_statistics(1'000'000);
 
-  auto predicate_node_0 = PredicateNode::make(greater_than_(c, 19'900));
-  predicate_node_0->set_left_input(stored_table_node);
+  _lqp = PredicateNode::make(less_than_(b, 15));
+  const auto predicate_node = PredicateNode::make(equals_(b, 19'900));
+  _lqp->set_left_input(predicate_node);
+  predicate_node->set_left_input(stored_table_node);
 
-  auto predicate_node_1 = PredicateNode::make(less_than_(b, 15));
-  predicate_node_1->set_left_input(predicate_node_0);
+  EXPECT_EQ(static_cast<PredicateNode&>(*_lqp).scan_type, ScanType::TableScan);
+  EXPECT_EQ(predicate_node->scan_type, ScanType::TableScan);
 
-  auto reordered = StrategyBaseTest::apply_rule(rule, predicate_node_1);
-  EXPECT_EQ(predicate_node_0->scan_type, ScanType::IndexScan);
-  EXPECT_EQ(predicate_node_1->scan_type, ScanType::TableScan);
+  _apply_rule(rule, _lqp);
+
+  EXPECT_TRUE(_optimization_context.is_cacheable());
+  EXPECT_EQ(static_cast<PredicateNode&>(*_lqp).scan_type, ScanType::TableScan);
+  EXPECT_EQ(predicate_node->scan_type, ScanType::IndexScan);
+}
+
+// Same test as before, but placing the predicate with a high selectivity first, which does not trigger an index
+// scan. The second predicate has a very low selectivity, but does not follow a stored table node.
+TEST_F(IndexScanRuleTest, NoIndexScanForSecondPredicate) {
+  auto chunk_ids = std::vector<ChunkID>(table->chunk_count());
+  // NOLINTNEXTLINE(modernize-use-ranges): We need LLVM 21's libc++ for std::ranges::iota.
+  std::iota(chunk_ids.begin(), chunk_ids.end(), 0);
+  table->create_partial_hash_index(ColumnID{1}, chunk_ids);
+
+  generate_mock_statistics(1'000'000);
+
+  _lqp = PredicateNode::make(equals_(b, 19'900));
+  const auto predicate_node = PredicateNode::make(less_than_(b, 15));
+  _lqp->set_left_input(predicate_node);
+  predicate_node->set_left_input(stored_table_node);
+
+  EXPECT_EQ(static_cast<PredicateNode&>(*_lqp).scan_type, ScanType::TableScan);
+  EXPECT_EQ(predicate_node->scan_type, ScanType::TableScan);
+
+  _apply_rule(rule, _lqp);
+
+  EXPECT_TRUE(_optimization_context.is_cacheable());
+  EXPECT_EQ(static_cast<PredicateNode&>(*_lqp).scan_type, ScanType::TableScan);
+  EXPECT_EQ(predicate_node->scan_type, ScanType::TableScan);
 }
 
 }  // namespace hyrise

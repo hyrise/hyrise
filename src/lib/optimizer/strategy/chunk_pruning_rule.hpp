@@ -3,12 +3,14 @@
 #include <memory>
 #include <set>
 #include <string>
+#include <unordered_map>
+#include <vector>
 
 #include "abstract_rule.hpp"
 #include "operators/operator_scan_predicate.hpp"
 #include "statistics/table_statistics.hpp"
 #include "types.hpp"
-#include "utils/chunk_pruning_utils.hpp"
+#include "utils/pruning_utils.hpp"
 
 namespace hyrise {
 
@@ -20,14 +22,15 @@ namespace hyrise {
  * `x = (SELECT MIN(y) FROM ...)`). We cannot prune chunks with these predicates during optimization since we do not
  * know the predicate value yet. However, we collect such predicates using subquery results that are safe to prune with
  * and also add this information to the StoredTableNode. During execution, the subquery might have already been executed
- * and the table can be pruned dynamically.
+ * and the table can be pruned dynamically (see get_table.hpp).
  */
 class ChunkPruningRule : public AbstractRule {
  public:
   std::string name() const override;
 
  protected:
-  void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
+  void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root,
+                                         OptimizationContext& optimization_context) const override;
 
   static std::vector<PredicatePruningChain> _find_predicate_pruning_chains_by_stored_table_node(
       const std::shared_ptr<StoredTableNode>& stored_table_node);

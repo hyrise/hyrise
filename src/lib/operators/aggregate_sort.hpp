@@ -10,7 +10,6 @@
 #include <utility>
 #include <vector>
 
-#include <boost/container/pmr/polymorphic_allocator.hpp>
 #include <boost/container/scoped_allocator.hpp>
 #include <boost/container_hash/hash.hpp>
 

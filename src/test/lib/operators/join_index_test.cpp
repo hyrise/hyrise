@@ -1,20 +1,25 @@
-#include <map>
+#include <cstddef>
 #include <memory>
-#include <numeric>
-#include <utility>
+#include <stdexcept>
+#include <string>
 #include <vector>
 
-#include "base_test.hpp"
-
 #include "all_type_variant.hpp"
+#include "base_test.hpp"
+#include "operators/abstract_join_operator.hpp"
+#include "operators/abstract_operator.hpp"
 #include "operators/join_index.hpp"
 #include "operators/join_verification.hpp"
+#include "operators/operator_join_predicate.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk_encoder.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
 #include "storage/table.hpp"
+#include "testing_assert.hpp"
 #include "types.hpp"
+#include "utils/load_table.hpp"
 
 namespace hyrise {
 
@@ -137,7 +142,8 @@ class OperatorsJoinIndexTest : public BaseTest {
 
 TEST_F(OperatorsJoinIndexTest, Supports) {
   const auto primary_predicate = OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals};
-  auto configuration = JoinConfiguration{};
+  auto configuration =
+      JoinConfiguration(JoinMode::Inner, PredicateCondition::Equals, DataType::Int, DataType::Int, false);
 
   auto join_operator = std::make_shared<JoinIndex>(dummy_input, dummy_input, JoinMode::Inner, primary_predicate,
                                                    std::vector<OperatorJoinPredicate>{}, IndexSide::Left);
@@ -220,7 +226,7 @@ TEST_F(OperatorsJoinIndexTest, PerformanceDataOutputToStream) {
   performance_data.chunks_scanned_without_index = 5u;
 
   {
-    std::stringstream stream;
+    auto stream = std::stringstream{};
     stream << performance_data;
     EXPECT_EQ(stream.str(),
               "Output: 2 rows in 1 chunk, 999 ns. Operator step runtimes: IndexJoining 17 ns, "
@@ -228,7 +234,7 @@ TEST_F(OperatorsJoinIndexTest, PerformanceDataOutputToStream) {
   }
 
   {
-    std::stringstream stream;
+    auto stream = std::stringstream{};
     performance_data.output_to_stream(stream, DescriptionMode::MultiLine);
     EXPECT_EQ(stream.str(),
               "Output: 2 rows in 1 chunk, 999 ns.\nOperator step runtimes:\n IndexJoining 17 ns\n "

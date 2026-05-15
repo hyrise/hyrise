@@ -68,7 +68,7 @@ def main():
 
     benchmark = run_benchmark(build_dir, arguments, "hyriseBenchmarkTPCC", True)
     benchmark.expect_exact(f"Writing benchmark results to '{output_filename_2}'")
-    benchmark.expect_exact("Loading table 'NEW_ORDER' from cached binary")
+    benchmark.expect_exact("Loaded table 'NEW_ORDER' from cached binary")
 
     close_benchmark(benchmark)
     check_exit_status(benchmark)

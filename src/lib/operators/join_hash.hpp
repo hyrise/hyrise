@@ -1,6 +1,10 @@
 #pragma once
 
+#include <memory>
 #include <optional>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 #include "abstract_join_operator.hpp"
 #include "operator_join_predicate.hpp"

@@ -1,9 +1,12 @@
 #include <memory>
 #include <vector>
 
-#include "../micro_benchmark_basic_fixture.hpp"
 #include "benchmark/benchmark.h"
+
+#include "all_type_variant.hpp"
 #include "expression/expression_functional.hpp"
+#include "expression/window_function_expression.hpp"
+#include "micro_benchmark_basic_fixture.hpp"
 #include "operators/aggregate_hash.hpp"
 #include "operators/aggregate_sort.hpp"
 #include "operators/sort.hpp"
@@ -12,47 +15,47 @@
 
 namespace hyrise {
 
-using namespace expression_functional;  // NOLINT(build/namespaces)
+using namespace expression_functional;
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_AggregateHash)(benchmark::State& state) {
-  _clear_cache();
+  micro_benchmark_clear_cache();
 
   auto aggregates = std::vector<std::shared_ptr<WindowFunctionExpression>>{
-      std::static_pointer_cast<WindowFunctionExpression>(min_(pqp_column_(ColumnID{1}, DataType::Int, false, "b")))};
+      std::static_pointer_cast<WindowFunctionExpression>(min_(pqp_column_(ColumnID{1}, DataType::Int, "b")))};
 
-  std::vector<ColumnID> groupby = {ColumnID{0} /* "a" */};
+  const auto groupby_columns = std::vector<ColumnID>{ColumnID{0} /* "a" */};
 
-  auto warm_up = std::make_shared<AggregateHash>(_table_wrapper_a, aggregates, groupby);
+  auto warm_up = std::make_shared<AggregateHash>(_table_wrapper_a, aggregates, groupby_columns);
   warm_up->execute();
   for (auto _ : state) {
-    auto aggregate = std::make_shared<AggregateHash>(_table_wrapper_a, aggregates, groupby);
+    auto aggregate = std::make_shared<AggregateHash>(_table_wrapper_a, aggregates, groupby_columns);
     aggregate->execute();
   }
 }
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_AggregateSortNotSortedNoGroupBy)(benchmark::State& state) {
-  _clear_cache();
+  micro_benchmark_clear_cache();
 
   auto aggregates = std::vector<std::shared_ptr<WindowFunctionExpression>>{
-      std::static_pointer_cast<WindowFunctionExpression>(min_(pqp_column_(ColumnID{1}, DataType::Int, false, "b")))};
+      std::static_pointer_cast<WindowFunctionExpression>(min_(pqp_column_(ColumnID{1}, DataType::Int, "b")))};
 
-  std::vector<ColumnID> groupby = {};
+  const std::vector<ColumnID> groupby_columns = {};
 
-  auto warm_up = std::make_shared<AggregateSort>(_table_wrapper_a, aggregates, groupby);
+  auto warm_up = std::make_shared<AggregateSort>(_table_wrapper_a, aggregates, groupby_columns);
   warm_up->execute();
   for (auto _ : state) {
-    auto aggregate = std::make_shared<AggregateSort>(_table_wrapper_a, aggregates, groupby);
+    auto aggregate = std::make_shared<AggregateSort>(_table_wrapper_a, aggregates, groupby_columns);
     aggregate->execute();
   }
 }
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_AggregateSortSortedNoGroupBy)(benchmark::State& state) {
-  _clear_cache();
+  micro_benchmark_clear_cache();
 
   auto aggregates = std::vector<std::shared_ptr<WindowFunctionExpression>>{
-      std::static_pointer_cast<WindowFunctionExpression>(min_(pqp_column_(ColumnID{1}, DataType::Int, false, "b")))};
+      std::static_pointer_cast<WindowFunctionExpression>(min_(pqp_column_(ColumnID{1}, DataType::Int, "b")))};
 
-  std::vector<ColumnID> groupby = {};
+  const auto groupby_columns = std::vector<ColumnID>{};
 
   const auto sort =
       std::make_shared<Sort>(_table_wrapper_a, std::vector<SortColumnDefinition>{SortColumnDefinition(ColumnID{1})});
@@ -62,37 +65,37 @@ BENCHMARK_F(MicroBenchmarkBasicFixture, BM_AggregateSortSortedNoGroupBy)(benchma
   table_wrapper_sorted->never_clear_output();
   table_wrapper_sorted->execute();
 
-  auto warm_up = std::make_shared<AggregateSort>(_table_wrapper_a, aggregates, groupby);
+  auto warm_up = std::make_shared<AggregateSort>(_table_wrapper_a, aggregates, groupby_columns);
   warm_up->execute();
   for (auto _ : state) {
-    auto aggregate = std::make_shared<AggregateSort>(table_wrapper_sorted, aggregates, groupby);
+    auto aggregate = std::make_shared<AggregateSort>(table_wrapper_sorted, aggregates, groupby_columns);
     aggregate->execute();
   }
 }
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_AggregateSortNotSortedOneGroupBy)(benchmark::State& state) {
-  _clear_cache();
+  micro_benchmark_clear_cache();
 
   auto aggregates = std::vector<std::shared_ptr<WindowFunctionExpression>>{
-      std::static_pointer_cast<WindowFunctionExpression>(min_(pqp_column_(ColumnID{1}, DataType::Int, false, "b")))};
+      std::static_pointer_cast<WindowFunctionExpression>(min_(pqp_column_(ColumnID{1}, DataType::Int, "b")))};
 
-  std::vector<ColumnID> groupby = {ColumnID{1}};
+  const auto groupby_columns = std::vector<ColumnID>{ColumnID{1}};
 
-  auto warm_up = std::make_shared<AggregateSort>(_table_wrapper_a, aggregates, groupby);
+  auto warm_up = std::make_shared<AggregateSort>(_table_wrapper_a, aggregates, groupby_columns);
   warm_up->execute();
   for (auto _ : state) {
-    auto aggregate = std::make_shared<AggregateSort>(_table_wrapper_a, aggregates, groupby);
+    auto aggregate = std::make_shared<AggregateSort>(_table_wrapper_a, aggregates, groupby_columns);
     aggregate->execute();
   }
 }
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_AggregateSortSortedOneGroupBy)(benchmark::State& state) {
-  _clear_cache();
+  micro_benchmark_clear_cache();
 
   auto aggregates = std::vector<std::shared_ptr<WindowFunctionExpression>>{
-      std::static_pointer_cast<WindowFunctionExpression>(min_(pqp_column_(ColumnID{1}, DataType::Int, false, "b")))};
+      std::static_pointer_cast<WindowFunctionExpression>(min_(pqp_column_(ColumnID{1}, DataType::Int, "b")))};
 
-  std::vector<ColumnID> groupby = {ColumnID{1}};
+  const auto groupby_columns = std::vector<ColumnID>{ColumnID{1}};
 
   const auto sort =
       std::make_shared<Sort>(_table_wrapper_a, std::vector<SortColumnDefinition>{SortColumnDefinition(ColumnID{1})});
@@ -102,37 +105,37 @@ BENCHMARK_F(MicroBenchmarkBasicFixture, BM_AggregateSortSortedOneGroupBy)(benchm
   table_wrapper_sorted->never_clear_output();
   table_wrapper_sorted->execute();
 
-  auto warm_up = std::make_shared<AggregateSort>(_table_wrapper_a, aggregates, groupby);
+  auto warm_up = std::make_shared<AggregateSort>(_table_wrapper_a, aggregates, groupby_columns);
   warm_up->execute();
   for (auto _ : state) {
-    auto aggregate = std::make_shared<AggregateSort>(table_wrapper_sorted, aggregates, groupby);
+    auto aggregate = std::make_shared<AggregateSort>(table_wrapper_sorted, aggregates, groupby_columns);
     aggregate->execute();
   }
 }
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_AggregateSortNotSortedMultipleGroupBy)(benchmark::State& state) {
-  _clear_cache();
+  micro_benchmark_clear_cache();
 
   auto aggregates = std::vector<std::shared_ptr<WindowFunctionExpression>>{
-      std::static_pointer_cast<WindowFunctionExpression>(min_(pqp_column_(ColumnID{1}, DataType::Int, false, "b")))};
+      std::static_pointer_cast<WindowFunctionExpression>(min_(pqp_column_(ColumnID{1}, DataType::Int, "b")))};
 
-  std::vector<ColumnID> groupby = {ColumnID{0}, ColumnID{1}};
+  const auto groupby_columns = std::vector<ColumnID>{ColumnID{0}, ColumnID{1}};
 
-  auto warm_up = std::make_shared<AggregateSort>(_table_wrapper_a, aggregates, groupby);
+  auto warm_up = std::make_shared<AggregateSort>(_table_wrapper_a, aggregates, groupby_columns);
   warm_up->execute();
   for (auto _ : state) {
-    auto aggregate = std::make_shared<AggregateSort>(_table_wrapper_a, aggregates, groupby);
+    auto aggregate = std::make_shared<AggregateSort>(_table_wrapper_a, aggregates, groupby_columns);
     aggregate->execute();
   }
 }
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_AggregateSortSortedMultipleGroupBy)(benchmark::State& state) {
-  _clear_cache();
+  micro_benchmark_clear_cache();
 
   auto aggregates = std::vector<std::shared_ptr<WindowFunctionExpression>>{
-      std::static_pointer_cast<WindowFunctionExpression>(min_(pqp_column_(ColumnID{1}, DataType::Int, false, "b")))};
+      std::static_pointer_cast<WindowFunctionExpression>(min_(pqp_column_(ColumnID{1}, DataType::Int, "b")))};
 
-  std::vector<ColumnID> groupby = {ColumnID{0}, ColumnID{1}};
+  const auto groupby_columns = std::vector<ColumnID>{ColumnID{0}, ColumnID{1}};
 
   const auto sort =
       std::make_shared<Sort>(_table_wrapper_a, std::vector<SortColumnDefinition>{SortColumnDefinition(ColumnID{1})});
@@ -142,10 +145,10 @@ BENCHMARK_F(MicroBenchmarkBasicFixture, BM_AggregateSortSortedMultipleGroupBy)(b
   table_wrapper_sorted->never_clear_output();
   table_wrapper_sorted->execute();
 
-  auto warm_up = std::make_shared<AggregateSort>(_table_wrapper_a, aggregates, groupby);
+  auto warm_up = std::make_shared<AggregateSort>(_table_wrapper_a, aggregates, groupby_columns);
   warm_up->execute();
   for (auto _ : state) {
-    auto aggregate = std::make_shared<AggregateSort>(table_wrapper_sorted, aggregates, groupby);
+    auto aggregate = std::make_shared<AggregateSort>(table_wrapper_sorted, aggregates, groupby_columns);
     aggregate->execute();
   }
 }

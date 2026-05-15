@@ -1,8 +1,15 @@
 #include "case_expression.hpp"
 
-#include <sstream>
+#include <format>
+#include <memory>
+#include <string>
+#include <unordered_map>
 
-#include "expression_utils.hpp"
+#include "all_type_variant.hpp"
+#include "expression/abstract_expression.hpp"
+#include "expression/expression_utils.hpp"
+#include "operators/abstract_operator.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
@@ -24,12 +31,8 @@ const std::shared_ptr<AbstractExpression>& CaseExpression::otherwise() const {
 }
 
 std::string CaseExpression::description(const DescriptionMode mode) const {
-  std::stringstream stream;
-
-  stream << "CASE WHEN " << when()->description(mode) << " THEN " << then()->description(mode) << " ELSE "
-         << otherwise()->description(mode) << " END";
-
-  return stream.str();
+  return std::format("CASE WHEN {} THEN {} ELSE {} END", when()->description(mode), then()->description(mode),
+                     otherwise()->description(mode));
 }
 
 DataType CaseExpression::data_type() const {

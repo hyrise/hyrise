@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "abstract_read_write_operator.hpp"
@@ -45,7 +46,6 @@ class Update : public AbstractReadWriteOperator {
   // Rollback happens in Insert and Delete operators
   void _on_rollback_records() override {}
 
- protected:
   const std::string _table_to_update_name;
   std::shared_ptr<Delete> _delete;
   std::shared_ptr<Insert> _insert;

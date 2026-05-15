@@ -1,13 +1,23 @@
 #include "window_function_expression.hpp"
 
+#include <cstddef>
+#include <format>
+#include <functional>
+#include <memory>
+#include <ostream>
 #include <sstream>
+#include <string>
+#include <unordered_map>
 
-#include <boost/container_hash/hash.hpp>
-
+#include "all_type_variant.hpp"
+#include "expression/abstract_expression.hpp"
 #include "expression_utils.hpp"
 #include "lqp_column_expression.hpp"
+#include "null_value.hpp"
+#include "operators/abstract_operator.hpp"
 #include "operators/aggregate/window_function_traits.hpp"
 #include "resolve_type.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
@@ -95,7 +105,8 @@ DataType WindowFunctionExpression::data_type() const {
   }
 
   const auto& argument = this->argument();
-  Assert(argument, "Expected " + window_function_to_string.left.at(window_function) + " to have an argument.");
+  Assert(argument,
+         std::format("Expected '{}' to have an argument.", window_function_to_string.left.at(window_function)));
   const auto argument_data_type = argument->data_type();
   auto result_type = DataType::Null;
 
@@ -165,7 +176,7 @@ bool WindowFunctionExpression::_shallow_equals(const AbstractExpression& express
 }
 
 size_t WindowFunctionExpression::_shallow_hash() const {
-  return boost::hash_value(static_cast<size_t>(window_function));
+  return std::hash<WindowFunction>{}(window_function);
 }
 
 bool WindowFunctionExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& /*lqp*/) const {

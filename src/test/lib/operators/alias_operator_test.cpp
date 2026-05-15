@@ -1,9 +1,17 @@
-#include "base_test.hpp"
+#include <algorithm>
+#include <memory>
+#include <string>
+#include <vector>
 
+#include "base_test.hpp"
+#include "expression/expression_functional.hpp"
+#include "expression/pqp_column_expression.hpp"
 #include "operators/alias_operator.hpp"
 #include "operators/projection.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_wrapper.hpp"
+#include "testing_assert.hpp"
+#include "types.hpp"
 #include "utils/load_table.hpp"
 
 namespace hyrise {
@@ -63,7 +71,7 @@ TEST_F(AliasOperatorTest, ForwardSortedByFlag) {
     const auto& sorted_by = result_table_sorted->get_chunk(chunk_id)->individually_sorted_by();
     ASSERT_EQ(sorted_by.size(), 1);
     EXPECT_EQ(sorted_by.front().column, ColumnID{1});
-    EXPECT_EQ(sorted_by.front().sort_mode, SortMode::Ascending);
+    EXPECT_EQ(sorted_by.front().sort_mode, SortMode::AscendingNullsFirst);
   }
 }
 

@@ -1,5 +1,9 @@
-#include "base_test.hpp"
+#include <cstdint>
+#include <memory>
+#include <vector>
 
+#include "all_type_variant.hpp"
+#include "base_test.hpp"
 #include "cost_estimation/cost_estimator_logical.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/join_node.hpp"
@@ -7,11 +11,15 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "optimizer/join_ordering/greedy_operator_ordering.hpp"
 #include "optimizer/join_ordering/join_graph.hpp"
+#include "optimizer/join_ordering/join_graph_edge.hpp"
 #include "statistics/cardinality_estimator.hpp"
+#include "statistics/statistics_objects/generic_histogram.hpp"
+#include "testing_assert.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
-using namespace expression_functional;  // NOLINT(build/namespaces)
+using namespace expression_functional;
 
 class GreedyOperatorOrderingTest : public BaseTest {
  public:
@@ -45,7 +53,7 @@ class GreedyOperatorOrderingTest : public BaseTest {
   std::shared_ptr<MockNode> node_a, node_b, node_c, node_d;
   std::shared_ptr<LQPColumnExpression> a_a, a_b, b_a, c_a, d_a;
   std::shared_ptr<AbstractCostEstimator> cost_estimator;
-  std::shared_ptr<AbstractCardinalityEstimator> cardinality_estimator;
+  std::shared_ptr<CardinalityEstimator> cardinality_estimator;
 };
 
 TEST_F(GreedyOperatorOrderingTest, NoEdges) {
@@ -54,7 +62,7 @@ TEST_F(GreedyOperatorOrderingTest, NoEdges) {
   const auto join_graph =
       JoinGraph{std::vector<std::shared_ptr<AbstractLQPNode>>{node_a}, std::vector<JoinGraphEdge>{}};
 
-  const auto actual_lqp = GreedyOperatorOrdering{}(join_graph, cost_estimator);  // NOLINT
+  const auto actual_lqp = GreedyOperatorOrdering{}(join_graph, cost_estimator);
   const auto expected_lqp = node_a->deep_copy();
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -71,8 +79,7 @@ TEST_F(GreedyOperatorOrderingTest, ChainQuery) {
   const auto join_graph = JoinGraph{std::vector<std::shared_ptr<AbstractLQPNode>>{node_a, node_b, node_c, node_d},
                                     std::vector<JoinGraphEdge>{edge_a, edge_ab, edge_bc, edge_cd}};
 
-  const auto actual_lqp = GreedyOperatorOrdering{}(join_graph, cost_estimator);  // NOLINT
-
+  const auto actual_lqp = GreedyOperatorOrdering{}(join_graph, cost_estimator);
   // clang-format off
   const auto expected_lqp =
   JoinNode::make(JoinMode::Inner, equals_(a_a, b_a),
@@ -96,8 +103,7 @@ TEST_F(GreedyOperatorOrderingTest, StarQuery) {
   const auto join_graph = JoinGraph{std::vector<std::shared_ptr<AbstractLQPNode>>{node_a, node_b, node_c, node_d},
                                     std::vector<JoinGraphEdge>{edge_ab, edge_ac, edge_ad}};
 
-  const auto actual_lqp = GreedyOperatorOrdering{}(join_graph, cost_estimator);  // NOLINT
-
+  const auto actual_lqp = GreedyOperatorOrdering{}(join_graph, cost_estimator);
   // clang-format off
   const auto expected_lqp =
   JoinNode::make(JoinMode::Inner, equals_(a_a, b_a),
@@ -126,8 +132,7 @@ TEST_F(GreedyOperatorOrderingTest, HyperEdges) {
   const auto join_graph = JoinGraph{std::vector<std::shared_ptr<AbstractLQPNode>>{node_a, node_b, node_c, node_d},
                                     std::vector<JoinGraphEdge>{edge_bc, edge_cd, edge_acd, edge_bcd, edge_abcd}};
 
-  const auto actual_lqp = GreedyOperatorOrdering{}(join_graph, cost_estimator);  // NOLINT
-
+  const auto actual_lqp = GreedyOperatorOrdering{}(join_graph, cost_estimator);
   // clang-format off
   const auto expected_lqp =
   PredicateNode::make(greater_than_(add_(b_a, c_a), sub_(a_a, d_a)),
@@ -155,7 +160,7 @@ TEST_F(GreedyOperatorOrderingTest, UncorrelatedPredicate) {
   const auto join_graph = JoinGraph{std::vector<std::shared_ptr<AbstractLQPNode>>{node_a, node_b},
                                     std::vector<JoinGraphEdge>{edge_uncorrelated, edge_ab}};
 
-  const auto actual_lqp = GreedyOperatorOrdering{}(join_graph, cost_estimator);  // NOLINT
+  const auto actual_lqp = GreedyOperatorOrdering{}(join_graph, cost_estimator);
 
   // clang-format off
   const auto expected_lqp =

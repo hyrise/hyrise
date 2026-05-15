@@ -1,6 +1,14 @@
-#include "encoding_test.hpp"
+#include <memory>
+#include <string>
+#include <type_traits>
 
+#include "base_test.hpp"
+#include "encoding_test.hpp"
 #include "storage/create_iterable_from_segment.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
+#include "storage/segment_iterables/segment_positions.hpp"
+#include "storage/table.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
@@ -200,8 +208,9 @@ TEST_P(SegmentIteratorsTest, LegacyRandomIteratorCompatible) {
    * Takes an iterator pair and verifies its LegacyRandomAccessIterator compatibility by feeding it into STL algorithms
    * that require LegacyRandomAccessIterator. Most of the testing is that this compiles.
    */
-  test_all_iterators(table, position_filter, position_filter_multi_chunk,
-                     [&](const auto begin, const auto end) { (void)std::is_heap(begin, end); });
+  test_all_iterators(table, position_filter, position_filter_multi_chunk, [&](const auto begin, const auto end) {
+    (void)std::is_heap(begin, end);
+  });
 }
 
 template <typename T>

@@ -1,21 +1,36 @@
 #include "base_test.hpp"
 
+#include <cstddef>
 #include <fstream>
+#include <iterator>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include "all_type_variant.hpp"
+#include "expression/abstract_expression.hpp"
+#include "expression/between_expression.hpp"
+#include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_functional.hpp"
+#include "expression/is_null_expression.hpp"
 #include "logical_query_plan/mock_node.hpp"
+#include "operators/table_scan.hpp"
+#include "resolve_type.hpp"
 #include "sql/sql_plan_cache.hpp"
 #include "statistics/attribute_statistics.hpp"
 #include "statistics/statistics_objects/abstract_statistics_object.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/chunk_encoder.hpp"
+#include "storage/dictionary_segment.hpp"
 #include "storage/encoding_type.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
+#include "storage/reference_segment.hpp"
 #include "storage/segment_encoding_utils.hpp"
 #include "storage/value_segment.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
@@ -56,7 +71,7 @@ std::shared_ptr<AbstractExpression> get_column_expression(const std::shared_ptr<
   const auto output_table = op->get_output();
   const auto& column_definition = output_table->column_definitions().at(column_id);
 
-  return pqp_column_(column_id, column_definition.data_type, column_definition.nullable, column_definition.name);
+  return pqp_column_(column_id, column_definition.data_type, column_definition.name);
 }
 
 std::shared_ptr<TableScan> create_table_scan(const std::shared_ptr<AbstractOperator>& in, const ColumnID column_id,
@@ -79,7 +94,8 @@ std::shared_ptr<TableScan> create_table_scan(const std::shared_ptr<AbstractOpera
 void set_statistics_for_mock_node(const std::shared_ptr<MockNode>& mock_node, const size_t row_count,
                                   const std::vector<std::shared_ptr<AbstractStatisticsObject>>& statistics_objects) {
   const auto& column_definitions = mock_node->column_definitions();
-  auto output_column_statistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>(column_definitions.size());
+  auto output_column_statistics =
+      std::vector<std::shared_ptr<const BaseAttributeStatistics>>(column_definitions.size());
 
   for (auto column_id = ColumnID{0}; column_id < column_definitions.size(); ++column_id) {
     resolve_data_type(column_definitions[column_id].first, [&](const auto data_type_t) {
@@ -98,7 +114,7 @@ void set_statistics_for_mock_node(const std::shared_ptr<MockNode>& mock_node, co
 std::shared_ptr<MockNode> create_mock_node_with_statistics(
     const MockNode::ColumnDefinitions& column_definitions, const size_t row_count,
     const std::vector<std::shared_ptr<AbstractStatisticsObject>>& statistics_objects) {
-  Assert(column_definitions.size() == statistics_objects.size(), "Column count mismatch");
+  Assert(column_definitions.size() == statistics_objects.size(), "Column count mismatch.");
 
   const auto mock_node = MockNode::make(column_definitions);
 
@@ -133,7 +149,7 @@ ChunkEncodingSpec create_compatible_chunk_encoding_spec(const Table& table,
 
 void assert_chunk_encoding(const std::shared_ptr<Chunk>& chunk, const ChunkEncodingSpec& spec) {
   const auto column_count = chunk->column_count();
-  for (auto column_id = ColumnID{0u}; column_id < column_count; ++column_id) {
+  for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
     const auto segment = chunk->get_segment(column_id);
     const auto segment_spec = spec.at(column_id);
 
@@ -179,10 +195,10 @@ bool file_exists(const std::string& name) {
 
 bool compare_files(const std::string& original_file, const std::string& created_file) {
   std::ifstream original(original_file);
-  Assert(original.is_open(), "compare_file: Could not find file " + original_file);
+  Assert(original.is_open(), std::format("compare_file: Could not find file '{}'.", original_file));
 
   std::ifstream created(created_file);
-  Assert(created.is_open(), "compare_file: Could not find file " + created_file);
+  Assert(created.is_open(), std::format("compare_file: Could not find file '{}'.", created_file));
 
   std::istreambuf_iterator<char> iterator_original(original);
   std::istreambuf_iterator<char> iterator_created(created);
@@ -199,16 +215,16 @@ bool compare_files(const std::string& original_file, const std::string& created_
 }
 
 std::shared_ptr<const Table> to_simple_reference_table(const std::shared_ptr<const Table>& table) {
-  Assert(table->type() == TableType::Data, "Input table already is a reference table");
+  Assert(table->type() == TableType::Data, "Input table already is a reference table.");
 
   auto pos_list = std::make_shared<RowIDPosList>();
   pos_list->reserve(table->row_count());
 
-  for (auto chunk_id = ChunkID{0u}; chunk_id < table->chunk_count(); ++chunk_id) {
+  for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
     const auto chunk = table->get_chunk(chunk_id);
 
     const auto chunk_size = chunk->size();
-    for (auto chunk_offset = ChunkOffset{0u}; chunk_offset < chunk_size; ++chunk_offset) {
+    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
       pos_list->emplace_back(RowID{chunk_id, chunk_offset});
     }
   }

@@ -1,12 +1,17 @@
 #include <memory>
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
-
 #include "storage/abstract_segment.hpp"
-#include "storage/dictionary_segment.hpp"
+#include "storage/base_value_segment.hpp"
+#include "storage/chunk.hpp"
+#include "storage/chunk_encoder.hpp"
+#include "storage/encoding_type.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/segment_accessor.hpp"
 #include "storage/table.hpp"
+#include "storage/value_segment.hpp"
 #include "types.hpp"
 
 namespace hyrise {
@@ -119,7 +124,7 @@ TEST_F(SegmentAccessorTest, TestReferenceSegmentToDictionarySegmentString) {
 
 TEST_F(SegmentAccessorTest, TestSegmentAccessCounterIncrementing) {
   const auto& access_counter = val_seg_int->access_counter;
-  EXPECT_EQ(access_counter[SegmentAccessCounter::AccessType::Random], 0ul);
+  EXPECT_EQ(access_counter[SegmentAccessCounter::AccessType::Random], 0);
 
   // Create segment accessor in a new scope to ensure its destructor, which writes the access counters, is called.
   {
@@ -130,7 +135,7 @@ TEST_F(SegmentAccessorTest, TestSegmentAccessCounterIncrementing) {
     EXPECT_EQ(val_seg_int_base_accessor->access(ChunkOffset{2}), 3);
   }
 
-  EXPECT_EQ(access_counter[SegmentAccessCounter::AccessType::Random], 3ul);
+  EXPECT_EQ(access_counter[SegmentAccessCounter::AccessType::Random], 3);
 }
 
 }  // namespace hyrise

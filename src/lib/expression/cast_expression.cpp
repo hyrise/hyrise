@@ -1,6 +1,16 @@
 #include "cast_expression.hpp"
 
+#include <cstddef>
+#include <functional>
+#include <memory>
 #include <sstream>
+#include <string>
+#include <type_traits>
+#include <unordered_map>
+
+#include "all_type_variant.hpp"
+#include "expression/abstract_expression.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
@@ -13,7 +23,7 @@ std::shared_ptr<AbstractExpression> CastExpression::_on_deep_copy(
 }
 
 std::string CastExpression::description(const DescriptionMode mode) const {
-  std::stringstream stream;
+  auto stream = std::stringstream{};
   stream << "CAST(" << argument()->description(mode) << " AS " << _data_type << ")";
   return stream.str();
 }

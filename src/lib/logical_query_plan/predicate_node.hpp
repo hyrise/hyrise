@@ -1,19 +1,16 @@
 #pragma once
 
 #include <memory>
-#include <optional>
 #include <string>
-#include <vector>
 
 #include "abstract_lqp_node.hpp"
 #include "all_parameter_variant.hpp"
-#include "all_type_variant.hpp"
 
 namespace hyrise {
 
 class AbstractExpression;
 
-enum class ScanType { TableScan, IndexScan };
+enum class ScanType : uint8_t { TableScan, IndexScan };
 
 /**
  * This node type represents a filter.
@@ -30,6 +27,8 @@ class PredicateNode : public EnableMakeForLQPNode<PredicateNode>, public Abstrac
 
   // Forwards unique column combinations from the left input node.
   UniqueColumnCombinations unique_column_combinations() const override;
+
+  OrderDependencies order_dependencies() const override;
 
   std::shared_ptr<AbstractExpression> predicate() const;
 

@@ -1,29 +1,37 @@
 #include "sql_pipeline_statement.hpp"
 
+#include <chrono>
+#include <format>
 #include <fstream>
-#include <iomanip>
 #include <memory>
+#include <string>
+#include <tuple>
 #include <utility>
-
-#include <boost/algorithm/string.hpp>
+#include <vector>
 
 #include "SQLParser.h"
+#include "SQLParserResult.h"
+
+#include "concurrency/transaction_context.hpp"
 #include "create_sql_parser_error_message.hpp"
-#include "expression/value_expression.hpp"
 #include "hyrise.hpp"
+#include "logical_query_plan/lqp_translator.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
-#include "operators/export.hpp"
+#include "operators/abstract_operator.hpp"
 #include "operators/import.hpp"
 #include "operators/maintenance/create_prepared_plan.hpp"
 #include "operators/maintenance/create_table.hpp"
 #include "operators/maintenance/create_view.hpp"
 #include "operators/maintenance/drop_table.hpp"
 #include "operators/maintenance/drop_view.hpp"
+#include "optimizer/optimization_context.hpp"
 #include "optimizer/optimizer.hpp"
+#include "optimizer/strategy/abstract_rule.hpp"
+#include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
-#include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_plan_cache.hpp"
 #include "sql/sql_translator.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
@@ -41,7 +49,8 @@ SQLPipelineStatement::SQLPipelineStatement(const std::string& sql, std::shared_p
       _metrics(std::make_shared<SQLPipelineStatementMetrics>()) {
   Assert(!_parsed_sql_statement || _parsed_sql_statement->size() == 1,
          "SQLPipelineStatement must hold exactly one SQL statement");
-  DebugAssert(!_sql_string.empty(), "An SQLPipelineStatement should always contain a SQL statement string for caching");
+  DebugAssert(!_sql_string.empty(),
+              "An SQLPipelineStatement should always contain a SQL statement string for caching.");
 }
 
 void SQLPipelineStatement::set_transaction_context(const std::shared_ptr<TransactionContext>& transaction_context) {
@@ -89,7 +98,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_unoptimized_lo
   SQLTranslator sql_translator{_use_mvcc};
 
   auto translation_result = sql_translator.translate_parser_result(*parsed_sql);
-  std::vector<std::shared_ptr<AbstractLQPNode>> lqp_roots = translation_result.lqp_nodes;
+  const auto lqp_roots = translation_result.lqp_nodes;
   _translation_info = translation_result.translation_info;
 
   DebugAssert(lqp_roots.size() == 1, "LQP translation returned no or more than one LQP root for a single statement.");
@@ -123,7 +132,10 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
       if (lqp_is_validated(plan) == (_use_mvcc == UseMvcc::Yes)) {
         // Copy the LQP for reuse as the LQPTranslator might modify mutable fields (e.g., cached output_expressions)
         // and concurrent translations might conflict.
+        // Note that the plan we have received here was cached, so it is obviously cacheable. This is why a missing
+        // optimization context leads to a cacheable PQP.
         _optimized_logical_plan = plan->deep_copy();
+        _optimization_context = nullptr;
         return _optimized_logical_plan;
       }
     }
@@ -140,14 +152,15 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
 
   auto optimizer_rule_durations = std::make_shared<std::vector<OptimizerRuleMetrics>>();
 
-  _optimized_logical_plan = _optimizer->optimize(std::move(unoptimized_lqp), optimizer_rule_durations);
+  std::tie(_optimized_logical_plan, _optimization_context) =
+      _optimizer->optimize_with_context(std::move(unoptimized_lqp), optimizer_rule_durations);
 
   const auto done = std::chrono::steady_clock::now();
   _metrics->optimization_duration = done - started;
   _metrics->optimizer_rule_durations = *optimizer_rule_durations;
 
   // Cache newly created plan for the according sql statement
-  if (lqp_cache && _translation_info.cacheable) {
+  if (lqp_cache && _translation_info.cacheable && _optimization_context->is_cacheable()) {
     lqp_cache->set(_sql_string, _optimized_logical_plan);
   }
 
@@ -159,16 +172,16 @@ const std::shared_ptr<AbstractOperator>& SQLPipelineStatement::get_physical_plan
     return _physical_plan;
   }
 
-  // If we need a transaction context but haven't passed one in, this is the last point where we can create it
+  // If we need a transaction context but have not passed one in, this is the last point where we can create it.
   if (!_transaction_context && _use_mvcc == UseMvcc::Yes) {
     _transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::Yes);
   }
 
-  // Stores when the actual compilation started/ended
+  // Stores when the actual compilation started/ended.
   auto started = std::chrono::steady_clock::now();
   auto done = started;  // dummy value needed for initialization
 
-  // Try to retrieve the PQP from cache
+  // Try to retrieve the PQP from cache.
   if (pqp_cache) {
     if (const auto cached_physical_plan = pqp_cache->try_get(_sql_string)) {
       if ((*cached_physical_plan)->transaction_context_is_set()) {
@@ -183,10 +196,9 @@ const std::shared_ptr<AbstractOperator>& SQLPipelineStatement::get_physical_plan
   }
 
   if (!_physical_plan) {
-    // "Normal" path in which the query plan is created instead of begin retrieved from cache
+    // "Normal" path in which the query plan is created instead of begin retrieved from cache.
     const auto& lqp = get_optimized_logical_plan();
-
-    // Reset time to exclude previous pipeline steps
+    // Reset time to exclude the previous pipeline steps.
     started = std::chrono::steady_clock::now();
     _physical_plan = LQPTranslator{}.translate_node(lqp);
   }
@@ -197,8 +209,10 @@ const std::shared_ptr<AbstractOperator>& SQLPipelineStatement::get_physical_plan
     _physical_plan->set_transaction_context_recursively(_transaction_context);
   }
 
-  // Cache newly created plan for the according sql statement (only if not already cached)
-  if (pqp_cache && !_metrics->query_plan_cache_hit && _translation_info.cacheable) {
+  // Cache the newly created PQP for the according SQL statement (only if not already cached). If the LQP was cached
+  // (`_optimization_context` is set to `nullptr`), we can also safely cache the PQP.
+  if (pqp_cache && !_metrics->query_plan_cache_hit && _translation_info.cacheable &&
+      (!_optimization_context || _optimization_context->is_cacheable())) {
     pqp_cache->set(_sql_string, _physical_plan);
   }
 
@@ -223,8 +237,8 @@ const std::vector<std::shared_ptr<AbstractTask>>& SQLPipelineStatement::get_task
 
 std::vector<std::shared_ptr<AbstractTask>> SQLPipelineStatement::_get_transaction_tasks() {
   const auto& sql_statement = get_parsed_sql_statement();
-  const std::vector<hsql::SQLStatement*>& statements = sql_statement->getStatements();
-  const auto& transaction_statement = static_cast<const hsql::TransactionStatement&>(*statements.front());
+  const auto& transaction_statement =
+      static_cast<const hsql::TransactionStatement&>(*sql_statement->getStatements().front());
 
   switch (transaction_statement.command) {
     case hsql::kBeginTransaction:
@@ -236,11 +250,15 @@ std::vector<std::shared_ptr<AbstractTask>> SQLPipelineStatement::_get_transactio
     case hsql::kCommitTransaction:
       AssertInput(_transaction_context && !_transaction_context->is_auto_commit(),
                   "Cannot commit since there is no active transaction.");
-      return {std::make_shared<JobTask>([this] { _transaction_context->commit(); })};
+      return {std::make_shared<JobTask>([this] {
+        _transaction_context->commit();
+      })};
     case hsql::kRollbackTransaction:
       AssertInput(_transaction_context && !_transaction_context->is_auto_commit(),
                   "Cannot rollback since there is no active transaction.");
-      return {std::make_shared<JobTask>([this] { _transaction_context->rollback(RollbackReason::User); })};
+      return {std::make_shared<JobTask>([this] {
+        _transaction_context->rollback(RollbackReason::User);
+      })};
     default:
       Fail("Unexpected transaction command!");
   }
@@ -338,37 +356,37 @@ void SQLPipelineStatement::_precheck_ddl_operators(const std::shared_ptr<Abstrac
     case OperatorType::CreatePreparedPlan: {
       const auto create_prepared_plan = std::dynamic_pointer_cast<CreatePreparedPlan>(pqp);
       AssertInput(!storage_manager.has_prepared_plan(create_prepared_plan->prepared_plan_name()),
-                  "Prepared Plan '" + create_prepared_plan->prepared_plan_name() + "' already exists.");
+                  std::format("Prepared Plan '{}' already exists.", create_prepared_plan->prepared_plan_name()));
       break;
     }
     case OperatorType::CreateTable: {
       const auto create_table = std::dynamic_pointer_cast<CreateTable>(pqp);
       AssertInput(create_table->if_not_exists || !storage_manager.has_table(create_table->table_name),
-                  "Table '" + create_table->table_name + "' already exists.");
+                  std::format("Table '{}' already exists.", create_table->table_name));
       break;
     }
     case OperatorType::CreateView: {
       const auto create_view = std::dynamic_pointer_cast<CreateView>(pqp);
       AssertInput(create_view->if_not_exists() || !storage_manager.has_view(create_view->view_name()),
-                  "View '" + create_view->view_name() + "' already exists.");
+                  std::format("View '{}' already exists.", create_view->view_name()));
       break;
     }
     case OperatorType::DropTable: {
       const auto drop_table = std::dynamic_pointer_cast<DropTable>(pqp);
       AssertInput(drop_table->if_exists || storage_manager.has_table(drop_table->table_name),
-                  "There is no table '" + drop_table->table_name + "'.");
+                  std::format("There is no table '{}'.", drop_table->table_name));
       break;
     }
     case OperatorType::DropView: {
       const auto drop_view = std::dynamic_pointer_cast<DropView>(pqp);
       AssertInput(drop_view->if_exists || storage_manager.has_view(drop_view->view_name),
-                  "There is no view '" + drop_view->view_name + "'.");
+                  std::format("There is no view '{}'.", drop_view->view_name));
       break;
     }
     case OperatorType::Import: {
       const auto import = std::dynamic_pointer_cast<Import>(pqp);
       const auto file = std::ifstream{import->filename};
-      AssertInput(file.good(), "There is no file '" + import->filename + "'.");
+      AssertInput(file.good(), std::format("There is no file '{}'.", import->filename));
       break;
     }
     default:

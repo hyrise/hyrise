@@ -99,7 +99,7 @@ def main():
         return_error,
     )
     return_error = check_json(
-        output["context"]["encoding"]["default"]["encoding"],
+        output["context"]["encoding"]["preferred"]["encoding"],
         arguments["--encoding"].replace("'", ""),
         "Encoding doesn't match with JSON:",
         return_error,
@@ -138,7 +138,7 @@ def main():
     benchmark.expect_exact("Max duration per item is 10 seconds")
     benchmark.expect_exact("Warmup duration per item is 5 seconds")
     benchmark.expect_exact(
-        "Automatically verifying results with SQLite. This will make the performance numbers invalid."
+        "Automatically verifying results with SQLite. This will make the performance numbers invalid"
     )
     benchmark.expect_exact("Benchmarking queries from resources/test_data/queries/file_based/")
     benchmark.expect_exact("Running on tables from resources/test_data/tbl/file_based/")

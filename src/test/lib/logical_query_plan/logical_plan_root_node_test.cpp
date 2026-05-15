@@ -1,5 +1,7 @@
-#include "base_test.hpp"
+#include <memory>
+#include <stdexcept>
 
+#include "base_test.hpp"
 #include "logical_query_plan/logical_plan_root_node.hpp"
 
 namespace hyrise {

@@ -1,14 +1,16 @@
 #pragma once
 
-#include <tbb/concurrent_vector.h>
 #include <chrono>
 #include <functional>
+#include <string>
+
+#include <oneapi/tbb/concurrent_vector.h>  // NOLINT(build/include_order): cpplint identifies TBB as C system headers.
 
 #include "types.hpp"
 
 namespace hyrise {
 
-enum class LogLevel { Debug, Info, Warning };
+enum class LogLevel : uint8_t { Debug, Info, Warning };
 
 struct LogEntry {
   // We need system_clock here to provide human readable timestamps in MetaLogTable.

@@ -1,6 +1,8 @@
 #pragma once
 
-#include "../base_test.hpp"
+#include <set>
+
+#include "base_test.hpp"
 
 namespace hyrise {
 

@@ -1,10 +1,20 @@
 #include "create_table.hpp"
 
+#include <cstddef>
+#include <memory>
 #include <sstream>
+#include <string>
+#include <unordered_map>
 
+#include "all_type_variant.hpp"
 #include "hyrise.hpp"
+#include "operators/abstract_operator.hpp"
+#include "operators/abstract_read_write_operator.hpp"
 #include "operators/insert.hpp"
+#include "storage/chunk.hpp"
 #include "storage/table.hpp"
+#include "storage/table_column_definition.hpp"
+#include "types.hpp"
 #include "utils/print_utils.hpp"
 
 namespace hyrise {
@@ -21,7 +31,7 @@ const std::string& CreateTable::name() const {
 }
 
 std::string CreateTable::description(DescriptionMode description_mode) const {
-  std::ostringstream stream;
+  auto stream = std::ostringstream{};
 
   const auto* const separator = description_mode == DescriptionMode::SingleLine ? ", " : "\n";
 
@@ -42,7 +52,7 @@ std::string CreateTable::description(DescriptionMode description_mode) const {
       stream << "NOT NULL";
     }
 
-    if (column_id + 1u < column_definitions.size()) {
+    if (column_id + size_t{1} < column_definitions.size()) {
       stream << separator;
     }
   }
@@ -70,8 +80,9 @@ std::shared_ptr<const Table> CreateTable::_on_execute(std::shared_ptr<Transactio
     const auto table = std::make_shared<Table>(column_definitions, TableType::Data, Chunk::DEFAULT_SIZE, UseMvcc::Yes);
     Hyrise::get().storage_manager.add_table(table_name, table);
 
-    for (const auto& table_key_constraint : _left_input->get_output()->soft_key_constraints()) {
-      table->add_soft_key_constraint(table_key_constraint);
+    const auto& table_key_constraints = _left_input->get_output()->soft_key_constraints();
+    for (const auto& table_key_constraint : table_key_constraints) {
+      table->add_soft_constraint(table_key_constraint);
     }
 
     // Insert table data (if no data is present, insertion makes no difference)

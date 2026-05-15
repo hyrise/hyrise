@@ -1,16 +1,39 @@
-#include <fstream>
+#include <algorithm>
+#include <array>
+#include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <iostream>
+#include <map>
+#include <memory>
+#include <optional>
 #include <set>
+#include <string>
+#include <tuple>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
+#include "operators/abstract_join_operator.hpp"
+#include "operators/abstract_operator.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/join_index.hpp"
 #include "operators/join_nested_loop.hpp"
 #include "operators/join_sort_merge.hpp"
 #include "operators/join_verification.hpp"
+#include "operators/operator_join_predicate.hpp"
 #include "operators/print.hpp"
 #include "operators/table_wrapper.hpp"
-#include "storage/index/b_tree/b_tree_index.hpp"
+#include "storage/chunk_encoder.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
+#include "storage/reference_segment.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
+#include "utils/check_table_equal.hpp"
 #include "utils/load_table.hpp"
 
 /**
@@ -19,11 +42,11 @@
  * number of configurations (i.e. JoinModes, predicates, data types, ...)
  */
 
-using namespace std::string_literals;  // NOLINT
+using namespace std::string_literals;
 
 namespace {
 
-using namespace hyrise;  // NOLINT
+using namespace hyrise;
 
 using ChunkRange = std::pair<ChunkID, ChunkID>;
 
@@ -135,7 +158,7 @@ class JoinOperatorFactory : public BaseJoinOperatorFactory {
     if constexpr (std::is_same_v<JoinOperator, JoinHash>) {
       return std::make_shared<JoinOperator>(left, right, configuration.join_mode, primary_predicate,
                                             configuration.secondary_predicates, configuration.radix_bits);
-    } else if constexpr (std::is_same_v<JoinOperator, JoinIndex>) {  // NOLINT
+    } else if constexpr (std::is_same_v<JoinOperator, JoinIndex>) {
       Assert(configuration.index_side, "IndexSide should be explicitly defined for the JoinIndex test runs.");
       return std::make_shared<JoinIndex>(left, right, configuration.join_mode, primary_predicate,
                                          configuration.secondary_predicates, *configuration.index_side);
@@ -191,12 +214,13 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
     const auto all_input_table_types =
         std::vector{InputTableType::Data, InputTableType::IndividualPosLists, InputTableType::SharedPosList};
 
+    // NOLINTBEGIN(whitespace/line_length)
     // clang-format off
     JoinTestConfiguration default_configuration{
       InputTableConfiguration{
-        InputSide::Left, all_chunk_sizes.front(), all_table_sizes.front(), all_input_table_types.front(), encoding_types.front()},  // NOLINT
+        InputSide::Left, all_chunk_sizes.front(), all_table_sizes.front(), all_input_table_types.front(), ENCODING_TYPES.front()},
       InputTableConfiguration{
-        InputSide::Right, all_chunk_sizes.front(), all_table_sizes.front(), all_input_table_types.front(), encoding_types.front()},  // NOLINT
+        InputSide::Right, all_chunk_sizes.front(), all_table_sizes.front(), all_input_table_types.front(), ENCODING_TYPES.front()},
       JoinMode::Inner,
       DataType::Int,
       DataType::Int,
@@ -209,6 +233,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
       std::nullopt
     };
     // clang-format on
+    // NOLINTEND(whitespace/line_length)
 
     /**
      * Returns a set of adapted configurations if the join type provides further configuration possibilities that
@@ -219,6 +244,13 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
         // Currently the Index Join cannot deal with configurations where the join column
         // data types are different, see Issue #2077
         if (configuration.data_type_left != configuration.data_type_right) {
+          return std::vector<JoinTestConfiguration>{};
+        }
+
+        // Since not all indexes support all encodings, we keep it simple and run tests only for dictionary encoded
+        // data.
+        if (configuration.left_input.encoding_type != EncodingType::Dictionary ||
+            configuration.right_input.encoding_type != EncodingType::Dictionary) {
           return std::vector<JoinTestConfiguration>{};
         }
 
@@ -453,7 +485,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
     // Dictionaries.
     // Since materialization interacts with data types, NULLs and InputTableTypes, vary all those, too.
     // Use both Equals and LessThan to trigger sorting/non-sorting mode of JoinSortedMerge's ColumnMaterializer.
-    for (const auto encoding_type : encoding_types) {
+    for (const auto encoding_type : ENCODING_TYPES) {
       for (const auto data_type : all_data_types) {
         for (const auto nullable : {false, true}) {
           for (const auto table_type : all_input_table_types) {
@@ -535,12 +567,14 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
        * encoding.
        */
       if (key.encoding_type != EncodingType::Unencoded) {
-        auto chunk_encoding_spec = ChunkEncodingSpec{data_table->column_count()};
-        for (auto column_id = ColumnID{0}; column_id < data_table->column_count(); ++column_id) {
+        auto chunk_encoding_spec = ChunkEncodingSpec{};
+        const auto column_count = data_table->column_count();
+        chunk_encoding_spec.reserve(column_count);
+        for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
           if (encoding_supports_data_type(key.encoding_type, data_table->column_data_type(column_id))) {
-            chunk_encoding_spec[column_id] = SegmentEncodingSpec{key.encoding_type};
+            chunk_encoding_spec.push_back(SegmentEncodingSpec{key.encoding_type});
           } else {
-            chunk_encoding_spec[column_id] = SegmentEncodingSpec{EncodingType::Unencoded};
+            chunk_encoding_spec.push_back(SegmentEncodingSpec{EncodingType::Unencoded});
           }
         }
         ChunkEncoder::encode_all_chunks(data_table, chunk_encoding_spec);
@@ -559,7 +593,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
         for (auto chunk_id = ChunkID{0}; chunk_id < data_table->chunk_count(); ++chunk_id) {
           const auto input_chunk = data_table->get_chunk(chunk_id);
 
-          Segments reference_segments;
+          auto reference_segments = Segments{};
 
           if (input_table_type == InputTableType::SharedPosList) {
             const auto pos_list = std::make_shared<RowIDPosList>();
@@ -594,17 +628,13 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
 
       /**
        * To sufficiently test IndexJoins, indexes have to be created. Therefore, if index_side is set in the configuration,
-       * indexes for the data table are created. The index type is either GroupKeyIndex for dictionary segments or BTreeIndex
-       * for non-dictionary segments.
+       * indexes for the data table are created.
        */
 
       for (auto chunk_id = indexed_chunk_range.first; chunk_id < indexed_chunk_range.second; ++chunk_id) {
         for (auto column_id = ColumnID{0}; column_id < data_table->column_count(); ++column_id) {
-          if (encoding_type == EncodingType::Dictionary) {
-            data_table->get_chunk(chunk_id)->create_index<GroupKeyIndex>(std::vector<ColumnID>{column_id});
-          } else {
-            data_table->get_chunk(chunk_id)->create_index<BTreeIndex>(std::vector<ColumnID>{column_id});
-          }
+          Assert(encoding_type == EncodingType::Dictionary, "Only dictionary encoding is supported.");
+          data_table->get_chunk(chunk_id)->create_index<GroupKeyIndex>(std::vector<ColumnID>{column_id});
         }
       }
 
@@ -674,47 +704,46 @@ TEST_P(JoinTestRunner, TestJoin) {
   auto table_difference_message = std::optional<std::string>{};
 
   const auto print_configuration_info = [&]() {
-    std::cout << "====================== JoinOperator ========================" << std::endl;
-    std::cout << join_op->description(DescriptionMode::MultiLine) << std::endl;
-    std::cout << "===================== Left Input Table =====================" << std::endl;
+    std::cout << "====================== JoinOperator ========================\n";
+    std::cout << join_op->description(DescriptionMode::MultiLine);
+    std::cout << "\n===================== Left Input Table =====================\n";
     Print::print(left_input_table, PrintFlags::IgnoreChunkBoundaries);
-    std::cout << "Chunk size: " << configuration.left_input.chunk_size << std::endl;
-    std::cout << "Table type: " << input_table_type_to_string.at(configuration.left_input.table_type) << std::endl;
-    std::cout << "Indexed chunk range: [" << configuration.left_input.indexed_chunk_range.first << ", "
-              << configuration.left_input.indexed_chunk_range.second << ")" << std::endl;
-    std::cout << "Chunk range with single chunk ref. guarantee: ["
+    std::cout << "Chunk size: " << configuration.left_input.chunk_size;
+    std::cout << "\nTable type: " << input_table_type_to_string.at(configuration.left_input.table_type);
+    std::cout << "\nIndexed chunk range: [" << configuration.left_input.indexed_chunk_range.first << ", "
+              << configuration.left_input.indexed_chunk_range.second;
+    std::cout << "\nChunk range with single chunk ref. guarantee: ["
               << configuration.left_input.single_chunk_reference_range.first << ", "
-              << configuration.left_input.single_chunk_reference_range.second << ")" << std::endl;
-    std::cout << get_table_path(configuration.left_input) << std::endl;
-    std::cout << std::endl;
-    std::cout << "===================== Right Input Table ====================" << std::endl;
+              << configuration.left_input.single_chunk_reference_range.second << ")\n";
+    std::cout << get_table_path(configuration.left_input);
+    std::cout << "\n\n===================== Right Input Table ====================\n";
     Print::print(right_input_table, PrintFlags::IgnoreChunkBoundaries);
-    std::cout << "Chunk size: " << configuration.right_input.chunk_size << std::endl;
-    std::cout << "Table size: " << input_table_type_to_string.at(configuration.right_input.table_type) << std::endl;
-    std::cout << "Indexed chunk range: [" << configuration.right_input.indexed_chunk_range.first << ", "
-              << configuration.right_input.indexed_chunk_range.second << ")" << std::endl;
-    std::cout << "Chunk range with single chunk ref. guarantee: ["
+    std::cout << "Chunk size: " << configuration.right_input.chunk_size;
+    std::cout << "\nTable size: " << input_table_type_to_string.at(configuration.right_input.table_type);
+    std::cout << "\nIndexed chunk range: [" << configuration.right_input.indexed_chunk_range.first << ", "
+              << configuration.right_input.indexed_chunk_range.second;
+    std::cout << "\nChunk range with single chunk ref. guarantee: ["
               << configuration.right_input.single_chunk_reference_range.first << ", "
-              << configuration.right_input.single_chunk_reference_range.second << ")" << std::endl;
-    std::cout << get_table_path(configuration.right_input) << std::endl;
-    std::cout << std::endl;
-    std::cout << "==================== Actual Output Table ===================" << std::endl;
+              << configuration.right_input.single_chunk_reference_range.second << ")\n";
+    std::cout << get_table_path(configuration.right_input);
+    std::cout << "\n\n==================== Actual Output Table ===================\n";
     if (actual_table) {
       Print::print(actual_table, PrintFlags::IgnoreChunkBoundaries);
-      std::cout << std::endl;
     } else {
-      std::cout << "No Table produced by the join operator under test" << std::endl;
+      std::cout << "No Table produced by the join operator under test";
     }
-    std::cout << "=================== Expected Output Table ==================" << std::endl;
+    std::cout << "\n=================== Expected Output Table ==================\n";
     if (expected_table) {
       Print::print(expected_table, PrintFlags::IgnoreChunkBoundaries);
-      std::cout << std::endl;
+      std::cout << '\n';
     } else {
-      std::cout << "No Table produced by the reference join operator" << std::endl;
+      std::cout << "No Table produced by the reference join operator\n";
     }
-    std::cout << "======================== Difference ========================" << std::endl;
-    std::cout << *table_difference_message << std::endl;
-    std::cout << "============================================================" << std::endl;
+    if (table_difference_message) {
+      std::cout << "======================== Difference ========================\n";
+      std::cout << *table_difference_message;
+      std::cout << "\n============================================================\n";
+    }
   };
 
   try {

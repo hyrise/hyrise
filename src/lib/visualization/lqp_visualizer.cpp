@@ -1,26 +1,35 @@
 #include "lqp_visualizer.hpp"
 
+#include <cmath>
+#include <format>
 #include <iomanip>
+#include <ios>
+#include <locale>
 #include <memory>
+#include <ostream>
+#include <sstream>
 #include <string>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
+#include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_subquery_expression.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/abstract_non_query_node.hpp"
+#include "logical_query_plan/data_dependencies/functional_dependency.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
-#include "logical_query_plan/projection_node.hpp"
+#include "statistics/cardinality_estimator.hpp"
+#include "types.hpp"
+#include "visualization/abstract_visualizer.hpp"
 
 namespace hyrise {
 
 LQPVisualizer::LQPVisualizer() {
   // Set defaults for this visualizer
   _default_vertex.shape = "rectangle";
-
-  // We can guarantee the LQP never changes during visualization and thus avoid redundant estimations for subplans
-  _cardinality_estimator.guarantee_bottom_up_construction();
 }
 
 LQPVisualizer::LQPVisualizer(GraphvizConfig graphviz_config, VizGraphInfo graph_info, VizVertexInfo vertex_info,
@@ -33,38 +42,41 @@ void LQPVisualizer::_build_graph(const std::vector<std::shared_ptr<AbstractLQPNo
   ExpressionUnorderedSet visualized_sub_queries;
 
   for (const auto& root : lqp_roots) {
-    _build_subtree(root, visualized_nodes, visualized_sub_queries);
+    const auto cardinality_estimator = CardinalityEstimator{};
+    cardinality_estimator.guarantee_bottom_up_construction(root);
+    _build_subtree(root, visualized_nodes, visualized_sub_queries, cardinality_estimator);
   }
 }
 
 void LQPVisualizer::_build_subtree(const std::shared_ptr<AbstractLQPNode>& node,
                                    std::unordered_set<std::shared_ptr<const AbstractLQPNode>>& visualized_nodes,
-                                   ExpressionUnorderedSet& visualized_sub_queries) {
-  // Avoid drawing dataflows/ops redundantly in diamond shaped Nodes
-  if (visualized_nodes.find(node) != visualized_nodes.end()) {
+                                   ExpressionUnorderedSet& visualized_sub_queries,
+                                   const CardinalityEstimator& cardinality_estimator) {
+  // Avoid drawing dataflows/nodes redundantly in diamond-shaped plans.
+  if (visualized_nodes.contains(node)) {
     return;
   }
   visualized_nodes.insert(node);
 
   auto node_label = node->description();
   if (!node->comment.empty()) {
-    node_label += "\n(" + node->comment + ")";
+    node_label += std::format("\n({})", node->comment);
   }
   _add_vertex(node, node_label);
 
   if (node->left_input()) {
     auto left_input = node->left_input();
-    _build_subtree(left_input, visualized_nodes, visualized_sub_queries);
-    _build_dataflow(left_input, node, InputSide::Left);
+    _build_subtree(left_input, visualized_nodes, visualized_sub_queries, cardinality_estimator);
+    _build_dataflow(left_input, node, InputSide::Left, cardinality_estimator);
   }
 
   if (node->right_input()) {
     auto right_input = node->right_input();
-    _build_subtree(right_input, visualized_nodes, visualized_sub_queries);
-    _build_dataflow(right_input, node, InputSide::Right);
+    _build_subtree(right_input, visualized_nodes, visualized_sub_queries, cardinality_estimator);
+    _build_dataflow(right_input, node, InputSide::Right, cardinality_estimator);
   }
 
-  // Visualize subqueries
+  // Visualize subqueries.
   for (const auto& expression : node->node_expressions) {
     visit_expression(expression, [&](const auto& sub_expression) {
       const auto subquery_expression = std::dynamic_pointer_cast<LQPSubqueryExpression>(sub_expression);
@@ -76,11 +88,11 @@ void LQPVisualizer::_build_subtree(const std::shared_ptr<AbstractLQPNode>& node,
         return ExpressionVisitation::VisitArguments;
       }
 
-      _build_subtree(subquery_expression->lqp, visualized_nodes, visualized_sub_queries);
+      _build_subtree(subquery_expression->lqp, visualized_nodes, visualized_sub_queries, cardinality_estimator);
 
       auto edge_info = _default_edge;
-      auto correlated_str = std::string(subquery_expression->is_correlated() ? "correlated" : "uncorrelated");
-      edge_info.label = correlated_str + " subquery";
+      edge_info.label =
+          std::format("{} subquery", subquery_expression->is_correlated() ? "correlated" : "uncorrelated");
       edge_info.style = "dashed";
       _add_edge(subquery_expression->lqp, node, edge_info);
 
@@ -90,33 +102,25 @@ void LQPVisualizer::_build_subtree(const std::shared_ptr<AbstractLQPNode>& node,
 }
 
 void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& source_node,
-                                    const std::shared_ptr<AbstractLQPNode>& target_node, const InputSide side) {
-  float row_count = NAN;
-  double pen_width = 1.0;
-  auto row_percentage = 100.0f;
+                                    const std::shared_ptr<AbstractLQPNode>& target_node, const InputSide side,
+                                    const CardinalityEstimator& cardinality_estimator) {
+  Cardinality row_count = NAN;
+  auto row_percentage = 100.0;
 
-  try {
-    row_count = _cardinality_estimator.estimate_cardinality(source_node);
-    pen_width = row_count;
-  } catch (...) {
-    // statistics don't exist for this edge
-  }
-
+  row_count = cardinality_estimator.estimate_cardinality(source_node);
   if (source_node->left_input()) {
-    try {
-      float input_count = _cardinality_estimator.estimate_cardinality(source_node->left_input());
+    auto input_count = cardinality_estimator.estimate_cardinality(source_node->left_input());
 
-      // Include right side in cardinality estimation unless it is a semi/anti join
-      const auto join_node = std::dynamic_pointer_cast<JoinNode>(source_node);
-      if (source_node->right_input() &&
-          (!join_node || (join_node->join_mode != JoinMode::Semi && join_node->join_mode != JoinMode::AntiNullAsTrue &&
-                          join_node->join_mode != JoinMode::AntiNullAsFalse))) {
-        input_count *= _cardinality_estimator.estimate_cardinality(source_node->right_input());
-      }
-      row_percentage = 100 * row_count / input_count;
-    } catch (...) {
-      // Couldn't create statistics. Using default value of 100%
+    const auto join_node = std::dynamic_pointer_cast<JoinNode>(source_node);
+    // Include right side in cardinality estimation for unions and joins (unless it is a semi-/anti-join).
+    if (source_node->right_input() && source_node->type == LQPNodeType::Union) {
+      input_count += cardinality_estimator.estimate_cardinality(source_node->right_input());
+    } else if (source_node->right_input() && (!join_node || (join_node->join_mode != JoinMode::Semi &&
+                                                             join_node->join_mode != JoinMode::AntiNullAsTrue &&
+                                                             join_node->join_mode != JoinMode::AntiNullAsFalse))) {
+      input_count *= cardinality_estimator.estimate_cardinality(source_node->right_input());
     }
+    row_percentage = input_count == 0 ? 0 : 100 * row_count / input_count;
   }
 
   auto label_stream = std::ostringstream{};
@@ -142,7 +146,7 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& sour
   const auto& output_expressions = source_node->output_expressions();
   const auto output_expression_count = output_expressions.size();
   for (auto column_id = ColumnID{0}; column_id < output_expression_count; ++column_id) {
-    tooltip_stream << " (" << column_id + 1 << ") ";
+    tooltip_stream << std::format(" ({})", column_id + 1);
     tooltip_stream << output_expressions.at(column_id)->as_column_name();
     if (source_node->is_column_nullable(column_id)) {
       tooltip_stream << " NULL";
@@ -203,7 +207,8 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& sour
   auto info = _default_edge;
   info.label = label_stream.str();
   info.label_tooltip = tooltip_stream.str();
-  info.pen_width = pen_width;
+  // `pen_width` is normalized later during graph construction, so assigning 0 or NAN is acceptable.
+  info.pen_width = row_count;
   if (target_node->input_count() == 2) {
     info.arrowhead = side == InputSide::Left ? "lnormal" : "rnormal";
   }

@@ -1,11 +1,21 @@
 #include "union_node.hpp"
 
+#include <cstddef>
+#include <format>
+#include <functional>
 #include <memory>
-#include <numeric>
 #include <string>
 #include <vector>
 
+#include "magic_enum/magic_enum.hpp"
+
+#include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/data_dependencies/functional_dependency.hpp"
+#include "logical_query_plan/data_dependencies/order_dependency.hpp"
+#include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
@@ -14,7 +24,7 @@ UnionNode::UnionNode(const SetOperationMode init_set_operation_mode)
     : AbstractLQPNode(LQPNodeType::Union), set_operation_mode(init_set_operation_mode) {}
 
 std::string UnionNode::description(const DescriptionMode /*mode*/) const {
-  return "[UnionNode] Mode: " + std::string{magic_enum::enum_name(set_operation_mode)};
+  return std::format("[UnionNode] Mode: {}", magic_enum::enum_name(set_operation_mode));
 }
 
 std::vector<std::shared_ptr<AbstractExpression>> UnionNode::output_expressions() const {
@@ -24,12 +34,12 @@ std::vector<std::shared_ptr<AbstractExpression>> UnionNode::output_expressions()
    * have performance implications now, they may arise in the future. In this case, consider relaxing the check by using
    * `DebugAssert`.
    */
-  Assert(expressions_equal(left_expressions, right_input()->output_expressions()), "Input Expressions must match");
+  Assert(expressions_equal(left_expressions, right_input()->output_expressions()), "Input Expressions must match.");
   return left_expressions;
 }
 
 bool UnionNode::is_column_nullable(const ColumnID column_id) const {
-  Assert(left_input() && right_input(), "Need both inputs to determine nullability");
+  Assert(left_input() && right_input(), "Need both inputs to determine nullability.");
 
   return left_input()->is_column_nullable(column_id) || right_input()->is_column_nullable(column_id);
 }
@@ -59,9 +69,27 @@ UniqueColumnCombinations UnionNode::unique_column_combinations() const {
       return UniqueColumnCombinations{};
     }
     case SetOperationMode::Unique:
-      Fail("ToDo, see discussion https://github.com/hyrise/hyrise/pull/2156#discussion_r452803825");
+      Fail("ToDo, see discussion: https://github.com/hyrise/hyrise/pull/2156#discussion_r452803825");
   }
-  Fail("Unhandled UnionMode");
+  Fail("Unhandled UnionMode.");
+}
+
+OrderDependencies UnionNode::order_dependencies() const {
+  switch (set_operation_mode) {
+    case SetOperationMode::Positions:
+    case SetOperationMode::All: {
+      // We can only forward ODs if the two input nodes come from the same table, i.e., they have the same output
+      // expressions. This is the case when, e.g., the results of two predicates combined with logical or are merged.
+      // Currently, Hyrise does not allow unions of different tables.
+      const auto& left_order_dependencies = _forward_left_order_dependencies();
+      Assert(left_order_dependencies == right_input()->order_dependencies(),
+             "Input tables should have the same order depedencies.");
+      return left_order_dependencies;
+    }
+    case SetOperationMode::Unique:
+      Fail("ToDo, see discussion: https://github.com/hyrise/hyrise/pull/2156#discussion_r452803825");
+  }
+  Fail("Unhandled UnionMode.");
 }
 
 FunctionalDependencies UnionNode::non_trivial_functional_dependencies() const {
@@ -71,8 +99,8 @@ FunctionalDependencies UnionNode::non_trivial_functional_dependencies() const {
        * With UnionAll, UCCs from both input nodes are discarded. To preserve trivial FDs, we request all available FDs
        * from both input nodes.
        */
-      const auto& fds_left = left_input()->functional_dependencies();
-      const auto& fds_right = right_input()->functional_dependencies();
+      const auto fds_left = left_input()->functional_dependencies();
+      const auto fds_right = right_input()->functional_dependencies();
       /**
        * Currently, both input tables have the same output expressions for SetOperationMode::All. However, the FDs might
        * differ. For example, the left input node could have discarded FDs, whereas the right one has not. To work
@@ -85,19 +113,19 @@ FunctionalDependencies UnionNode::non_trivial_functional_dependencies() const {
        * By definition, UnionPositions requires both input tables to have the same table origin and structure.
        * Therefore, we can pass the FDs of either the left or the right input node.
        */
-      const auto& non_trivial_fds = left_input()->non_trivial_functional_dependencies();
+      const auto non_trivial_fds = left_input()->non_trivial_functional_dependencies();
       DebugAssert(non_trivial_fds == right_input()->non_trivial_functional_dependencies(),
                   "Expected both input nodes to pass the same non-trivial FDs.");
       return non_trivial_fds;
     }
     default: {
-      Fail("Unhandled UnionMode");
+      Fail("Unhandled UnionMode.");
     }
   }
 }
 
 size_t UnionNode::_on_shallow_hash() const {
-  return boost::hash_value(set_operation_mode);
+  return std::hash<SetOperationMode>{}(set_operation_mode);
 }
 
 std::shared_ptr<AbstractLQPNode> UnionNode::_on_shallow_copy(LQPNodeMapping& /*node_mapping*/) const {

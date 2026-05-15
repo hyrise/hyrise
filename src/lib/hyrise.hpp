@@ -1,9 +1,9 @@
 #pragma once
 
-#include <boost/container/pmr/memory_resource.hpp>
+#include <memory>
 
 #include "concurrency/transaction_manager.hpp"
-#include "scheduler/immediate_execution_scheduler.hpp"
+#include "scheduler/abstract_scheduler.hpp"
 #include "scheduler/topology.hpp"
 #include "sql/sql_plan_cache.hpp"
 #include "storage/storage_manager.hpp"
@@ -15,12 +15,13 @@
 
 namespace hyrise {
 
-class AbstractScheduler;
 class BenchmarkRunner;
 
 // This should be the only singleton in the src/lib world. It provides a unified way of accessing components like the
 // storage manager, the transaction manager, and more. Encapsulating this in one class avoids the static initialization
-// order fiasco, which would otherwise make the initialization/destruction order hard to control.
+// order fiasco, which would otherwise make the initialization/destruction order hard to control. One should never
+// store references to the fields of this singleton, as these might be invalidated if `reset()` is called. Instead,
+// always call `Hyrise::get()` to access fields in this singleton.
 class Hyrise : public Singleton<Hyrise> {
  public:
   // Resets the Hyrise state by deleting its members (e.g., StorageManager) and
@@ -47,6 +48,15 @@ class Hyrise : public Singleton<Hyrise> {
   SettingsManager settings_manager;
   LogManager log_manager;
   Topology topology;
+
+  // We need to implement the move assignment operator so that the storage manager and plugin manager are destructed
+  // in the correct order. This is because the plugin manager might have plugins that need to delete tables, which
+  // fails if the storage manager is already destructed.
+  Hyrise(const Hyrise&) = delete;
+  Hyrise(Hyrise&&) noexcept = default;
+  ~Hyrise() override = default;
+  Hyrise& operator=(const Hyrise&) = delete;
+  Hyrise& operator=(Hyrise&& other) noexcept;
 
   // Plan caches used by the SQLPipelineBuilder if `with_{l/p}qp_cache()` are not used. Both default caches can be
   // nullptr themselves. If both default_{l/p}qp_cache and _{l/p}qp_cache are nullptr, no plan caching is used.

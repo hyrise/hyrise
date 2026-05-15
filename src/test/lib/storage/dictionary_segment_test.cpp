@@ -1,15 +1,15 @@
+#include <cstdint>
 #include <memory>
-#include <string>
-#include <utility>
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
-
 #include "storage/chunk_encoder.hpp"
 #include "storage/dictionary_segment.hpp"
-#include "storage/segment_encoding_utils.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/value_segment.hpp"
 #include "storage/vector_compression/fixed_width_integer/fixed_width_integer_vector.hpp"
 #include "storage/vector_compression/vector_compression.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
@@ -200,7 +200,7 @@ TEST_F(StorageDictionarySegmentTest, FixedWidthIntegerMemoryUsageEstimation) {
       vs_int, DataType::Int, SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedWidthInteger});
   const auto dictionary_segment = std::dynamic_pointer_cast<DictionarySegment<int>>(compressed_segment);
 
-  static constexpr auto size_of_attribute = 1u;
+  static constexpr auto size_of_attribute = 1;
 
   EXPECT_GE(dictionary_segment->memory_usage(MemoryUsageCalculationMode::Sampled),
             empty_memory_usage + 3 * size_of_attribute);

@@ -1,27 +1,42 @@
+#include <algorithm>
+#include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <functional>
+#include <map>
 #include <memory>
 #include <numeric>
 #include <random>
+#include <string>
+#include <utility>
+#include <vector>
 
-#include "../micro_benchmark_basic_fixture.hpp"
 #include "benchmark/benchmark.h"
+
+#include "all_type_variant.hpp"
+#include "expression/abstract_predicate_expression.hpp"
+#include "expression/between_expression.hpp"
+#include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "micro_benchmark_utils.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
+#include "resolve_type.hpp"
 #include "storage/chunk_encoder.hpp"
-#include "storage/segment_encoding_utils.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/table.hpp"
+#include "storage/table_column_definition.hpp"
+#include "storage/value_segment.hpp"
+#include "types.hpp"
 #include "utils/load_table.hpp"
 
-namespace hyrise {
-
-using namespace expression_functional;  // NOLINT(build/namespaces)
-
 namespace {
+using namespace hyrise;
+using namespace expression_functional;
 
-const auto ROWS = 1'000'000;
-const auto CHUNK_SIZE = Chunk::DEFAULT_SIZE;
-const auto STRING_SIZE = 512;
+constexpr auto ROWS = 1'000'000;
+constexpr auto CHUNK_SIZE = Chunk::DEFAULT_SIZE;
+constexpr auto STRING_SIZE = 512;
 
 TableColumnDefinitions create_column_definitions(const DataType data_type) {
   auto table_column_definitions = TableColumnDefinitions();
@@ -39,6 +54,7 @@ std::vector<Type> generate_values(const size_t table_size);
 template <>
 std::vector<int32_t> generate_values<int32_t>(const size_t table_size) {
   auto values = std::vector<int32_t>(table_size);
+  // NOLINTNEXTLINE(modernize-use-ranges): We need LLVM 21's libc++ for std::ranges::iota.
   std::iota(values.begin(), values.end(), 0);
   return values;
 }
@@ -71,9 +87,9 @@ std::shared_ptr<TableWrapper> create_table(const DataType data_type, const int t
     std::shuffle(chunk_values.begin(), chunk_values.end(), generator);
   }
 
-  for (auto chunk_index = 0u; chunk_index < table_size / CHUNK_SIZE; ++chunk_index) {
-    const auto first = chunk_values.cbegin() + CHUNK_SIZE * chunk_index;
-    const auto last = chunk_values.cbegin() + CHUNK_SIZE * (chunk_index + 1);
+  for (auto chunk_index = size_t{0}; chunk_index < table_size / CHUNK_SIZE; ++chunk_index) {
+    const auto first = chunk_values.cbegin() + (CHUNK_SIZE * chunk_index);
+    const auto last = chunk_values.cbegin() + (CHUNK_SIZE * (chunk_index + 1));
     auto value_vector = pmr_vector<Type>(first, last);
     if (mode == "SortedDescending") {
       std::reverse(value_vector.begin(), value_vector.end());
@@ -89,11 +105,11 @@ std::shared_ptr<TableWrapper> create_table(const DataType data_type, const int t
 
     const auto value_segment = std::make_shared<ValueSegment<Type>>(std::move(value_vector), std::move(null_values));
     table->append_chunk({value_segment});
-    table->last_chunk()->finalize();
+    table->last_chunk()->set_immutable();
   }
 
   if (encoding_type != EncodingType::Unencoded) {
-    // chunks are already finalized
+    // Chunks are already marked as immutable.
     ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec(encoding_type));
   }
 
@@ -102,9 +118,9 @@ std::shared_ptr<TableWrapper> create_table(const DataType data_type, const int t
     const auto chunk = table->get_chunk(chunk_id);
 
     if (mode == "Sorted") {
-      chunk->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending));
+      chunk->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::AscendingNullsFirst));
     } else if (mode == "SortedDescending") {
-      chunk->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Descending));
+      chunk->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::DescendingNullsFirst));
     }
   }
 
@@ -114,12 +130,10 @@ std::shared_ptr<TableWrapper> create_table(const DataType data_type, const int t
   return table_wrapper;
 }
 
-}  // namespace
-
 void BM_TableScanSorted(
     benchmark::State& state, const int table_size, const double selectivity, const EncodingType encoding_type,
     const std::string& mode, const bool is_between_scan, const bool is_reference_scan,
-    const std::function<std::shared_ptr<TableWrapper>(const EncodingType, const std::string)> table_creator) {
+    const std::function<std::shared_ptr<TableWrapper>(const EncodingType, const std::string)>& table_creator) {
   micro_benchmark_clear_cache();
 
   // The benchmarks all run with different selectivities (ratio of values in the output to values in the input).
@@ -132,12 +146,11 @@ void BM_TableScanSorted(
 
   const auto column_index = ColumnID(0);
 
-  const auto column_definition = table_column_definitions.at(column_index);
+  const auto& column_definition = table_column_definitions.at(column_index);
 
   std::shared_ptr<AbstractPredicateExpression> predicate;
   std::shared_ptr<AbstractPredicateExpression> reference_scan_predicate;
-  const auto column_expression =
-      pqp_column_(column_index, column_definition.data_type, column_definition.nullable, column_definition.name);
+  const auto column_expression = pqp_column_(column_index, column_definition.data_type, column_definition.name);
 
   resolve_data_type(column_definition.data_type, [&](const auto data_type_t) {
     using ColumnDataType = typename decltype(data_type_t)::type;
@@ -199,8 +212,6 @@ void BM_TableScanSorted(
   }
 }
 
-namespace {
-
 void registerTableScanSortedBenchmarks() {
   using EncodingAndSupportedDataTypes = std::pair<EncodingType, std::vector<std::string>>;
   const std::map<std::string, EncodingAndSupportedDataTypes> encoding_types{
@@ -215,10 +226,10 @@ void registerTableScanSortedBenchmarks() {
 
   const std::map<std::string, std::function<std::shared_ptr<TableWrapper>(const EncodingType, const std::string)>>
       table_types{{"Int",
-                   [&](const EncodingType encoding_type, const std::string mode) {
+                   [&](const EncodingType encoding_type, const std::string& mode) {
                      return create_table<int32_t>(DataType::Int, ROWS, generate_values<int32_t>, encoding_type, mode);
                    }},
-                  {"String", [&](const EncodingType encoding_type, const std::string mode) {
+                  {"String", [&](const EncodingType encoding_type, const std::string& mode) {
                      return create_table<pmr_string>(DataType::String, ROWS, generate_values<pmr_string>, encoding_type,
                                                      mode);
                    }}};
@@ -237,12 +248,10 @@ void registerTableScanSortedBenchmarks() {
             for (const auto is_between_scan : {false, true}) {
               const auto& table_generator = table_types.at(data_type);
 
-              const std::string between_label = is_between_scan ? "Between" : "";
-              const std::string ref_scan_label = is_reference_scan ? "ReferenceTableScan" : "DataTableScan";
               benchmark::RegisterBenchmark(
-                  ("BM_Table" + between_label + "ScanSorted/" + ref_scan_label + "/" + encoding_name + "/" +
-                   std::to_string(selectivity) + "/" + data_type + "/" + mode)
-                      .c_str(),
+                  std::format("BM_Table{}ScanSorted/{}/{}/{}/{}/{}", is_between_scan ? "Between" : "",
+                              is_reference_scan ? "ReferenceTableScan" : "DataTableScan", encoding_name, selectivity,
+                              data_type, mode),
                   BM_TableScanSorted, ROWS, selectivity, encoding_type, mode, is_between_scan, is_reference_scan,
                   table_generator);
             }
@@ -264,8 +273,6 @@ class StartUp {
   }
 };
 
-StartUp startup;
+const auto startup = StartUp{};
 
 }  // namespace
-
-}  // namespace hyrise
