@@ -149,10 +149,8 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     values.reserve(num_chars);
     auto null_values = pmr_vector<bool>{allocator};
 
-    /**
-     * If the null value vector only contains the value false, then the value segment does not have any row value that
-     * is null. In that case, we don't store the null value vector to reduce the LZ4 segment's memory footprint.
-     */
+    // If the null value vector only contains the value false, then the value segment does not have any row value that
+    // is null. In that case, we don't store the null value vector to reduce the LZ4 segment's memory footprint.
     auto segment_contains_null = false;
 
     /**
@@ -168,9 +166,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
      */
     auto offsets = pmr_vector<uint32_t>{allocator};
 
-    /**
-     * These are the lengths of each string. They are needed to train the zstd dictionary.
-     */
+    // These are the lengths of each string. They are needed to train the zstd dictionary.
     auto string_samples_lengths = pmr_vector<size_t>{allocator};
 
     segment_iterable.with_iterators([&](auto it, const auto& end) {
@@ -181,8 +177,8 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
       string_samples_lengths.reserve(segment_size);
 
       auto offset = uint32_t{0};
-      // iterate over the iterator to access the values and increment the row index to write to the values and null
-      // values vectors
+      // Iterate over the iterator to access the values and increment the row index to write to the values and null
+      // values vectors.
       auto row_index = size_t{0};
       for (; it != end; ++it) {
         const auto segment_element = *it;
