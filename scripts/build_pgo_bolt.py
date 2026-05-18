@@ -10,9 +10,17 @@
 # There is a GiHhub comment summarizing the PGO options we evaluated:
 #   https://github.com/hyrise/hyrise/pull/2724#issuecomment-3734286523
 #
-# Please note that PGO/LTO/BOLT optimization pipelines are steadily changing (and improving) with LLVM updates. We use
-# IR-PGO (fprofile-generate) + LTO + BOLT as recommended here: https://www.youtube.com/watch?app=desktop&v=KdHtOMc5_c8
-# We found this combination to work well with LLVM 20. For newer LLVM versions, this pipeline should be re-evaluated.
+# BENCHMARKING:
+#   `benchmark_all.sh` is also PGO/BOLT aware. To evaluate a commit with PGO/BOLT, use the --export option,
+#   which places the profiles in the resources folder, where `benchmark_all.sh` picks it up.
+#
+#
+# CURRENT PIPELINE
+#   Please note that PGO/LTO/BOLT optimization pipelines are steadily changing (and improving) with LLVM updates. We use
+#   IR-PGO (fprofile-generate) + LTO + BOLT as recommended here: https://www.youtube.com/watch?app=desktop&v=KdHtOMc5_c8
+#   We found this combination to work well with LLVM 20. For newer LLVM versions, this pipeline should be re-evaluated.
+#   Another option that might further improve performance is a second context-sensitive PGO run (CSIR PGO), see
+#   https://github.com/llvm/llvm-project/issues/56274#issuecomment-1406427363.
 
 import platform
 import psutil
@@ -29,7 +37,7 @@ from subprocess import run
 
 if platform.system() != 'Linux':
     # Note: macOS support is possible but currently out of scope.
-    print("This script has only been tested on Linux.")
+    print("PGO/BOLT builds have only been tested on Linux.")
     sys.exit(1)
 
 
