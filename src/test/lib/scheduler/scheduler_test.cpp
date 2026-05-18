@@ -446,14 +446,13 @@ TEST_F(SchedulerTest, NumGroupDetermination) {
 }
 
 TEST_F(SchedulerTest, NumGroupDeterminationDifferentLoads) {
-  constexpr auto WORKER_COUNT = size_t{24};
-
-  Hyrise::get().topology.use_fake_numa_topology(WORKER_COUNT, WORKER_COUNT);
+  Hyrise::get().topology.use_non_numa_topology();
   const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
   Hyrise::get().set_scheduler(node_queue_scheduler);
+  const auto worker_count = node_queue_scheduler->workers().size();
 
   // Create a large number of tasks to avoid early out.
-  const auto task_count = WORKER_COUNT * 50;
+  const auto task_count = 200 * worker_count;
   auto tasks_1 = std::vector<std::shared_ptr<AbstractTask>>{};
   tasks_1.reserve(task_count);
   for (auto task_id = TaskID{0}; task_id < task_count; ++task_id) {
@@ -480,8 +479,11 @@ TEST_F(SchedulerTest, NumGroupDeterminationDifferentLoads) {
   const auto num_groups_with_load = node_queue_scheduler->determine_group_count(tasks_2);
   ASSERT_TRUE(num_groups_with_load);
 
-  // We should receive a larger group count when the queue load is low.
-  EXPECT_GT(*num_groups_without_load, *num_groups_with_load);
+  // We should receive a large group count when the queue load is low (here, no load at time of grouping); and a small
+  // group count when we
+
+  EXPECT_EQ(*num_groups_without_load, 2 * worker_count);  // 2 * NodeQueueScheduler::NUM_GROUPS_MAX_FACTOR
+  EXPECT_EQ(*num_groups_with_load, 8);                    // NodeQueueScheduler::MIN_GROUP_COUNT
 
   // Shutdown. Unblock scheduled jobs.
   block_jobs = false;
