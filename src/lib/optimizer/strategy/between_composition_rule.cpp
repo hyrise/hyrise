@@ -24,9 +24,8 @@
 #include "utils/assert.hpp"
 
 namespace {
-
-using namespace hyrise;                 // NOLINT(build/namespaces)
-using namespace expression_functional;  // NOLINT(build/namespaces)
+using namespace hyrise;
+using namespace expression_functional;
 
 PredicateCondition get_between_predicate_condition(bool left_inclusive, bool right_inclusive) {
   if (left_inclusive && right_inclusive) {

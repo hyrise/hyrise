@@ -22,7 +22,7 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT
+using namespace hyrise;
 
 ChunkEncodingSpec get_chunk_encoding_spec(const Chunk& chunk) {
   auto chunk_encoding_spec = ChunkEncodingSpec{};

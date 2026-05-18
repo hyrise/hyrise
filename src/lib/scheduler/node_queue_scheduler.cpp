@@ -5,12 +5,12 @@
 #include <chrono>
 #include <cstdint>
 #include <cstdlib>
+#include <format>
 #include <iostream>
 #include <limits>
 #include <memory>
 #include <mutex>
 #include <optional>
-#include <sstream>
 #include <thread>
 #include <vector>
 
@@ -162,11 +162,12 @@ void NodeQueueScheduler::wait_for_all_tasks() {
     // (e.g., ensure operators split their work into smaller tasks).
     if (progressless_loop_count >= 360'000) {
       const auto remaining_task_count = _task_counter - num_finished_tasks;
-      auto message = std::stringstream{};
       // We waited for 1 h (360'000 * 10 ms).
-      message << "Timeout: no progress while waiting for all scheduled tasks to be processed. " << remaining_task_count
-              << " task(s) still remaining without progress for 1 h now, quitting.";
-      Fail(message.str());
+      const auto message = std::format(
+          "Timeout: no progress while waiting for all scheduled tasks to be processed. {}  task(s) still remaining "
+          "without progress for 1 h now, quitting.",
+          remaining_task_count);
+      Fail(message);
     }
 
     if (previous_finished_task_count == num_finished_tasks) {

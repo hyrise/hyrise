@@ -1,12 +1,22 @@
+#include <algorithm>
+#include <cstdint>
+#include <exception>
 #include <memory>
+#include <stdexcept>
+#include <vector>
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
-#include "resolve_type.hpp"
 #include "storage/abstract_segment.hpp"
 #include "storage/chunk.hpp"
+#include "storage/chunk_encoder.hpp"
+#include "storage/encoding_type.hpp"
+#include "storage/index/chunk_index_type.hpp"
 #include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
+#include "storage/mvcc_data.hpp"
 #include "storage/segment_encoding_utils.hpp"
+#include "storage/value_segment.hpp"
 #include "types.hpp"
 
 namespace hyrise {
@@ -448,6 +458,82 @@ TEST_F(StorageChunkTest, TrySetImmutable) {
 
   // However, chunk should not be marked as full multiple times.
   EXPECT_THROW(chunk->mark_as_full(), std::logic_error);
+}
+
+TEST_F(StorageChunkTest, SegmentsShareTableAndPositions) {
+  // Create a test table with two columns.
+  const auto column_definitions = TableColumnDefinitions({{"a", DataType::Int, true}, {"b", DataType::String, true}});
+  const auto test_table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{3});
+  test_table->append_chunk({vs_int, vs_str});
+
+  // Create a second test table.
+  const auto column_definitions2 =
+      TableColumnDefinitions({{"c", DataType::Int, false}, {"d", DataType::String, false}});
+  const auto test_table2 = std::make_shared<Table>(column_definitions2, TableType::Data, ChunkOffset{3});
+  test_table2->append_chunk({ds_int, ds_str});
+
+  // Chunk with non-reference segments.
+  EXPECT_FALSE(chunk->segments_share_table_and_positions());
+
+  // Chunk with reference segments to the same table with the same pos_list.
+  {
+    const auto pos_list = std::make_shared<RowIDPosList>();
+    pos_list->emplace_back(ChunkID{0}, ChunkOffset{0});
+    pos_list->emplace_back(ChunkID{0}, ChunkOffset{1});
+
+    const auto ref_segment1 = std::make_shared<ReferenceSegment>(test_table, ColumnID{0}, pos_list);
+    const auto ref_segment2 = std::make_shared<ReferenceSegment>(test_table, ColumnID{1}, pos_list);
+    const auto reference_segments = Segments{ref_segment1, ref_segment2};
+
+    const auto reference_chunk = std::make_shared<Chunk>(reference_segments);
+    EXPECT_TRUE(reference_chunk->segments_share_table_and_positions());
+  }
+
+  // Chunk with reference segments to different tables.
+  {
+    const auto pos_list = std::make_shared<RowIDPosList>();
+    pos_list->emplace_back(ChunkID{0}, ChunkOffset{0});
+
+    const auto ref_segment1 = std::make_shared<ReferenceSegment>(test_table, ColumnID{0}, pos_list);
+    const auto ref_segment2 = std::make_shared<ReferenceSegment>(test_table2, ColumnID{0}, pos_list);
+    const auto mixed_reference_segments = Segments{ref_segment1, ref_segment2};
+
+    const auto mixed_reference_chunk = std::make_shared<Chunk>(mixed_reference_segments);
+    EXPECT_FALSE(mixed_reference_chunk->segments_share_table_and_positions());
+  }
+
+  // Chunk with reference segments to the same table but different pos_lists.
+  {
+    const auto pos_list1 = std::make_shared<RowIDPosList>();
+    pos_list1->emplace_back(ChunkID{0}, ChunkOffset{0});
+
+    const auto pos_list2 = std::make_shared<RowIDPosList>();
+    pos_list2->emplace_back(ChunkID{0}, ChunkOffset{1});
+
+    const auto ref_segment1 = std::make_shared<ReferenceSegment>(test_table, ColumnID{0}, pos_list1);
+    const auto ref_segment2 = std::make_shared<ReferenceSegment>(test_table, ColumnID{1}, pos_list2);
+    const auto different_pos_list_segments = Segments{ref_segment1, ref_segment2};
+
+    const auto different_pos_list_chunk = std::make_shared<Chunk>(different_pos_list_segments);
+    EXPECT_FALSE(different_pos_list_chunk->segments_share_table_and_positions());
+  }
+
+  // Chunk with reference segments to the same table and same pos_lists, but separately constructed.
+  if constexpr (HYRISE_DEBUG) {  // EXPECT_THROW is only true for debug builds
+    const auto pos_list1 = std::make_shared<RowIDPosList>();
+    pos_list1->emplace_back(ChunkID{0}, ChunkOffset{0});
+
+    const auto pos_list2 = std::make_shared<RowIDPosList>();
+    pos_list2->emplace_back(ChunkID{0}, ChunkOffset{0});
+
+    const auto ref_segment1 = std::make_shared<ReferenceSegment>(test_table, ColumnID{0}, pos_list1);
+    const auto ref_segment2 = std::make_shared<ReferenceSegment>(test_table, ColumnID{1}, pos_list2);
+
+    auto same_pos_list_segments = Segments{ref_segment1, ref_segment2};
+
+    const auto different_pos_list_chunk = std::make_shared<Chunk>(same_pos_list_segments);
+    EXPECT_THROW(different_pos_list_chunk->segments_share_table_and_positions(), std::logic_error);
+  }
 }
 
 }  // namespace hyrise

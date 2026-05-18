@@ -15,41 +15,41 @@
 
 namespace hyrise {
 
-TPCCNewOrder::TPCCNewOrder(const int num_warehouses, BenchmarkSQLExecutor& sql_executor)
-    : AbstractTPCCProcedure(sql_executor), c_id{static_cast<int>(_tpcc_random_generator.nurand(1023, 1, 3000))} {
+TPCCNewOrder::TPCCNewOrder(const int num_warehouses, BenchmarkSQLExecutor& init_sql_executor)
+    : AbstractTPCCProcedure(init_sql_executor), c_id{static_cast<int>(tpcc_random_generator.nurand(1023, 1, 3000))} {
   auto warehouse_dist = std::uniform_int_distribution<>{1, num_warehouses};
-  w_id = warehouse_dist(_random_engine);
+  w_id = warehouse_dist(random_engine);
 
   auto district_dist = std::uniform_int_distribution<>{1, 10};
-  d_id = district_dist(_random_engine);
+  d_id = district_dist(random_engine);
 
   auto num_items_dist = std::uniform_int_distribution<>{5, 15};
-  ol_cnt = num_items_dist(_random_engine);
+  ol_cnt = num_items_dist(random_engine);
 
   order_lines.resize(ol_cnt);
   for (auto& order_line : order_lines) {
-    order_line.ol_i_id = static_cast<int32_t>(_tpcc_random_generator.nurand(8191, 1, 100'000));
+    order_line.ol_i_id = static_cast<int32_t>(tpcc_random_generator.nurand(8191, 1, 100'000));
 
     auto home_warehouse_dist = std::uniform_int_distribution<>{1, 100};
     // 1% chance of remote warehouses (if more than one).
-    const auto is_home_warehouse = num_warehouses == 1 || home_warehouse_dist(_random_engine) > 1;
+    const auto is_home_warehouse = num_warehouses == 1 || home_warehouse_dist(random_engine) > 1;
     if (is_home_warehouse) {
       order_line.ol_supply_w_id = w_id;
     } else {
       // Choose a warehouse that is different from w_id.
       // NOLINTNEXTLINE(cppcoreguidelines-avoid-do-while)
       do {
-        order_line.ol_supply_w_id = warehouse_dist(_random_engine);
+        order_line.ol_supply_w_id = warehouse_dist(random_engine);
       } while (order_line.ol_supply_w_id == w_id);
     }
 
     auto quantity_dist = std::uniform_int_distribution<>{1, 10};
-    order_line.ol_quantity = quantity_dist(_random_engine);
+    order_line.ol_quantity = quantity_dist(random_engine);
   }
 
   auto is_erroneous_dist = std::uniform_int_distribution<>{1, 100};
   // 1% chance of erroneous procedures.
-  if (is_erroneous_dist(_random_engine) == 1) {
+  if (is_erroneous_dist(random_engine) == 1) {
     order_lines.back().ol_i_id = UNUSED_ITEM_ID;  // A non-existing item ID.
   }
 
@@ -64,7 +64,7 @@ bool TPCCNewOrder::_on_execute() {
   Assert(warehouse_table && warehouse_table->row_count() == 1, "Did not find warehouse (or found more than one)");
 
   const auto w_tax = *warehouse_table->get_value<float>(ColumnID{0}, 0);
-  Assert(w_tax >= 0.f && w_tax <= .2f, "Invalid warehouse tax rate encountered.");
+  Assert(w_tax >= 0 && w_tax <= .2, "Invalid warehouse tax rate encountered.");
 
   // Find the district tax rate and the next order ID.
   const auto district_select_pair =
@@ -73,7 +73,7 @@ bool TPCCNewOrder::_on_execute() {
   const auto& district_table = district_select_pair.second;
   Assert(district_table && district_table->row_count() == 1, "Did not find district (or found more than one)");
   const auto d_tax = *district_table->get_value<float>(ColumnID{0}, 0);
-  Assert(d_tax >= 0.f && d_tax <= .2f, "Invalid warehouse tax rate encountered.");
+  Assert(d_tax >= 0 && d_tax <= .2, "Invalid warehouse tax rate encountered.");
   const auto d_next_o_id = *district_table->get_value<int32_t>(ColumnID{1}, 0);
   o_id = d_next_o_id;
 
@@ -96,7 +96,7 @@ bool TPCCNewOrder::_on_execute() {
   const auto& customer_table = customer_select_pair.second;
   Assert(customer_table && customer_table->row_count() == 1, "Did not find customer (or found more than one).");
   const auto c_discount = *customer_table->get_value<float>(ColumnID{0}, 0);
-  Assert(c_discount >= 0.f && c_discount <= .5f, "Invalid customer discount rate encountered.");
+  Assert(c_discount >= 0 && c_discount <= .5, "Invalid customer discount rate encountered.");
   const auto c_credit = *customer_table->get_value<pmr_string>(ColumnID{2}, 0);
   Assert(c_credit == "GC" || c_credit == "BC", "Invalid customer credit encountered.");
 

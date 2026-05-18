@@ -1,6 +1,7 @@
 #include "abstract_task.hpp"
 
 #include <atomic>
+#include <format>
 #include <functional>
 #include <memory>
 #include <mutex>
@@ -41,7 +42,7 @@ bool AbstractTask::is_scheduled() const {
 }
 
 std::string AbstractTask::description() const {
-  return _description.empty() ? "{Task with id: " + std::to_string(_id.load()) + "}" : _description;
+  return _description.empty() ? std::format("{{Task with id: {}}}", _id.load().t) : _description;
 }
 
 void AbstractTask::set_id(TaskID task_id) {

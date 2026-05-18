@@ -1,9 +1,9 @@
 #include "predicate_node.hpp"
 
 #include <cstddef>
+#include <format>
 #include <functional>
 #include <memory>
-#include <sstream>
 #include <string>
 
 #include "expression/expression_utils.hpp"
@@ -19,10 +19,7 @@ PredicateNode::PredicateNode(const std::shared_ptr<AbstractExpression>& predicat
 
 std::string PredicateNode::description(const DescriptionMode mode) const {
   const auto expression_mode = _expression_description_mode(mode);
-
-  auto stream = std::stringstream{};
-  stream << "[Predicate] " << predicate()->description(expression_mode);
-  return stream.str();
+  return std::format("[Predicate] {}", predicate()->description(expression_mode));
 }
 
 UniqueColumnCombinations PredicateNode::unique_column_combinations() const {

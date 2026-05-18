@@ -29,7 +29,7 @@ class ImmediateExecutionScheduler : public AbstractScheduler {
 
   void _group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const final;
 
-  std::vector<std::shared_ptr<TaskQueue>> _queues = std::vector<std::shared_ptr<TaskQueue>>{};
+  std::vector<std::shared_ptr<TaskQueue>> _queues;
 };
 
 }  // namespace hyrise

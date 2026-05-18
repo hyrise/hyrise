@@ -57,8 +57,6 @@ class AbstractScheduler : public Noncopyable {
   friend class SchedulerTest;
 
  public:
-  virtual ~AbstractScheduler() = default;
-
   /**
    * Begin the scheduler's lifecycle as the global Scheduler instance.
    */

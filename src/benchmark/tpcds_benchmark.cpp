@@ -1,10 +1,15 @@
-#include <chrono>
+#include <cstdint>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <memory>
 #include <string>
+#include <unordered_set>
+#include <utility>
 
 #include "cxxopts.hpp"
 
+#include "benchmark_config.hpp"
 #include "benchmark_runner.hpp"
 #include "cli_config_parser.hpp"
 #include "file_based_benchmark_item_runner.hpp"
@@ -12,21 +17,21 @@
 #include "utils/assert.hpp"
 #include "utils/sqlite_add_indices.hpp"
 
-using namespace hyrise;  // NOLINT(build/namespaces)
+using namespace hyrise;
 
 namespace {
 
-const std::unordered_set<std::string> filename_excludelist() {
+std::unordered_set<std::string> filename_excludelist() {
   auto filename_excludelist = std::unordered_set<std::string>{};
-  const auto excludelist_file_path = "resources/benchmark/tpcds/query_excludelist.cfg";
-  auto excludelist_file = std::ifstream(excludelist_file_path);
+  constexpr auto EXCLUDELIST_FILE_PATH = "resources/benchmark/tpcds/query_excludelist.cfg";
+  auto excludelist_file = std::ifstream(EXCLUDELIST_FILE_PATH);
 
   if (!excludelist_file) {
-    std::cerr << "Cannot open the excludelist file: " << excludelist_file_path << "\n";
+    std::cerr << "Cannot open the excludelist file: " << EXCLUDELIST_FILE_PATH << "\n";
   } else {
     auto filename = std::string{};
     while (std::getline(excludelist_file, filename)) {
-      if (filename.size() > 0 && filename.at(0) != '#') {
+      if (!filename.empty() && filename.at(0) != '#') {
         filename_excludelist.emplace(filename);
       }
     }
@@ -62,8 +67,9 @@ int main(int argc, char* argv[]) {
 
   const auto query_path = std::string{"resources/benchmark/tpcds/tpcds-result-reproduction/query_qualification"};
 
-  Assert(std::filesystem::is_directory(query_path), "Query path (" + query_path + ") has to be a directory.");
-  Assert(std::filesystem::exists(std::filesystem::path{query_path + "/01.sql"}), "Queries have to be available.");
+  Assert(std::filesystem::is_directory(query_path), std::format("Query path '{}' has to be a directory.", query_path));
+  Assert(std::filesystem::exists(std::filesystem::path{std::format("{}/01.sql", query_path)}),
+         "Queries have to be available.");
 
   auto query_generator = std::make_unique<FileBasedBenchmarkItemRunner>(config, query_path, filename_excludelist());
   if (config->verify) {

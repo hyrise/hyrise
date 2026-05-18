@@ -18,17 +18,18 @@ namespace hyrise {
 
 class FrameOfReferenceEncoder : public SegmentEncoder<FrameOfReferenceEncoder> {
  public:
+  // NOLINTNEXTLINE(readability-identifier-naming)
   static constexpr auto _encoding_type = enum_c<EncodingType, EncodingType::FrameOfReference>;
-  static constexpr auto _uses_vector_compression = true;  // see base_segment_encoder.hpp for details
+  static constexpr auto USES_VECTOR_COMPRESSION = true;  // see base_segment_encoder.hpp for details
 
   template <typename T>
-  std::shared_ptr<AbstractEncodedSegment> _on_encode(const AnySegmentIterable<T> segment_iterable,
-                                                     const PolymorphicAllocator<T>& allocator) {
-    static constexpr auto block_size = FrameOfReferenceSegment<T>::block_size;
+  std::shared_ptr<AbstractEncodedSegment> on_encode(const AnySegmentIterable<T>& segment_iterable,
+                                                    const PolymorphicAllocator<T>& allocator) {
+    static constexpr auto BLOCK_SIZE = FrameOfReferenceSegment<T>::BLOCK_SIZE;
 
     // Ceiling of integer division
-    const auto div_ceil = [](auto x, auto y) {
-      return (x + y - 1u) / y;
+    const auto div_ceil = [](auto numerator, auto denominator) {
+      return (numerator + denominator - 1) / denominator;
     };
 
     // holds the minimum of each block
@@ -41,20 +42,20 @@ class FrameOfReferenceEncoder : public SegmentEncoder<FrameOfReferenceEncoder> {
     auto null_values = pmr_vector<bool>{allocator};
 
     // used as optional input for the compression of the offset values
-    auto max_offset = uint32_t{0u};
+    auto max_offset = uint32_t{0};
 
     auto segment_contains_null_values = false;
 
-    segment_iterable.with_iterators([&](auto segment_it, auto segment_end) {
+    segment_iterable.with_iterators([&](auto segment_it, const auto& segment_end) {
       const auto size = std::distance(segment_it, segment_end);
-      const auto num_blocks = div_ceil(size, block_size);
+      const auto num_blocks = div_ceil(size, BLOCK_SIZE);
 
       block_minima.reserve(num_blocks);
       offset_values.reserve(size);
       null_values.reserve(size);
 
       // a temporary storage to hold the values of one block
-      auto current_value_block = std::array<T, block_size>{};
+      auto current_value_block = std::array<T, BLOCK_SIZE>{};
 
       // store iterator to the null values written within this block
       auto current_block_null_values_it = null_values.end();
@@ -71,7 +72,7 @@ class FrameOfReferenceEncoder : public SegmentEncoder<FrameOfReferenceEncoder> {
 
           const auto value = segment_value.value();
           const auto value_is_null = segment_value.is_null();
-          *value_block_it = value_is_null ? T{0u} : value;
+          *value_block_it = value_is_null ? T{0} : value;
           null_values.push_back(value_is_null);
           segment_contains_null_values |= value_is_null;
 
@@ -109,7 +110,8 @@ class FrameOfReferenceEncoder : public SegmentEncoder<FrameOfReferenceEncoder> {
       }
     });
 
-    auto compressed_offset_values = compress_vector(offset_values, vector_compression_type(), allocator, {max_offset});
+    auto compressed_offset_values =
+        compress_vector(offset_values, _get_vector_compression_type(), allocator, {max_offset});
 
     if (segment_contains_null_values) {
       return std::make_shared<FrameOfReferenceSegment<T>>(std::move(block_minima), std::move(null_values),

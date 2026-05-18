@@ -1,23 +1,20 @@
+#include <cstdint>
 #include <memory>
-#include <numeric>
+#include <stdexcept>
 
+#include "all_type_variant.hpp"
+#include "base_test.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
-#include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/join_node.hpp"
-#include "logical_query_plan/limit_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
-#include "logical_query_plan/predicate_node.hpp"
-#include "logical_query_plan/projection_node.hpp"
-#include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
-#include "logical_query_plan/union_node.hpp"
-#include "logical_query_plan/validate_node.hpp"
 #include "optimizer/strategy/join_predicate_ordering_rule.hpp"
 #include "statistics/statistics_objects/generic_histogram.hpp"
 #include "strategy_base_test.hpp"
-#include "utils/load_table.hpp"
+#include "testing_assert.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 

@@ -1,15 +1,8 @@
-#include <algorithm>
-#include <iostream>
-#include <iterator>
-#include <memory>
-#include <set>
-#include <string>
-#include <utility>
-#include <vector>
+#include <bit>
+#include <cstdint>
 
 #include "base_test.hpp"
 #include "storage/index/group_key/variable_length_key_base.hpp"
-#include "types.hpp"
 
 namespace hyrise {
 

@@ -1,5 +1,6 @@
 #include "operator_task.hpp"
 
+#include <format>
 #include <memory>
 #include <string>
 #include <unordered_set>
@@ -17,7 +18,7 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT(build/namespaces)
+using namespace hyrise;
 
 /**
  * Create tasks recursively. Called by `make_tasks_from_operator`.
@@ -93,7 +94,7 @@ OperatorTask::OperatorTask(std::shared_ptr<AbstractOperator> op, SchedulePriorit
     : AbstractTask(priority, stealable), _op(std::move(op)) {}
 
 std::string OperatorTask::description() const {
-  return "OperatorTask with id: " + std::to_string(id()) + " for op: " + _op->description();
+  return std::format("OperatorTask with id: {} for op: {}", id().t, _op->description());
 }
 
 std::pair<std::vector<std::shared_ptr<AbstractTask>>, std::shared_ptr<OperatorTask>>

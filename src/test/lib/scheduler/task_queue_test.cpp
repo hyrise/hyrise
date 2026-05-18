@@ -1,8 +1,12 @@
+#include <cstddef>
+#include <memory>
+
 #include "base_test.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/task_queue.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
