@@ -32,7 +32,7 @@ from argparse import (
     ArgumentDefaultsHelpFormatter,
     BooleanOptionalAction,
 )
-from os import cpu_count, getcwd
+from os import getcwd
 from subprocess import run
 
 if platform.system() != 'Linux':
