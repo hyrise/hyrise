@@ -452,7 +452,7 @@ TEST_F(SchedulerTest, NumGroupDeterminationDifferentLoads) {
   const auto worker_count = node_queue_scheduler->workers().size();
 
   // Create a large number of tasks to avoid early out.
-  const auto task_count = 200 * worker_count;
+  const auto task_count = 1'000 * worker_count;
   auto tasks_1 = std::vector<std::shared_ptr<AbstractTask>>{};
   tasks_1.reserve(task_count);
   for (auto task_id = TaskID{0}; task_id < task_count; ++task_id) {
