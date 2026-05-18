@@ -156,9 +156,9 @@ def build(
             "--split-all-cold",
             "--split-eh",
             "--dyno-stats",
-        )
-        run_in_build_folder(
-            'strip -R .rela.text -R ".rela.text.*" -R .rela.data -R ".rela.data.*" lib/libhyrise_impl.so'
+            "--icf",
+            "--indirect-call-promotion=all",
+            "--peepholes=all",
         )
 
 
@@ -181,8 +181,10 @@ def build_with_bolt_from_previous_build(*targets):
         "--split-all-cold",
         "--split-eh",
         "--dyno-stats",
+        "--icf",
+        "--indirect-call-promotion=all",
+        "--peepholes=all",
     )
-    run_in_build_folder('strip -R .rela.text -R ".rela.text.*" -R .rela.data -R ".rela.data.*" lib/libhyrise_impl.so')
 
 
 def profile(bolt_instrumented=False, pgo_instrumented=False):
@@ -200,12 +202,14 @@ def profile(bolt_instrumented=False, pgo_instrumented=False):
         if bolt_instrumented:
             run_in_build_folder(f"mv /tmp/prof.fdata {benchmark}.fdata")
 
+        if pgo_instrumented:
+            run_in_hyrise_folder(f"mv *.profraw {build_folder}/{benchmark}.profraw")
+
     if bolt_instrumented:
         run_in_build_folder("merge-fdata *.fdata > bolt.fdata")
 
     if pgo_instrumented:
-        run_in_hyrise_folder(f"mv *.profraw {build_folder}/libhyrise.profraw")
-        run_in_build_folder("llvm-profdata merge -output libhyrise.profdata libhyrise.profraw")
+        run_in_build_folder("llvm-profdata merge -output libhyrise.profdata *.profraw")
 
 
 def cleanup():
