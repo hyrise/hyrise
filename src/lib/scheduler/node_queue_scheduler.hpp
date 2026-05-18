@@ -91,7 +91,7 @@ class NodeQueueScheduler final : public AbstractScheduler {
    */
   std::optional<size_t> determine_group_count(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const;
 
-  void wait_for_all_tasks() override final;
+  void wait_for_all_tasks() final;
 
   const std::atomic_int64_t& active_worker_count() const;
 
@@ -109,7 +109,7 @@ class NodeQueueScheduler final : public AbstractScheduler {
    * @param tasks: list of tasks to group
    */
   static void _group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks, const size_t group_count);
-  void _group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const override final;
+  void _group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const final;
 
   /**
    * @param task
