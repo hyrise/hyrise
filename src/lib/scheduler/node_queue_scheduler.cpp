@@ -23,35 +23,9 @@
 #include "utils/assert.hpp"
 #include "worker.hpp"
 
-namespace {
-/**
- * Hyrise groups tasks to lower the pressure on the scheduler and the tasks queues. Grouping happens by dividing a large
- * set of tasks into groups and only scheduling one task of this group. All other tasks are chained as dependencies.
- * When a worker pulls the first task and executes it, it will then process the entire chain without any further
- * communication with the scheduler.
- * The number of groups to use is hard to determine and depends on the current load. In case of a single user, we can
- * use a high group count (to allow parallelism and balance load evenly even when some tasks straggle) as the task queue
- * is usually not congested. In case of multiple clients, we lower the number of groups to take pressure of the
- * scheduler and the tasks queues (see discussion in #2243).
- *
- * We scale number of groups linearly between (NUM_GROUPS_MIN_FACTOR * _workers_per_node) and (NUM_GROUPS_MAX_FACTOR *
- * _workers_per_node).
- */
-constexpr auto NUM_GROUPS_MIN_FACTOR = 0.1;
-constexpr auto NUM_GROUPS_MAX_FACTOR = 2.0;
-// constexpr auto NUM_GROUPS_RANGE = NUM_GROUPS_MAX_FACTOR - NUM_GROUPS_MIN_FACTOR;
-
-// For small machines where NUM_GROUPS_MIN_FACTOR * cores can yield small group_counts, we cut of at `MIN_GROUP_COUNT`.
-// We found for "small" machines (e.g., 12-core MacBooks but also 32-thread servers), the calculated minimal group
-// counts perform worse then ensuring at least a group count of eight.
-constexpr auto MIN_GROUP_COUNT = size_t{8};
-
-// This factor is used to determine at which queue load we use the maximum number of groups.
-constexpr auto UPPER_LIMIT_QUEUE_SIZE_FACTOR = size_t{4};
-
-}  // namespace
-
 namespace hyrise {
+
+using namespace node_queue_scheduler::detail;
 
 NodeQueueScheduler::NodeQueueScheduler() {
   _worker_id_allocator = std::make_shared<UidAllocator>();

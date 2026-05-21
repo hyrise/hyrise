@@ -479,11 +479,12 @@ TEST_F(SchedulerTest, NumGroupDeterminationDifferentLoads) {
   const auto num_groups_with_load = node_queue_scheduler->determine_group_count(tasks_2);
   ASSERT_TRUE(num_groups_with_load);
 
-  // We should receive a large group count when the queue load is low (here, no load at time of grouping); and a small
-  // group count when we
-
-  EXPECT_EQ(*num_groups_without_load, 2 * worker_count);  // 2 * NodeQueueScheduler::NUM_GROUPS_MAX_FACTOR
-  EXPECT_EQ(*num_groups_with_load, 8);                    // NodeQueueScheduler::MIN_GROUP_COUNT
+  // We should receive a large group count when the queue load is low (here, no load at time of grouping).
+  EXPECT_EQ(*num_groups_without_load, static_cast<size_t>(scheduler_grouping_detail::NUM_GROUPS_MAX_FACTOR * static_cast<double>(worker_count)));
+  // We should receive the minimum group count when the queue load is high.
+  EXPECT_EQ(*num_groups_with_load, std::max(scheduler_grouping_detail::MIN_GROUP_COUNT,
+                                            static_cast<size_t>(scheduler_grouping_detail::NUM_GROUPS_MIN_FACTOR *
+                                                                static_cast<double>(worker_count))));
 
   // Shutdown. Unblock scheduled jobs.
   block_jobs = false;
