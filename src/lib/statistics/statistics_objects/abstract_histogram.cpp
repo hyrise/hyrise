@@ -17,7 +17,6 @@
 #include "all_type_variant.hpp"
 #include "generic_histogram_builder.hpp"
 #include "lossy_cast.hpp"
-#include "resolve_type.hpp"
 #include "statistics/statistics_objects/abstract_statistics_object.hpp"
 #include "statistics/statistics_objects/histogram_domain.hpp"
 #include "statistics/statistics_objects/scaled_histogram.hpp"
@@ -27,8 +26,7 @@
 namespace hyrise {
 
 template <typename T>
-AbstractHistogram<T>::AbstractHistogram(const HistogramDomain<T>& domain)
-    : AbstractStatisticsObject(data_type_from_type<T>()), _domain(domain) {}
+AbstractHistogram<T>::AbstractHistogram(const HistogramDomain<T>& domain) : _domain(domain) {}
 
 template <typename T>
 const HistogramDomain<T>& AbstractHistogram<T>::domain() const {

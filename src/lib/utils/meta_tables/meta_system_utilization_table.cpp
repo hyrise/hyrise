@@ -120,7 +120,7 @@ uint64_t MetaSystemUtilizationTable::_get_system_cpu_time() {
     std::getline(stat_file, cpu_line);
     stat_file.close();
   } catch (std::ios_base::failure& fail) {
-    Fail("Failed to read /proc/stat (" + fail.what() + ").");
+    Fail(std::format("Failed to read /proc/stat: {}", fail.what()));
   }
 
   const auto cpu_ticks = _parse_value_string(cpu_line);
@@ -144,7 +144,6 @@ uint64_t MetaSystemUtilizationTable::_get_system_cpu_time() {
   const auto active_ticks = static_cast<double>(
       cpu_info.cpu_ticks[CPU_STATE_SYSTEM] + cpu_info.cpu_ticks[CPU_STATE_USER] + cpu_info.cpu_ticks[CPU_STATE_NICE]);
 #else
-
   Fail("Method not implemented for this platform.");
 
 #endif  // __APPLE__
@@ -206,7 +205,7 @@ MetaSystemUtilizationTable::SystemMemoryUsage MetaSystemUtilizationTable::_get_s
     }
     meminfo_file.close();
   } catch (std::ios_base::failure& fail) {
-    Fail("Failed to read /proc/meminfo (" + fail.what() + ").");
+    Fail(std::format("Failed to read /proc/meminfo: {}", fail.what()));
   }
 
   return memory_usage;
@@ -260,7 +259,7 @@ MetaSystemUtilizationTable::ProcessMemoryUsage MetaSystemUtilizationTable::_get_
 
     self_status_file.close();
   } catch (std::ios_base::failure& fail) {
-    Fail("Failed to read /proc/self/status (" + fail.what() + ").");
+    Fail(std::format("Failed to read /proc/self/status: {}", fail.what()));
   }
 
   return memory_usage;
@@ -329,7 +328,7 @@ std::optional<size_t> MetaSystemUtilizationTable::_get_allocated_memory() {
   auto allocated_size = sizeof(allocated);
 
   const auto error_code = mallctl("stats.allocated", &allocated, &allocated_size, nullptr, 0);
-  Assert(!error_code, std::string{"mallctl failed with error code "} + std::to_string(error_code) + ".");
+  Assert(!error_code, std::format("mallctl failed with error code: {}.", error_code));
 
   return allocated;
 #else

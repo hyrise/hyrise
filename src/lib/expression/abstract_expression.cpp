@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <format>
 #include <memory>
 #include <string>
 #include <type_traits>
@@ -16,7 +17,7 @@
 
 namespace hyrise {
 
-using namespace std::string_literals;  // NOLINT(build/namespaces)
+using namespace std::string_literals;
 
 AbstractExpression::AbstractExpression(const ExpressionType init_type,
                                        const std::vector<std::shared_ptr<AbstractExpression>>& init_arguments)
@@ -107,7 +108,7 @@ std::string AbstractExpression::_enclose_argument(const AbstractExpression& argu
 
   if (static_cast<std::underlying_type_t<ExpressionPrecedence>>(argument._precedence()) >=
       static_cast<std::underlying_type_t<ExpressionPrecedence>>(_precedence())) {
-    return "(" + argument.description(mode) + ")";
+    return std::format("({})", argument.description(mode));
   }
 
   return argument.description(mode);

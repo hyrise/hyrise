@@ -51,7 +51,7 @@ std::shared_ptr<const CommitContext> CommitContext::next() const {
 }
 
 bool CommitContext::try_set_next(const std::shared_ptr<CommitContext>& next) {
-  DebugAssert((next->commit_id() == commit_id() + 1u), "Next commit context's commit id needs to be incremented by 1.");
+  DebugAssert((next->commit_id() == commit_id() + 1), "Next commit context's commit id needs to be incremented by 1.");
 
   if (has_next()) {
     return false;

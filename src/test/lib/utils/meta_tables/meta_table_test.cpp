@@ -1,16 +1,28 @@
+#include <algorithm>
+#include <cctype>
+#include <memory>
+#include <stdexcept>
+#include <string>
+#include <vector>
+
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "lib/utils/meta_tables/meta_mock_table.hpp"
-#include "operators/table_wrapper.hpp"
-#include "statistics/attribute_statistics.hpp"
+#include "sql/sql_pipeline_statement.hpp"
+#include "sql/sql_plan_cache.hpp"
 #include "storage/chunk_encoder.hpp"
+#include "storage/encoding_type.hpp"
+#include "storage/vector_compression/vector_compression.hpp"
+#include "testing_assert.hpp"
+#include "types.hpp"
+#include "utils/load_table.hpp"
 #include "utils/meta_table_manager.hpp"
+#include "utils/meta_tables/abstract_meta_table.hpp"
 #include "utils/meta_tables/meta_chunk_sort_orders_table.hpp"
 #include "utils/meta_tables/meta_chunks_table.hpp"
 #include "utils/meta_tables/meta_columns_table.hpp"
-#include "utils/meta_tables/meta_plugins_table.hpp"
 #include "utils/meta_tables/meta_segments_accurate_table.hpp"
 #include "utils/meta_tables/meta_segments_table.hpp"
-#include "utils/meta_tables/meta_settings_table.hpp"
 #include "utils/meta_tables/meta_tables_table.hpp"
 
 namespace hyrise {
@@ -89,10 +101,7 @@ class MetaTableTest : public BaseTest {
 class MultiMetaTablesTest : public MetaTableTest, public ::testing::WithParamInterface<MetaTable> {};
 
 auto meta_table_test_formatter = [](const ::testing::TestParamInfo<MetaTable> info) {
-  auto stream = std::stringstream{};
-  stream << info.param->name();
-
-  auto string = stream.str();
+  auto string = info.param->name();
   string.erase(std::remove_if(string.begin(), string.end(),
                               [](char c) {
                                 return !std::isalnum(c);

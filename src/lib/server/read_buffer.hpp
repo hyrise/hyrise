@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <string>
+#include <utility>
 
 #include "ring_buffer_iterator.hpp"
 #include "server_types.hpp"
@@ -14,7 +15,7 @@ namespace hyrise {
 template <typename SocketType>
 class ReadBuffer {
  public:
-  explicit ReadBuffer(std::shared_ptr<SocketType> socket) : _socket(socket) {}
+  explicit ReadBuffer(std::shared_ptr<SocketType> socket) : _socket(std::move(socket)) {}
 
   // Problem: full and empty might be same state, so head == tail
   // Solution: Full state is tail + 1 == head
@@ -53,7 +54,7 @@ class ReadBuffer {
  private:
   void _receive_if_necessary(const size_t bytes_required = 1);
 
-  std::array<char, SERVER_BUFFER_SIZE> _data;
+  std::array<char, SERVER_BUFFER_SIZE> _data{};
   // This iterator points to the first element that has not been read yet.
   RingBufferIterator _start_position{_data};
   // This iterator points to the field after the last unread element of the array.

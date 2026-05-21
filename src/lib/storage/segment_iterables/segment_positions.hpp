@@ -23,9 +23,11 @@ class AbstractSegmentPosition {
  public:
   using Type = T;
 
- public:
   AbstractSegmentPosition() = default;
   AbstractSegmentPosition(const AbstractSegmentPosition&) = default;
+  AbstractSegmentPosition(AbstractSegmentPosition&&) = default;
+  AbstractSegmentPosition& operator=(const AbstractSegmentPosition&) = default;
+  AbstractSegmentPosition& operator=(AbstractSegmentPosition&&) = default;
   virtual ~AbstractSegmentPosition() = default;
 
   virtual const T& value() const = 0;
@@ -48,7 +50,7 @@ class AbstractSegmentPosition {
 template <typename T>
 class SegmentPosition final : public AbstractSegmentPosition<T> {
  public:
-  static constexpr bool Nullable = true;
+  static constexpr bool NULLABLE = true;
 
   SegmentPosition(const T& value, const bool null_value, const ChunkOffset& chunk_offset)
       : _value{value}, _null_value{null_value}, _chunk_offset{chunk_offset} {}
@@ -80,7 +82,7 @@ class SegmentPosition final : public AbstractSegmentPosition<T> {
 template <typename T>
 class NonNullSegmentPosition final : public AbstractSegmentPosition<T> {
  public:
-  static constexpr bool Nullable = false;
+  static constexpr bool NULLABLE = false;
 
   NonNullSegmentPosition(const T& value, const ChunkOffset& chunk_offset)
       : _value{value}, _chunk_offset{chunk_offset} {}
@@ -112,13 +114,13 @@ class NonNullSegmentPosition final : public AbstractSegmentPosition<T> {
  */
 class IsNullSegmentPosition final : public AbstractSegmentPosition<boost::blank> {
  public:
-  static constexpr bool Nullable = true;
+  static constexpr bool NULLABLE = true;
 
   IsNullSegmentPosition(const bool null_value, const ChunkOffset& chunk_offset)
       : _null_value{null_value}, _chunk_offset{chunk_offset} {}
 
   const boost::blank& value() const override {
-    return _blank;
+    return BLANK;
   }
 
   bool is_null() const override {
@@ -131,7 +133,7 @@ class IsNullSegmentPosition final : public AbstractSegmentPosition<boost::blank>
 
  private:
   // The alignment improves the suitability of the iterator for (auto-)vectorization
-  static constexpr auto _blank = boost::blank{};
+  static constexpr auto BLANK = boost::blank{};
   alignas(8) const bool _null_value;
   alignas(8) const ChunkOffset _chunk_offset;
 };

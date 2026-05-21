@@ -1,17 +1,22 @@
 #include <algorithm>
+#include <cstddef>
+#include <iterator>
 #include <memory>
 #include <random>
-#include <utility>
+#include <string>
 
 #include "benchmark/benchmark.h"
 
+#include "all_type_variant.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/union_positions.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
 
 namespace {
+using namespace hyrise;
 
 constexpr auto REFERENCED_TABLE_CHUNK_COUNT = hyrise::ChunkID{10};
 
@@ -38,22 +43,19 @@ std::shared_ptr<hyrise::RowIDPosList> generate_pos_list(float referenced_table_c
     const auto chunk_id = hyrise::ChunkID{chunk_id_distribution(random_engine)};
     const auto chunk_offset = hyrise::ChunkOffset{chunk_offset_distribution(random_engine)};
 
-    pos_list->emplace_back(hyrise::RowID{chunk_id, chunk_offset});
+    pos_list->emplace_back(chunk_id, chunk_offset);
   }
 
   return pos_list;
 }
-}  // namespace
 
-namespace hyrise {
-
-std::shared_ptr<Table> create_reference_table(std::shared_ptr<Table> referenced_table, size_t num_rows,
+std::shared_ptr<Table> create_reference_table(const std::shared_ptr<Table>& referenced_table, size_t num_rows,
                                               size_t num_columns) {
   const auto num_rows_per_chunk = num_rows / GENERATED_TABLE_NUM_CHUNKS;
 
   auto column_definitions = TableColumnDefinitions{};
   for (auto column_id = ColumnID{0}; column_id < num_columns; ++column_id) {
-    column_definitions.emplace_back("c" + std::to_string(column_id), DataType::Int, false);
+    column_definitions.emplace_back(std::format("c{}", column_id.t), DataType::Int, false);
   }
   auto table = std::make_shared<Table>(column_definitions, TableType::References);
 
@@ -89,7 +91,7 @@ void BM_UnionPositions(::benchmark::State& state) {  // NOLINT
   TableColumnDefinitions column_definitions;
 
   for (auto column_idx = 0; column_idx < num_columns; ++column_idx) {
-    column_definitions.emplace_back("c" + std::to_string(column_idx), DataType::Int, false);
+    column_definitions.emplace_back(std::format("c{}", column_idx), DataType::Int, false);
   }
   auto referenced_table = std::make_shared<Table>(column_definitions, TableType::Data);
 
@@ -111,13 +113,11 @@ void BM_UnionPositions(::benchmark::State& state) {  // NOLINT
   }
 }
 
-BENCHMARK(BM_UnionPositions);
-
 /**
  * Measure what sorting and merging two pos lists would cost - that's the core of the UnionPositions implementation and sets
  * a performance base line for what UnionPositions could achieve in an overhead-free implementation.
  */
-void BM_UnionPositionsBaseLine(::benchmark::State& state) {  // NOLINT
+void BM_UnionPositionsBaseLine(::benchmark::State& state) {
   auto num_table_rows = 500000;
 
   auto pos_list_left = generate_pos_list(static_cast<float>(num_table_rows) * 0.2f, num_table_rows);
@@ -128,14 +128,20 @@ void BM_UnionPositionsBaseLine(::benchmark::State& state) {  // NOLINT
     auto& left = *pos_list_left;
     auto& right = *pos_list_right;
 
-    std::sort(left.begin(), left.end());
-    std::sort(right.begin(), right.end());
+    std::ranges::sort(left);
+    std::ranges::sort(right);
 
-    RowIDPosList result;
+    auto result = RowIDPosList{};
     result.reserve(std::min(left.size(), right.size()));
-    std::set_union(left.begin(), left.end(), right.begin(), right.end(), std::back_inserter(result));
+    std::ranges::set_union(left, right, std::back_inserter(result));
   }
 }
+
+}  // namespace
+
+namespace hyrise {
+
+BENCHMARK(BM_UnionPositions);
 
 BENCHMARK(BM_UnionPositionsBaseLine);
 }  // namespace hyrise

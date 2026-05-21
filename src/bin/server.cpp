@@ -1,6 +1,7 @@
 #include "server/server.hpp"
 
 #include <cstdint>
+#include <format>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -28,7 +29,7 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT(build/namespaces)
+using namespace hyrise;
 
 cxxopts::Options get_server_cli_options() {
   auto cli_options = cxxopts::Options{"./hyriseServer", "Starts Hyrise server in order to accept network requests."};
@@ -112,7 +113,8 @@ int main(int argc, char* argv[]) {
   auto error = boost::system::error_code{};
   const auto address = boost::asio::ip::make_address(parsed_options["address"].as<std::string>(), error);
 
-  Assert(!error, "Not a valid IPv4 address: " + parsed_options["address"].as<std::string>() + ", terminating...");
+  Assert(!error,
+         std::format("Not a valid IPv4 address: '{}', terminating...", parsed_options["address"].as<std::string>()));
 
   auto server = hyrise::Server{address, port, static_cast<hyrise::SendExecutionInfo>(execution_info)};
   server.run();
