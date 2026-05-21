@@ -483,7 +483,7 @@ TEST_F(SchedulerTest, NumGroupDeterminationDifferentLoads) {
   // group count when we
 
   EXPECT_EQ(*num_groups_without_load, 2 * worker_count);  // 2 * NodeQueueScheduler::NUM_GROUPS_MAX_FACTOR
-  //EXPECT_EQ(*num_groups_with_load, 8);                    // NodeQueueScheduler::MIN_GROUP_COUNT
+  // EXPECT_EQ(*num_groups_with_load, 8);                    // NodeQueueScheduler::MIN_GROUP_COUNT
 
   // Shutdown. Unblock scheduled jobs.
   block_jobs = false;
