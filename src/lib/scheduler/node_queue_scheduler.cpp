@@ -353,9 +353,10 @@ void NodeQueueScheduler::_schedule(std::shared_ptr<AbstractTask> task, NodeID pr
 
 void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const {
   const auto group_count = determine_group_count(tasks);
-  if (!group_count) {  // Skip grouping when not beneficial.
+  //std::cerr << std::format(" GC: {} ", (group_count ? "none" : std::to_string(*group_count)));
+  /*if (!group_count) {  // Skip grouping when not beneficial.
     return;
-  }
+  }*/
 
   _group_tasks(tasks, *group_count);
 }
