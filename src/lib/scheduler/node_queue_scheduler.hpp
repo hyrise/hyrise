@@ -55,7 +55,7 @@ namespace node_queue_scheduler::detail {
  * _workers_per_node).
  */
 constexpr auto NUM_GROUPS_MIN_FACTOR = 0.1;
-constexpr auto NUM_GROUPS_MAX_FACTOR = 1.0;
+constexpr auto NUM_GROUPS_MAX_FACTOR = 2.0;
 
 // For small machines where NUM_GROUPS_MIN_FACTOR * cores can yield small group_counts, we cut of at `MIN_GROUP_COUNT`.
 // We found for "small" machines (e.g., 12 core MacBooks but also 32-thread servers), the calculated minimal group

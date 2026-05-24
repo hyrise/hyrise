@@ -66,7 +66,7 @@ void NodeQueueScheduler::begin() {
   // std::cout << ((_step_size * _queue_load_capped) == (_max_group_count - _min_group_count)) << " <<<<<\n";
   Assert((_step_size * _queue_load_capped) == (_max_group_count - _min_group_count), "...");
 
-  // For every task list of  size >= `_regrouping_upper_limit`, we use the max value for grouping. For 64 workers, a
+  // For every task list of size >= `_regrouping_upper_limit`, we use the minimal value for grouping. For 64 workers, a
   // queue load of 640 (i.e., ~640 normal priority tasks) is enough to use the minimum number of groups.
   _regrouping_upper_limit = _worker_count * UPPER_LIMIT_QUEUE_SIZE_FACTOR;
 
@@ -327,10 +327,10 @@ void NodeQueueScheduler::_schedule(std::shared_ptr<AbstractTask> task, NodeID pr
 
 void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const {
   const auto group_count = determine_group_count(tasks);
-  //std::cerr << std::format(" GC: {} ", (group_count ? "none" : std::to_string(*group_count)));
-  /*if (!group_count) {  // Skip grouping when not beneficial.
+  //std::cerr << std::format("\tTask count: {}, GC: {}\t", tasks.size(), (group_count.has_value() ? std::to_string(*group_count) : std::string{"none"}));
+  if (!group_count) {  // Skip grouping when not beneficial.
     return;
-  }*/
+  }
 
   _group_tasks(tasks, *group_count);
 }
