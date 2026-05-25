@@ -150,7 +150,7 @@ void write_output_segments(Segments& output_segments, const std::shared_ptr<cons
         if (common_chunk_id && *common_chunk_id != INVALID_CHUNK_ID) {
           // Track the occuring chunk ids and set the single chunk guarantee if possible. Generally, this is the case
           // if both of the following are true: (1) The probe side input already had this guarantee and (2) no radix
-          // partitioning was used. If multiple small PosLists were merged (see MIN_SIZE in join_hash.cpp), this
+          // partitioning was used. If multiple small PosLists were mergeg (see MIN_SIZE), this
           // guarantee cannot be given.
           new_pos_list->guarantee_single_chunk();
         }
@@ -252,8 +252,8 @@ std::vector<std::shared_ptr<Chunk>> write_output_chunks(
     // A lower number of output chunks reduces the overhead, especially when multi-threading is used. However,
     // merging chunks destroys a potential references_single_chunk property of the PosList that would have been
     // emitted otherwise. Search for guarantee_single_chunk in join_hash_steps.hpp for details.
-    constexpr auto MIN_SIZE = 500;
-    constexpr auto MAX_SIZE = MIN_SIZE * 2;
+    constexpr auto MIN_SIZE = 1000;
+    constexpr auto MAX_SIZE = MIN_SIZE * 4;
 
     // Moving the values into a shared PosList saves us some work in write_output_segments. We know that
     // left_side_pos_list and right_side_pos_list will not be used again.
