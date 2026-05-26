@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <bit>
 #include <chrono>
+#include <concepts>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -357,7 +358,7 @@ struct ScanResult {
 template <typename ColumnDataType>
 ScanResult scan_column(const AbstractSegment& segment) {
   auto result = ScanResult();
-  segment_with_iterators<ColumnDataType>(segment, [&](auto it, const auto end) {
+  segment_with_iterators<ColumnDataType>(segment, [&](auto it, const auto& end) {
     for (; it != end; ++it) {
       const auto& segment_position = *it;
       if (segment_position.is_null()) {
