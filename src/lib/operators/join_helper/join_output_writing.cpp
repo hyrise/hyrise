@@ -253,7 +253,7 @@ std::vector<std::shared_ptr<Chunk>> write_output_chunks(
     // merging chunks destroys a potential references_single_chunk property of the PosList that would have been
     // emitted otherwise. Search for guarantee_single_chunk in join_hash_steps.hpp for details.
     constexpr auto MIN_SIZE = 1000;
-    constexpr auto MAX_SIZE = MIN_SIZE * 8;
+    constexpr auto MAX_SIZE = MIN_SIZE * 4;
 
     // Moving the values into a shared PosList saves us some work in write_output_segments. We know that
     // left_side_pos_list and right_side_pos_list will not be used again.

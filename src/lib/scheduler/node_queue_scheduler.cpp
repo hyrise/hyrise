@@ -23,6 +23,7 @@
 #include "utils/assert.hpp"
 #include "worker.hpp"
 
+
 namespace hyrise {
 
 using namespace node_queue_scheduler::detail;
@@ -289,13 +290,6 @@ std::optional<size_t> NodeQueueScheduler::determine_group_count(
   const auto group_count =
       static_cast<size_t>(_max_group_count - (std::min(_queue_load_capped, queue_load) * _step_size));
 
-  // // Scale between 1.0 (max group count) to 0.0 (minimal group count).
-  // const auto fill_level = 1.0f - (static_cast<float>(std::min(queue_load, _regrouping_upper_limit)) /
-  //                                 static_cast<float>(_regrouping_upper_limit));
-  // const auto group_count_factor = NUM_GROUPS_MIN_FACTOR + (NUM_GROUPS_RANGE * fill_level);
-  // const auto group_count =
-  //     std::max(size_t{MIN_GROUP_COUNT}, static_cast<size_t>(static_cast<float>(_worker_count) * group_count_factor));
-
   // If the resulting groups are smaller than two tasks, skip grouping.
   if ((task_count / group_count) < 2) {
     return std::nullopt;
@@ -327,7 +321,6 @@ void NodeQueueScheduler::_schedule(std::shared_ptr<AbstractTask> task, NodeID pr
 
 void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const {
   const auto group_count = determine_group_count(tasks);
-  // std::cerr << std::format("\tTask count: {}, GC: {}\t", tasks.size(), (group_count.has_value() ? std::to_string(*group_count) : std::string{"none"}));
   if (!group_count) {  // Skip grouping when not beneficial.
     return;
   }
