@@ -1,13 +1,14 @@
 #include "export_node.hpp"
 
 #include <cstddef>
+#include <format>
 #include <memory>
 #include <string>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/container_hash/hash.hpp>
 
-#include "magic_enum.hpp"
+#include "magic_enum/magic_enum.hpp"
 
 #include "import_export/file_type.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
@@ -21,7 +22,7 @@ ExportNode::ExportNode(const std::string& init_file_name, const FileType init_fi
 std::string ExportNode::description(const DescriptionMode /*mode*/) const {
   auto file_type_str = std::string{magic_enum::enum_name(file_type)};
   boost::algorithm::to_lower(file_type_str);
-  return "[Export] to '" + file_name + "' (" + file_type_str + ")";
+  return std::format("[Export] to '{}' ({})", file_name, file_type_str);
 }
 
 size_t ExportNode::_on_shallow_hash() const {

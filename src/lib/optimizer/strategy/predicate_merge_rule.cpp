@@ -18,7 +18,7 @@
 
 namespace hyrise {
 
-using namespace expression_functional;  // NOLINT(build/namespaces)
+using namespace expression_functional;
 
 std::string PredicateMergeRule::name() const {
   static const auto name = std::string{"PredicateMergeRule"};

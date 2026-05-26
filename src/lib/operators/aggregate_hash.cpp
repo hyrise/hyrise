@@ -7,6 +7,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <format>
 #include <functional>
 #include <limits>
 #include <memory>
@@ -45,7 +46,188 @@
 #include "utils/timer.hpp"
 
 namespace {
-using namespace hyrise;  // NOLINT(build/namespaces)
+using namespace hyrise;
+
+/**
+ * The following template functions write the aggregated values for the different aggregate functions. They are separate
+ * and templated to avoid compiler errors for invalid type/function combinations.
+ */
+
+// MIN, MAX, SUM, ANY write the current aggregated value.
+template <typename ColumnDataType, typename AggregateType, WindowFunction aggregate_func>
+  requires(aggregate_func == WindowFunction::Min || aggregate_func == WindowFunction::Max ||
+           aggregate_func == WindowFunction::Sum || aggregate_func == WindowFunction::Any)
+bool write_aggregate_values(const AggregateResults<ColumnDataType, aggregate_func>& results,
+                            std::vector<pmr_vector<AggregateType>>& value_vectors,
+                            std::vector<pmr_vector<bool>>& null_vectors) {
+  auto null_written = std::atomic<bool>{};
+  split_results_chunk_wise(true, results, value_vectors, null_vectors,
+                           [&](auto begin, const auto end, const ChunkID chunk_id) {
+                             auto& values = value_vectors[chunk_id];
+                             auto& null_values = null_vectors[chunk_id];
+
+                             for (; begin != end; ++begin) {
+                               const auto& result = *begin;
+
+                               // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap
+                               // (in the case of an unused immediate key) or the result of overallocating the result
+                               // vector. As such, it must be skipped.
+                               if (result.row_id.is_null()) {
+                                 continue;
+                               }
+
+                               if (result.aggregate_count > 0) {
+                                 values.emplace_back(result.accumulator);
+                                 null_values.emplace_back(false);
+                               } else {
+                                 values.emplace_back();
+                                 null_values.emplace_back(true);
+                                 null_written = true;
+                               }
+                             }
+                           });
+  return null_written;
+}
+
+// COUNT writes the aggregate counter.
+template <typename ColumnDataType, typename AggregateType, WindowFunction aggregate_func>
+  requires(aggregate_func == WindowFunction::Count)
+bool write_aggregate_values(const AggregateResults<ColumnDataType, aggregate_func>& results,
+                            std::vector<pmr_vector<AggregateType>>& value_vectors,
+                            std::vector<pmr_vector<bool>>& null_vectors) {
+  split_results_chunk_wise(false, results, value_vectors, null_vectors,
+                           [&](auto begin, const auto end, const ChunkID chunk_id) {
+                             auto& values = value_vectors[chunk_id];
+
+                             for (; begin != end; ++begin) {
+                               const auto& result = *begin;
+
+                               // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap
+                               // (in the case of an unused immediate key) or the result of overallocating the result
+                               // vector. As such, it must be skipped.
+                               if (result.row_id.is_null()) {
+                                 continue;
+                               }
+
+                               values.emplace_back(result.aggregate_count);
+                             }
+                           });
+  return false;
+}
+
+// COUNT(DISTINCT) writes the number of distinct values.
+template <typename ColumnDataType, typename AggregateType, WindowFunction aggregate_func>
+  requires(aggregate_func == WindowFunction::CountDistinct)
+bool write_aggregate_values(const AggregateResults<ColumnDataType, aggregate_func>& results,
+                            std::vector<pmr_vector<AggregateType>>& value_vectors,
+                            std::vector<pmr_vector<bool>>& null_vectors) {
+  split_results_chunk_wise(false, results, value_vectors, null_vectors,
+                           [&](auto begin, const auto end, const ChunkID chunk_id) {
+                             auto& values = value_vectors[chunk_id];
+
+                             for (; begin != end; ++begin) {
+                               const auto& result = *begin;
+
+                               // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap
+                               // (in the case of an unused immediate key) or the result of overallocating the result
+                               // vector. As such, it must be skipped.
+                               if (result.row_id.is_null()) {
+                                 continue;
+                               }
+
+                               values.emplace_back(result.accumulator.size());
+                             }
+                           });
+  return false;
+}
+
+// AVG writes the calculated average from current aggregate and the aggregate counter.
+template <typename ColumnDataType, typename AggregateType, WindowFunction aggregate_func>
+  requires(aggregate_func == WindowFunction::Avg && std::is_arithmetic_v<AggregateType>)
+bool write_aggregate_values(const AggregateResults<ColumnDataType, aggregate_func>& results,
+                            std::vector<pmr_vector<AggregateType>>& value_vectors,
+                            std::vector<pmr_vector<bool>>& null_vectors) {
+  auto null_written = std::atomic<bool>{};
+  split_results_chunk_wise(
+      true, results, value_vectors, null_vectors, [&](auto begin, const auto end, const ChunkID chunk_id) {
+        auto& values = value_vectors[chunk_id];
+        auto& null_values = null_vectors[chunk_id];
+
+        for (; begin != end; ++begin) {
+          const auto& result = *begin;
+
+          // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap (in the case of an
+          // unused immediate key) or the result of overallocating the result vector. As such, it must be skipped.
+          if (result.row_id.is_null()) {
+            continue;
+          }
+
+          if (result.aggregate_count > 0) {
+            values.emplace_back(result.accumulator / static_cast<AggregateType>(result.aggregate_count));
+            null_values.emplace_back(false);
+          } else {
+            values.emplace_back();
+            null_values.emplace_back(true);
+            null_written = true;
+          }
+        }
+      });
+  return null_written;
+}
+
+// AVG is not defined for non-arithmetic types. Avoiding compiler errors.
+template <typename ColumnDataType, typename AggregateType, WindowFunction aggregate_func>
+  requires(aggregate_func == WindowFunction::Avg && !std::is_arithmetic_v<AggregateType>)
+bool write_aggregate_values(const AggregateResults<ColumnDataType, aggregate_func>& /*results*/,
+                            std::vector<pmr_vector<AggregateType>>& /* values */,
+                            std::vector<pmr_vector<bool>>& /* null_vectors */) {
+  Fail("Invalid aggregate.");
+}
+
+// STDDEV_SAMP writes the calculated standard deviation from current aggregate and the aggregate counter.
+template <typename ColumnDataType, typename AggregateType, WindowFunction aggregate_func>
+  requires(aggregate_func == WindowFunction::StandardDeviationSample && std::is_arithmetic_v<AggregateType>)
+bool write_aggregate_values(const AggregateResults<ColumnDataType, aggregate_func>& results,
+                            std::vector<pmr_vector<AggregateType>>& value_vectors,
+                            std::vector<pmr_vector<bool>>& null_vectors) {
+  auto null_written = std::atomic<bool>{};
+  split_results_chunk_wise(true, results, value_vectors, null_vectors,
+                           [&](auto begin, const auto end, const ChunkID chunk_id) {
+                             auto& values = value_vectors[chunk_id];
+                             auto& null_values = null_vectors[chunk_id];
+
+                             for (; begin != end; ++begin) {
+                               const auto& result = *begin;
+
+                               // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap
+                               // (in the case of an unused immediate key) or the result of overallocating the result
+                               // vector. As such, it must be skipped.
+                               if (result.row_id.is_null()) {
+                                 continue;
+                               }
+
+                               if (result.aggregate_count > 1) {
+                                 values.emplace_back(result.accumulator[3]);
+                                 null_values.emplace_back(false);
+                               } else {
+                                 // STDDEV_SAMP is undefined for lists with less than two elements.
+                                 values.emplace_back();
+                                 null_values.emplace_back(true);
+                                 null_written = true;
+                               }
+                             }
+                           });
+  return null_written;
+}
+
+// STDDEV_SAMP is not defined for non-arithmetic types. Avoiding compiler errors.
+template <typename ColumnDataType, typename AggregateType, WindowFunction aggregate_func>
+  requires(aggregate_func == WindowFunction::StandardDeviationSample && !std::is_arithmetic_v<AggregateType>)
+bool write_aggregate_values(const AggregateResults<ColumnDataType, aggregate_func>& /*results*/,
+                            std::vector<pmr_vector<AggregateType>>& /* values */,
+                            std::vector<pmr_vector<bool>>& /* null_vectors */) {
+  Fail("Invalid aggregate.");
+}
 
 /**
  * Helper to split results into chunks and prepare output vectors. Callers pass a function to consume the split results.
@@ -82,7 +264,7 @@ void split_results_chunk_wise(const bool write_nulls, const AggregateResults<Col
   jobs.reserve(output_chunk_count);
   for (auto output_chunk_id = ChunkID{0}; output_chunk_id < output_chunk_count; ++output_chunk_id) {
     const auto write_split_data = [&, output_chunk_id, consumer_function]() {
-      auto begin = results_begin + output_chunk_id * Chunk::DEFAULT_SIZE;
+      auto begin = results_begin + (output_chunk_id * Chunk::DEFAULT_SIZE);
       auto end = results_begin + std::min(result_count, (output_chunk_id + 1) * Chunk::DEFAULT_SIZE);
 
       const auto element_count = std::distance(begin, end);
@@ -130,7 +312,7 @@ void prepare_output(std::vector<Segments>& output, const size_t chunk_count, con
 // calculates multiple aggregate functions, we only need to perform this lookup as part of the first aggregate function.
 // By setting CacheResultIds to true_type, we can store the result of the lookup in the AggregateKey. Following
 // aggregate functions can then retrieve the index from the AggregateKey.
-constexpr auto CACHE_MASK = AggregateKeyEntry{1} << 63u;  // See explanation below
+constexpr auto CACHE_MASK = AggregateKeyEntry{1} << uint8_t{63};  // See explanation below
 
 template <typename CacheResultIds, typename ResultIds, typename Results, typename AggregateKey>
 typename Results::reference get_or_add_result(CacheResultIds /*cache_result_ids*/, ResultIds& result_ids,
@@ -363,9 +545,10 @@ AggregateHash::AggregateHash(const std::shared_ptr<AbstractOperator>& input_oper
                              const std::vector<ColumnID>& groupby_column_ids)
     : AbstractAggregateOperator(input_operator, aggregates, groupby_column_ids,
                                 std::make_unique<OperatorPerformanceData<OperatorSteps>>()) {
-  // NOLINTNEXTLINE - clang-tidy wants _has_aggregate_functions in the member initializer list.
+  // clang-tidy wants _has_aggregate_functions in the member initializer list.
+  // NOLINTNEXTLINE(cppcoreguidelines-prefer-member-initializer)
   _has_aggregate_functions =
-      !_aggregates.empty() && !std::all_of(_aggregates.begin(), _aggregates.end(), [](const auto aggregate_expression) {
+      !_aggregates.empty() && !std::ranges::all_of(_aggregates, [](const auto& aggregate_expression) {
         return aggregate_expression->window_function == WindowFunction::Any;
       });
 }
@@ -656,9 +839,9 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() {
               segment_iterate<ColumnDataType>(*abstract_segment, [&](const auto& position) {
                 if (position.is_null()) {
                   if constexpr (std::is_same_v<AggregateKey, AggregateKeyEntry>) {
-                    keys[chunk_offset] = 0u;
+                    keys[chunk_offset] = 0;
                   } else {
-                    keys[chunk_offset][group_column_index] = 0u;
+                    keys[chunk_offset][group_column_index] = 0;
                   }
                 } else {
                   // We need to generate an ID that is unique for the value. In some cases, we can use an optimization,
@@ -843,7 +1026,7 @@ void AggregateHash::_aggregate() {
       /**
        * DISTINCT implementation
        *
-       * In Hyrise we handle the SQL keyword DISTINCT by using an aggregate operator with grouping but without 
+       * In Hyrise we handle the SQL keyword DISTINCT by using an aggregate operator with grouping but without
        * aggregate functions. All input columns (either explicitly specified as `SELECT DISTINCT a, b, c` OR implicitly
        * as `SELECT DISTINCT *` are passed as `groupby_column_ids`).
        *
@@ -983,8 +1166,8 @@ void AggregateHash::_aggregate() {
             case WindowFunction::PercentRank:
             case WindowFunction::Rank:
             case WindowFunction::RowNumber:
-              Fail("Unsupported aggregate function " + window_function_to_string.left.at(aggregate->window_function) +
-                   ".");
+              Fail(std::format("Unsupported aggregate function '{}'.",
+                               window_function_to_string.left.at(aggregate->window_function)));
           }
         });
 
@@ -1030,9 +1213,9 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
     auto groupby_columns_writing_timer = Timer{};
     write_groupby_output(left_input_table(), _aggregates, _groupby_column_ids, context->results,
                          _output_column_definitions, _intermediate_result);
-    DebugAssert(groupby_columns_writing_duration == std::chrono::nanoseconds{0},
-                "groupby_columns_writing_duration() was apparently called more than once.");
-    groupby_columns_writing_duration = groupby_columns_writing_timer.lap();
+    DebugAssert(_groupby_columns_writing_duration == std::chrono::nanoseconds{0},
+                "_groupby_columns_writing_duration() was apparently called more than once.");
+    _groupby_columns_writing_duration = groupby_columns_writing_timer.lap();
   }
 
   /*
@@ -1080,7 +1263,8 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
         case WindowFunction::PercentRank:
         case WindowFunction::Rank:
         case WindowFunction::RowNumber:
-          Fail("Unsupported aggregate function " + window_function_to_string.left.at(aggregate->window_function) + ".");
+          Fail(std::format("Unsupported aggregate function '{}'.",
+                           window_function_to_string.left.at(aggregate->window_function)));
       }
     });
 
@@ -1103,6 +1287,7 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
   auto entireposlist_indexes = std::vector<ColumnID>{};
   entireposlist_indexes.reserve(_aggregates.size());
 
+  // NOLINTNEXTLINE(modernize-use-ranges): We need LLVM 21's libc++ for std::ranges::iota.
   std::iota(reference_segment_indexes.begin(), reference_segment_indexes.end(), ColumnID{0});
   auto output_column_id = ColumnID{static_cast<ColumnID::base_type>(_groupby_column_ids.size())};
   for (const auto& aggregate : _aggregates) {
@@ -1181,186 +1366,10 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
   auto& step_performance_data = dynamic_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
   step_performance_data.set_step_runtime(OperatorSteps::OutputWriting, timer.lap());
 
-  step_performance_data.set_step_runtime(OperatorSteps::GroupByColumnsWriting, groupby_columns_writing_duration);
-  step_performance_data.set_step_runtime(OperatorSteps::AggregateColumnsWriting, aggregate_columns_writing_duration);
+  step_performance_data.set_step_runtime(OperatorSteps::GroupByColumnsWriting, _groupby_columns_writing_duration);
+  step_performance_data.set_step_runtime(OperatorSteps::AggregateColumnsWriting, _aggregate_columns_writing_duration);
 
   return operator_output;
-}
-
-/*
-The following template functions write the aggregated values for the different aggregate functions.
-They are separate and templated to avoid compiler errors for invalid type/function combinations.
-*/
-// MIN, MAX, SUM, ANY write the current aggregated value.
-template <typename ColumnDataType, typename AggregateType, WindowFunction aggregate_func>
-std::enable_if_t<aggregate_func == WindowFunction::Min || aggregate_func == WindowFunction::Max ||
-                     aggregate_func == WindowFunction::Sum || aggregate_func == WindowFunction::Any,
-                 bool>
-write_aggregate_values(const AggregateResults<ColumnDataType, aggregate_func>& results,
-                       std::vector<pmr_vector<AggregateType>>& value_vectors,
-                       std::vector<pmr_vector<bool>>& null_vectors) {
-  auto null_written = std::atomic<bool>{};
-  split_results_chunk_wise(
-      true, results, value_vectors, null_vectors, [&](auto begin, const auto end, const ChunkID chunk_id) {
-        auto& values = value_vectors[chunk_id];
-        auto& null_values = null_vectors[chunk_id];
-
-        for (; begin != end; ++begin) {
-          const auto& result = *begin;
-
-          // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap (in the case of an
-          // unused immediate key) or the result of overallocating the result vector. As such, it must be skipped.
-          if (result.row_id.is_null()) {
-            continue;
-          }
-
-          if (result.aggregate_count > 0) {
-            values.emplace_back(result.accumulator);
-            null_values.emplace_back(false);
-          } else {
-            values.emplace_back();
-            null_values.emplace_back(true);
-            null_written = true;
-          }
-        }
-      });
-  return null_written;
-}
-
-// COUNT writes the aggregate counter.
-template <typename ColumnDataType, typename AggregateType, WindowFunction aggregate_func>
-std::enable_if_t<aggregate_func == WindowFunction::Count, bool> write_aggregate_values(
-    const AggregateResults<ColumnDataType, aggregate_func>& results,
-    std::vector<pmr_vector<AggregateType>>& value_vectors, std::vector<pmr_vector<bool>>& null_vectors) {
-  split_results_chunk_wise(
-      false, results, value_vectors, null_vectors, [&](auto begin, const auto end, const ChunkID chunk_id) {
-        auto& values = value_vectors[chunk_id];
-
-        for (; begin != end; ++begin) {
-          const auto& result = *begin;
-
-          // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap (in the case of an
-          // unused immediate key) or the result of overallocating the result vector. As such, it must be skipped.
-          if (result.row_id.is_null()) {
-            continue;
-          }
-
-          values.emplace_back(result.aggregate_count);
-        }
-      });
-  return false;
-}
-
-// COUNT(DISTINCT) writes the number of distinct values.
-template <typename ColumnDataType, typename AggregateType, WindowFunction aggregate_func>
-std::enable_if_t<aggregate_func == WindowFunction::CountDistinct, bool> write_aggregate_values(
-    const AggregateResults<ColumnDataType, aggregate_func>& results,
-    std::vector<pmr_vector<AggregateType>>& value_vectors, std::vector<pmr_vector<bool>>& null_vectors) {
-  split_results_chunk_wise(
-      false, results, value_vectors, null_vectors, [&](auto begin, const auto end, const ChunkID chunk_id) {
-        auto& values = value_vectors[chunk_id];
-
-        for (; begin != end; ++begin) {
-          const auto& result = *begin;
-
-          // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap (in the case of an
-          // unused immediate key) or the result of overallocating the result vector. As such, it must be skipped.
-          if (result.row_id.is_null()) {
-            continue;
-          }
-
-          values.emplace_back(result.accumulator.size());
-        }
-      });
-  return false;
-}
-
-// AVG writes the calculated average from current aggregate and the aggregate counter.
-template <typename ColumnDataType, typename AggregateType, WindowFunction aggregate_func>
-std::enable_if_t<aggregate_func == WindowFunction::Avg && std::is_arithmetic_v<AggregateType>, bool>
-write_aggregate_values(const AggregateResults<ColumnDataType, aggregate_func>& results,
-                       std::vector<pmr_vector<AggregateType>>& value_vectors,
-                       std::vector<pmr_vector<bool>>& null_vectors) {
-  auto null_written = std::atomic<bool>{};
-  split_results_chunk_wise(
-      true, results, value_vectors, null_vectors, [&](auto begin, const auto end, const ChunkID chunk_id) {
-        auto& values = value_vectors[chunk_id];
-        auto& null_values = null_vectors[chunk_id];
-
-        for (; begin != end; ++begin) {
-          const auto& result = *begin;
-
-          // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap (in the case of an
-          // unused immediate key) or the result of overallocating the result vector. As such, it must be skipped.
-          if (result.row_id.is_null()) {
-            continue;
-          }
-
-          if (result.aggregate_count > 0) {
-            values.emplace_back(result.accumulator / static_cast<AggregateType>(result.aggregate_count));
-            null_values.emplace_back(false);
-          } else {
-            values.emplace_back();
-            null_values.emplace_back(true);
-            null_written = true;
-          }
-        }
-      });
-  return null_written;
-}
-
-// AVG is not defined for non-arithmetic types. Avoiding compiler errors.
-template <typename ColumnDataType, typename AggregateType, WindowFunction aggregate_func>
-std::enable_if_t<aggregate_func == WindowFunction::Avg && !std::is_arithmetic_v<AggregateType>, bool>
-write_aggregate_values(const AggregateResults<ColumnDataType, aggregate_func>& /*results*/,
-                       std::vector<pmr_vector<AggregateType>>& /* values */,
-                       std::vector<pmr_vector<bool>>& /* null_vectors */) {
-  Fail("Invalid aggregate.");
-}
-
-// STDDEV_SAMP writes the calculated standard deviation from current aggregate and the aggregate counter.
-template <typename ColumnDataType, typename AggregateType, WindowFunction aggregate_func>
-std::enable_if_t<aggregate_func == WindowFunction::StandardDeviationSample && std::is_arithmetic_v<AggregateType>, bool>
-write_aggregate_values(const AggregateResults<ColumnDataType, aggregate_func>& results,
-                       std::vector<pmr_vector<AggregateType>>& value_vectors,
-                       std::vector<pmr_vector<bool>>& null_vectors) {
-  auto null_written = std::atomic<bool>{};
-  split_results_chunk_wise(
-      true, results, value_vectors, null_vectors, [&](auto begin, const auto end, const ChunkID chunk_id) {
-        auto& values = value_vectors[chunk_id];
-        auto& null_values = null_vectors[chunk_id];
-
-        for (; begin != end; ++begin) {
-          const auto& result = *begin;
-
-          // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap (in the case of an
-          // unused immediate key) or the result of overallocating the result vector. As such, it must be skipped.
-          if (result.row_id.is_null()) {
-            continue;
-          }
-
-          if (result.aggregate_count > 1) {
-            values.emplace_back(result.accumulator[3]);
-            null_values.emplace_back(false);
-          } else {
-            // STDDEV_SAMP is undefined for lists with less than two elements.
-            values.emplace_back();
-            null_values.emplace_back(true);
-            null_written = true;
-          }
-        }
-      });
-  return null_written;
-}
-
-// STDDEV_SAMP is not defined for non-arithmetic types. Avoiding compiler errors.
-template <typename ColumnDataType, typename AggregateType, WindowFunction aggregate_func>
-std::enable_if_t<aggregate_func == WindowFunction::StandardDeviationSample && !std::is_arithmetic_v<AggregateType>,
-                 bool>
-write_aggregate_values(const AggregateResults<ColumnDataType, aggregate_func>& /*results*/,
-                       std::vector<pmr_vector<AggregateType>>& /* values */,
-                       std::vector<pmr_vector<bool>>& /* null_vectors */) {
-  Fail("Invalid aggregate.");
 }
 
 template <typename ColumnDataType, WindowFunction aggregate_function>
@@ -1396,9 +1405,9 @@ void AggregateHash::_write_aggregate_output(ColumnID aggregate_index) {
     write_groupby_output(left_input_table(), _aggregates, _groupby_column_ids, results, _output_column_definitions,
                          _intermediate_result);
     const auto groupby_columns_writing_runtime = groupby_columns_writing_timer.lap();
-    DebugAssert(groupby_columns_writing_duration == std::chrono::nanoseconds{0},
-                "groupby_columns_writing_duration() was apparently called more than once.");
-    groupby_columns_writing_duration = groupby_columns_writing_runtime;
+    DebugAssert(_groupby_columns_writing_duration == std::chrono::nanoseconds{0},
+                "_groupby_columns_writing_duration() was apparently called more than once.");
+    _groupby_columns_writing_duration = groupby_columns_writing_runtime;
     excluded_time = groupby_columns_writing_runtime;
   }
 
@@ -1444,7 +1453,7 @@ void AggregateHash::_write_aggregate_output(ColumnID aggregate_index) {
     _intermediate_result[segment_id][output_column_id] = output_segment;
   }
 
-  aggregate_columns_writing_duration += timer.lap() - excluded_time;
+  _aggregate_columns_writing_duration += timer.lap() - excluded_time;
 }
 
 template <typename AggregateKey>
@@ -1486,7 +1495,8 @@ std::shared_ptr<SegmentVisitorContext> AggregateHash::_create_aggregate_context(
       case WindowFunction::PercentRank:
       case WindowFunction::Rank:
       case WindowFunction::RowNumber:
-        Fail("Unsupported aggregate function '" + window_function_to_string.left.at(aggregate_function) + "'.");
+        Fail(
+            std::format("Unsupported aggregate function '{}'.", window_function_to_string.left.at(aggregate_function)));
     }
   });
 

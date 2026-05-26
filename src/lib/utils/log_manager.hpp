@@ -10,7 +10,7 @@
 
 namespace hyrise {
 
-enum class LogLevel { Debug, Info, Warning };
+enum class LogLevel : uint8_t { Debug, Info, Warning };
 
 struct LogEntry {
   // We need system_clock here to provide human readable timestamps in MetaLogTable.

@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <format>
 #include <memory>
 #include <optional>
 #include <sstream>
@@ -11,7 +12,7 @@
 
 #include <boost/lexical_cast/bad_lexical_cast.hpp>
 
-#include "magic_enum.hpp"
+#include "magic_enum/magic_enum.hpp"
 
 #include "all_type_variant.hpp"
 #include "expression/abstract_expression.hpp"
@@ -35,14 +36,13 @@
 
 namespace hyrise {
 
-using namespace expression_functional;  // NOLINT(build/namespaces)
+using namespace expression_functional;
 
 bool expressions_equal(const std::vector<std::shared_ptr<AbstractExpression>>& expressions_a,
                        const std::vector<std::shared_ptr<AbstractExpression>>& expressions_b) {
-  return std::equal(expressions_a.begin(), expressions_a.end(), expressions_b.begin(), expressions_b.end(),
-                    [&](const auto& expression_a, const auto& expression_b) {
-                      return *expression_a == *expression_b;
-                    });
+  return std::ranges::equal(expressions_a, expressions_b, [&](const auto& expression_a, const auto& expression_b) {
+    return *expression_a == *expression_b;
+  });
 }
 
 bool expressions_equal_to_expressions_in_different_lqp(
@@ -149,7 +149,7 @@ std::shared_ptr<LQPColumnExpression> expression_adapt_to_different_lqp(const LQP
   Assert(node, "LQPColumnExpression is expired.");
   const auto node_mapping_iter = node_mapping.find(node);
   Assert(node_mapping_iter != node_mapping.end(),
-         "Could not find referenced node (" + node->description() + ") in NodeMapping.");
+         std::format("Could not find referenced node '{}' in NodeMapping.", node->description()));
 
   return std::make_shared<LQPColumnExpression>(node_mapping_iter->second, lqp_column_expression.original_column_id);
 }
@@ -356,7 +356,7 @@ bool expression_contains_correlated_parameter(const std::shared_ptr<AbstractExpr
 std::optional<AllTypeVariant> expression_get_value_or_parameter(const AbstractExpression& expression) {
   if (const auto* correlated_parameter_expression = dynamic_cast<const CorrelatedParameterExpression*>(&expression)) {
     DebugAssert(correlated_parameter_expression->value(), "CorrelatedParameterExpression does not have a value set.");
-    return *correlated_parameter_expression->value();
+    return correlated_parameter_expression->value();
   }
 
   if (expression.type == ExpressionType::Value) {
@@ -384,8 +384,8 @@ std::optional<AllTypeVariant> expression_get_value_or_parameter(const AbstractEx
         // lossy_variant_cast returns std::nullopt when it casts from a NULL value. We have handled this above.
         result = *lossy_variant_cast<TargetDataType>(value_expression.value);
       } catch (boost::bad_lexical_cast&) {
-        Fail("Cannot cast " + cast_expression.argument()->as_column_name() + " as " +
-             std::string{magic_enum::enum_name(expression.data_type())} + ".");
+        Fail(std::format("Cannot cast '{}' as '{}'.", cast_expression.argument()->as_column_name(),
+                         magic_enum::enum_name(expression.data_type())));
       }
     });
     return result;

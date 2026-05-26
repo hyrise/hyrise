@@ -2,7 +2,6 @@
 
 #include <cstddef>
 #include <memory>
-#include <ostream>
 #include <sstream>
 #include <string>
 
@@ -19,11 +18,9 @@ ChangeMetaTableNode::ChangeMetaTableNode(const std::string& init_table_name,
     : AbstractNonQueryNode(LQPNodeType::ChangeMetaTable), table_name(init_table_name), change_type(init_change_type) {}
 
 std::string ChangeMetaTableNode::description(const DescriptionMode /*mode*/) const {
-  std::ostringstream desc;
-
-  desc << "[Change] Meta Table: '" << table_name << "'";
-
-  return desc.str();
+  auto description = std::ostringstream{};
+  description << "[Change] Meta Table: '" << table_name << "'";
+  return description.str();
 }
 
 std::shared_ptr<AbstractLQPNode> ChangeMetaTableNode::_on_shallow_copy(LQPNodeMapping& /*node_mapping*/) const {

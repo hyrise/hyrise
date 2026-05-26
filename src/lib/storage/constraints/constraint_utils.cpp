@@ -1,6 +1,7 @@
 #include "constraint_utils.hpp"
 
 #include <cstdint>
+#include <format>
 #include <memory>
 #include <set>
 #include <string>
@@ -16,7 +17,7 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT(build/namespaces)
+using namespace hyrise;
 
 std::vector<ColumnID> column_ids_by_name(const std::shared_ptr<Table>& table, const std::vector<std::string>& columns) {
   Assert(table, "Expected table to resolve ColumnIDs.");
@@ -36,7 +37,7 @@ std::set<ColumnID> column_ids_by_name(const std::shared_ptr<Table>& table, const
 
   for (const auto& column : columns) {
     [[maybe_unused]] const auto success = column_ids.emplace(table->column_id_by_name(column)).second;
-    DebugAssert(success, "Column '" + column + "' is already part of the constraint.");
+    DebugAssert(success, std::format("Column '{}' is already part of the constraint.", column));
   }
 
   return column_ids;
@@ -127,6 +128,39 @@ bool key_constraint_is_confidently_invalid(const std::shared_ptr<Table>& table,
   }
 
   return true;
+}
+
+bool column_is_unique(const std::shared_ptr<Table>& table, const ColumnID column_id) {
+  DebugAssert(column_id < table->column_count(), "ColumnID out of range.");
+  for (const auto& key_constraint : table->soft_key_constraints()) {
+    // Because we specify a long term encoding for the chunk, we do not care about temporary constraints.
+    if (key_constraint.can_become_invalid()) {
+      continue;
+    }
+
+    const auto& key_type = key_constraint.key_type();
+    if (key_type != KeyConstraintType::PRIMARY_KEY && key_type != KeyConstraintType::UNIQUE) {
+      continue;
+    }
+
+    const auto& columns = key_constraint.columns();
+    if (columns.size() == 1 && columns.contains(column_id)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+std::vector<ColumnID> unique_columns(const std::shared_ptr<Table>& table) {
+  const auto column_count = table->column_count();
+  auto columns = std::vector<ColumnID>();
+  for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+    if (column_is_unique(table, column_id)) {
+      columns.push_back(column_id);
+    }
+  }
+  return columns;
 }
 
 }  // namespace hyrise

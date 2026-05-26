@@ -2,7 +2,6 @@
 
 #include <atomic>
 #include <memory>
-#include <thread>
 #include <vector>
 
 #include "abstract_scheduler.hpp"
@@ -35,7 +34,7 @@ namespace hyrise {
  * TaskQueue.
  *
  * Note: currently, TaskQueues are not explicitly allocated on a NUMA node. This means most workers will frequently
- * access distant TaskQueues, which is ~1.6 times slower than accessing a local node [1]. 
+ * access distant TaskQueues, which is ~1.6 times slower than accessing a local node [1].
  *
  *  [1] http://frankdenneman.nl/2016/07/13/numa-deep-dive-4-local-memory-optimization/
  *
@@ -51,6 +50,12 @@ class UidAllocator;
 class NodeQueueScheduler final : public AbstractScheduler {
  public:
   NodeQueueScheduler();
+  NodeQueueScheduler(const NodeQueueScheduler&) = delete;
+  NodeQueueScheduler& operator=(const NodeQueueScheduler&) = delete;
+  // These two need not be deleted, but they are for the same reason that std::atomic has them deleted
+  // You can implement them, but you should think about the implications for this class.
+  NodeQueueScheduler(NodeQueueScheduler&&) = delete;
+  NodeQueueScheduler& operator=(NodeQueueScheduler&&) = delete;
   ~NodeQueueScheduler() final;
 
   /**
@@ -106,7 +111,7 @@ class NodeQueueScheduler final : public AbstractScheduler {
   size_t _node_count{1};
   std::vector<size_t> _workers_per_node;
 
-  std::mutex _finish_mutex{};
+  std::mutex _finish_mutex;
 };
 
 }  // namespace hyrise

@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <format>
 #include <memory>
 #include <optional>
 #include <ostream>
@@ -26,15 +27,15 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT(build/namespaces)
+using namespace hyrise;
 
 bool contains_column(const std::vector<ColumnID>& column_ids, const ColumnID search_column_id) {
-  return std::find(column_ids.cbegin(), column_ids.cend(), search_column_id) != column_ids.cend();
+  return std::ranges::find(column_ids, search_column_id) != column_ids.cend();
 }
 
 template <typename ColumnIDs>
 bool contains_any_column(const std::vector<ColumnID>& column_ids, const ColumnIDs& search_column_ids) {
-  return std::any_of(search_column_ids.cbegin(), search_column_ids.cend(), [&](const auto column_id) {
+  return std::ranges::any_of(search_column_ids, [&](const auto column_id) {
     return contains_column(column_ids, column_id);
   });
 }
@@ -55,7 +56,7 @@ std::shared_ptr<LQPColumnExpression> MockNode::get_column(const std::string& col
     }
   }
 
-  Fail("Could not find column named '" + column_name + "' in MockNode.");
+  Fail(std::format("Could not find column named '{}' in MockNode.", column_name));
 }
 
 const MockNode::ColumnDefinitions& MockNode::column_definitions() const {
@@ -93,9 +94,8 @@ bool MockNode::is_column_nullable(const ColumnID column_id) const {
 }
 
 void MockNode::set_pruned_column_ids(const std::vector<ColumnID>& pruned_column_ids) {
-  DebugAssert(std::is_sorted(pruned_column_ids.begin(), pruned_column_ids.end()),
-              "Expected sorted vector of ColumnIDs.");
-  DebugAssert(std::adjacent_find(pruned_column_ids.begin(), pruned_column_ids.end()) == pruned_column_ids.end(),
+  DebugAssert(std::ranges::is_sorted(pruned_column_ids), "Expected sorted vector of ColumnIDs.");
+  DebugAssert(std::ranges::adjacent_find(pruned_column_ids) == pruned_column_ids.end(),
               "Expected vector of unique ColumnIDs.");
 
   _pruned_column_ids = pruned_column_ids;
@@ -145,7 +145,7 @@ UniqueColumnCombinations MockNode::unique_column_combinations() const {
                 "Unexpected count of column expressions.");
 
     // Create UniqueColumnCombination.
-    unique_column_combinations.emplace(std::move(column_expressions));
+    unique_column_combinations.emplace(std::move(column_expressions), !table_key_constraint.can_become_invalid());
   }
 
   return unique_column_combinations;

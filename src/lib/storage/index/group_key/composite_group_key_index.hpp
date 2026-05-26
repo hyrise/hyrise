@@ -50,8 +50,6 @@ class CompositeGroupKeyIndex : public AbstractChunkIndex {
    */
   static size_t estimate_memory_consumption(ChunkOffset row_count, ChunkOffset distinct_count, uint32_t value_bytes);
 
-  CompositeGroupKeyIndex(CompositeGroupKeyIndex&&) = default;
-
   explicit CompositeGroupKeyIndex(const std::vector<std::shared_ptr<const AbstractSegment>>& segments_to_index);
 
  private:
@@ -102,17 +100,16 @@ class CompositeGroupKeyIndex : public AbstractChunkIndex {
    */
   Iterator _get_position_iterator_for_key(const VariableLengthKey& key) const;
 
- private:
-  // the segments the index is based on
+  // The segments the index is based on.
   std::vector<std::shared_ptr<const BaseDictionarySegment>> _indexed_segments;
 
-  // contains concatenated value-ids
+  // Contains concatenated value-ids.
   VariableLengthKeyStore _keys;
 
-  // the start positions within _position_list for every key
+  // The start positions within _position_list for every key.
   std::vector<ChunkOffset> _key_offsets;
 
-  // contains positions, ie ChunkOffsets, for the concatenated value-ids
+  // Contains positions, ie ChunkOffsets, for the concatenated value-ids.
   std::vector<ChunkOffset> _position_list;
 };
 }  // namespace hyrise

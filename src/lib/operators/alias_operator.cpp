@@ -1,8 +1,8 @@
 #include "alias_operator.hpp"
 
 #include <algorithm>
+#include <format>
 #include <memory>
-#include <sstream>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -34,11 +34,8 @@ const std::string& AliasOperator::name() const {
 
 std::string AliasOperator::description(DescriptionMode description_mode) const {
   const auto separator = (description_mode == DescriptionMode::SingleLine ? ' ' : '\n');
-  auto stream = std::stringstream{};
-
-  stream << AbstractOperator::description(description_mode) << separator;
-  stream << "[" << boost::algorithm::join(_aliases, ", ") << "]";
-  return stream.str();
+  return std::format("{1}{0}[{2}]", separator, AbstractOperator::description(description_mode),
+                     boost::algorithm::join(_aliases, ", "));
 }
 
 std::shared_ptr<AbstractOperator> AliasOperator::_on_deep_copy(
@@ -100,10 +97,9 @@ std::shared_ptr<const Table> AliasOperator::_on_execute() {
         // translator references the first occurrence twice (leaving the second (sorted) occurrence unreferenced, see
         // issue #2321 for more details). We thus iterate over the output columns to (potentially) mark multiple
         // columns that reference the same input column as sorted.
-        const auto it =
-            std::find_if(input_sorted_by.cbegin(), input_sorted_by.cend(), [&](const auto& sorted_information) {
-              return column_id == sorted_information.column;
-            });
+        const auto it = std::ranges::find_if(input_sorted_by, [&](const auto& sorted_information) {
+          return column_id == sorted_information.column;
+        });
         if (it != input_sorted_by.cend()) {
           sort_definitions.emplace_back(output_column_id, it->sort_mode);
         }

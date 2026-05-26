@@ -1,14 +1,21 @@
+#include <algorithm>
+#include <memory>
+#include <string>
 #include <tuple>
 #include <utility>
+#include <vector>
 
-#include "operators/operator_scan_predicate.hpp"
-#include "operators/print.hpp"
+#include "all_type_variant.hpp"
+#include "null_value.hpp"
+#include "operators/abstract_operator.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "resolve_type.hpp"
 #include "storage/chunk_encoder.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/table.hpp"
 #include "typed_operator_base_test.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
@@ -42,8 +49,7 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
 
     const auto data_table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{6});
 
-    // `nullable=nullable` is a dirty hack to work around C++ defect 2313.
-    resolve_data_type(data_type, [&, nullable = nullable, sort_mode = sort_mode](const auto type) {
+    resolve_data_type(data_type, [&, nullable, sort_mode](const auto type) {
       using Type = typename decltype(type)::type;
       if (nullable) {
         for (int i = 0; i < number_of_nulls; ++i) {
@@ -107,7 +113,7 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
     const bool descending = sort_mode == SortMode::DescendingNullsFirst;
     const int number_of_nulls = nullable && sort_mode ? 3 : 0;
     std::ignore = encoding;
-    resolve_data_type(data_type, [&, nullable = nullable](const auto data_type_t) {
+    resolve_data_type(data_type, [&, nullable](const auto data_type_t) {
       using ColumnDataType = typename decltype(data_type_t)::type;
 
       for (const auto& [left, right, expected_with_null] : tests) {

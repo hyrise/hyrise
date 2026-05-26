@@ -402,7 +402,6 @@ set(
     sql/sql_translator.hpp
     statistics/attribute_statistics.cpp
     statistics/attribute_statistics.hpp
-    statistics/base_attribute_statistics.cpp
     statistics/base_attribute_statistics.hpp
     statistics/cardinality_estimator.cpp
     statistics/cardinality_estimator.hpp
@@ -412,7 +411,6 @@ set(
     statistics/join_graph_statistics_cache.hpp
     statistics/statistics_objects/abstract_histogram.cpp
     statistics/statistics_objects/abstract_histogram.hpp
-    statistics/statistics_objects/abstract_statistics_object.cpp
     statistics/statistics_objects/abstract_statistics_object.hpp
     statistics/statistics_objects/distinct_value_count.cpp
     statistics/statistics_objects/distinct_value_count.hpp
@@ -461,6 +459,7 @@ set(
     storage/create_iterable_from_reference_segment.ipp
     storage/create_iterable_from_segment.hpp
     storage/create_iterable_from_segment.ipp
+    storage/create_iterable_from_non_reference_segment.hpp
     storage/dictionary_segment.cpp
     storage/dictionary_segment.hpp
     storage/dictionary_segment/attribute_vector_iterable.hpp
@@ -509,6 +508,7 @@ set(
     storage/index/partial_hash/partial_hash_index.hpp
     storage/index/partial_hash/partial_hash_index_impl.cpp
     storage/index/partial_hash/partial_hash_index_impl.hpp
+    storage/index/chunk_index_map.hpp
     storage/index/chunk_index_type.hpp
     storage/lqp_view.cpp
     storage/lqp_view.hpp
@@ -604,9 +604,6 @@ set(
     utils/format_duration.cpp
     utils/format_duration.hpp
     utils/invalid_input_exception.hpp
-    utils/ips4o_sort.hpp
-    utils/list_directory.cpp
-    utils/list_directory.hpp
     utils/load_table.cpp
     utils/load_table.hpp
     utils/log_manager.cpp
@@ -720,14 +717,6 @@ else()
     # Also, the sanitizer builds on Mac require static linkage.
     add_library(hyrise_impl STATIC ${SOURCES})
 endif()
-
-# Work around an stdlibc++ bug, see list_directory.hpp for details
-set_source_files_properties(
-    utils/list_directory.cpp
-    PROPERTIES
-    COMPILE_FLAGS -O0
-    SKIP_PRECOMPILE_HEADERS TRUE
-)
 
 # -rdynamic tells the linker to export the library's symbols so that plugins can use them.
 target_link_libraries(hyrise_impl PUBLIC ${LIBRARIES} -rdynamic)

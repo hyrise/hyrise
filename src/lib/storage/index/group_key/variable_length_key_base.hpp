@@ -28,8 +28,7 @@ class VariableLengthKeyBase {
 
   /**
    * Performs an 'or'-assignment on the eight (at most) least significant bytes. If more bits have to be set, shifting
-   * has to
-   * be performed.
+   * has to be performed.
    */
   VariableLengthKeyBase& operator|=(uint64_t other);
 
@@ -45,9 +44,8 @@ class VariableLengthKeyBase {
    */
   VariableLengthKeyBase& shift_and_set(uint64_t value, uint8_t bits_to_set);
 
- public:
-  VariableLengthKeyWord* _data;
-  CompositeKeyLength _size;
+  VariableLengthKeyWord* data;
+  CompositeKeyLength size;
 };
 
 /**

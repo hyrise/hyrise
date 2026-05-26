@@ -1,15 +1,39 @@
-#include <fstream>
+#include <algorithm>
+#include <array>
+#include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <iostream>
+#include <map>
+#include <memory>
+#include <optional>
 #include <set>
+#include <string>
+#include <tuple>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
+#include "operators/abstract_join_operator.hpp"
+#include "operators/abstract_operator.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/join_index.hpp"
 #include "operators/join_nested_loop.hpp"
 #include "operators/join_sort_merge.hpp"
 #include "operators/join_verification.hpp"
+#include "operators/operator_join_predicate.hpp"
 #include "operators/print.hpp"
 #include "operators/table_wrapper.hpp"
+#include "storage/chunk_encoder.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
+#include "storage/reference_segment.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
+#include "utils/check_table_equal.hpp"
 #include "utils/load_table.hpp"
 
 /**
@@ -18,11 +42,11 @@
  * number of configurations (i.e. JoinModes, predicates, data types, ...)
  */
 
-using namespace std::string_literals;  // NOLINT(build/namespaces)
+using namespace std::string_literals;
 
 namespace {
 
-using namespace hyrise;  // NOLINT(build/namespaces)
+using namespace hyrise;
 
 using ChunkRange = std::pair<ChunkID, ChunkID>;
 
@@ -134,7 +158,7 @@ class JoinOperatorFactory : public BaseJoinOperatorFactory {
     if constexpr (std::is_same_v<JoinOperator, JoinHash>) {
       return std::make_shared<JoinOperator>(left, right, configuration.join_mode, primary_predicate,
                                             configuration.secondary_predicates, configuration.radix_bits);
-    } else if constexpr (std::is_same_v<JoinOperator, JoinIndex>) {  // NOLINT
+    } else if constexpr (std::is_same_v<JoinOperator, JoinIndex>) {
       Assert(configuration.index_side, "IndexSide should be explicitly defined for the JoinIndex test runs.");
       return std::make_shared<JoinIndex>(left, right, configuration.join_mode, primary_predicate,
                                          configuration.secondary_predicates, *configuration.index_side);
@@ -190,12 +214,13 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
     const auto all_input_table_types =
         std::vector{InputTableType::Data, InputTableType::IndividualPosLists, InputTableType::SharedPosList};
 
+    // NOLINTBEGIN(whitespace/line_length)
     // clang-format off
     JoinTestConfiguration default_configuration{
       InputTableConfiguration{
-        InputSide::Left, all_chunk_sizes.front(), all_table_sizes.front(), all_input_table_types.front(), encoding_types.front()},  // NOLINT
+        InputSide::Left, all_chunk_sizes.front(), all_table_sizes.front(), all_input_table_types.front(), ENCODING_TYPES.front()},
       InputTableConfiguration{
-        InputSide::Right, all_chunk_sizes.front(), all_table_sizes.front(), all_input_table_types.front(), encoding_types.front()},  // NOLINT
+        InputSide::Right, all_chunk_sizes.front(), all_table_sizes.front(), all_input_table_types.front(), ENCODING_TYPES.front()},
       JoinMode::Inner,
       DataType::Int,
       DataType::Int,
@@ -208,6 +233,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
       std::nullopt
     };
     // clang-format on
+    // NOLINTEND(whitespace/line_length)
 
     /**
      * Returns a set of adapted configurations if the join type provides further configuration possibilities that
@@ -459,7 +485,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
     // Dictionaries.
     // Since materialization interacts with data types, NULLs and InputTableTypes, vary all those, too.
     // Use both Equals and LessThan to trigger sorting/non-sorting mode of JoinSortedMerge's ColumnMaterializer.
-    for (const auto encoding_type : encoding_types) {
+    for (const auto encoding_type : ENCODING_TYPES) {
       for (const auto data_type : all_data_types) {
         for (const auto nullable : {false, true}) {
           for (const auto table_type : all_input_table_types) {
@@ -541,12 +567,14 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
        * encoding.
        */
       if (key.encoding_type != EncodingType::Unencoded) {
-        auto chunk_encoding_spec = ChunkEncodingSpec{data_table->column_count()};
-        for (auto column_id = ColumnID{0}; column_id < data_table->column_count(); ++column_id) {
+        auto chunk_encoding_spec = ChunkEncodingSpec{};
+        const auto column_count = data_table->column_count();
+        chunk_encoding_spec.reserve(column_count);
+        for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
           if (encoding_supports_data_type(key.encoding_type, data_table->column_data_type(column_id))) {
-            chunk_encoding_spec[column_id] = SegmentEncodingSpec{key.encoding_type};
+            chunk_encoding_spec.push_back(SegmentEncodingSpec{key.encoding_type});
           } else {
-            chunk_encoding_spec[column_id] = SegmentEncodingSpec{EncodingType::Unencoded};
+            chunk_encoding_spec.push_back(SegmentEncodingSpec{EncodingType::Unencoded});
           }
         }
         ChunkEncoder::encode_all_chunks(data_table, chunk_encoding_spec);
@@ -565,7 +593,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
         for (auto chunk_id = ChunkID{0}; chunk_id < data_table->chunk_count(); ++chunk_id) {
           const auto input_chunk = data_table->get_chunk(chunk_id);
 
-          Segments reference_segments;
+          auto reference_segments = Segments{};
 
           if (input_table_type == InputTableType::SharedPosList) {
             const auto pos_list = std::make_shared<RowIDPosList>();
@@ -711,9 +739,11 @@ TEST_P(JoinTestRunner, TestJoin) {
     } else {
       std::cout << "No Table produced by the reference join operator\n";
     }
-    std::cout << "======================== Difference ========================\n";
-    std::cout << *table_difference_message;
-    std::cout << "\n============================================================\n";
+    if (table_difference_message) {
+      std::cout << "======================== Difference ========================\n";
+      std::cout << *table_difference_message;
+      std::cout << "\n============================================================\n";
+    }
   };
 
   try {

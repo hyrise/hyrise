@@ -1,10 +1,23 @@
+#include <cstddef>
+#include <cstdint>
+#include <cstdlib>
+#include <memory>
+#include <memory_resource>
+#include <string>
+#include <tuple>
+
 #include "../storage/encoding_test.hpp"
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "resolve_type.hpp"
-#include "storage/abstract_encoded_segment.hpp"
+#include "storage/abstract_segment.hpp"
+#include "storage/chunk_encoder.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/segment_encoding_utils.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/value_segment.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
@@ -73,7 +86,7 @@ class SegmentsUsingAllocatorsTest : public BaseTestWithParam<std::tuple<DataType
   }
 
   DataType data_type;
-  SegmentEncodingSpec encoding_spec;
+  SegmentEncodingSpec encoding_spec{EncodingType::Unencoded};
   bool contains_null_values;
 
   std::shared_ptr<BaseValueSegment> original_segment;

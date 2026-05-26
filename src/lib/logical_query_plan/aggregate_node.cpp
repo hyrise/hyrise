@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <format>
 #include <iterator>
 #include <memory>
 #include <sstream>
@@ -17,6 +18,7 @@
 #include "logical_query_plan/data_dependencies/order_dependency.hpp"
 #include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "lqp_utils.hpp"
+#include "optimizer/strategy/abstract_rule.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -37,16 +39,16 @@ AggregateNode::AggregateNode(const std::vector<std::shared_ptr<AbstractExpressio
              "Expression used as aggregate expression must be of type WindowFunctionExpression.");
       const auto& window_function = static_cast<const WindowFunctionExpression&>(*aggregate_expression);
       Assert(!window_function.window(), "Aggregates must not define a window.");
-      Assert(
-          aggregate_functions.contains(window_function.window_function),
-          window_function_to_string.left.at(window_function.window_function) + " is not a valid aggregate function.");
+      Assert(aggregate_functions.contains(window_function.window_function),
+             std::format("'{}' is not a valid aggregate function.",
+                         window_function_to_string.left.at(window_function.window_function)));
     }
   }
 
   node_expressions.resize(group_by_expressions.size() + aggregate_expressions.size());
-  std::copy(group_by_expressions.begin(), group_by_expressions.end(), node_expressions.begin());
-  std::copy(aggregate_expressions.begin(), aggregate_expressions.end(),
-            node_expressions.begin() + static_cast<NodeExpressionsDifferenceType>(group_by_expressions.size()));
+  std::ranges::copy(group_by_expressions, node_expressions.begin());
+  std::ranges::copy(aggregate_expressions,
+                    node_expressions.begin() + static_cast<NodeExpressionsDifferenceType>(group_by_expressions.size()));
 }
 
 std::string AggregateNode::description(const DescriptionMode mode) const {
@@ -58,7 +60,7 @@ std::string AggregateNode::description(const DescriptionMode mode) const {
   stream << "GroupBy: [";
   for (auto expression_idx = ColumnID{0}; expression_idx < aggregate_expressions_begin_idx; ++expression_idx) {
     stream << node_expressions[expression_idx]->description(expression_mode);
-    if (expression_idx + 1u < aggregate_expressions_begin_idx) {
+    if (expression_idx + size_t{1} < aggregate_expressions_begin_idx) {
       stream << ", ";
     }
   }
@@ -144,16 +146,18 @@ UniqueColumnCombinations AggregateNode::unique_column_combinations() const {
   }
 
   // (2) Create a new UCC from the group-by column(s), which form a candidate key for the output relation.
-  const auto group_by_columns_count = aggregate_expressions_begin_idx;
+  const auto group_by_columns_count = static_cast<NodeExpressionsDifferenceType>(aggregate_expressions_begin_idx);
   if (group_by_columns_count > 0) {
-    auto group_by_columns = ExpressionUnorderedSet{group_by_columns_count};
-    std::copy_n(node_expressions.begin(), group_by_columns_count,
-                std::inserter(group_by_columns, group_by_columns.begin()));
+    auto group_by_columns =
+        ExpressionUnorderedSet{node_expressions.begin(), node_expressions.begin() + group_by_columns_count};
 
-    // Make sure that we do not add an already existing or a superset UCC.
-    if (unique_column_combinations.empty() ||
-        !contains_matching_unique_column_combination(unique_column_combinations, group_by_columns)) {
-      unique_column_combinations.emplace(std::move(group_by_columns));
+    const auto [existing_ucc, inserted] =
+        unique_column_combinations.emplace(std::move(group_by_columns), /*is_genuine=*/true);
+
+    // If the UCC was already in the set but is not genuine, we set it to genuine because columns in the GROUP BY clause
+    // must be unique.
+    if (!inserted && !existing_ucc->is_genuine()) {
+      existing_ucc->set_genuine();
     }
   }
 

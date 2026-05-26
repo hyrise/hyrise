@@ -1,30 +1,26 @@
-#include <map>
+#include <algorithm>
 #include <memory>
 #include <numeric>
+#include <stdexcept>
 #include <utility>
 #include <vector>
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "hyrise.hpp"
-#include "logical_query_plan/lqp_translator.hpp"
-#include "logical_query_plan/predicate_node.hpp"
-#include "logical_query_plan/stored_table_node.hpp"
 #include "operators/get_table.hpp"
 #include "operators/index_scan.hpp"
-#include "operators/print.hpp"
 #include "operators/table_scan.hpp"
-#include "operators/table_wrapper.hpp"
-#include "operators/union_all.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
-#include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
+#include "utils/load_table.hpp"
 
 namespace {
 
-using namespace hyrise;  // NOLINT(build/namespaces)
+using namespace hyrise;
 
 std::shared_ptr<std::vector<ChunkID>> shared_chunk_id_vector(std::vector<ChunkID>&& chunk_vector) {
   return std::make_shared<std::vector<ChunkID>>(chunk_vector);
@@ -44,9 +40,11 @@ class OperatorsIndexScanTest : public BaseTest {
     ChunkEncoder::encode_all_chunks(int_int_5);
 
     _chunk_ids = std::vector<ChunkID>(int_int_7->chunk_count());
+    // NOLINTNEXTLINE(modernize-use-ranges): We need LLVM 21's libc++ for std::ranges::iota.
     std::iota(_chunk_ids.begin(), _chunk_ids.end(), ChunkID{0});
 
     _chunk_ids_partly_compressed = std::vector<ChunkID>(int_int_5->chunk_count());
+    // NOLINTNEXTLINE(modernize-use-ranges): We need LLVM 21's libc++ for std::ranges::iota.
     std::iota(_chunk_ids_partly_compressed.begin(), _chunk_ids_partly_compressed.end(), ChunkID{0});
 
     _column_id = ColumnID{0};
@@ -189,6 +187,7 @@ TEST_F(OperatorsIndexScanTest, DynamicallyPrunedChunks) {
   ChunkEncoder::encode_all_chunks(table);
 
   auto chunk_ids = std::vector<ChunkID>(table->chunk_count());
+  // NOLINTNEXTLINE(modernize-use-ranges): We need LLVM 21's libc++ for std::ranges::iota.
   std::iota(chunk_ids.begin(), chunk_ids.end(), ChunkID{0});
   table->create_partial_hash_index(ColumnID{0}, chunk_ids);
 

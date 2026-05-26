@@ -64,12 +64,9 @@ pmr_string HistogramDomain<pmr_string>::string_to_domain(const pmr_string& strin
 }
 
 bool HistogramDomain<pmr_string>::contains(const pmr_string& string_value) const {
-  for (const auto char_value : string_value) {
-    if (char_value > max_char || char_value < min_char) {
-      return false;
-    }
-  }
-  return true;
+  return std::ranges::all_of(string_value, [&](const auto char_value) {
+    return min_char <= char_value && char_value <= max_char;
+  });
 }
 
 pmr_string HistogramDomain<pmr_string>::next_value_clamped(const pmr_string& string_in_domain) const {
@@ -124,11 +121,11 @@ uint64_t ipow(uint64_t base, uint64_t exp) {
   uint64_t result = 1;
 
   for (;;) {
-    if ((exp & 1u) != 0) {
+    if ((exp & uint64_t{1}) != 0) {
       result *= base;
     }
 
-    exp >>= 1u;
+    exp >>= uint8_t{1};
 
     if (exp == 0) {
       break;

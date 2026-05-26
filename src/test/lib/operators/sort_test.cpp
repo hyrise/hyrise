@@ -1,14 +1,25 @@
-#include <gtest/gtest.h>
-
 #include <memory>
+#include <string>
+#include <type_traits>
+#include <vector>
+
 
 #include "all_type_variant.hpp"
 #include "base_test.hpp"
+#include "expression/expression_functional.hpp"
+#include "operators/abstract_operator.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/projection.hpp"
 #include "operators/sort.hpp"
+#include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
-#include "storage/table_column_definition.hpp"
+#include "resolve_type.hpp"
+#include "storage/chunk.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
+#include "storage/reference_segment.hpp"
+#include "storage/table.hpp"
+#include "storage/value_segment.hpp"
+#include "testing_assert.hpp"
 #include "types.hpp"
 #include "utils/load_table.hpp"
 
@@ -172,7 +183,7 @@ INSTANTIATE_TEST_SUITE_P(Variations, SortTest,
                            // Empty input tables with forced materialization.
                            SortTestParam{{SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsFirst}},                                                           true,  false, Chunk::DEFAULT_SIZE, Sort::ForceMaterialization::Yes, "empty.tbl"},             // NOLINT(whitespace/line_length)
                            SortTestParam{{SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsFirst}},                                                           true,  true,  Chunk::DEFAULT_SIZE, Sort::ForceMaterialization::Yes, "empty.tbl"}              // NOLINT(whitespace/line_length)
-                          ),  // NOLINT
+                          ),  // NOLINT(whitespace/parens)
                          sort_test_formatter);
 // clang-format on
 

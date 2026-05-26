@@ -1,10 +1,15 @@
-#include <chrono>
+#include <cstdint>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <memory>
 #include <string>
+#include <unordered_set>
+#include <utility>
 
 #include "cxxopts.hpp"
 
+#include "benchmark_config.hpp"
 #include "benchmark_runner.hpp"
 #include "cli_config_parser.hpp"
 #include "file_based_benchmark_item_runner.hpp"
@@ -12,27 +17,27 @@
 #include "utils/assert.hpp"
 #include "utils/sqlite_add_indices.hpp"
 
-using namespace hyrise;  // NOLINT(build/namespaces)
+using namespace hyrise;
 
 namespace {
 
-const std::unordered_set<std::string> filename_blacklist() {
-  auto filename_blacklist = std::unordered_set<std::string>{};
-  const auto blacklist_file_path = "resources/benchmark/tpcds/query_blacklist.cfg";
-  std::ifstream blacklist_file(blacklist_file_path);
+std::unordered_set<std::string> filename_excludelist() {
+  auto filename_excludelist = std::unordered_set<std::string>{};
+  constexpr auto EXCLUDELIST_FILE_PATH = "resources/benchmark/tpcds/query_excludelist.cfg";
+  auto excludelist_file = std::ifstream(EXCLUDELIST_FILE_PATH);
 
-  if (!blacklist_file) {
-    std::cerr << "Cannot open the blacklist file: " << blacklist_file_path << "\n";
+  if (!excludelist_file) {
+    std::cerr << "Cannot open the excludelist file: " << EXCLUDELIST_FILE_PATH << "\n";
   } else {
     auto filename = std::string{};
-    while (std::getline(blacklist_file, filename)) {
-      if (filename.size() > 0 && filename.at(0) != '#') {
-        filename_blacklist.emplace(filename);
+    while (std::getline(excludelist_file, filename)) {
+      if (!filename.empty() && filename.at(0) != '#') {
+        filename_excludelist.emplace(filename);
       }
     }
-    blacklist_file.close();
+    excludelist_file.close();
   }
-  return filename_blacklist;
+  return filename_excludelist;
 }
 
 }  // namespace
@@ -62,10 +67,11 @@ int main(int argc, char* argv[]) {
 
   const auto query_path = std::string{"resources/benchmark/tpcds/tpcds-result-reproduction/query_qualification"};
 
-  Assert(std::filesystem::is_directory(query_path), "Query path (" + query_path + ") has to be a directory.");
-  Assert(std::filesystem::exists(std::filesystem::path{query_path + "/01.sql"}), "Queries have to be available.");
+  Assert(std::filesystem::is_directory(query_path), std::format("Query path '{}' has to be a directory.", query_path));
+  Assert(std::filesystem::exists(std::filesystem::path{std::format("{}/01.sql", query_path)}),
+         "Queries have to be available.");
 
-  auto query_generator = std::make_unique<FileBasedBenchmarkItemRunner>(config, query_path, filename_blacklist());
+  auto query_generator = std::make_unique<FileBasedBenchmarkItemRunner>(config, query_path, filename_excludelist());
   if (config->verify) {
     // We can only verify the results for scale factor (SF) 1 since the dedicated result sets were obtained on this SF.
     Assert(scale_factor == 1, "TPC-DS result verification can only be performed on scale factor 1 (--scale 1).");

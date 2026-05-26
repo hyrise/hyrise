@@ -2,13 +2,14 @@
 
 #include <algorithm>
 #include <cctype>
+#include <format>
 #include <memory>
 #include <string>
 #include <unordered_map>
 
 #include <boost/algorithm/string.hpp>
 
-#include "magic_enum.hpp"
+#include "magic_enum/magic_enum.hpp"
 
 #include "all_type_variant.hpp"
 #include "import_export/binary/binary_writer.hpp"
@@ -40,12 +41,12 @@ std::string Export::description(DescriptionMode description_mode) const {
 
   auto file_type = std::string{magic_enum::enum_name(_file_type)};
   boost::algorithm::to_lower(file_type);
-  return AbstractOperator::description(description_mode) + separator + "to '" + _filename + "'" + separator + "(" +
-         file_type + ")";
+  return std::format("{1}{0}to '{2}'{0}({3})", separator, AbstractOperator::description(description_mode), _filename,
+                     file_type);
 }
 
 std::shared_ptr<const Table> Export::_on_execute() {
-  if (_filename.empty() || std::all_of(_filename.begin(), _filename.end(), isspace)) {
+  if (_filename.empty() || std::ranges::all_of(_filename, isspace)) {
     Fail("Export: File name must not be empty.");
   }
 

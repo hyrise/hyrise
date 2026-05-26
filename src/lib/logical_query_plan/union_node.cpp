@@ -1,12 +1,13 @@
 #include "union_node.hpp"
 
 #include <cstddef>
+#include <format>
 #include <functional>
 #include <memory>
 #include <string>
 #include <vector>
 
-#include "magic_enum.hpp"
+#include "magic_enum/magic_enum.hpp"
 
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"
@@ -23,7 +24,7 @@ UnionNode::UnionNode(const SetOperationMode init_set_operation_mode)
     : AbstractLQPNode(LQPNodeType::Union), set_operation_mode(init_set_operation_mode) {}
 
 std::string UnionNode::description(const DescriptionMode /*mode*/) const {
-  return "[UnionNode] Mode: " + std::string{magic_enum::enum_name(set_operation_mode)};
+  return std::format("[UnionNode] Mode: {}", magic_enum::enum_name(set_operation_mode));
 }
 
 std::vector<std::shared_ptr<AbstractExpression>> UnionNode::output_expressions() const {
@@ -98,8 +99,8 @@ FunctionalDependencies UnionNode::non_trivial_functional_dependencies() const {
        * With UnionAll, UCCs from both input nodes are discarded. To preserve trivial FDs, we request all available FDs
        * from both input nodes.
        */
-      const auto& fds_left = left_input()->functional_dependencies();
-      const auto& fds_right = right_input()->functional_dependencies();
+      const auto fds_left = left_input()->functional_dependencies();
+      const auto fds_right = right_input()->functional_dependencies();
       /**
        * Currently, both input tables have the same output expressions for SetOperationMode::All. However, the FDs might
        * differ. For example, the left input node could have discarded FDs, whereas the right one has not. To work
@@ -112,7 +113,7 @@ FunctionalDependencies UnionNode::non_trivial_functional_dependencies() const {
        * By definition, UnionPositions requires both input tables to have the same table origin and structure.
        * Therefore, we can pass the FDs of either the left or the right input node.
        */
-      const auto& non_trivial_fds = left_input()->non_trivial_functional_dependencies();
+      const auto non_trivial_fds = left_input()->non_trivial_functional_dependencies();
       DebugAssert(non_trivial_fds == right_input()->non_trivial_functional_dependencies(),
                   "Expected both input nodes to pass the same non-trivial FDs.");
       return non_trivial_fds;

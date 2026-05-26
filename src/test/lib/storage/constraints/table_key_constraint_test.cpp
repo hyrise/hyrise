@@ -1,6 +1,11 @@
+#include <iterator>
+#include <memory>
+#include <set>
 #include <stdexcept>
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
+#include "storage/constraints/abstract_table_constraint.hpp"
 #include "storage/constraints/table_key_constraint.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
@@ -182,7 +187,7 @@ TEST_F(TableKeyConstraintTest, OrderIndependence) {
 
 TEST_F(TableKeyConstraintTest, CanBecomeInvalid) {
   const auto key_constraint_invalid =
-      TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE, CommitID{0}, CommitID{0}};
+      TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE, INITIAL_COMMIT_ID, INITIAL_COMMIT_ID};
   const auto key_constraint_valid =
       TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE, MAX_COMMIT_ID, MAX_COMMIT_ID};
 

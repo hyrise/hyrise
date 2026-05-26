@@ -12,21 +12,21 @@ namespace hyrise {
 
 VariableLengthKeyStore::VariableLengthKeyStore(ChunkOffset size, CompositeKeyLength bytes_per_key)
     : _bytes_per_key{bytes_per_key} {
-  static const CompositeKeyLength alignment = 8u;
-  _key_alignment = (bytes_per_key / alignment + (bytes_per_key % alignment == 0u ? 0u : 1u)) * alignment;
+  static const auto alignment = CompositeKeyLength{8};
+  _key_alignment = (bytes_per_key / alignment + (bytes_per_key % alignment == 0 ? 0 : 1)) * alignment;
   _data = std::vector<VariableLengthKeyWord>(
       static_cast<std::vector<VariableLengthKeyWord>::size_type>(size * _key_alignment));
 }
 
 VariableLengthKeyProxy VariableLengthKeyStore::operator[](ChunkOffset position) {
-  return VariableLengthKeyProxy(_data.data() + static_cast<size_t>(position) * _key_alignment, _bytes_per_key);
+  return VariableLengthKeyProxy(_data.data() + (static_cast<size_t>(position) * _key_alignment), _bytes_per_key);
 }
 
 VariableLengthKeyConstProxy VariableLengthKeyStore::operator[](ChunkOffset position) const {
   auto* const self = const_cast<VariableLengthKeyStore*>(this);  // NOLINT(cppcoreguidelines-pro-type-const-cast)
   // The const_cast is grandfathered in, because it would require significant changes to get rid of it. New code should
   // not require it.
-  return VariableLengthKeyConstProxy(self->_data.data() + static_cast<size_t>(position) * _key_alignment,
+  return VariableLengthKeyConstProxy(self->_data.data() + (static_cast<size_t>(position) * _key_alignment),
                                      _bytes_per_key);
 }
 

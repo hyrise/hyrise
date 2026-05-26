@@ -1,6 +1,7 @@
 #include "date_time_utils.hpp"
 
 #include <cstdint>
+#include <format>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -8,7 +9,7 @@
 #include <boost/date_time/gregorian/gregorian.hpp>
 #include <boost/lexical_cast/bad_lexical_cast.hpp>
 
-#include "magic_enum.hpp"
+#include "magic_enum/magic_enum.hpp"
 
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -54,7 +55,7 @@ boost::gregorian::date date_interval(const boost::gregorian::date& start_date, i
       return *(++boost::gregorian::day_iterator{start_date, static_cast<int>(offset)});
     }
     default:
-      Fail("Invalid time unit for date interval: " + std::string{magic_enum::enum_name(unit)});
+      Fail(std::format("Invalid time unit for date interval: '{}'.", magic_enum::enum_name(unit)));
   }
 
   Fail("Invalid enum value.");

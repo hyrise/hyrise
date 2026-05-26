@@ -1,9 +1,10 @@
-#include <functional>
-#include <limits>
+#include <cstddef>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
+#include "magic_enum/magic_enum.hpp"
 #include "nlohmann/json.hpp"
 
 #include "../../plugins/ucc_discovery_plugin.hpp"
@@ -11,9 +12,7 @@
 #include "base_test.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "concurrency/transaction_manager.hpp"
-#include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
-#include "expression/pqp_column_expression.hpp"
 #include "lib/storage/encoding_test.hpp"
 #include "lib/utils/plugin_test_utils.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
@@ -23,25 +22,25 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "operators/delete.hpp"
-#include "operators/get_table.hpp"
 #include "operators/insert.hpp"
-#include "operators/projection.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/update.hpp"
-#include "operators/validate.hpp"
+#include "sql/sql_pipeline_statement.hpp"
+#include "sql/sql_plan_cache.hpp"
+#include "storage/chunk_encoder.hpp"
 #include "storage/constraints/constraint_utils.hpp"
 #include "storage/constraints/table_key_constraint.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
 #include "types.hpp"
 #include "utils/load_table.hpp"
 #include "utils/plugin_manager.hpp"
-#include "utils/template_type.hpp"
 
 namespace {
-using namespace hyrise;  // NOLINT(build/namespaces)
+using namespace hyrise;
 
 void encode_table(const std::shared_ptr<Table>& table, const SegmentEncodingSpec& encoding_spec) {
   auto chunk_encoding_spec = ChunkEncodingSpec{table->column_count(), SegmentEncodingSpec{EncodingType::Unencoded}};
@@ -430,7 +429,7 @@ TEST_P(UccDiscoveryPluginMultiEncodingTest, RevalidationUpdatesValidationTimesta
   const auto& constraints_A = _table_A->soft_key_constraints();
   EXPECT_EQ(constraints_A.size(), 0);  // No constraints known for the table yet.
 
-  // Add permanent UCC to table A.
+  // Add genuine UCC to table A.
   _table_A->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE});
   delete_row(_table_A, 3);
 
@@ -441,18 +440,18 @@ TEST_P(UccDiscoveryPluginMultiEncodingTest, RevalidationUpdatesValidationTimesta
   // Perform a transaction that does not affect table A but increments the global CommitID.
   delete_row(_table_B, 0);
 
-  EXPECT_EQ(constraints_A.size(), 2);  // One permanent UCC and one non-permanent UCC.
+  EXPECT_EQ(constraints_A.size(), 2);  // One genione UCC and one spurious UCC.
 
   const auto search_constraint_A = TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE};
   const auto column_0_constraint = constraints_A.find(search_constraint_A);
   ASSERT_NE(column_0_constraint, constraints_A.end());
-  // The permanent UCC should remain permanent.
+  // The genuine UCC should remain genuine.
   EXPECT_EQ(column_0_constraint->last_validated_on(), MAX_COMMIT_ID);
 
   const auto search_constraint_B = TableKeyConstraint{{ColumnID{1}}, KeyConstraintType::UNIQUE};
   const auto column_1_constraint = constraints_A.find(search_constraint_B);
   ASSERT_NE(column_1_constraint, constraints_A.end());
-  // The non-permanent UCC should have been validated.
+  // The spurious UCC should have been validated.
   const auto first_validation_timestamp = column_1_constraint->last_validated_on();
   EXPECT_NE(first_validation_timestamp, MAX_COMMIT_ID);
 

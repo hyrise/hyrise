@@ -92,13 +92,13 @@ def main():
         return_error,
     )
     return_error = check_json(
-        output["context"]["encoding"]["default"]["encoding"],
+        output["context"]["encoding"]["preferred"]["encoding"],
         arguments["--encoding"].replace("'", ""),
         "Encoding doesn't match with JSON:",
         return_error,
     )
     return_error = check_json(
-        output["context"]["encoding"]["default"]["compression"],
+        output["context"]["encoding"]["preferred"]["compression"],
         arguments["--compression"].replace("'", ""),
         "Compression doesn't match with JSON:",
         return_error,

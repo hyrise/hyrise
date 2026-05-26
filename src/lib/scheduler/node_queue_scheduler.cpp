@@ -4,11 +4,11 @@
 #include <chrono>
 #include <cstdint>
 #include <cstdlib>
+#include <format>
 #include <iostream>
 #include <memory>
 #include <mutex>
 #include <optional>
-#include <sstream>
 #include <thread>
 #include <vector>
 
@@ -49,7 +49,7 @@ void NodeQueueScheduler::begin() {
     // Tracked per node as core restrictions can lead to unbalanced core counts.
     _workers_per_node.emplace_back(topology_node.cpus.size());
 
-    // Only create queues for nodes with CPUs assigned. Otherwise, no workers are active on these nodes and we might
+    // Only create queues for nodes with CPUs assigned. Otherwise, no workers are active on these nodes, and we might
     // add tasks to these queues that can never be directly pulled and must be stolen by other nodes' workers. As
     // ShutdownTasks are not stealable, placing tasks on nodes without workers can lead to failing shutdowns.
     if (!topology_node.cpus.empty()) {
@@ -109,11 +109,12 @@ void NodeQueueScheduler::wait_for_all_tasks() {
     // (e.g., ensure operators split their work into smaller tasks).
     if (progressless_loop_count >= 360'000) {
       const auto remaining_task_count = _task_counter - num_finished_tasks;
-      auto message = std::stringstream{};
       // We waited for 1 h (360'000 * 10 ms).
-      message << "Timeout: no progress while waiting for all scheduled tasks to be processed. " << remaining_task_count
-              << " task(s) still remaining without progress for 1 h now, quitting.";
-      Fail(message.str());
+      const auto message = std::format(
+          "Timeout: no progress while waiting for all scheduled tasks to be processed. {}  task(s) still remaining "
+          "without progress for 1 h now, quitting.",
+          remaining_task_count);
+      Fail(message);
     }
 
     if (previous_finished_task_count == num_finished_tasks) {
@@ -146,7 +147,7 @@ void NodeQueueScheduler::wait_for_all_tasks() {
 
 void NodeQueueScheduler::finish() {
   // Lock finish() to ensure that the shutdown tasks are not sent twice.
-  const auto lock = std::lock_guard<std::mutex>{_finish_mutex};
+  const auto lock = std::lock_guard{_finish_mutex};
 
   if (!_active) {
     return;
@@ -209,8 +210,7 @@ NodeID NodeQueueScheduler::determine_queue_id(const NodeID preferred_node_id) co
   }
 
   // If the current node is requested, try to obtain node from current worker.
-  const auto& worker = Worker::get_this_thread_worker();
-  if (worker) {
+  if (const auto& worker = Worker::get_this_thread_worker()) {
     return worker->queue()->node_id();
   }
 
@@ -218,7 +218,7 @@ NodeID NodeQueueScheduler::determine_queue_id(const NodeID preferred_node_id) co
   auto min_load_node_id = _active_nodes[0];
   auto min_load = _queues[min_load_node_id]->estimate_load();
 
-  // When the load of the initial node is small (less tasks than threads on first node), do not check other queues.
+  // When the load of the initial node is small (fewer tasks than threads on first node), do not check other queues.
   if (min_load < _workers_per_node[min_load_node_id]) {
     return min_load_node_id;
   }
@@ -266,7 +266,7 @@ void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<Abstract
 
   // For each group, this list stores the task that will be successor of the current task. Tasks are identified by their
   // offset in the task list. Initialize with -1 to denote an invalid offset.
-  auto grouped_task_offsets = std::vector<int32_t>(NUM_GROUPS, -1);
+  auto grouped_task_offsets = std::vector(NUM_GROUPS, -1);
 
   auto common_node_id = std::optional<NodeID>{};
 
@@ -283,7 +283,7 @@ void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<Abstract
   for (auto task_offset = static_cast<int32_t>(task_count - 1); task_offset >= 0; --task_offset) {
     const auto& task = tasks[task_offset];
     if (!task->predecessors().empty() || !task->successors().empty() || dynamic_cast<ShutdownTask*>(&*task)) {
-      // Do not group tasks that either have precessors/successors or are ShutdownTasks.
+      // Do not group tasks that either have predecessors/successors or are ShutdownTasks.
       return;
     }
 

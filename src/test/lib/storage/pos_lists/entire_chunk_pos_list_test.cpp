@@ -1,10 +1,18 @@
+#include <cstdint>
+#include <memory>
+#include <stdexcept>
+
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "operators/get_table.hpp"
+#include "operators/insert.hpp"
 #include "operators/maintenance/create_table.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/pos_lists/entire_chunk_pos_list.hpp"
-#include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/segment_iterate.hpp"
+#include "storage/table.hpp"
+#include "types.hpp"
+#include "utils/load_table.hpp"
 
 namespace hyrise {
 
@@ -56,11 +64,11 @@ TEST_F(EntireChunkPosListTest, AddAfterMatchedAllTest) {
   // Extra Lines have been added to the table:
   EXPECT_EQ(table->chunk_count(), 1);
   EXPECT_EQ(table->row_count(), 6);
-  // Newly added rows are not in the position list
+  // Newly added rows are not in the position list.
   EXPECT_EQ(entire_chunk_pos_list->size(), 3);
 
-  // TODO(anyone): Maybe add a better check than just size, cause the returned iterators should also handle.
-  // this case, which we right now don't check.
+  // TODO(anyone): Maybe add a better check than just size, cause the returned iterators should also handle this case,
+  // which we right now don't check.
 }
 
 TEST_F(EntireChunkPosListTest, InsertDoesNotAffectIterators) {

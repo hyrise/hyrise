@@ -366,7 +366,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
       // When materializing the first side (here: the build side), we do not yet have a Bloom filter. To keep the number
       // of code paths low, materialize_*_side always expects a Bloom filter. For the first step, we thus pass in a
       // Bloom filter that returns true for every probe.
-      materialize_build_side(ALL_TRUE_BLOOM_FILTER);
+      materialize_build_side(all_true_bloom_filter);
       _performance_data.set_step_runtime(OperatorSteps::BuildSideMaterializing, timer_materialization.lap());
       materialize_probe_side(build_side_bloom_filter);
       _performance_data.set_step_runtime(OperatorSteps::ProbeSideMaterializing, timer_materialization.lap());
@@ -374,7 +374,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
       // Here, we first materialize the probe side and use the resulting Bloom filter in the materialization of the
       // build side. Consequently, the Bloom filter later passed into build() will have no effect as it has already
       // been used here to filter non-matching values.
-      materialize_probe_side(ALL_TRUE_BLOOM_FILTER);
+      materialize_probe_side(all_true_bloom_filter);
       _performance_data.set_step_runtime(OperatorSteps::ProbeSideMaterializing, timer_materialization.lap());
       materialize_build_side(probe_side_bloom_filter);
       _performance_data.set_step_runtime(OperatorSteps::BuildSideMaterializing, timer_materialization.lap());
@@ -500,17 +500,6 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
      */
     auto build_side_pos_lists = std::vector<RowIDPosList>{};
     auto probe_side_pos_lists = std::vector<RowIDPosList>{};
-    const size_t partition_count = radix_probe_column.size();
-    build_side_pos_lists.resize(partition_count);
-    probe_side_pos_lists.resize(partition_count);
-
-    // simple heuristic: half of the rows of the probe side will match
-    const size_t result_rows_per_partition =
-        _probe_input_table->row_count() > 0 ? _probe_input_table->row_count() / partition_count / 2 : 0;
-    for (auto partition_index = size_t{0}; partition_index < partition_count; ++partition_index) {
-      build_side_pos_lists[partition_index].reserve(result_rows_per_partition);
-      probe_side_pos_lists[partition_index].reserve(result_rows_per_partition);
-    }
 
     auto timer_probing = Timer{};
     switch (_mode) {

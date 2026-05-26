@@ -1,5 +1,6 @@
 #include "operator_scan_predicate.hpp"
 
+#include <format>
 #include <memory>
 #include <optional>
 #include <ostream>
@@ -24,8 +25,8 @@
 
 namespace {
 
-using namespace hyrise;                         // NOLINT(build/namespaces)
-using namespace hyrise::expression_functional;  // NOLINT(build/namespaces)
+using namespace hyrise;
+using namespace hyrise::expression_functional;
 
 std::optional<AllParameterVariant> resolve_all_parameter_variant(const AbstractExpression& expression,
                                                                  const AbstractLQPNode& node) {
@@ -51,7 +52,7 @@ namespace hyrise {
 
 std::ostream& OperatorScanPredicate::output_to_stream(std::ostream& stream,
                                                       const std::shared_ptr<const Table>& table) const {
-  std::string column_name_left = std::string("Column #") + std::to_string(column_id);
+  std::string column_name_left = std::format("Column #{}", column_id.t);
   if (table) {
     column_name_left = table->column_name(column_id);
   }
@@ -121,7 +122,7 @@ std::optional<std::vector<OperatorScanPredicate>> OperatorScanPredicate::from_ex
         !variant_is_null(boost::get<AllTypeVariant>(*argument_c))) {
       // This is the BETWEEN case that we can handle
       return std::vector<OperatorScanPredicate>{
-          OperatorScanPredicate{boost::get<ColumnID>(*argument_a), predicate_condition, *argument_b, *argument_c}};
+          OperatorScanPredicate{boost::get<ColumnID>(*argument_a), predicate_condition, *argument_b, argument_c}};
     }
 
     PerformanceWarning("BETWEEN handled as two table scans because no BETWEEN specialization was available");

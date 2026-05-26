@@ -5,6 +5,7 @@
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <utility>
 
 #include "commit_context.hpp"
 #include "transaction_context.hpp"
@@ -22,6 +23,12 @@ TransactionManager::~TransactionManager() {
   Assert(_active_snapshot_commit_ids.empty(),
          "Some transactions do not seem to have finished yet as they are still registered as active.");
 }
+
+TransactionManager::TransactionManager(TransactionManager&& transaction_manager) noexcept
+    : _next_transaction_id(transaction_manager._next_transaction_id.load()),
+      _last_commit_id(transaction_manager._last_commit_id.load()),
+      _last_commit_context(std::move(transaction_manager._last_commit_context)),
+      _active_snapshot_commit_ids(std::move(transaction_manager._active_snapshot_commit_ids)) {}
 
 TransactionManager& TransactionManager::operator=(TransactionManager&& transaction_manager) noexcept {
   _next_transaction_id = transaction_manager._next_transaction_id.load();
@@ -48,7 +55,7 @@ void TransactionManager::_register_transaction(const CommitID snapshot_commit_id
 void TransactionManager::_deregister_transaction(const CommitID snapshot_commit_id) {
   const auto lock = std::lock_guard<std::mutex>{_active_snapshot_commit_ids_mutex};
 
-  auto it = std::find(_active_snapshot_commit_ids.begin(), _active_snapshot_commit_ids.end(), snapshot_commit_id);
+  auto it = std::ranges::find(_active_snapshot_commit_ids, snapshot_commit_id);
 
   if (it != _active_snapshot_commit_ids.end()) {
     _active_snapshot_commit_ids.erase(it);
@@ -68,8 +75,7 @@ std::optional<CommitID> TransactionManager::get_lowest_active_snapshot_commit_id
     return std::nullopt;
   }
 
-  auto it = std::min_element(_active_snapshot_commit_ids.begin(), _active_snapshot_commit_ids.end());
-  return *it;
+  return std::ranges::min(_active_snapshot_commit_ids);
 }
 
 /**

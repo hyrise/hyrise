@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -12,18 +13,34 @@
 
 namespace hyrise {
 
-enum class IndexSide { Left, Right };
+enum class IndexSide : uint8_t { Left, Right };
 
 struct JoinConfiguration {
+  JoinConfiguration() = delete;
+
+  JoinConfiguration(JoinMode init_join_mode, PredicateCondition init_predicate_condition, DataType init_left_data_type,
+                    DataType init_right_data_type, bool init_secondary_predicates,
+                    std::optional<TableType> init_left_table_type = std::nullopt,
+                    std::optional<TableType> init_right_table_type = std::nullopt,
+                    std::optional<IndexSide> init_index_side = std::nullopt)
+      : join_mode(init_join_mode),
+        predicate_condition(init_predicate_condition),
+        left_data_type(init_left_data_type),
+        right_data_type(init_right_data_type),
+        secondary_predicates(init_secondary_predicates),
+        left_table_type(init_left_table_type),
+        right_table_type(init_right_table_type),
+        index_side(init_index_side) {}
+
   JoinMode join_mode;
   PredicateCondition predicate_condition;
   DataType left_data_type;
   DataType right_data_type;
   bool secondary_predicates;
   // Only for JoinIndex
-  std::optional<TableType> left_table_type{std::nullopt};
-  std::optional<TableType> right_table_type{std::nullopt};
-  std::optional<IndexSide> index_side{std::nullopt};
+  std::optional<TableType> left_table_type;
+  std::optional<TableType> right_table_type;
+  std::optional<IndexSide> index_side;
 };
 
 /**

@@ -11,13 +11,13 @@ class AbstractCostEstimator;
 
 /**
  * A rule that brings join operations into a (supposedly) efficient order. Currently, only the order of inner joins is
- * modified using either the DpCcp algorithm or GreedyOperatorOrdering.
+ * modified using either the DPccp algorithm or GreedyOperatorOrdering.
  */
 class JoinOrderingRule : public AbstractRule {
  public:
   std::string name() const override;
 
-  // Below an empirically determined threshold, we use DpCcp. Else, we use GreedyOperatorOrdering (GOO).
+  // Below an empirically determined threshold, we use DPccp. Else, we use GreedyOperatorOrdering (GOO).
   //
   // This threshold was most recently evaluated and adapted in #2652, backed by former investigations in #2626 and
   // #2642. There, experiments showed that join ordering was a huge performance issue for JOB and TPC-DS queries (many

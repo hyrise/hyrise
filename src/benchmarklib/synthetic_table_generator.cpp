@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <cstddef>
+#include <format>
 #include <functional>
 #include <memory>
 #include <random>
@@ -32,7 +33,7 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT(build/namespaces)
+using namespace hyrise;
 
 template <typename T>
 pmr_vector<T> create_typed_segment_values(const std::vector<int>& values) {
@@ -50,6 +51,34 @@ pmr_vector<T> create_typed_segment_values(const std::vector<int>& values) {
 }  // namespace
 
 namespace hyrise {
+
+ColumnDataDistribution ColumnDataDistribution::make_uniform_config(const double min, const double max) {
+  auto config = ColumnDataDistribution{};
+  config.min_value = min;
+  config.max_value = max;
+  config.num_different_values = static_cast<int>(std::floor(max - min));
+  return config;
+}
+
+ColumnDataDistribution ColumnDataDistribution::make_pareto_config(const double pareto_scale,
+                                                                  const double pareto_shape) {
+  auto config = ColumnDataDistribution{};
+  config.pareto_scale = pareto_scale;
+  config.pareto_shape = pareto_shape;
+  config.distribution_type = DataDistributionType::Pareto;
+  return config;
+}
+
+ColumnDataDistribution ColumnDataDistribution::make_skewed_normal_config(const double skew_location,
+                                                                         const double skew_scale,
+                                                                         const double skew_shape) {
+  auto config = ColumnDataDistribution{};
+  config.skew_location = skew_location;
+  config.skew_scale = skew_scale;
+  config.skew_shape = skew_shape;
+  config.distribution_type = DataDistributionType::NormalSkewed;
+  return config;
+}
 
 std::shared_ptr<Table> SyntheticTableGenerator::generate_table(const size_t num_columns, const size_t num_rows,
                                                                const ChunkOffset chunk_size,
@@ -79,7 +108,7 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
   auto column_definitions = TableColumnDefinitions{};
   for (auto column_id = size_t{0}; column_id < num_columns; ++column_id) {
     const auto column_name = column_specifications[column_id].name ? *column_specifications[column_id].name
-                                                                   : "column_" + std::to_string(column_id + 1);
+                                                                   : std::format("column_{}", column_id + 1);
     column_definitions.emplace_back(column_name, column_specifications[column_id].data_type, false);
   }
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, chunk_size, use_mvcc);
@@ -145,7 +174,7 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
            * If a ratio of to-be-created NULL values is given, fill the null_values vector used in the ValueSegment
            * constructor in a regular interval based on the null_ratio with true.
            */
-          if (column_specifications[column_index].null_ratio > 0.0f) {
+          if (column_specifications[column_index].null_ratio > 0) {
             null_values.resize(chunk_size, false);
 
             const double step_size = 1.0 / column_specifications[column_index].null_ratio;
@@ -172,7 +201,7 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
           }
 
           auto value_segment = std::shared_ptr<ValueSegment<ColumnDataType>>{};
-          if (column_specifications[column_index].null_ratio > 0.0f) {
+          if (column_specifications[column_index].null_ratio > 0) {
             value_segment = std::make_shared<ValueSegment<ColumnDataType>>(
                 create_typed_segment_values<ColumnDataType>(values), std::move(null_values));
           } else {

@@ -61,8 +61,7 @@ void JoinGraphVisualizer::_build_graph(const std::vector<JoinGraph>& graphs) {
 
         auto edge_label_stream = std::stringstream{};
         for (const auto& predicate : edge.predicates) {
-          edge_label_stream << predicate->as_column_name();
-          edge_label_stream << "\n";
+          edge_label_stream << predicate->as_column_name() << "\n";
         }
 
         VizEdgeInfo edge_info;
@@ -130,7 +129,7 @@ std::string JoinGraphVisualizer::_create_vertex_description(const std::shared_pt
   const auto stored_table_node_count = stored_table_nodes.size();
   for (auto node_idx = size_t{0}; node_idx < stored_table_node_count; ++node_idx) {
     stream << stored_table_nodes[node_idx]->table_name;
-    if (node_idx + 1u < stored_table_nodes.size()) {
+    if (node_idx + 1 < stored_table_nodes.size()) {
       stream << ", ";
     }
   }

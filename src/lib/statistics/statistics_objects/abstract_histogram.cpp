@@ -17,7 +17,6 @@
 #include "all_type_variant.hpp"
 #include "generic_histogram_builder.hpp"
 #include "lossy_cast.hpp"
-#include "resolve_type.hpp"
 #include "statistics/statistics_objects/abstract_statistics_object.hpp"
 #include "statistics/statistics_objects/histogram_domain.hpp"
 #include "statistics/statistics_objects/scaled_histogram.hpp"
@@ -27,8 +26,7 @@
 namespace hyrise {
 
 template <typename T>
-AbstractHistogram<T>::AbstractHistogram(const HistogramDomain<T>& domain)
-    : AbstractStatisticsObject(data_type_from_type<T>()), _domain(domain) {}
+AbstractHistogram<T>::AbstractHistogram(const HistogramDomain<T>& domain) : _domain(domain) {}
 
 template <typename T>
 const HistogramDomain<T>& AbstractHistogram<T>::domain() const {
@@ -441,6 +439,8 @@ std::pair<Cardinality, DistinctCount> AbstractHistogram<T>::estimate_cardinality
 
     case PredicateCondition::Like:
     case PredicateCondition::NotLike:
+    case PredicateCondition::LikeInsensitive:
+    case PredicateCondition::NotLikeInsensitive:
       if constexpr (std::is_same_v<pmr_string, T>) {
         // Generally, (NOT) LIKE is too hard to perform estimations on. Some special patterns could be estimated,
         // e.g. `LIKE 'a'` is the same as `= 'a'` or `LIKE 'a%'` is the same as `>= a AND < b`, but we leave it to other
@@ -448,7 +448,7 @@ std::pair<Cardinality, DistinctCount> AbstractHistogram<T>::estimate_cardinality
         // Thus, (NOT) LIKE is not estimated and we return a selectivity of 1.
         return {total_count(), total_distinct_count()};
       } else {
-        Fail("Predicate NOT LIKE is not supported for non-string columns.");
+        Fail("Predicate (NOT) LIKE is not supported for non-string columns.");
       }
 
     default:
@@ -602,6 +602,8 @@ std::shared_ptr<const AbstractStatisticsObject> AbstractHistogram<T>::sliced(
 
     case PredicateCondition::Like:
     case PredicateCondition::NotLike:
+    case PredicateCondition::LikeInsensitive:
+    case PredicateCondition::NotLikeInsensitive:
       // TODO(anybody): Slicing for (NOT) LIKE not supported, yet.
       return this->shared_from_this();
 
@@ -698,6 +700,8 @@ std::shared_ptr<const AbstractStatisticsObject> AbstractHistogram<T>::pruned(
 
     case PredicateCondition::Like:
     case PredicateCondition::NotLike:
+    case PredicateCondition::LikeInsensitive:
+    case PredicateCondition::NotLikeInsensitive:
       // TODO(anybody): Pruning for (NOT) LIKE not supported, yet.
       return this->shared_from_this();
 
@@ -827,7 +831,7 @@ std::shared_ptr<AbstractHistogram<T>> AbstractHistogram<T>::split_at_bin_bounds(
 
   for (auto bin_id = BinID{0}; bin_id < result_bin_count; ++bin_id) {
     const auto& bin_min = candidate_edges[bin_id * 2];
-    const auto& bin_max = candidate_edges[bin_id * 2 + 1];
+    const auto& bin_max = candidate_edges[(bin_id * 2) + 1];
 
     const auto estimate =
         estimate_cardinality_and_distinct_count(PredicateCondition::BetweenInclusive, bin_min, bin_max);

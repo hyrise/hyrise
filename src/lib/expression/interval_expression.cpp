@@ -2,14 +2,14 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <format>
 #include <memory>
-#include <sstream>
 #include <string>
 #include <unordered_map>
 
 #include <boost/container_hash/hash.hpp>
 
-#include "magic_enum.hpp"
+#include "magic_enum/magic_enum.hpp"
 
 #include "all_type_variant.hpp"
 #include "expression/abstract_expression.hpp"
@@ -32,9 +32,7 @@ std::shared_ptr<AbstractExpression> IntervalExpression::_on_deep_copy(
 }
 
 std::string IntervalExpression::description(const DescriptionMode /*mode*/) const {
-  auto stream = std::stringstream{};
-  stream << "INTERVAL '" << duration << "' " << magic_enum::enum_name(unit);
-  return stream.str();
+  return std::format("INTERVAL '{}' {}", duration, magic_enum::enum_name(unit));
 }
 
 bool IntervalExpression::_shallow_equals(const AbstractExpression& expression) const {

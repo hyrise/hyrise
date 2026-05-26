@@ -26,13 +26,14 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/update_node.hpp"
+#include "optimizer/strategy/abstract_rule.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace {
 
-using namespace hyrise;                         // NOLINT(build/namespaces)
-using namespace hyrise::expression_functional;  // NOLINT(build/namespaces)
+using namespace hyrise;
+using namespace hyrise::expression_functional;
 
 void lqp_create_node_mapping_impl(LQPNodeMapping& mapping, const std::shared_ptr<AbstractLQPNode>& lhs,
                                   const std::shared_ptr<AbstractLQPNode>& rhs) {
@@ -103,7 +104,7 @@ void lqp_find_subplan_roots_impl(std::vector<std::shared_ptr<AbstractLQPNode>>& 
     }
 
     for (const auto& expression : sub_node->node_expressions) {
-      visit_expression(expression, [&](const auto sub_expression) {
+      visit_expression(expression, [&](const auto& sub_expression) {
         if (const auto subquery_expression = std::dynamic_pointer_cast<LQPSubqueryExpression>(sub_expression)) {
           lqp_find_subplan_roots_impl(root_nodes, visited_nodes, subquery_expression->lqp);
         }
@@ -153,6 +154,57 @@ void recursively_collect_lqp_subquery_expressions_by_lqp(
                                                       only_correlated);
   recursively_collect_lqp_subquery_expressions_by_lqp(subquery_expressions_by_lqp, node->right_input(), visited_nodes,
                                                       only_correlated);
+}
+
+/**
+ * Function creates a boolean expression from an lqp. It traverses the passed lqp from top to bottom. However, an lqp is
+ * evaluated from bottom to top. This requires that the order in which the translated expressions are added to the
+ * output expression is the reverse order of how the nodes are traversed. The subsequent_expression parameter passes the
+ * translated expressions to the translation of its children nodes, which allows to add the translated expression of
+ * child node before its parent node to the output expression.
+ */
+std::shared_ptr<AbstractExpression> lqp_subplan_to_boolean_expression_impl(
+    const std::shared_ptr<AbstractLQPNode>& begin, const std::optional<const std::shared_ptr<AbstractLQPNode>>& end,
+    const std::optional<const std::shared_ptr<AbstractExpression>>& subsequent_expression) {
+  if (end && begin == *end) {
+    return nullptr;
+  }
+
+  switch (begin->type) {
+    case LQPNodeType::Predicate: {
+      const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(begin);
+      const auto predicate = predicate_node->predicate();
+      auto expression = subsequent_expression ? and_(predicate, *subsequent_expression) : predicate;
+      auto left_input_expression = lqp_subplan_to_boolean_expression_impl(begin->left_input(), end, expression);
+      if (left_input_expression) {
+        return left_input_expression;
+      }
+
+      return expression;
+    }
+
+    case LQPNodeType::Union: {
+      const auto union_node = std::dynamic_pointer_cast<UnionNode>(begin);
+      const auto left_input_expression = lqp_subplan_to_boolean_expression_impl(begin->left_input(), end, std::nullopt);
+      const auto right_input_expression =
+          lqp_subplan_to_boolean_expression_impl(begin->right_input(), end, std::nullopt);
+      if (left_input_expression && right_input_expression) {
+        const auto or_expression = or_(left_input_expression, right_input_expression);
+        return subsequent_expression ? and_(or_expression, *subsequent_expression) : or_expression;
+      }
+
+      return nullptr;
+    }
+
+    case LQPNodeType::Projection:
+    case LQPNodeType::Sort:
+    case LQPNodeType::Validate:
+    case LQPNodeType::Limit:
+      return lqp_subplan_to_boolean_expression_impl(begin->left_input(), end, subsequent_expression);
+
+    default:
+      return nullptr;
+  }
 }
 
 }  // namespace
@@ -350,59 +402,6 @@ std::set<std::string> lqp_find_modified_tables(const std::shared_ptr<AbstractLQP
   return modified_tables;
 }
 
-namespace {
-/**
- * Function creates a boolean expression from an lqp. It traverses the passed lqp from top to bottom. However, an lqp is
- * evaluated from bottom to top. This requires that the order in which the translated expressions are added to the
- * output expression is the reverse order of how the nodes are traversed. The subsequent_expression parameter passes the
- * translated expressions to the translation of its children nodes, which allows to add the translated expression of
- * child node before its parent node to the output expression.
- */
-std::shared_ptr<AbstractExpression> lqp_subplan_to_boolean_expression_impl(
-    const std::shared_ptr<AbstractLQPNode>& begin, const std::optional<const std::shared_ptr<AbstractLQPNode>>& end,
-    const std::optional<const std::shared_ptr<AbstractExpression>>& subsequent_expression) {
-  if (end && begin == *end) {
-    return nullptr;
-  }
-
-  switch (begin->type) {
-    case LQPNodeType::Predicate: {
-      const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(begin);
-      const auto predicate = predicate_node->predicate();
-      auto expression = subsequent_expression ? and_(predicate, *subsequent_expression) : predicate;
-      auto left_input_expression = lqp_subplan_to_boolean_expression_impl(begin->left_input(), end, expression);
-      if (left_input_expression) {
-        return left_input_expression;
-      }
-
-      return expression;
-    }
-
-    case LQPNodeType::Union: {
-      const auto union_node = std::dynamic_pointer_cast<UnionNode>(begin);
-      const auto left_input_expression = lqp_subplan_to_boolean_expression_impl(begin->left_input(), end, std::nullopt);
-      const auto right_input_expression =
-          lqp_subplan_to_boolean_expression_impl(begin->right_input(), end, std::nullopt);
-      if (left_input_expression && right_input_expression) {
-        const auto or_expression = or_(left_input_expression, right_input_expression);
-        return subsequent_expression ? and_(or_expression, *subsequent_expression) : or_expression;
-      }
-
-      return nullptr;
-    }
-
-    case LQPNodeType::Projection:
-    case LQPNodeType::Sort:
-    case LQPNodeType::Validate:
-    case LQPNodeType::Limit:
-      return lqp_subplan_to_boolean_expression_impl(begin->left_input(), end, subsequent_expression);
-
-    default:
-      return nullptr;
-  }
-}
-}  // namespace
-
 // Function wraps the call to the lqp_subplan_to_boolean_expression_impl() function to hide its third parameter,
 // subsequent_predicate, which is only used internally.
 std::shared_ptr<AbstractExpression> lqp_subplan_to_boolean_expression(
@@ -489,7 +488,7 @@ std::vector<std::shared_ptr<AbstractExpression>> get_expressions_for_column_ids(
     const auto& column_expression = static_cast<const LQPColumnExpression&>(*output_expression);
 
     const auto original_column_id = column_expression.original_column_id;
-    const auto it = std::find(column_ids.cbegin(), column_ids.cend(), original_column_id);
+    const auto it = std::ranges::find(column_ids, original_column_id);
     if (it != column_ids.end()) {
       DebugAssert(*column_expression.original_node.lock() == lqp_node,
                   "LQPColumnExpressions should reference the original node.");
@@ -508,23 +507,30 @@ std::vector<std::shared_ptr<AbstractExpression>> get_expressions_for_column_ids(
   return column_expressions;
 }
 
-bool contains_matching_unique_column_combination(const UniqueColumnCombinations& unique_column_combinations,
-                                                 const ExpressionUnorderedSet& expressions) {
+UniqueColumnCombinations::const_iterator find_ucc(const UniqueColumnCombinations& unique_column_combinations,
+                                                  const ExpressionUnorderedSet& expressions) {
   DebugAssert(!unique_column_combinations.empty(), "Invalid input: Set of UCCs should not be empty.");
   DebugAssert(!expressions.empty(), "Invalid input: Set of expressions should not be empty.");
 
-  // Look for a unique column combination that is based on a subset of the given expressions.
-  for (const auto& ucc : unique_column_combinations) {
-    if (ucc.expressions.size() <= expressions.size() &&
-        std::all_of(ucc.expressions.cbegin(), ucc.expressions.cend(), [&](const auto& ucc_expression) {
+  // Look for a unique column combination that is based on a subset of the given expressions. We do not guarantee the
+  // UCC to be minimal, but we prefer genuine UCCs.
+  auto matching_ucc = unique_column_combinations.cend();
+  for (auto ucc = unique_column_combinations.cbegin(); ucc != unique_column_combinations.cend(); ++ucc) {
+    // If all of the expressions in the UCC are contained in the given expressions, we found a match.
+    if (ucc->expressions.size() <= expressions.size() &&
+        std::ranges::all_of(ucc->expressions, [&](const auto& ucc_expression) {
           return expressions.contains(ucc_expression);
         })) {
-      // Found a matching UCC.
-      return true;
+      // If this match is genuine, we can stop here.
+      if (ucc->is_genuine()) {
+        return ucc;
+      }
+
+      // We found a matching UCC, but continue looking for a genuine one.
+      matching_ucc = ucc;
     }
   }
-  // Did not find a UCC for the given expressions.
-  return false;
+  return matching_ucc;
 }
 
 FunctionalDependencies fds_from_unique_column_combinations(const std::shared_ptr<const AbstractLQPNode>& lqp,
@@ -546,7 +552,7 @@ FunctionalDependencies fds_from_unique_column_combinations(const std::shared_ptr
     auto determinants = ucc.expressions;
 
     // (1) Verify whether we can create an FD from the given UCC (non-nullable determinant expressions).
-    if (!std::all_of(determinants.cbegin(), determinants.cend(), [&](const auto& determinant_expression) {
+    if (!std::ranges::all_of(determinants, [&](const auto& determinant_expression) {
           return output_expressions_non_nullable.contains(determinant_expression);
         })) {
       continue;
@@ -565,12 +571,12 @@ FunctionalDependencies fds_from_unique_column_combinations(const std::shared_ptr
     if (dependents.empty()) {
       continue;
     }
-    DebugAssert(std::find_if(fds.cbegin(), fds.cend(),
-                             [&determinants, &dependents](const auto& fd) {
-                               return (fd.determinants == determinants) && (fd.dependents == dependents);
-                             }) == fds.cend(),
+    DebugAssert(std::ranges::none_of(fds,
+                                     [&determinants, &dependents](const auto& fd) {
+                                       return (fd.determinants == determinants) && (fd.dependents == dependents);
+                                     }),
                 "Creating duplicate functional dependencies is unexpected.");
-    fds.emplace(std::move(determinants), std::move(dependents));
+    fds.emplace(std::move(determinants), std::move(dependents), ucc.is_genuine());
   }
   return fds;
 }
@@ -594,7 +600,7 @@ FunctionalDependencies fds_from_order_dependencies(const std::shared_ptr<const A
     auto determinants = ExpressionUnorderedSet{od.ordering_expressions.cbegin(), od.ordering_expressions.cend()};
 
     // (1) Verify whether we can create an FD from the given OD (non-nullable expressions).
-    if (!std::all_of(determinants.cbegin(), determinants.cend(), [&](const auto& determinant_expression) {
+    if (!std::ranges::all_of(determinants, [&](const auto& determinant_expression) {
           return output_expressions_non_nullable.contains(determinant_expression);
         })) {
       continue;

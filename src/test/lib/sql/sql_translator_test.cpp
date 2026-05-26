@@ -1,10 +1,22 @@
+#include <cstddef>
+#include <cstdint>
+#include <limits>
+#include <memory>
 #include <optional>
+#include <stdexcept>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 
+#include "SQLParser.h"
+
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "expression/abstract_expression.hpp"
-#include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
+#include "expression/window_expression.hpp"
 #include "hyrise.hpp"
 #include "import_export/file_type.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
@@ -25,6 +37,7 @@
 #include "logical_query_plan/intersect_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/limit_node.hpp"
+#include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
@@ -35,16 +48,21 @@
 #include "logical_query_plan/window_node.hpp"
 #include "sql/create_sql_parser_error_message.hpp"
 #include "sql/sql_translator.hpp"
+#include "storage/constraints/table_key_constraint.hpp"
 #include "storage/encoding_type.hpp"
+#include "storage/lqp_view.hpp"
 #include "storage/table.hpp"
+#include "testing_assert.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 #include "utils/invalid_input_exception.hpp"
 #include "utils/load_table.hpp"
 #include "utils/meta_table_manager.hpp"
 
 namespace hyrise {
 
-using namespace std::string_literals;   // NOLINT(build/namespaces)
-using namespace expression_functional;  // NOLINT(build/namespaces)
+using namespace std::string_literals;
+using namespace expression_functional;
 
 class SQLTranslatorTest : public BaseTest {
  public:
@@ -779,6 +797,10 @@ TEST_F(SQLTranslatorTest, WhereWithLike) {
       sql_to_lqp_helper("SELECT * FROM int_string WHERE b NOT LIKE '%test1%';");
   const auto [actual_lqp_c, translation_info_c] =
       sql_to_lqp_helper("SELECT * FROM int_string WHERE b NOT LIKE CONCAT('%test1', '%');");
+  const auto [actual_lqp_d, translation_info_d] =
+      sql_to_lqp_helper("SELECT * FROM int_string WHERE b ILIKE '%test1%';");
+  const auto [actual_lqp_e, translation_info_e] =
+      sql_to_lqp_helper("SELECT * FROM int_string WHERE NOT b ILIKE '%test1%';");
 
   // clang-format off
   const auto expected_lqp_a = PredicateNode::make(like_(int_string_b, "%test1%"), stored_table_node_int_string);
@@ -786,11 +808,15 @@ TEST_F(SQLTranslatorTest, WhereWithLike) {
   const auto expected_lqp_c =
   PredicateNode::make(not_like_(int_string_b, concat_("%test1", "%")),
       stored_table_node_int_string);
+  const auto expected_lqp_d = PredicateNode::make(ilike_(int_string_b, "%test1%"), stored_table_node_int_string);
+  const auto expected_lqp_e = PredicateNode::make(not_ilike_(int_string_b, "%test1%"), stored_table_node_int_string);
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp_a, expected_lqp_a);
   EXPECT_LQP_EQ(actual_lqp_b, expected_lqp_b);
   EXPECT_LQP_EQ(actual_lqp_c, expected_lqp_c);
+  EXPECT_LQP_EQ(actual_lqp_d, expected_lqp_d);
+  EXPECT_LQP_EQ(actual_lqp_e, expected_lqp_e);
 }
 
 TEST_F(SQLTranslatorTest, WhereWithLogical) {

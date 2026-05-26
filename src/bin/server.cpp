@@ -1,6 +1,7 @@
 #include "server/server.hpp"
 
 #include <cstdint>
+#include <format>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -28,7 +29,26 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT(build/namespaces)
+using namespace hyrise;
+
+cxxopts::Options get_server_cli_options() {
+  auto cli_options = cxxopts::Options{"./hyriseServer", "Starts Hyrise server in order to accept network requests."};
+
+  // clang-format off
+  cli_options.add_options()
+    ("help", "Display this help and exit")
+    ("address", "Specify the address to run on", cxxopts::value<std::string>()->default_value("0.0.0.0"))
+    ("p,port", "Specify the port number. 0 means randomly select an available one. If no port is specified, the "
+               "server will start on PostgreSQL's official port", cxxopts::value<uint16_t>()->default_value("5432"))
+    ("benchmark_data", "Optional for benchmarking purposes: specify the benchmark name and sizing factor to generate "
+                       "at server start (e.g., \"TPC-C:5\", \"TPC-DS:5\", or \"TPC-H:10\"). Supported are TPC-C, "
+                       "TPC-DS, and TPC-H. The sizing factor determines the scale factor in TPC-DS and TPC-H, and the "
+                       "warehouse count in TPC-C.", cxxopts::value<std::string>())
+    ("execution_info", "Send execution information after statement execution", cxxopts::value<bool>()->default_value("false"));  // NOLINT(whitespace/line_length)
+  // clang-format on
+
+  return cli_options;
+}
 
 void generate_benchmark_data(std::string argument_string) {
   // Remove unnecessary whitespaces.
@@ -65,25 +85,6 @@ void generate_benchmark_data(std::string argument_string) {
 
 }  // namespace
 
-cxxopts::Options get_server_cli_options() {
-  auto cli_options = cxxopts::Options{"./hyriseServer", "Starts Hyrise server in order to accept network requests."};
-
-  // clang-format off
-  cli_options.add_options()
-    ("help", "Display this help and exit")
-    ("address", "Specify the address to run on", cxxopts::value<std::string>()->default_value("0.0.0.0"))
-    ("p,port", "Specify the port number. 0 means randomly select an available one. If no port is specified, the "
-               "server will start on PostgreSQL's official port", cxxopts::value<uint16_t>()->default_value("5432"))
-    ("benchmark_data", "Optional for benchmarking purposes: specify the benchmark name and sizing factor to generate "
-                       "at server start (e.g., \"TPC-C:5\", \"TPC-DS:5\", or \"TPC-H:10\"). Supported are TPC-C, "
-                       "TPC-DS, and TPC-H. The sizing factor determines the scale factor in TPC-DS and TPC-H, and the "
-                       "warehouse count in TPC-C.", cxxopts::value<std::string>())
-    ("execution_info", "Send execution information after statement execution", cxxopts::value<bool>()->default_value("false"));  // NOLINT(whitespace/line_length)
-  // clang-format on
-
-  return cli_options;
-}
-
 int main(int argc, char* argv[]) {
   auto cli_options = get_server_cli_options();
   const auto parsed_options = cli_options.parse(argc, argv);
@@ -112,7 +113,8 @@ int main(int argc, char* argv[]) {
   auto error = boost::system::error_code{};
   const auto address = boost::asio::ip::make_address(parsed_options["address"].as<std::string>(), error);
 
-  Assert(!error, "Not a valid IPv4 address: " + parsed_options["address"].as<std::string>() + ", terminating...");
+  Assert(!error,
+         std::format("Not a valid IPv4 address: '{}', terminating...", parsed_options["address"].as<std::string>()));
 
   auto server = hyrise::Server{address, port, static_cast<hyrise::SendExecutionInfo>(execution_info)};
   server.run();

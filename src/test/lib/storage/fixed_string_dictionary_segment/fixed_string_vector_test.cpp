@@ -1,4 +1,10 @@
+#include <algorithm>
+#include <cstddef>
 #include <memory>
+#include <stdexcept>
+#include <string>
+#include <utility>
+#include <vector>
 
 #include "base_test.hpp"
 #include "storage/fixed_string_dictionary_segment/fixed_string_vector.hpp"
@@ -9,7 +15,7 @@ class FixedStringVectorTest : public BaseTest {
  protected:
   void SetUp() override {
     auto strings = {"foo", "barbaz", "str3"};
-    fixed_string_vector = std::make_shared<FixedStringVector>(FixedStringVector(strings.begin(), strings.end(), 6u));
+    fixed_string_vector = std::make_shared<FixedStringVector>(strings.begin(), strings.end(), 6);
   }
 
   std::shared_ptr<FixedStringVector> fixed_string_vector = nullptr;

@@ -1,27 +1,37 @@
+#include <memory>
+#include <stdexcept>
+
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "expression/expression_functional.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
-#include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
+#include "operators/get_table.hpp"
+#include "operators/insert.hpp"
+#include "optimizer/strategy/abstract_rule.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/constraints/table_key_constraint.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
+#include "storage/table_column_definition.hpp"
+#include "types.hpp"
 #include "utils/data_dependency_test_utils.hpp"
+#include "utils/load_table.hpp"
 
 namespace hyrise {
 
-using namespace expression_functional;  // NOLINT(build/namespaces)
+using namespace expression_functional;
 
 class StoredTableNodeTest : public BaseTest {
  protected:
   void SetUp() override {
     _table_a = load_table("resources/test_data/tbl/int_int_float.tbl", ChunkOffset{1});
-    ChunkEncoder::encode_all_chunks(_table_a);
+    ChunkEncoder::encode_all_chunks(_table_a, SegmentEncodingSpec{EncodingType::Dictionary});
     _table_b = load_table("resources/test_data/tbl/int_int_float.tbl", ChunkOffset{1});
 
     Hyrise::get().storage_manager.add_table("t_a", _table_a);
@@ -207,43 +217,43 @@ TEST_F(StoredTableNodeTest, Copy) {
 }
 
 TEST_F(StoredTableNodeTest, NodeExpressions) {
-  ASSERT_EQ(_stored_table_node->node_expressions.size(), 0u);
+  ASSERT_EQ(_stored_table_node->node_expressions.size(), 0);
 }
 
 TEST_F(StoredTableNodeTest, GetStatisticsPruneFirstColumn) {
-  EXPECT_EQ(_stored_table_node->chunk_indexes_statistics().size(), 4u);
+  EXPECT_EQ(_stored_table_node->chunk_indexes_statistics().size(), 4);
 
-  auto expected_statistics = _stored_table_node->chunk_indexes_statistics().at(1u);
+  auto expected_statistics = _stored_table_node->chunk_indexes_statistics().at(1);
 
   _stored_table_node->set_pruned_column_ids({ColumnID{0}});
 
   // column with ColumnID{0} was pruned, therefore the column has to be left shifted
   expected_statistics.column_ids[0] -= 1;
 
-  EXPECT_EQ(_stored_table_node->chunk_indexes_statistics().size(), 1u);
-  EXPECT_EQ(_stored_table_node->chunk_indexes_statistics().at(0u), expected_statistics);
+  EXPECT_EQ(_stored_table_node->chunk_indexes_statistics().size(), 1);
+  EXPECT_EQ(_stored_table_node->chunk_indexes_statistics().at(0), expected_statistics);
 }
 
 TEST_F(StoredTableNodeTest, GetStatisticsPruneSecondColumn) {
-  EXPECT_EQ(_stored_table_node->chunk_indexes_statistics().size(), 4u);
+  EXPECT_EQ(_stored_table_node->chunk_indexes_statistics().size(), 4);
 
-  auto expected_statistics = _stored_table_node->chunk_indexes_statistics().at(0u);
+  auto expected_statistics = _stored_table_node->chunk_indexes_statistics().at(0);
 
   _stored_table_node->set_pruned_column_ids({ColumnID{1}});
 
   // column with ColumnID{1} was pruned, so ColumnID{0} should be untouched
 
-  EXPECT_EQ(_stored_table_node->chunk_indexes_statistics().size(), 1u);
-  EXPECT_EQ(_stored_table_node->chunk_indexes_statistics().at(0u), expected_statistics);
+  EXPECT_EQ(_stored_table_node->chunk_indexes_statistics().size(), 1);
+  EXPECT_EQ(_stored_table_node->chunk_indexes_statistics().at(0), expected_statistics);
 }
 
 TEST_F(StoredTableNodeTest, GetStatisticsPruneBothColumns) {
-  EXPECT_EQ(_stored_table_node->chunk_indexes_statistics().size(), 4u);
+  EXPECT_EQ(_stored_table_node->chunk_indexes_statistics().size(), 4);
 
   _stored_table_node->set_pruned_column_ids({ColumnID{0}, ColumnID{1}});
 
   // All indexed columns were pruned, therefore the index statistics should be empty
-  EXPECT_EQ(_stored_table_node->chunk_indexes_statistics().size(), 0u);
+  EXPECT_EQ(_stored_table_node->chunk_indexes_statistics().size(), 0);
 }
 
 TEST_F(StoredTableNodeTest, FunctionalDependenciesNone) {
@@ -424,12 +434,42 @@ TEST_F(StoredTableNodeTest, UniqueColumnCombinationsPrunedColumns) {
   EXPECT_TRUE(find_ucc_by_key_constraint(key_constraint_c, unique_column_combinations));
 }
 
+TEST_F(StoredTableNodeTest, UniqueColumnCombinationsValidityNotGuaranteed) {
+  // Check that only the key constraints are used as UCCs for optimization purposes that are guaranteed to be valid
+  // for the current snapshot.
+
+  // Prepare UCCs.
+  const auto key_constraint_a_b = TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::UNIQUE};
+  const auto key_constraint_c = TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE, INITIAL_COMMIT_ID};
+  _table_a->add_soft_constraint(key_constraint_a_b);
+  _table_a->add_soft_constraint(key_constraint_c);
+  const auto& table_key_constraints = _table_a->soft_key_constraints();
+  EXPECT_EQ(table_key_constraints.size(), 2);
+  EXPECT_EQ(_stored_table_node->unique_column_combinations().size(), 2);
+
+  // Modify the table so that the UCC is no longer guaranteed to be valid. In fact, it is actually no longer valid
+  // because we duplicated all rows.
+  const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
+  const auto get_table = std::make_shared<GetTable>("t_a");
+  get_table->execute();
+  const auto insert_op = std::make_shared<Insert>("t_a", get_table);
+  insert_op->set_transaction_context(transaction_context);
+  insert_op->execute();
+  transaction_context->commit();
+
+  // Basic check.
+  const auto& unique_column_combinations = _stored_table_node->unique_column_combinations();
+  EXPECT_EQ(unique_column_combinations.size(), 1);
+  // In-depth check.
+  EXPECT_TRUE(find_ucc_by_key_constraint(key_constraint_a_b, unique_column_combinations));
+}
+
 TEST_F(StoredTableNodeTest, UniqueColumnCombinationsEmpty) {
   EXPECT_TRUE(_table_a->soft_key_constraints().empty());
   EXPECT_TRUE(_stored_table_node->unique_column_combinations().empty());
 }
 
-TEST_F(StoredTableNodeTest, HasMatchingUniqueColumnCombination) {
+TEST_F(StoredTableNodeTest, GetMatchingUniqueColumnCombination) {
   const auto key_constraint_a = TableKeyConstraint{{_a->original_column_id}, KeyConstraintType::UNIQUE};
   _table_a->add_soft_constraint(key_constraint_a);
   EXPECT_EQ(_stored_table_node->unique_column_combinations().size(), 1);
@@ -439,9 +479,9 @@ TEST_F(StoredTableNodeTest, HasMatchingUniqueColumnCombination) {
   EXPECT_THROW(_stored_table_node->has_matching_ucc({}), std::logic_error);
 
   // There is no matching UCC.
-  EXPECT_FALSE(_stored_table_node->has_matching_ucc({_b}));
-  EXPECT_FALSE(_stored_table_node->has_matching_ucc({_c}));
-  EXPECT_FALSE(_stored_table_node->has_matching_ucc({_b, _c}));
+  EXPECT_FALSE(_stored_table_node->has_matching_ucc({_b}).first);
+  EXPECT_FALSE(_stored_table_node->has_matching_ucc({_c}).first);
+  EXPECT_FALSE(_stored_table_node->has_matching_ucc({_b, _c}).first);
 
   if constexpr (HYRISE_DEBUG) {
     // Columns are not part of output_expressions() (i.e., pruned).
@@ -451,11 +491,18 @@ TEST_F(StoredTableNodeTest, HasMatchingUniqueColumnCombination) {
 
   // Test exact match.
   _stored_table_node->set_pruned_column_ids({});
-  EXPECT_TRUE(_stored_table_node->has_matching_ucc({_a}));
+  const auto [has_matching_ucc_a, matching_ucc_cacheable_a] = _stored_table_node->has_matching_ucc({_a});
+  EXPECT_TRUE(has_matching_ucc_a);
+  EXPECT_TRUE(matching_ucc_cacheable_a);
 
   // Test superset of column ids.
-  EXPECT_TRUE(_stored_table_node->has_matching_ucc({_a, _b}));
-  EXPECT_TRUE(_stored_table_node->has_matching_ucc({_a, _c}));
+  const auto [has_matching_ucc_ab, matching_ucc_cacheable_ab] = _stored_table_node->has_matching_ucc({_a, _b});
+  EXPECT_TRUE(has_matching_ucc_ab);
+  EXPECT_TRUE(matching_ucc_cacheable_ab);
+
+  const auto [has_matching_ucc_ac, matching_ucc_cacheable_ac] = _stored_table_node->has_matching_ucc({_a, _c});
+  EXPECT_TRUE(has_matching_ucc_ac);
+  EXPECT_TRUE(matching_ucc_cacheable_ac);
 }
 
 TEST_F(StoredTableNodeTest, OrderDependenciesSimple) {

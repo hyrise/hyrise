@@ -1,6 +1,7 @@
 #include "window_function_expression.hpp"
 
 #include <cstddef>
+#include <format>
 #include <functional>
 #include <memory>
 #include <ostream>
@@ -104,7 +105,8 @@ DataType WindowFunctionExpression::data_type() const {
   }
 
   const auto& argument = this->argument();
-  Assert(argument, "Expected " + window_function_to_string.left.at(window_function) + " to have an argument.");
+  Assert(argument,
+         std::format("Expected '{}' to have an argument.", window_function_to_string.left.at(window_function)));
   const auto argument_data_type = argument->data_type();
   auto result_type = DataType::Null;
 

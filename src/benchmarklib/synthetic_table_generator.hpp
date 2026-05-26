@@ -14,37 +14,13 @@ namespace hyrise {
 
 class Table;
 
-enum class DataDistributionType { Uniform, NormalSkewed, Pareto };
+enum class DataDistributionType : uint8_t { Uniform, NormalSkewed, Pareto };
 
 struct ColumnDataDistribution {
-  static ColumnDataDistribution make_uniform_config(const double min, const double max) {
-    auto config = ColumnDataDistribution{};
-    config.min_value = min;
-    config.max_value = max;
-    config.num_different_values = static_cast<int>(std::floor(max - min));
-    return config;
-  }
-
-  static ColumnDataDistribution make_pareto_config(const double pareto_scale = 1.0, const double pareto_shape = 1.0) {
-    auto config = ColumnDataDistribution{};
-    config.pareto_scale = pareto_scale;
-    config.pareto_shape = pareto_shape;
-    config.distribution_type = DataDistributionType::Pareto;
-    return config;
-  }
-
-  static ColumnDataDistribution make_skewed_normal_config(
-      const double skew_location = 0.0, const double skew_scale = 1.0,
-      // Temporary work around for https://github.com/boostorg/math/issues/254.
-      // TODO(anyone): reset to 0.0 when Hyrise's boost has the fix.
-      const double skew_shape = 0.0001) {
-    auto config = ColumnDataDistribution{};
-    config.skew_location = skew_location;
-    config.skew_scale = skew_scale;
-    config.skew_shape = skew_shape;
-    config.distribution_type = DataDistributionType::NormalSkewed;
-    return config;
-  }
+  static ColumnDataDistribution make_uniform_config(const double min, const double max);
+  static ColumnDataDistribution make_pareto_config(const double pareto_scale = 1.0, const double pareto_shape = 1.0);
+  static ColumnDataDistribution make_skewed_normal_config(const double skew_location = 0.0,
+                                                          const double skew_scale = 1.0, const double skew_shape = 0.0);
 
   DataDistributionType distribution_type = DataDistributionType::Uniform;
 
@@ -64,7 +40,7 @@ struct ColumnDataDistribution {
 struct ColumnSpecification {
   ColumnSpecification(const ColumnDataDistribution& init_data_distribution, const DataType& init_data_type,
                       const std::optional<SegmentEncodingSpec> init_segment_encoding_spec = std::nullopt,
-                      const std::optional<std::string> init_name = std::nullopt, const float init_null_ratio = 0.0f)
+                      const std::optional<std::string>& init_name = std::nullopt, const float init_null_ratio = 0)
       : data_distribution{init_data_distribution},
         data_type{init_data_type},
         segment_encoding_spec{init_segment_encoding_spec},
@@ -75,7 +51,7 @@ struct ColumnSpecification {
   const DataType data_type;
   const std::optional<SegmentEncodingSpec> segment_encoding_spec;
   const std::optional<std::string> name;
-  const float null_ratio = 0.0f;
+  const float null_ratio = 0;
 };
 
 class SyntheticTableGenerator {
@@ -118,23 +94,23 @@ class SyntheticTableGenerator {
     if constexpr (std::is_integral_v<T>) {
       return static_cast<T>(input);
     } else if constexpr (std::is_floating_point_v<T>) {
-      return static_cast<T>(input) * 0.999999f;
+      return static_cast<T>(input) * static_cast<T>(0.999999);
     } else if constexpr (std::is_same_v<T, pmr_string>) {
       Assert(input >= 0, "Integer values need to be positive in order to be converted to a pmr_string.");
 
-      constexpr auto generated_string_length = size_t{10};
-      constexpr auto prefix_length = size_t{4};
-      constexpr auto variable_string_length = generated_string_length - prefix_length;
+      constexpr auto GENERATED_STRING_LENGTH = size_t{10};
+      constexpr auto PREFIX_LENGTH = size_t{4};
+      constexpr auto VARIABLE_STRING_LENGTH = GENERATED_STRING_LENGTH - PREFIX_LENGTH;
 
       const auto chars = std::vector<char>{
           '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K',
           'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f',
           'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'};
       const auto chars_base = chars.size();
-      Assert(static_cast<double>(input) < std::pow(chars_base, variable_string_length),
-             "Input too large. Cannot be represented in " + std::to_string(variable_string_length) + " chars.");
+      Assert(static_cast<double>(input) < std::pow(chars_base, VARIABLE_STRING_LENGTH),
+             std::format("Input too large. Cannot be represented in '{}' chars.", VARIABLE_STRING_LENGTH));
 
-      auto result = pmr_string(generated_string_length, ' ');  // fill full length with spaces
+      auto result = pmr_string(GENERATED_STRING_LENGTH, ' ');  // Fill entire length with spaces
       if (input == 0) {
         return result;
       }
@@ -142,7 +118,7 @@ class SyntheticTableGenerator {
       const auto result_char_count = static_cast<size_t>(std::floor(std::log(input) / std::log(chars_base)) + 1);
       auto remainder = static_cast<size_t>(input);
       for (auto i = size_t{0}; i < result_char_count; ++i) {
-        result[generated_string_length - 1 - i] = chars[remainder % chars_base];
+        result[GENERATED_STRING_LENGTH - 1 - i] = chars[remainder % chars_base];
         remainder = static_cast<size_t>(remainder / chars_base);
       }
 

@@ -38,7 +38,7 @@ std::vector<std::string> SettingsManager::setting_names() const {
     setting_names.emplace_back(setting_name);
   }
 
-  std::sort(setting_names.begin(), setting_names.end());
+  std::ranges::sort(setting_names);
   return setting_names;
 }
 

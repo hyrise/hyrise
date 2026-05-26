@@ -1,5 +1,8 @@
+#include <memory>
+
 #include "base_test.hpp"
 #include "mock_setting.hpp"
+#include "utils/settings/abstract_setting.hpp"
 
 namespace hyrise {
 

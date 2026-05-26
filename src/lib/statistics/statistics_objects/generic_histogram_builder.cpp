@@ -34,8 +34,8 @@ void GenericHistogramBuilder<T>::add_bin(const T& min, const T& max, HistogramCo
 
   _bin_minima.emplace_back(min);
   _bin_maxima.emplace_back(max);
-  _bin_heights.emplace_back(static_cast<HistogramCountType>(height));
-  _bin_distinct_counts.emplace_back(static_cast<HistogramCountType>(distinct_count));
+  _bin_heights.emplace_back(height);
+  _bin_distinct_counts.emplace_back(distinct_count);
 }
 
 template <typename T>

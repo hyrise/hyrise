@@ -1,9 +1,26 @@
+#include <algorithm>
+#include <cstddef>
+#include <cstdint>
+#include <iterator>
 #include <memory>
+#include <optional>
 #include <set>
+#include <shared_mutex>
+#include <stdexcept>
+#include <thread>
+#include <utility>
 #include <vector>
 
+#include "tsl/sparse_map.h"
+#include "tsl/sparse_set.h"
+
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
+#include "storage/chunk.hpp"
 #include "storage/index/partial_hash/partial_hash_index.hpp"
+#include "storage/index/partial_hash/partial_hash_index_impl.hpp"
+#include "storage/table.hpp"
+#include "storage/value_segment.hpp"
 #include "types.hpp"
 
 namespace hyrise {
@@ -512,6 +529,23 @@ TEST_F(PartialHashIndexTest, NotEqualsValueNotFound) {
   EXPECT_EQ(begin1, cbegin(index));
   EXPECT_EQ(end1, begin2);
   EXPECT_EQ(end2, cend(index));
+}
+
+TEST_F(PartialHashIndexTest, AssignFlatMapIterator) {
+  // auto iterator = something; would not call the assignment operator, but the constructor.
+  auto iterator = FlatMapIterator{cend(index)};
+
+  // Explicitely invoke assign operator.
+  iterator = cbegin(index);
+  EXPECT_EQ(iterator, cbegin(index));
+  EXPECT_EQ(*iterator, *cbegin(index));
+  EXPECT_NE(iterator, cend(index));
+
+  // Test re-assignment of the same value.
+  iterator = cbegin(index);
+  EXPECT_EQ(iterator, cbegin(index));
+  EXPECT_EQ(*iterator, *cbegin(index));
+  EXPECT_NE(iterator, cend(index));
 }
 
 /*

@@ -19,7 +19,7 @@ std::optional<float> next_float_towards(double value, double towards);
 // Example: `int(a) < float(3.3)` is the same as `int(a) <= int(3)`.
 template <typename Output, typename Input>
 std::optional<std::pair<PredicateCondition, Output>> lossless_predicate_cast(const PredicateCondition condition,
-                                                                             const Input input) {
+                                                                             const Input& input) {
   using ResultPair = std::pair<PredicateCondition, Output>;
 
   if (const auto losslessly_casted_value = lossless_cast<Output>(input)) {

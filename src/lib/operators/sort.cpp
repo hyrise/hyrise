@@ -43,12 +43,11 @@
 #include "storage/value_segment.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
-#include "utils/ips4o_sort.hpp"
 #include "utils/timer.hpp"
 
 namespace {
 
-using namespace hyrise;  // NOLINT
+using namespace hyrise;
 
 // The number of bytes after that long strings are shortened.
 constexpr size_t STRING_CUTOFF = 64;
@@ -67,6 +66,7 @@ constexpr size_t STRING_CUTOFF = 64;
 
 // Divide left by right and round up to the next larger integer.
 auto div_ceil(const auto left, const auto right) {
+  DebugAssert(right > 0, "Divisor must be larger than 0.");
   return (left + right - 1) / right;
 }
 
@@ -278,8 +278,6 @@ int static_memcmp(std::byte* left, std::byte* right, size_t len) {
 }
 
 struct NormalizedKeyRow {
-  constexpr NormalizedKeyRow() noexcept = default;
-
   constexpr NormalizedKeyRow(std::byte* key_head, RowID row_id) noexcept : key_head(key_head), row_id(row_id) {}
 
   std::byte* key_head = nullptr;
@@ -297,13 +295,13 @@ struct NormalizedKeyRow {
 
 // Map signed to unsigned data types with same number of bytes (e.g., int32_t to uint32_t).
 template <typename T>
+  // bool and char are arithmetic types but are not supported.
+  requires(std::is_arithmetic_v<T> && !std::is_same_v<T, bool>&& !std::is_same_v<T, char>)
 auto to_unsigned(T value) {
   if constexpr (std::is_same_v<decltype(value), int32_t> || std::is_same_v<decltype(value), float>) {
     return std::bit_cast<uint32_t>(value);
   } else if constexpr (std::is_same_v<decltype(value), int64_t> || std::is_same_v<decltype(value), double>) {
     return std::bit_cast<uint64_t>(value);
-  } else {
-    static_assert(false, "Unsupported data type");
   }
 }
 
@@ -773,12 +771,9 @@ std::shared_ptr<const Table> Sort::_on_execute() {
 
   const auto materialization_time = timer.lap();
 
-  const auto comp = [normalized_key_size](const NormalizedKeyRow& lhs, const NormalizedKeyRow& rhs) {
+  std::ranges::sort(materialized_rows, [normalized_key_size](const NormalizedKeyRow& lhs, const NormalizedKeyRow& rhs) {
     return lhs.less_than(rhs, normalized_key_size);
-  };
-  hyrise::ips4o::sort<NormalizedKeyRow>(std::views::all(materialized_rows), comp, _config.max_parallelism,
-                                        _config.min_blocks_per_stripe, _config.bucket_count - 1,
-                                        _config.samples_per_classifier, _config.block_size);
+  });
 
   const auto sort_time = timer.lap();
 

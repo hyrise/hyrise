@@ -1,11 +1,11 @@
 #include "abstract_table_generator.hpp"
 
 #include <filesystem>
+#include <format>
 #include <iostream>
 #include <memory>
 #include <numeric>
 #include <optional>
-#include <sstream>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -32,7 +32,6 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/format_duration.hpp"
-#include "utils/list_directory.hpp"
 #include "utils/timer.hpp"
 
 namespace hyrise {
@@ -126,7 +125,7 @@ void AbstractTableGenerator::generate_and_store() {
             auto last_value = std::optional<ColumnDataType>{};
             for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
               const auto& segment = table->get_chunk(chunk_id)->get_segment(sort_column_id);
-              segment_with_iterators<ColumnDataType>(*segment, [&](auto it, const auto end) {
+              segment_with_iterators<ColumnDataType>(*segment, [&](auto it, const auto& end) {
                 while (it != end) {
                   if (it->is_null()) {
                     if (last_value) {
@@ -153,9 +152,8 @@ void AbstractTableGenerator::generate_and_store() {
           });
 
           if (is_sorted) {
-            auto output = std::stringstream{};
-            output << "-  Table '" << table_name << "' is already sorted by '" << column_name << "'\n";
-            std::cout << output.str() << std::flush;
+            std::cout << std::format("-  Table '{}' is already sorted by '{}'\n", table_name, column_name)
+                      << std::flush;
             const SortColumnDefinition sort_column{sort_column_id, sort_mode};
 
             if (_all_chunks_sorted_by(table, sort_column)) {
@@ -202,10 +200,9 @@ void AbstractTableGenerator::generate_and_store() {
             table->get_chunk(chunk_id)->set_individually_sorted_by(SortColumnDefinition(sort_column_id, sort_mode));
           }
 
-          auto output = std::stringstream{};
-          output << "-  Sorted '" << table_name << "' by '" << column_name << "' (" << per_table_timer.lap_formatted()
-                 << ")\n";
-          std::cout << output.str() << std::flush;
+          std::cout << std::format("-  Sorted '{}' by '{}' ({})\n", table_name, column_name,
+                                   per_table_timer.lap_formatted())
+                    << std::flush;
         };
         jobs.emplace_back(std::make_shared<JobTask>(sort_table));
       }
@@ -237,12 +234,10 @@ void AbstractTableGenerator::generate_and_store() {
         auto per_table_timer = Timer{};
         table_info.re_encoded =
             BenchmarkTableEncoder::encode(table_name, table_info.table, _benchmark_config->encoding_config);
-        auto output = std::stringstream{};
-        output << "-  Processing '" + table_name << "' - "
-               << (table_info.re_encoded ? "encoding applied" : "no encoding necessary") << " ("
-               << per_table_timer.lap_formatted() << ")\n"
-               << std::flush;
-        std::cout << output.str() << std::flush;
+        std::cout << std::format("-  Processing '{}' - {} ({})\n", table_name,
+                                 table_info.re_encoded ? "encoding applied" : "no encoding necessary",
+                                 per_table_timer.lap_formatted())
+                  << std::flush;
       };
       jobs.emplace_back(std::make_shared<JobTask>(encode_table));
     }
@@ -261,9 +256,10 @@ void AbstractTableGenerator::generate_and_store() {
     for (auto& [table_name, table_info] : table_info_by_name) {
       const auto& table = table_info.table;
       if (table->chunk_count() > 1 && table->get_chunk(ChunkID{0})->size() != _benchmark_config->chunk_size) {
-        Fail("Table '" + table_name + "' was loaded from binary, but has a mismatching chunk size of " +
-             std::to_string(table->get_chunk(ChunkID{0})->size()) +
-             ". Delete cached files or use '--dont_cache_binary_tables'.");
+        Fail(
+            std::format("Table '{}' was loaded from binary, but has a mismatching chunk size of '{}'. Delete cached "
+                        "files or use '--dont_cache_binary_tables'.",
+                        table_name, table->get_chunk(ChunkID{0})->size().t));
       }
     }
 
@@ -301,9 +297,9 @@ void AbstractTableGenerator::generate_and_store() {
     auto& storage_manager = Hyrise::get().storage_manager;
     auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
     jobs.reserve(table_info_by_name.size());
-    for (auto& table_info_by_name_pair : table_info_by_name) {
+    for (const auto& table_info_by_name_pair : table_info_by_name) {
       const auto& table_name = table_info_by_name_pair.first;
-      auto& table_info = table_info_by_name_pair.second;
+      const auto& table_info = table_info_by_name_pair.second;
 
       const auto add_table = [&]() {
         auto per_table_timer = Timer{};
@@ -311,8 +307,7 @@ void AbstractTableGenerator::generate_and_store() {
           storage_manager.drop_table(table_name);
         }
         storage_manager.add_table(table_name, table_info.table);
-        const auto output =
-            std::string{"-  Added '"} + table_name + "' " + "(" + per_table_timer.lap_formatted() + ")\n";
+        const auto output = std::format("-  Added '{}' ({})\n", table_name, per_table_timer.lap_formatted());
         std::cout << output << std::flush;
       };
       jobs.emplace_back(std::make_shared<JobTask>(add_table));
@@ -402,6 +397,7 @@ void AbstractTableGenerator::_create_table_indexes(
     const auto& table = table_info_by_name[table_name].table;
 
     auto chunk_ids = std::vector<ChunkID>(table->chunk_count());
+    // NOLINTNEXTLINE(modernize-use-ranges): We need LLVM 21's libc++ for std::ranges::iota.
     std::iota(chunk_ids.begin(), chunk_ids.end(), ChunkID{0});
     for (const auto& index_column_names : indexes) {
       Assert(index_column_names.size() == 1, "Multi-column indexes are currently not supported.");
@@ -458,11 +454,16 @@ std::unordered_map<std::string, BenchmarkTableInfo> AbstractTableGenerator::_loa
     const std::string& cache_directory) {
   auto table_info_by_name = std::unordered_map<std::string, BenchmarkTableInfo>{};
 
-  for (const auto& table_file : list_directory(cache_directory)) {
-    const auto table_name = table_file.stem();
+  for (const auto& table_file : std::filesystem::recursive_directory_iterator(cache_directory)) {
+    const auto& file_path = table_file.path();
+    if (!table_file.is_regular_file() || file_path.extension() != ".bin") {
+      continue;
+    }
+
+    const auto table_name = file_path.stem();
     auto table_info = BenchmarkTableInfo{};
     table_info.loaded_from_binary = true;
-    table_info.binary_file_path = table_file;
+    table_info.binary_file_path = file_path;
     table_info_by_name[table_name] = std::move(table_info);
   }
 
@@ -475,10 +476,9 @@ std::unordered_map<std::string, BenchmarkTableInfo> AbstractTableGenerator::_loa
       auto& table_info = table_name_info_pair.second;
       table_info.table = BinaryParser::parse(*table_info.binary_file_path);
 
-      auto message = std::stringstream{};
-      message << "-  Loaded table '" << table_name_info_pair.first << "' from cached binary "
-              << *table_info.binary_file_path << " (" << timer.lap_formatted() << ")\n";
-      std::cout << message.str() << std::flush;
+      std::cout << std::format("-  Loaded table '{}' from cached binary \"{}\" ({})\n", table_name_info_pair.first,
+                               table_info.binary_file_path->string(), timer.lap_formatted())
+                << std::flush;
     }));
   }
 

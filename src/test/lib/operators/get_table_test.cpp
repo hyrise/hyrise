@@ -1,3 +1,10 @@
+#include <cstdint>
+#include <exception>
+#include <memory>
+#include <stdexcept>
+#include <vector>
+
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "expression/expression_functional.hpp"
@@ -11,13 +18,17 @@
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/validate.hpp"
-#include "storage/chunk.hpp"
+#include "storage/chunk_encoder.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
 #include "storage/table.hpp"
+#include "testing_assert.hpp"
+#include "types.hpp"
+#include "utils/load_table.hpp"
 
 namespace hyrise {
 
-using namespace expression_functional;  // NOLINT(build/namespaces)
+using namespace expression_functional;
 
 class OperatorsGetTableTest : public BaseTest {
  protected:
@@ -28,7 +39,7 @@ class OperatorsGetTableTest : public BaseTest {
         "int_int_float_aliased", load_table("resources/test_data/tbl/int_int_float_aliased.tbl", ChunkOffset{2}));
 
     const auto& table = Hyrise::get().storage_manager.get_table("int_int_float");
-    ChunkEncoder::encode_all_chunks(table);
+    ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{EncodingType::Dictionary});
     table->create_chunk_index<GroupKeyIndex>({ColumnID{0}}, "i_a");
     table->create_chunk_index<GroupKeyIndex>({ColumnID{1}}, "i_b1");
     table->create_chunk_index<GroupKeyIndex>({ColumnID{1}}, "i_b2");
@@ -296,13 +307,12 @@ TEST_F(OperatorsGetTableTest, Copy) {
   const auto get_table_c = std::make_shared<GetTable>("int_int_float");
   const auto get_table_d = std::make_shared<GetTable>("int_int_float_aliased");
   const auto table_scan_a =
-      std::make_shared<TableScan>(get_table_d, equals_(pqp_column_(ColumnID{1}, DataType::Int, false, "x"), 10));
-  const auto projection = std::make_shared<Projection>(
-      table_scan_a, expression_vector(pqp_column_(ColumnID{0}, DataType::Float, false, "z")));
+      std::make_shared<TableScan>(get_table_d, equals_(pqp_column_(ColumnID{1}, DataType::Int, "x"), 10));
+  const auto projection =
+      std::make_shared<Projection>(table_scan_a, expression_vector(pqp_column_(ColumnID{0}, DataType::Float, "z")));
 
-  const auto table_scan_b =
-      std::make_shared<TableScan>(get_table_c, equals_(pqp_column_(ColumnID{2}, DataType::Float, false, "c"),
-                                                       pqp_subquery_(projection, DataType::Float, false)));
+  const auto table_scan_b = std::make_shared<TableScan>(
+      get_table_c, equals_(pqp_column_(ColumnID{2}, DataType::Float, "c"), pqp_subquery_(projection, DataType::Float)));
   get_table_c->set_prunable_subquery_predicates({table_scan_b});
 
   const auto& pqp_copy = table_scan_b->deep_copy();
@@ -387,9 +397,9 @@ TEST_F(OperatorsGetTableTest, DynamicSubqueryPruning) {
   const auto dummy_table = Table::create_dummy_table({{"x", DataType::Int, false}});
   dummy_table->append({9});
   const auto table_wrapper = std::make_shared<TableWrapper>(dummy_table);
-  const auto table_scan =
-      std::make_shared<TableScan>(get_table, not_equals_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"),
-                                                         pqp_subquery_(table_wrapper, DataType::Int, false)));
+  const auto table_scan = std::make_shared<TableScan>(
+      get_table,
+      not_equals_(pqp_column_(ColumnID{0}, DataType::Int, "a"), pqp_subquery_(table_wrapper, DataType::Int)));
   const auto mock_node = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "x"}});
   const auto stored_table_node = StoredTableNode::make("int_int_float");
   stored_table_node->set_pruned_chunk_ids({ChunkID{0}});
@@ -420,9 +430,9 @@ TEST_F(OperatorsGetTableTest, DynamicSubqueryPruningSubqueryNotExecuted) {
   const auto dummy_table = Table::create_dummy_table({{"x", DataType::Int, false}});
   dummy_table->append({9});
   const auto table_wrapper = std::make_shared<TableWrapper>(dummy_table);
-  const auto table_scan =
-      std::make_shared<TableScan>(get_table, not_equals_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"),
-                                                         pqp_subquery_(table_wrapper, DataType::Int, false)));
+  const auto table_scan = std::make_shared<TableScan>(
+      get_table,
+      not_equals_(pqp_column_(ColumnID{0}, DataType::Int, "a"), pqp_subquery_(table_wrapper, DataType::Int)));
   const auto mock_node = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "x"}});
   const auto stored_table_node = StoredTableNode::make("int_int_float");
   stored_table_node->set_pruned_chunk_ids({ChunkID{0}});

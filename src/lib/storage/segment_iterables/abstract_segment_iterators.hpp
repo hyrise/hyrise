@@ -4,11 +4,15 @@
 
 #include <boost/iterator/iterator_facade.hpp>
 
+#include "storage/pos_lists/abstract_pos_list.hpp"
 #include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/segment_iterables/segment_positions.hpp"
 #include "types.hpp"
 
 namespace hyrise {
+
+template <typename Derived, typename Value, typename PosListIteratorType>
+class AbstractPointAccessSegmentIterator;
 
 /**
  * @brief base class of all iterators used by iterables
@@ -41,7 +45,15 @@ namespace hyrise {
  */
 template <typename Derived, typename Value>
 class AbstractSegmentIterator
-    : public boost::iterator_facade<Derived, Value, boost::random_access_traversal_tag, Value, std::ptrdiff_t> {};
+    : public boost::iterator_facade<Derived, Value, boost::random_access_traversal_tag, Value, std::ptrdiff_t> {
+  // The constructor of a CRTP has to be private, and the derived class has to be a friend so only it can construct
+  // the object. All instanciations of AbstractPointAccessSegmentIterator are also a friend, as the
+  // AbstractPointAccessSegmentIterator is also a CRTP that extends this CRTP
+  AbstractSegmentIterator() = default;
+  friend Derived;
+  template <typename PointAccessDerived, typename PointAccessValue, typename PosListIteratorType>
+  friend class AbstractPointAccessSegmentIterator;
+};
 
 /**
  * Mapping between chunk offset into a reference segment and
@@ -62,15 +74,22 @@ struct ChunkOffsetMapping {
  * are returned.
  */
 
-template <typename Derived, typename Value, typename PosListIteratorType>
-class AbstractPointAccessSegmentIterator : public AbstractSegmentIterator<Derived, Value> {
- public:
+// The first two typenames cannot be `Derived` and `Value`, as these would shadow the corresponding values of the
+// AbstractSegmentIterator in the friend declaration above. It does not seem possible to change them there, so they
+// have to be adapted here.
+template <typename PointAccessDerived, typename PointAccessValue, typename PosListIteratorType>
+class AbstractPointAccessSegmentIterator : public AbstractSegmentIterator<PointAccessDerived, PointAccessValue> {
+ private:
+  // The constructor of a CRTP has to be private, and the derived class has to be a friend so only it can construct
+  // the object.
   explicit AbstractPointAccessSegmentIterator(PosListIteratorType position_filter_begin,
                                               PosListIteratorType position_filter_it)
       : _position_filter_begin{std::move(position_filter_begin)}, _position_filter_it{std::move(position_filter_it)} {}
 
+  friend PointAccessDerived;
+
  protected:
-  const ChunkOffsetMapping chunk_offsets() const {
+  ChunkOffsetMapping _chunk_offsets() const {
     DebugAssert(_position_filter_it->chunk_offset != INVALID_CHUNK_OFFSET,
                 "Invalid ChunkOffset, calling code should handle null values");
     return {static_cast<ChunkOffset>(_position_filter_it - _position_filter_begin), _position_filter_it->chunk_offset};
@@ -79,6 +98,7 @@ class AbstractPointAccessSegmentIterator : public AbstractSegmentIterator<Derive
  private:
   friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
+  // NOLINTBEGIN(readability-identifier-naming)
   void increment() {
     ++_position_filter_it;
   }
@@ -87,8 +107,8 @@ class AbstractPointAccessSegmentIterator : public AbstractSegmentIterator<Derive
     --_position_filter_it;
   }
 
-  void advance(std::ptrdiff_t n) {
-    _position_filter_it += n;
+  void advance(std::ptrdiff_t distance) {
+    _position_filter_it += distance;
   }
 
   bool equal(const AbstractPointAccessSegmentIterator& other) const {
@@ -99,7 +119,8 @@ class AbstractPointAccessSegmentIterator : public AbstractSegmentIterator<Derive
     return other._position_filter_it - _position_filter_it;
   }
 
- private:
+  // NOLINTEND(readability-identifier-naming)
+
   PosListIteratorType _position_filter_begin;
   PosListIteratorType _position_filter_it;
 };

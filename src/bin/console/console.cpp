@@ -10,6 +10,7 @@
 #include <ctime>
 #include <exception>
 #include <filesystem>
+#include <format>
 #include <fstream>
 #include <functional>
 #include <iomanip>
@@ -28,7 +29,7 @@
 #include <readline/history.h>   // NOLINT(build/include_order): cpplint considers readline headers as C system headers.
 #include <readline/readline.h>  // NOLINT(build/include_order)
 
-#include "magic_enum.hpp"
+#include "magic_enum/magic_enum.hpp"
 #include "SQLParser.h"
 #include "SQLParserResult.h"
 
@@ -112,7 +113,7 @@ std::string remove_coloring(const std::string& input, bool remove_rl_codes_only 
   const auto sanitized_sequences = std::regex_replace(sequences, special_chars, R"(\$&)");
 
   // Remove coloring commands and escape sequences before writing to logfile.
-  const auto expression = std::regex{"(" + sanitized_sequences + ")"};
+  const auto expression = std::regex{std::format("({})", sanitized_sequences)};
   return std::regex_replace(input, expression, "");
 }
 
@@ -123,7 +124,8 @@ std::vector<std::string> tokenize(std::string input) {
   const auto both_are_spaces = [](char left, char right) {
     return (left == right) && (left == ' ');
   };
-  input.erase(std::unique(input.begin(), input.end(), both_are_spaces), input.end());
+  const auto unique_range = std::ranges::unique(input, both_are_spaces);
+  input.erase(unique_range.begin(), unique_range.end());
 
   auto tokens = std::vector<std::string>{};
   boost::algorithm::split(tokens, input, boost::is_space());
@@ -136,11 +138,7 @@ std::vector<std::string> tokenize(std::string input) {
 namespace hyrise {
 
 Console::Console()
-    : _prompt("> "),
-      _out(std::cout.rdbuf()),
-      _log("console.log", std::ios_base::app | std::ios_base::out),
-      _verbose(false),
-      _pagination_active(false) {
+    : _prompt("> "), _out(std::cout.rdbuf()), _log("console.log", std::ios_base::app | std::ios_base::out) {
   // Init readline basics, tells readline to use our custom command completion function.
   rl_attempted_completion_function = &Console::_command_completion;
   // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
@@ -182,7 +180,7 @@ Console::~Console() {
   out("Bye.\n");
 
   // Timestamp dump only to logfile.
-  out("--- Session end --- " + current_timestamp() + "\n", false);
+  out(std::format("--- Session end --- {}\n", current_timestamp()), false);
 }
 
 int Console::read() {
@@ -203,7 +201,7 @@ int Console::read() {
     // Save command to history file.
     if (!_history_file.empty()) {
       if (append_history(1, _history_file.c_str()) != 0) {
-        out("Error appending to history file: " + _history_file + "\n");
+        out(std::format("Error appending to history file: '{}'.\n", _history_file));
       }
     }
   }
@@ -226,7 +224,7 @@ int Console::_eval(const std::string& input) {
 
   // Dump command to logfile, and to the Console if input comes from a script file. Also remove Readline specific
   // escape sequences ('\001' and '\002') to make it look normal.
-  out(remove_coloring(_prompt + input + "\n", true), _verbose);
+  out(remove_coloring(std::format("{}{}\n", _prompt, input), true), _verbose);
 
   // Check if we already are in multiline input.
   if (_multiline_input.empty()) {
@@ -278,7 +276,8 @@ int Console::_eval_command(const CommandFunction& func, const std::string& comma
   const auto both_are_spaces = [](char left, char right) {
     return (left == right) && (left == ' ');
   };
-  args.erase(std::unique(args.begin(), args.end(), both_are_spaces), args.end());
+  const auto unique_range = std::ranges::unique(args, both_are_spaces);
+  args.erase(unique_range.begin(), unique_range.end());
 
   return static_cast<int>(func(args));
 }
@@ -291,7 +290,7 @@ bool Console::_initialize_pipeline(const std::string& sql) {
     }
     _sql_pipeline = std::make_unique<SQLPipeline>(builder.create_pipeline());
   } catch (const InvalidInputException& exception) {
-    out(std::string(exception.what()) + '\n');
+    out(std::format("{}\n", exception.what()));
     return false;
   }
 
@@ -306,7 +305,7 @@ int Console::_eval_sql(const std::string& sql) {
   try {
     _sql_pipeline->get_result_tables();
   } catch (const InvalidInputException& exception) {
-    out(std::string(exception.what()) + "\n");
+    out(std::format("{}\n", exception.what()));
     out("Following statements have not been executed.\n");
     if (!_explicitly_created_transaction_context && _sql_pipeline->statement_count() > 1) {
       out("All previous statements have been committed.\n");
@@ -333,7 +332,7 @@ int Console::_eval_sql(const std::string& sql) {
   }
 
   out("===\n");
-  out(std::to_string(row_count) + " rows total\n");
+  out(std::format("{} rows total\n", row_count));
 
   auto stream = std::ostringstream{};
   stream << _sql_pipeline->metrics();
@@ -373,15 +372,15 @@ void Console::load_history(const std::string& history_file) {
   // Check if history file exist, create empty history file if not.
   const auto file = std::ifstream{_history_file};
   if (!file.good()) {
-    out("Creating history file: " + _history_file + "\n");
+    out(std::format("Creating history file: '{}'\n", _history_file));
     if (write_history(_history_file.c_str()) != 0) {
-      out("Error creating history file: " + _history_file + "\n");
+      out(std::format("Error creating history file: '{}'.\n", _history_file));
       return;
     }
   }
 
   if (read_history(_history_file.c_str()) != 0) {
-    out("Error reading history file: " + _history_file + "\n");
+    out(std::format("Error reading history file: '{}'.\n", _history_file));
   }
 }
 
@@ -395,8 +394,8 @@ void Console::out(const std::string& output, bool console_print) {
 }
 
 void Console::out(const std::shared_ptr<const Table>& table, const PrintFlags flags) {
-  auto size_y = int{0};
-  auto size_x = int{0};
+  auto size_y = int32_t{0};
+  auto size_x = int32_t{0};
   rl_get_screen_size(&size_y, &size_x);
 
   auto stream = std::stringstream{};
@@ -434,7 +433,8 @@ void Console::out(const std::shared_ptr<const Table>& table, const PrintFlags fl
 
 // Command functions
 
-// NOLINTNEXTLINE: while this particular method could be made static, others cannot.
+// While this particular method could be made static, others cannot.
+// NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 int Console::_exit(const std::string& /*args*/) {
   return ReturnCode::Quit;
 }
@@ -462,7 +462,7 @@ int Console::_help(const std::string& /*args*/) {
   out("                                                   The import type is chosen by the type of FILEPATH.\n");
   out("                                                     Supported types: '.bin', '.csv', '.tbl'\n");
   out("                                                   If no table name is specified, the filename without extension is used\n");  // NOLINT(whitespace/line_length)
-  out(encoding_options + "\n");
+  out(std::format("{}\n", encoding_options));
   out("  export TABLENAME FILEPATH                 - Export table named TABLENAME from storage manager to filepath FILEPATH\n");  // NOLINT(whitespace/line_length)
   out("                                                 The export type is chosen by the type of FILEPATH.\n");
   out("                                                   Supported types: '.bin', '.csv'\n");
@@ -497,11 +497,13 @@ int Console::_generate_tpcc(const std::string& args) {
   const auto arguments = tokenize(args);
 
   if (arguments.empty() || arguments.size() > 2) {
+    // NOLINTBEGIN(whitespace/line_length,whitespace/parens)
     // clang-format off
-    out("Usage: ");
-    out("  generate_tpcc NUM_WAREHOUSES [CHUNK_SIZE]   Generate TPC-C tables with the specified number of warehouses. \n");  // NOLINT(whitespace/line_length)
-    out("                                              Chunk size is " + std::to_string(Chunk::DEFAULT_SIZE) + " by default. \n");  // NOLINT(whitespace/line_length)
+    out(            "Usage: ");
+    out(            "  generate_tpcc NUM_WAREHOUSES [CHUNK_SIZE]   Generate TPC-C tables with the specified number of warehouses.\n");
+    out(std::format("                                              Chunk size is {} by default.\n", Chunk::DEFAULT_SIZE.t));
     // clang-format on
+    // NOLINTEND(whitespace/line_length,whitespace/parens)
     return ReturnCode::Error;
   }
 
@@ -523,11 +525,13 @@ int Console::_generate_tpch(const std::string& args) {
   const auto arguments = tokenize(args);
 
   if (arguments.empty() || arguments.size() > 2) {
+    // NOLINTBEGIN(whitespace/line_length,whitespace/parens)
     // clang-format off
-    out("Usage: ");
-    out("  generate_tpch SCALE_FACTOR [CHUNK_SIZE]   Generate TPC-H tables with the specified scale factor. \n");
-    out("                                            Chunk size is " + std::to_string(Chunk::DEFAULT_SIZE) + " by default. \n");  // NOLINT(whitespace/line_length)
+    out(            "Usage: ");
+    out(            "  generate_tpch SCALE_FACTOR [CHUNK_SIZE]   Generate TPC-H tables with the specified scale factor.\n");
+    out(std::format("                                            Chunk size is {} by default.\n", Chunk::DEFAULT_SIZE.t));
     // clang-format on
+    // NOLINTEND(whitespace/line_length,whitespace/parens)
     return ReturnCode::Error;
   }
 
@@ -550,9 +554,9 @@ int Console::_generate_tpcds(const std::string& args) {
 
   if (arguments.empty() || arguments.size() > 2) {
     out("Usage: ");
-    out("  generate_tpcds SCALE_FACTOR [CHUNK_SIZE]   Generate TPC-DS tables with the specified scale factor. \n");
-    out("                                             Chunk size is " + std::to_string(Chunk::DEFAULT_SIZE) +
-        " by default. \n");
+    out("  generate_tpcds SCALE_FACTOR [CHUNK_SIZE]   Generate TPC-DS tables with the specified scale factor.\n");
+    out(std::format("                                             Chunk size is {} by default.\n",
+                    Chunk::DEFAULT_SIZE.t));
     return ReturnCode::Error;
   }
 
@@ -575,9 +579,9 @@ int Console::_generate_ssb(const std::string& args) {
 
   if (arguments.empty() || arguments.size() > 2) {
     out("Usage: ");
-    out("  generate_ssb SCALE_FACTOR [CHUNK_SIZE]   Generate SSB tables with the specified scale factor. \n");
-    out("                                           Chunk size is " + std::to_string(Chunk::DEFAULT_SIZE) +
-        " by default. \n");
+    out("  generate_ssb SCALE_FACTOR [CHUNK_SIZE]   Generate SSB tables with the specified scale factor.\n");
+    out(std::format("                                           Chunk size is {} by default.\n",
+                    Chunk::DEFAULT_SIZE.t));
     return ReturnCode::Error;
   }
 
@@ -594,18 +598,17 @@ int Console::_generate_ssb(const std::string& args) {
   const auto csv_meta_path = executable_path / "../resources/benchmark/ssb/schema";
 
   if (!std::filesystem::exists(ssb_dbgen_path / "dbgen")) {
-    out(std::string{"SSB dbgen not found at "} + ssb_dbgen_path.string() + "\n");
+    out(std::format("SSB dbgen not found at '{}'.\n", ssb_dbgen_path.string()));
     return ReturnCode::Error;
   }
 
   // Create the ssb_data directory (if needed) and generate the ssb_data/sf-... path.
-  auto ssb_data_path = std::stringstream{};
-  ssb_data_path << "ssb_data/sf-" << std::noshowpoint << scale_factor;
-  std::filesystem::create_directories(ssb_data_path.str());
+  const auto ssb_data_path = std::format("ssb_data/sf-{}", scale_factor);
+  std::filesystem::create_directories(ssb_data_path);
 
   out("Generating all SSB tables (this might take a while) ...\n");
   const auto config = std::make_shared<BenchmarkConfig>(chunk_size, _binary_caching);
-  SSBTableGenerator{ssb_dbgen_path, csv_meta_path, ssb_data_path.str(), scale_factor, config}.generate_and_store();
+  SSBTableGenerator{ssb_dbgen_path, csv_meta_path, ssb_data_path, scale_factor, config}.generate_and_store();
 
   return ReturnCode::Ok;
 }
@@ -622,17 +625,17 @@ int Console::_load_table(const std::string& args) {
   const auto filepath = std::filesystem::path{arguments.at(0)};
   const auto tablename = arguments.size() >= 2 ? arguments.at(1) : std::string{filepath.stem()};
 
-  out("Loading " + filepath.string() + " into table \"" + tablename + "\"\n");
+  out(std::format("Loading '{}' into table '{}'.\n", filepath.string(), tablename));
 
   if (Hyrise::get().storage_manager.has_table(tablename)) {
-    out("Table \"" + tablename + "\" already existed. Replacing it.\n");
+    out(std::format("Table '{}' already existed. Replacing it.\n", tablename));
   }
 
   try {
     const auto importer = std::make_shared<Import>(filepath, tablename, Chunk::DEFAULT_SIZE);
     importer->execute();
   } catch (const std::exception& exception) {
-    out("Error: Exception thrown while importing table:\n  " + std::string(exception.what()) + "\n");
+    out(std::format("Error: Exception thrown while importing table:\n{}\n", exception.what()));
     return ReturnCode::Error;
   }
 
@@ -640,7 +643,7 @@ int Console::_load_table(const std::string& args) {
 
   const auto encoding_type = magic_enum::enum_cast<EncodingType>(encoding);
   if (!encoding_type) {
-    out("Error: Invalid encoding type: '" + encoding + "', try one of these: " + all_encoding_options() + "\n");
+    out(std::format("Error: Invalid encoding type: '{}', try one of these: {}.\n", encoding, all_encoding_options()));
     return ReturnCode::Error;
   }
 
@@ -649,14 +652,14 @@ int Console::_load_table(const std::string& args) {
   auto supported = true;
   for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
     if (!encoding_supports_data_type(*encoding_type, table->column_data_type(column_id))) {
-      out("Encoding \"" + encoding + "\" not supported for column \"" + table->column_name(column_id) +
-          "\", table left unencoded\n");
+      out(std::format("Encoding '{}' not supported for column '{}', table left unencoded.\n", encoding,
+                      table->column_name(column_id)));
       supported = false;
     }
   }
 
   if (supported) {
-    out("Encoding \"" + tablename + "\" using " + encoding + "\n");
+    out(std::format("Encoding '{}' using '{}'\n", tablename, encoding));
     auto immutable_chunks = std::vector<ChunkID>{};
     for (ChunkID chunk_id(0); chunk_id < table->chunk_count(); ++chunk_id) {
       if (!table->get_chunk(chunk_id)->is_mutable()) {
@@ -687,26 +690,26 @@ int Console::_export_table(const std::string& args) {
   auto table_operator = std::shared_ptr<AbstractOperator>{};
   if (MetaTableManager::is_meta_table_name(tablename)) {
     if (!meta_table_manager.has_table(tablename)) {
-      out("Error: MetaTable does not exist in MetaTableManager\n");
+      out("Error: MetaTable does not exist in MetaTableManager.\n");
       return ReturnCode::Error;
     }
     table_operator = std::make_shared<TableWrapper>(meta_table_manager.generate_table(tablename));
   } else {
     if (!storage_manager.has_table(tablename)) {
-      out("Error: Table does not exist in StorageManager\n");
+      out("Error: Table does not exist in StorageManager.\n");
       return ReturnCode::Error;
     }
     table_operator = std::make_shared<GetTable>(tablename);
   }
 
   table_operator->execute();
-  out("Exporting \"" + tablename + "\" into \"" + filepath + "\" ...\n");
+  out(std::format("Exporting '{}' into '{}' ...\n", tablename, filepath));
 
   try {
     auto exporter = std::make_shared<Export>(table_operator, filepath);
     exporter->execute();
   } catch (const std::exception& exception) {
-    out("Error: Exception thrown while exporting:\n  " + std::string(exception.what()) + "\n");
+    out(std::format("Error: Exception thrown while exporting:\n{}\n", exception.what()));
     return ReturnCode::Error;
   }
 
@@ -726,7 +729,7 @@ int Console::_print_table(const std::string& args) {
 
   const auto& storage_manager = Hyrise::get().storage_manager;
   if (!storage_manager.has_table(tablename)) {
-    out("Error: Table does not exist in StorageManager\n");
+    out("Error: Table does not exist in StorageManager.\n");
     return ReturnCode::Error;
   }
 
@@ -764,7 +767,7 @@ int Console::_visualize(const std::string& input) {
   }
 
   // Determine the plan type to visualize.
-  enum class PlanType { LQP, UnoptLQP, PQP, Joins };
+  enum class PlanType : uint8_t { LQP, UnoptLQP, PQP, Joins };
   auto plan_type = PlanType::PQP;
   auto plan_type_str = std::string{"pqp"};
   if (input_words.front() == LQP || input_words.front() == UNOPTLQP || input_words.front() == PQP ||
@@ -801,7 +804,7 @@ int Console::_visualize(const std::string& input) {
     return ReturnCode::Error;
   }
 
-  const auto img_filename = plan_type_str + ".png";
+  const auto img_filename = std::format("{}.png", plan_type_str);
 
   try {
     switch (plan_type) {
@@ -858,27 +861,26 @@ int Console::_visualize(const std::string& input) {
       } break;
     }
   } catch (const InvalidInputException& exception) {
-    out(std::string(exception.what()) + '\n');
+    out(std::format("{}\n", exception.what()));
     return 0;
   }
 
   // NOLINTBEGIN(concurrency-mt-unsafe): system() is not thread-safe, but it is not used concurrently here.
   auto scripts_dir = std::string{"./scripts/"};
-  auto ret = system((scripts_dir + "planviz/is_iterm2.sh 2>/dev/null").c_str());
+  auto ret = system(std::format("{}planviz/is_iterm2.sh 2>/dev/null", scripts_dir).c_str());
   if (ret != 0) {
     // Try in parent directory.
-    scripts_dir = std::string{"."} + scripts_dir;
-    ret = system((scripts_dir + "planviz/is_iterm2.sh").c_str());
+    scripts_dir = std::format(".{}", scripts_dir);
+    ret = system(std::format("{}planviz/is_iterm2.sh", scripts_dir).c_str());
   }
   if (ret != 0) {
-    std::string msg{"Currently, only iTerm2 can print the visualization inline. You can find the plan at "};
-    msg += img_filename + "\n";
-    out(msg);
+    out(std::format("Currently, only iTerm2 can print the visualization inline. You can find the plan at {}.\n",
+                    img_filename));
 
     return ReturnCode::Ok;
   }
 
-  const auto cmd = scripts_dir + "/planviz/imgcat.sh " + img_filename;
+  const auto cmd = std::format("{}/planviz/imgcat.sh {}", scripts_dir, img_filename);
   ret = system(cmd.c_str());
   Assert(ret == 0, "Printing the image using ./scripts/imgcat.sh failed.");
   // NOLINTEND(concurrency-mt-unsafe)
@@ -918,7 +920,7 @@ int Console::_change_runtime_setting(const std::string& input) {
     return 0;
   }
 
-  out("Error: Unknown property\n");
+  out("Error: Unknown property.\n");
   return 1;
 }
 
@@ -928,22 +930,22 @@ int Console::_exec_script(const std::string& script_file) {
   auto script = std::ifstream{filepath};
 
   if (!script.good()) {
-    out("Error: Script file '" + filepath + "' does not exist.\n");
+    out(std::format("Error: Script file '{}' does not exist.\n", filepath));
     return ReturnCode::Error;
   }
 
   if (!std::filesystem::is_regular_file(filepath)) {
-    out("Error: '" + filepath + "' is not a regular file.\n");
+    out(std::format("Error: '{}' is not a regular file.\n", filepath));
     return ReturnCode::Error;
   }
 
-  out("Executing script file: " + filepath + "\n");
+  out(std::format("Executing script file: '{}'\n", filepath));
   _verbose = true;
   auto command = std::string{};
   // TODO(anyone): Use std::to_underlying(ReturnCode::Ok) once we use C++23.
   auto return_code = magic_enum::enum_underlying(ReturnCode::Ok);
   while (std::getline(script, command)) {
-    return_code = _eval(command);
+    return_code = static_cast<int8_t>(_eval(command));
     if (return_code == ReturnCode::Error || return_code == ReturnCode::Quit) {
       break;
     }
@@ -977,15 +979,15 @@ int Console::_print_transaction_info() {
     return ReturnCode::Error;
   }
 
-  const auto transaction_id = std::to_string(_explicitly_created_transaction_context->transaction_id());
-  const auto snapshot_commit_id = std::to_string(_explicitly_created_transaction_context->snapshot_commit_id());
-  out("Active transaction: { transaction id = " + transaction_id + ", snapshot commit id = " + snapshot_commit_id +
-      " }\n");
+  const auto transaction_id = _explicitly_created_transaction_context->transaction_id();
+  const auto snapshot_commit_id = _explicitly_created_transaction_context->snapshot_commit_id();
+  out(std::format("Active transaction: {{ transaction id = {}, snapshot commit id = {} }}\n", transaction_id.t,
+                  snapshot_commit_id.t));
   return ReturnCode::Ok;
 }
 
 int Console::_print_current_working_directory() {
-  out(std::filesystem::current_path().string() + "\n");
+  out(std::format("{}\n", std::filesystem::current_path().string()));
   return ReturnCode::Ok;
 }
 
@@ -1005,7 +1007,7 @@ int Console::_load_plugin(const std::string& args) {
 
   Hyrise::get().plugin_manager.load_plugin(plugin_path);
 
-  out("Plugin (" + plugin_name + ") successfully loaded.\n");
+  out(std::format("Plugin '{}' successfully loaded.\n", plugin_name));
 
   return ReturnCode::Ok;
 }
@@ -1029,7 +1031,7 @@ int Console::_unload_plugin(const std::string& input) {
   Hyrise::get().default_lqp_cache->clear();
   Hyrise::get().default_pqp_cache->clear();
 
-  out("Plugin (" + plugin_name + ") stopped.\n");
+  out(std::format("Plugin '{}' stopped.\n", plugin_name));
 
   return ReturnCode::Ok;
 }
@@ -1155,7 +1157,7 @@ int main(int argc, char** argv) {
   console.load_history(".repl_history");
 
   // Timestamp dump only to logfile
-  console.out("--- Session start --- " + current_timestamp() + "\n", false);
+  console.out(std::format("--- Session start --- {}\n", current_timestamp()), false);
 
   // TODO(anyone): Use std::to_underlying(ReturnCode::Ok) once we use C++23.
   auto return_code = magic_enum::enum_underlying(Return::Ok);
@@ -1170,7 +1172,7 @@ int main(int argc, char** argv) {
 
   // Execute .sql script if specified.
   if (argc == 2) {
-    return_code = console.execute_script(std::string(argv[1]));
+    return_code = static_cast<int8_t>(console.execute_script(std::string(argv[1])));
     // Terminate Console if an error occured during script execution
     if (return_code == Return::Error) {
       return_code = Return::Quit;
@@ -1196,7 +1198,7 @@ int main(int argc, char** argv) {
 
   // Main REPL loop.
   while (return_code != Return::Quit) {
-    return_code = console.read();
+    return_code = static_cast<int8_t>(console.read());
     if (return_code == Return::Ok) {
       console.set_prompt("> ");
     } else if (return_code == Return::Multiline) {

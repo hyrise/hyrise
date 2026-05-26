@@ -5,10 +5,10 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <format>
 #include <memory>
 #include <numeric>
 #include <random>
-#include <string>
 #include <thread>
 #include <utility>
 #include <vector>
@@ -23,7 +23,7 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT(build/namespaces)
+using namespace hyrise;
 
 /**
  * On worker threads, this references the worker running on this thread, on all other threads, this is empty.
@@ -44,6 +44,8 @@ Worker::Worker(const std::shared_ptr<TaskQueue>& queue, WorkerID worker_id, CpuI
     : _queue(queue), _id(worker_id), _cpu_id(cpu_id) {
   // Generate a random distribution from 0-99 for later use, see below
   _random.resize(100);
+
+  // NOLINTNEXTLINE(modernize-use-ranges): We need LLVM 21's libc++ for std::ranges::iota.
   std::iota(_random.begin(), _random.end(), 0);
   std::shuffle(_random.begin(), _random.end(), std::default_random_engine{std::random_device{}()});
 }
@@ -194,7 +196,6 @@ void Worker::_wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& t
       // executed, too. Anecdotal evidence says that this is a good idea. For some reason, this keeps the memory
       // consumption of TPC-H Q6 low even if the scheduler is overcommitted. Because generating random numbers is
       // somewhat expensive, we keep a list of random numbers and reuse them.
-      // TODO(anyone): Look deeper into scheduling theory and make this theoretically sound.
       _next_random = (_next_random + 1) % _random.size();
       if (_random[_next_random] <= 20) {
         return false;
@@ -236,7 +237,7 @@ void Worker::_set_affinity() {
   CPU_ZERO(&cpuset);
   CPU_SET(_cpu_id, &cpuset);
   const auto return_code = pthread_setaffinity_np(pthread_self(), sizeof(cpuset), &cpuset);
-  Assert(return_code == 0, "Error calling pthread_setaffinity_np (return code: " + std::to_string(return_code) + ").");
+  Assert(return_code == 0, std::format("Error calling pthread_setaffinity_np (return code: {}).", return_code));
 #endif
 }
 

@@ -8,6 +8,7 @@
 #include "optimizer/optimizer.hpp"
 #include "optimizer/strategy/abstract_rule.hpp"
 #include "statistics/cardinality_estimator.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
