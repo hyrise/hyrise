@@ -3,7 +3,6 @@
 #include <type_traits>
 #include <vector>
 
-
 #include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "expression/expression_functional.hpp"

@@ -295,8 +295,8 @@ struct NormalizedKeyRow {
 
 // Map signed to unsigned data types with same number of bytes (e.g., int32_t to uint32_t).
 template <typename T>
-  // bool and char are arithmetic types but are not supported.
-  requires(std::is_arithmetic_v<T> && !std::is_same_v<T, bool>&& !std::is_same_v<T, char>)
+// bool and char are arithmetic types but are not supported.
+  requires(std::is_arithmetic_v<T> && !std::is_same_v<T, bool> && !std::is_same_v<T, char>)
 auto to_unsigned(T value) {
   if constexpr (std::is_same_v<decltype(value), int32_t> || std::is_same_v<decltype(value), float>) {
     return std::bit_cast<uint32_t>(value);

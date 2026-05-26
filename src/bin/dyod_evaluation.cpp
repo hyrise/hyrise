@@ -1,7 +1,12 @@
 #include <algorithm>
 #include <fstream>
 #include <iostream>
+#include <memory>
 #include <random>
+#include <string>
+#include <tuple>
+#include <utility>
+#include <vector>
 
 #include "benchmark_config.hpp"
 #include "hyrise.hpp"
@@ -50,7 +55,7 @@ void append_to_csv(const std::string& benchmark, const size_t scale, const std::
 void append_to_csv(const std::string& benchmark, const size_t scale, const EncodingConfig& encoding_config,
                    const std::vector<size_t>& runtimes, const std::string note = "") {
   auto sstream = std::stringstream{};
-  sstream << encoding_config.default_encoding_spec;
+  sstream << *encoding_config.preferred_encoding_spec;
   append_to_csv(benchmark, scale, sstream.str(), runtimes, note);
 }
 
