@@ -592,13 +592,12 @@ void materialize_segment_as_normalized_keys(const AbstractSegment& segment, cons
 namespace hyrise {
 Sort::Sort(const std::shared_ptr<const AbstractOperator>& input_operator,
            const std::vector<SortColumnDefinition>& sort_definitions, const ChunkOffset output_chunk_size,
-           const ForceMaterialization force_materialization, const Config config)
+           const ForceMaterialization force_materialization)
     : AbstractReadOnlyOperator(OperatorType::Sort, input_operator, nullptr,
                                std::make_unique<OperatorPerformanceData<OperatorSteps>>()),
       _sort_definitions(sort_definitions),
       _output_chunk_size(output_chunk_size),
-      _force_materialization(force_materialization),
-      _config(config) {
+      _force_materialization(force_materialization) {
   DebugAssert(!_sort_definitions.empty(), "Expected at least one sort criterion.");
 }
 
@@ -615,8 +614,7 @@ std::shared_ptr<AbstractOperator> Sort::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
     const std::shared_ptr<AbstractOperator>& /*copied_right_input*/,
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& /*copied_ops*/) const {
-  return std::make_shared<Sort>(copied_left_input, _sort_definitions, _output_chunk_size, _force_materialization,
-                                _config);
+  return std::make_shared<Sort>(copied_left_input, _sort_definitions, _output_chunk_size, _force_materialization);
 }
 
 void Sort::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
@@ -771,9 +769,10 @@ std::shared_ptr<const Table> Sort::_on_execute() {
 
   const auto materialization_time = timer.lap();
 
-  std::ranges::sort(materialized_rows, [normalized_key_size](const NormalizedKeyRow& lhs, const NormalizedKeyRow& rhs) {
-    return lhs.less_than(rhs, normalized_key_size);
-  });
+  boost::sort::pdqsort(materialized_rows.begin(), materialized_rows.end(),
+                       [normalized_key_size](const NormalizedKeyRow& lhs, const NormalizedKeyRow& rhs) {
+                         return lhs.less_than(rhs, normalized_key_size);
+                       });
 
   const auto sort_time = timer.lap();
 
@@ -843,20 +842,6 @@ std::shared_ptr<const Table> Sort::_on_execute() {
 
   step_performance_data.set_step_runtime(OperatorSteps::WriteOutput, timer.lap());
   return sorted_table;
-}
-
-Sort::Config::Config()
-    : max_parallelism(std::thread::hardware_concurrency()),
-      block_size(256),
-      bucket_count(max_parallelism * 2),
-      samples_per_classifier(4),
-      min_blocks_per_stripe(32) {
-  if constexpr (HYRISE_DEBUG) {
-    block_size = 4;
-    bucket_count = 2;
-    samples_per_classifier = 1;
-    min_blocks_per_stripe = 4;
-  }
 }
 
 }  // namespace hyrise

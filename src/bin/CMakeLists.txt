@@ -23,9 +23,6 @@ target_link_libraries(
     hyrise
     hyriseBenchmarkLib
 )
-if (ENABLE_PERFETTO)
-    target_link_libraries(hyrisePlayground perfetto-wrapper)
-endif ()
 
 # Configure DYODEvaluation
 add_executable(

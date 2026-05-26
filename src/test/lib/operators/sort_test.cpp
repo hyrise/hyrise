@@ -159,31 +159,32 @@ inline std::string sort_test_formatter(const testing::TestParamInfo<SortTestPara
 INSTANTIATE_TEST_SUITE_P(Variations, SortTest,
                          ::testing::Values(
 
+                           // NOLINTBEGIN(whitespace/line_length)
                            // Variantions of different orders.
-                           SortTestParam{{SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsFirst}},                                                           false, false, Chunk::DEFAULT_SIZE, Sort::ForceMaterialization::No,  "a_asc.tbl"},             // NOLINT(whitespace/line_length)
-                           SortTestParam{{SortColumnDefinition{ColumnID{0}, SortMode::DescendingNullsFirst}},                                                          false, false, Chunk::DEFAULT_SIZE, Sort::ForceMaterialization::No,  "a_desc.tbl"},            // NOLINT(whitespace/line_length)
-                           SortTestParam{{SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsFirst},  SortColumnDefinition{ColumnID{1}, SortMode::DescendingNullsFirst}}, false, false, Chunk::DEFAULT_SIZE, Sort::ForceMaterialization::No,  "a_asc_b_desc.tbl"},      // NOLINT(whitespace/line_length)
-                           SortTestParam{{SortColumnDefinition{ColumnID{0}, SortMode::DescendingNullsFirst}, SortColumnDefinition{ColumnID{1}, SortMode::AscendingNullsFirst}},  false, false, Chunk::DEFAULT_SIZE, Sort::ForceMaterialization::No,  "a_desc_b_asc.tbl"},      // NOLINT(whitespace/line_length)
+                           SortTestParam{{SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsFirst}},                                                                     false, false, Chunk::DEFAULT_SIZE, Sort::ForceMaterialization::No,  "a_asc.tbl"},
+                           SortTestParam{{SortColumnDefinition{ColumnID{0}, SortMode::DescendingNullsFirst}},                                                                    false, false, Chunk::DEFAULT_SIZE, Sort::ForceMaterialization::No,  "a_desc.tbl"},
+                           SortTestParam{{SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsFirst},  SortColumnDefinition{ColumnID{1}, SortMode::DescendingNullsFirst}}, false, false, Chunk::DEFAULT_SIZE, Sort::ForceMaterialization::No,  "a_asc_b_desc.tbl"},
+                           SortTestParam{{SortColumnDefinition{ColumnID{0}, SortMode::DescendingNullsFirst}, SortColumnDefinition{ColumnID{1}, SortMode::AscendingNullsFirst}},  false, false, Chunk::DEFAULT_SIZE, Sort::ForceMaterialization::No,  "a_desc_b_asc.tbl"},
 
                            // Output chunk size.
-                           SortTestParam{{SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsFirst},  SortColumnDefinition{ColumnID{1}, SortMode::DescendingNullsFirst}}, false, false, ChunkOffset{40},     Sort::ForceMaterialization::No,  "a_asc_b_desc.tbl"},      // NOLINT(whitespace/line_length)
-                           SortTestParam{{SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsFirst},  SortColumnDefinition{ColumnID{1}, SortMode::DescendingNullsFirst}}, false, true,  ChunkOffset{40},     Sort::ForceMaterialization::No,  "a_asc_b_desc.tbl"},      // NOLINT(whitespace/line_length)
+                           SortTestParam{{SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsFirst},  SortColumnDefinition{ColumnID{1}, SortMode::DescendingNullsFirst}}, false, false, ChunkOffset{40},     Sort::ForceMaterialization::No,  "a_asc_b_desc.tbl"},
+                           SortTestParam{{SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsFirst},  SortColumnDefinition{ColumnID{1}, SortMode::DescendingNullsFirst}}, false, true,  ChunkOffset{40},     Sort::ForceMaterialization::No,  "a_asc_b_desc.tbl"},
 
                            // Empty input tables.
-                           SortTestParam{{SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsFirst}},                                                           true,  false, Chunk::DEFAULT_SIZE, Sort::ForceMaterialization::No,  "empty.tbl"},             // NOLINT(whitespace/line_length)
-                           SortTestParam{{SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsFirst}},                                                           true,  true,  Chunk::DEFAULT_SIZE, Sort::ForceMaterialization::No,  "empty.tbl"},             // NOLINT(whitespace/line_length)
+                           SortTestParam{{SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsFirst}},                                                                     true,  false, Chunk::DEFAULT_SIZE, Sort::ForceMaterialization::No,  "empty.tbl"},
+                           SortTestParam{{SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsFirst}},                                                                     true,  true,  Chunk::DEFAULT_SIZE, Sort::ForceMaterialization::No,  "empty.tbl"},
 
                            // Forced materialization.
-                           SortTestParam{{SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsFirst},  SortColumnDefinition{ColumnID{1}, SortMode::DescendingNullsFirst}}, false, false, Chunk::DEFAULT_SIZE, Sort::ForceMaterialization::Yes, "a_asc_b_desc.tbl"},      // NOLINT(whitespace/line_length)
-                           SortTestParam{{SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsFirst},  SortColumnDefinition{ColumnID{1}, SortMode::DescendingNullsFirst}}, false, false, ChunkOffset{33},     Sort::ForceMaterialization::Yes, "a_asc_b_desc.tbl"},      // NOLINT(whitespace/line_length)
-                           SortTestParam{{SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsFirst},  SortColumnDefinition{ColumnID{1}, SortMode::DescendingNullsFirst}}, false, true,  Chunk::DEFAULT_SIZE, Sort::ForceMaterialization::Yes, "a_asc_b_desc.tbl"},      // NOLINT(whitespace/line_length)
-                           SortTestParam{{SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsFirst},  SortColumnDefinition{ColumnID{1}, SortMode::DescendingNullsFirst}}, false, true,  ChunkOffset{33},     Sort::ForceMaterialization::Yes, "a_asc_b_desc.tbl"},      // NOLINT(whitespace/line_length)
+                           SortTestParam{{SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsFirst},  SortColumnDefinition{ColumnID{1}, SortMode::DescendingNullsFirst}}, false, false, Chunk::DEFAULT_SIZE, Sort::ForceMaterialization::Yes, "a_asc_b_desc.tbl"},
+                           SortTestParam{{SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsFirst},  SortColumnDefinition{ColumnID{1}, SortMode::DescendingNullsFirst}}, false, false, ChunkOffset{33},     Sort::ForceMaterialization::Yes, "a_asc_b_desc.tbl"},
+                           SortTestParam{{SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsFirst},  SortColumnDefinition{ColumnID{1}, SortMode::DescendingNullsFirst}}, false, true,  Chunk::DEFAULT_SIZE, Sort::ForceMaterialization::Yes, "a_asc_b_desc.tbl"},
+                           SortTestParam{{SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsFirst},  SortColumnDefinition{ColumnID{1}, SortMode::DescendingNullsFirst}}, false, true,  ChunkOffset{33},     Sort::ForceMaterialization::Yes, "a_asc_b_desc.tbl"},
 
                            // Empty input tables with forced materialization.
-                           SortTestParam{{SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsFirst}},                                                           true,  false, Chunk::DEFAULT_SIZE, Sort::ForceMaterialization::Yes, "empty.tbl"},             // NOLINT(whitespace/line_length)
-                           SortTestParam{{SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsFirst}},                                                           true,  true,  Chunk::DEFAULT_SIZE, Sort::ForceMaterialization::Yes, "empty.tbl"}              // NOLINT(whitespace/line_length)
-                          ),  // NOLINT(whitespace/parens)
+                           SortTestParam{{SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsFirst}},                                                                     true,  false, Chunk::DEFAULT_SIZE, Sort::ForceMaterialization::Yes, "empty.tbl"},
+                           SortTestParam{{SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsFirst}},                                                                     true,  true,  Chunk::DEFAULT_SIZE, Sort::ForceMaterialization::Yes, "empty.tbl"}),
                          sort_test_formatter);
+                         // NOLINTEND(whitespace/line_length)
 // clang-format on
 
 TEST_F(SortTest, JoinProducesReferences) {
@@ -307,38 +308,6 @@ TEST_F(SortTest, FloatDescendingSort) {
     last = current;
   }
   EXPECT_GT(last, -1000.0f);
-}
-
-TEST_F(SortTest, Ips4oFullConfig) {
-  auto config = Sort::Config();
-  config.block_size = 128;
-  config.max_parallelism = 8;
-  config.bucket_count = config.max_parallelism * 2;
-  config.samples_per_classifier = 4;
-  config.min_blocks_per_stripe = 16;
-
-  const auto count = 1'000'000;
-  const auto table = std::make_shared<Table>(TableColumnDefinitions{TableColumnDefinition{"a", DataType::Int, false}},
-                                             TableType::Data);
-  for (auto index = int32_t{0}; index < count; ++index) {
-    table->append({index});
-  }
-
-  const auto table_wrapper = std::make_shared<TableWrapper>(table);
-  table_wrapper->execute();
-  auto sort = Sort{table_wrapper,
-                   {SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsFirst}},
-                   Chunk::DEFAULT_SIZE,
-                   Sort::ForceMaterialization::No,
-                   config};
-  sort.execute();
-
-  const auto output_table = sort.get_output();
-  EXPECT_EQ(output_table->row_count(), count);
-  const auto rows = output_table->get_rows();
-  for (auto index = size_t{0}; index < count; ++index) {
-    EXPECT_EQ(boost::get<int32_t>(rows[index][0]), index);
-  }
 }
 
 TEST_F(SortTest, SameValues) {
