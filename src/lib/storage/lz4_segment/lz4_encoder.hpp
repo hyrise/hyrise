@@ -59,7 +59,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
    * at once (refer to the comment above).
    */
   static constexpr auto BLOCK_SIZE = size_t{16'384};
-  static_assert(BLOCK_SIZE <= size_t{std::numeric_limits<int>::max()},
+  static_assert(BLOCK_SIZE <= size_t{std::numeric_limits<int32_t>::max()},
                 "LZ4 block size cannot be larger than the maximum value of a 32 bit signed int");
 
   template <typename T>
