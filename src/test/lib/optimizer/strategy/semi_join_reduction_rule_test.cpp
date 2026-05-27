@@ -55,7 +55,7 @@ class SemiJoinReductionRuleTest : public StrategyBaseTest {
 
 TEST_F(SemiJoinReductionRuleTest, CreateSimpleReduction) {
   // The _a_a side of the inner join has values from 1-50, the _b_a side has values from 10-20. Based on that
-  // selectivity, a semi join reduction should be created.
+  // selectivity, a semi-join reduction should be created.
 
   // clang-format off
   _lqp =
@@ -80,7 +80,7 @@ TEST_F(SemiJoinReductionRuleTest, CreateSimpleReduction) {
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 
-  // Check whether the added semi join was also marked as a semi reduction.
+  // Check whether the added semi-join was also marked as a semi reduction.
   const auto join_node = std::static_pointer_cast<JoinNode>(_lqp->left_input());
   EXPECT_TRUE(join_node->is_semi_reduction());
   EXPECT_EQ(join_node->comment, _rule->name());
@@ -185,7 +185,7 @@ TEST_F(SemiJoinReductionRuleTest, ReductionOnlyForEquals) {
 }
 
 TEST_F(SemiJoinReductionRuleTest, NoReductionForNonBeneficial) {
-  // Same as CreateSimpleReduction, but with different predicates. We estimate that a semi join would not be
+  // Same as CreateSimpleReduction, but with different predicates. We estimate that a semi-join would not be
   // beneficial.
 
   // clang-format off
@@ -204,7 +204,7 @@ TEST_F(SemiJoinReductionRuleTest, NoReductionForNonBeneficial) {
 }
 
 TEST_F(SemiJoinReductionRuleTest, TraverseRightInput) {
-  // On the right side of the semi join reduction, we should traverse below joins so that the cardinality is reduced.
+  // On the right side of the semi-join reduction, we should traverse below joins so that the cardinality is reduced.
 
   // clang-format off
   _lqp =
@@ -235,7 +235,7 @@ TEST_F(SemiJoinReductionRuleTest, TraverseRightInput) {
 }
 
 TEST_F(SemiJoinReductionRuleTest, NoReductionForAntiJoin) {
-  // Same as CreateSimpleReduction, but with an anti join that must not be touched.
+  // Same as CreateSimpleReduction, but with an anti-join that must not be touched.
 
   // clang-format off
   _lqp =

@@ -35,7 +35,7 @@
 namespace hyrise {
 
 // For most join types, we are interested in retrieving the positions (i.e., the RowIDs) on the left and the right side.
-// For semi and anti joins, we only care whether a value exists or not, so there is no point in tracking the position
+// For semi-/anti-joins, we only care whether a value exists or not, so there is no point in tracking the position
 // in the input table of more than one occurrence of a value. However, if we have secondary predicates, we do need to
 // track all occurrences of a value as that first position might be disqualified later.
 enum class JoinHashBuildMode : uint8_t { AllPositions, ExistenceOnly };
@@ -123,7 +123,7 @@ class PosHashTable {
   }
 
   // For a value seen on the build side, add the value to the hash map.
-  // The row id is only added in the AllPositions mode. For ExistenceOnly, as used e.g., by semi joins, the actual
+  // The row id is only added in the AllPositions mode. For ExistenceOnly, as used e.g., by semi-joins, the actual
   // row id is irrelevant and is not stored.
   template <typename InputType>
   void emplace(const InputType& value, RowID row_id) {
@@ -207,7 +207,7 @@ class PosHashTable {
     return _offset_hash_table.size();
   }
 
-  // Return the number of positions stored in the hash table. For semi/anti joins, no positions are stored in the hash
+  // Return the number of positions stored in the hash table. For semi-/anti-joins, no positions are stored in the hash
   // table. For other join types, we return the size of the unified position list that is created in finalize().
   std::optional<size_t> position_count() const {
     if (_mode == JoinHashBuildMode::AllPositions) {
@@ -766,7 +766,7 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
 
             } else {
               // We have not found matching items for the first predicate. Only continue for non-equi join modes.
-              // We use constexpr to prune this conditional for the equi-join implementation.
+              // We use constexpr to prune this conditional for the equi join implementation.
               // Note that the outer relation (i.e., left relation for LEFT OUTER JOINs) is the probing
               // relation since the relations are swapped upfront.
               if constexpr (keep_null_values) {
@@ -777,7 +777,7 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
           }
         } else {
           // When there is no hash table, we might still need to handle the values of the probe side for LEFT
-          // and RIGHT joins. We use constexpr to prune this conditional for the equi-join implementation.
+          // and RIGHT joins. We use constexpr to prune this conditional for the equi join implementation.
           if constexpr (keep_null_values) {
             // We assume that the relations have been swapped previously, so that the outer relation is the probing
             // relation.

@@ -58,6 +58,13 @@ if [ ! -z "$output" ]; then
 	exitcode=1
 fi
 
+# Semi-/anti-joins should be written with a hyphen ("semi-join", not "semi join").
+output=$(grep -rHnEi '\b(semi|anti) join\b' src | sed 's/^\([a-zA-Z/._]*:[0-9]*\).*/\1  Write "semi-join" and "anti-join" with a hyphen./')
+if [ ! -z "$output" ]; then
+	echo "$output"
+	exitcode=1
+fi
+
 # Check for included cpp files. You would think that this is not necessary, but history proves you wrong.
 regex='#include .*\.cpp'
 namecheck=$(find src \( -iname "*.cpp" -o -iname "*.hpp" \) -print0 | xargs -0 grep -rHn "$regex" | grep -v NOLINT)

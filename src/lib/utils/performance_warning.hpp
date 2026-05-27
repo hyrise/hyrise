@@ -10,7 +10,7 @@
 
 /**
  * Performance Warnings can be used in places where slow workarounds are used. This includes AbstractSegment[] or the
- * use of a cross join followed by a projection instead of an equi-join.
+ * use of a cross join followed by a projection instead of an equi join.
  *
  * The warnings are printed only once per program execution. This is achieved by using static variables.
  *

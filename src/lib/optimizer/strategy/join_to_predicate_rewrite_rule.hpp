@@ -11,7 +11,7 @@ namespace hyrise {
  * A rule that tries to split up joins into local table scans with subquery expressions.
  *
  * The rewrite can be correctly done if the following conditions hold:
- * - the join is an inner or a semi join,
+ * - the join is an inner or a semi-join,
  * - one side of the join is not used thereafter,
  * - the join attribute on the unused side is a UCC,
  * - there is an equality predicate comparing an attribute of the unused side with a constant, and

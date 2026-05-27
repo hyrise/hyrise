@@ -43,7 +43,7 @@ void rewrite_to_join(const std::shared_ptr<AbstractLQPNode>& node,
                      const std::shared_ptr<AbstractExpression>& left_expression,
                      const std::vector<std::shared_ptr<AbstractExpression>>& right_side_expressions, DataType data_type,
                      const bool is_negated) {
-  // Create the temporary table for the build side of the semi/anti join
+  // Create the temporary table for the build side of the semi-/anti-join
   const auto list_as_table =
       std::make_shared<Table>(TableColumnDefinitions{{"right_values", data_type, false}}, TableType::Data);
 
