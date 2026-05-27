@@ -14,7 +14,6 @@
 #include <numeric>
 #include <ranges>
 #include <string>
-#include <thread>
 #include <type_traits>
 #include <unordered_map>
 #include <utility>
@@ -52,18 +51,6 @@ using namespace hyrise;
 
 // The number of bytes after that long strings are shortened.
 constexpr size_t STRING_CUTOFF = 64;
-
-/**
- *        ____  _  _  __  ____  ____   __  ____   ___
- *       (    \( \/ )/  \(    \(___ \ /  \(___ \ / __)
- *        ) D ( )  /(  O )) D ( / __/(  0 )/ __/(___ \
- *       (____/(__/  \__/(____/(____) \__/(____)(____/
- *
- *
- * Notes on Segment Accessors:
- *   As discussed on June 30th, you do not need to use segment accessors. They can be handy, but for almost all cases,
- *   using segment_iterate (which will use SegmentAccessors in the background) will be the better option.
- */
 
 // Divide left by right and round up to the next larger integer.
 auto div_ceil(const auto left, const auto right) {
