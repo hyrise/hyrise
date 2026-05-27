@@ -1,7 +1,7 @@
 #include "unary_minus_expression.hpp"
 
+#include <format>
 #include <memory>
-#include <sstream>
 #include <string>
 #include <unordered_map>
 
@@ -27,9 +27,7 @@ std::shared_ptr<AbstractExpression> UnaryMinusExpression::_on_deep_copy(
 }
 
 std::string UnaryMinusExpression::description(const DescriptionMode mode) const {
-  auto stream = std::stringstream{};
-  stream << "-" << _enclose_argument(*argument(), mode);
-  return stream.str();
+  return std::format("-{}", _enclose_argument(*argument(), mode));
 }
 
 DataType UnaryMinusExpression::data_type() const {

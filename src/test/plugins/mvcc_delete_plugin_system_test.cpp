@@ -1,27 +1,38 @@
+#include <atomic>
 #include <chrono>
+#include <cstddef>
+#include <cstdint>
+#include <memory>
 #include <numeric>
+#include <string>
 #include <thread>
+#include <utility>
+#include <vector>
 
 #include "../../plugins/mvcc_delete_plugin.hpp"
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "expression/expression_functional.hpp"
+#include "expression/window_function_expression.hpp"
 #include "lib/utils/plugin_test_utils.hpp"
 #include "operators/aggregate_hash.hpp"
 #include "operators/get_table.hpp"
-#include "operators/insert.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/update.hpp"
 #include "operators/validate.hpp"
+#include "sql/sql_pipeline_statement.hpp"
 #include "storage/chunk.hpp"
+#include "storage/mvcc_data.hpp"
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
 #include "storage/value_segment.hpp"
 #include "types.hpp"
+#include "utils/load_table.hpp"
 #include "utils/pausable_loop_thread.hpp"
 #include "utils/plugin_manager.hpp"
 
-using namespace hyrise;                         // NOLINT(build/namespaces)
-using namespace hyrise::expression_functional;  // NOLINT(build/namespaces)
+using namespace hyrise;
+using namespace hyrise::expression_functional;
 
 class MvccDeletePluginSystemTest : public BaseTest {
  public:
@@ -39,6 +50,7 @@ class MvccDeletePluginSystemTest : public BaseTest {
     auto begin_value = 0;
     for (auto chunk_id = ChunkID{0}; chunk_id < INITIAL_CHUNK_COUNT; ++chunk_id) {
       auto values = pmr_vector<int32_t>(CHUNK_SIZE);
+      // NOLINTNEXTLINE(modernize-use-ranges): We need LLVM 21's libc++ for std::ranges::iota.
       std::iota(values.begin(), values.end(), begin_value);
 
       const auto value_segment = std::make_shared<ValueSegment<int32_t>>(std::move(values));
@@ -72,7 +84,7 @@ class MvccDeletePluginSystemTest : public BaseTest {
 
     const auto validate = std::make_shared<Validate>(gt);
 
-    const auto column = pqp_column_(ColumnID{0}, DataType::Int, false, "number");
+    const auto column = pqp_column_(ColumnID{0}, DataType::Int, "number");
     const auto where = std::make_shared<TableScan>(validate, equals_(column, static_cast<int32_t>(_counter)));
 
     const auto update = std::make_shared<Update>(_t_name_test, where, where);
@@ -105,7 +117,7 @@ class MvccDeletePluginSystemTest : public BaseTest {
     const auto validate = std::make_shared<Validate>(gt);
     validate->set_transaction_context(transaction_context);
 
-    const auto sum = sum_(pqp_column_(ColumnID{0}, DataType::Int, false, "number"));
+    const auto sum = sum_(pqp_column_(ColumnID{0}, DataType::Int, "number"));
     const auto aggregate_definition =
         std::vector<std::shared_ptr<WindowFunctionExpression>>{std::static_pointer_cast<WindowFunctionExpression>(sum)};
     const auto group_by = std::vector<ColumnID>{};

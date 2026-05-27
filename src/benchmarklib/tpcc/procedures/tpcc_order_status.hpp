@@ -8,7 +8,7 @@ namespace hyrise {
 
 class TPCCOrderStatus : public AbstractTPCCProcedure {
  public:
-  TPCCOrderStatus(const int num_warehouses, BenchmarkSQLExecutor& sql_executor);
+  TPCCOrderStatus(const int num_warehouses, BenchmarkSQLExecutor& init_sql_executor);
 
   [[nodiscard]] bool _on_execute() override;
 

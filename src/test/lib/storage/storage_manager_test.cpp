@@ -1,14 +1,25 @@
+#include <algorithm>
 #include <filesystem>
 #include <memory>
+#include <sstream>
+#include <stdexcept>
 #include <string>
+#include <unordered_map>
+#include <utility>
 #include <vector>
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "hyrise.hpp"
+#include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "statistics/generate_pruning_statistics.hpp"
 #include "statistics/table_statistics.hpp"
+#include "storage/lqp_view.hpp"
+#include "storage/prepared_plan.hpp"
 #include "storage/table.hpp"
+#include "types.hpp"
+#include "utils/load_table.hpp"
 #include "utils/meta_table_manager.hpp"
 
 namespace hyrise {
@@ -60,8 +71,8 @@ TEST_F(StorageManagerTest, StatisticsCreationOnAddTable) {
   EXPECT_EQ(table->table_statistics()->row_count, 3.0);
   const auto chunk = table->get_chunk(ChunkID{0});
   EXPECT_TRUE(chunk->pruning_statistics());
-  EXPECT_EQ(chunk->pruning_statistics()->at(0)->data_type, DataType::Int);
-  EXPECT_EQ(chunk->pruning_statistics()->at(1)->data_type, DataType::Float);
+  EXPECT_EQ(chunk->pruning_statistics()->at(0)->data_type(), DataType::Int);
+  EXPECT_EQ(chunk->pruning_statistics()->at(1)->data_type(), DataType::Float);
 }
 
 TEST_F(StorageManagerTest, NoSuperfluousStatisticsGeneration) {

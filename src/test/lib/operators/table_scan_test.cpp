@@ -1,17 +1,21 @@
 #include <algorithm>
-#include <iostream>
+#include <cstddef>
+#include <cstdint>
+#include <initializer_list>
 #include <map>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <string>
+#include <tuple>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "expression/expression_functional.hpp"
-#include "operators/abstract_read_only_operator.hpp"
-#include "operators/limit.hpp"
-#include "operators/print.hpp"
+#include "null_value.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_scan/column_between_table_scan_impl.hpp"
@@ -21,16 +25,20 @@
 #include "operators/table_scan/column_vs_value_table_scan_impl.hpp"
 #include "operators/table_scan/expression_evaluator_table_scan_impl.hpp"
 #include "operators/table_wrapper.hpp"
+#include "storage/chunk.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/encoding_type.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/table.hpp"
+#include "storage/table_column_definition.hpp"
+#include "testing_assert.hpp"
 #include "types.hpp"
-#include "utils/assert.hpp"
+#include "utils/load_table.hpp"
 
 namespace hyrise {
 
-using namespace expression_functional;  // NOLINT(build/namespaces)
+using namespace expression_functional;
 
 class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInterface<EncodingType> {
  protected:
@@ -335,8 +343,8 @@ TEST_P(OperatorsTableScanTest, SingleScanWithSubquery) {
   execute_all({subquery_pqp->mutable_left_input(), subquery_pqp});
 
   const auto scan = std::make_shared<TableScan>(
-      get_int_float_op(), greater_than_equals_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"),
-                                               pqp_subquery_(subquery_pqp, DataType::Int, false)));
+      get_int_float_op(),
+      greater_than_equals_(pqp_column_(ColumnID{0}, DataType::Int, "a"), pqp_subquery_(subquery_pqp, DataType::Int)));
   EXPECT_TRUE(dynamic_cast<ColumnVsValueTableScanImpl*>(scan->create_impl().get()));
   scan->execute();
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
@@ -350,8 +358,8 @@ TEST_P(OperatorsTableScanTest, BetweenScanWithSubquery) {
   execute_all({subquery_pqp->mutable_left_input(), subquery_pqp});
 
   const auto scan = std::make_shared<TableScan>(
-      get_int_float_op(), between_inclusive_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"),
-                                             pqp_subquery_(subquery_pqp, DataType::Int, false), value_(12345)));
+      get_int_float_op(), between_inclusive_(pqp_column_(ColumnID{0}, DataType::Int, "a"),
+                                             pqp_subquery_(subquery_pqp, DataType::Int), value_(12345)));
   EXPECT_TRUE(dynamic_cast<ColumnBetweenTableScanImpl*>(scan->create_impl().get()));
   scan->execute();
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
@@ -365,8 +373,8 @@ TEST_P(OperatorsTableScanTest, SingleScanWithEmptySubquery) {
   subquery_pqp->execute();
 
   const auto scan = std::make_shared<TableScan>(
-      get_int_float_op(), greater_than_equals_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"),
-                                               pqp_subquery_(subquery_pqp, DataType::Int, false)));
+      get_int_float_op(),
+      greater_than_equals_(pqp_column_(ColumnID{0}, DataType::Int, "a"), pqp_subquery_(subquery_pqp, DataType::Int)));
   EXPECT_TRUE(dynamic_cast<ExpressionEvaluatorTableScanImpl*>(scan->create_impl().get()));
   scan->execute();
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
@@ -378,8 +386,8 @@ TEST_P(OperatorsTableScanTest, SingleScanWithInvalidSubquery) {
   subquery_pqp->execute();
 
   const auto scan = std::make_shared<TableScan>(
-      get_int_float_op(), greater_than_equals_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"),
-                                               pqp_subquery_(subquery_pqp, DataType::Int, false)));
+      get_int_float_op(),
+      greater_than_equals_(pqp_column_(ColumnID{0}, DataType::Int, "a"), pqp_subquery_(subquery_pqp, DataType::Int)));
 
   EXPECT_THROW(scan->create_impl(), std::logic_error);
 }
@@ -390,8 +398,8 @@ TEST_P(OperatorsTableScanTest, BetweenScanWithInvalidSubquery) {
   subquery_pqp->execute();
 
   const auto scan = std::make_shared<TableScan>(
-      get_int_float_op(), between_inclusive_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"),
-                                             pqp_subquery_(subquery_pqp, DataType::Int, false), value_(12345)));
+      get_int_float_op(), between_inclusive_(pqp_column_(ColumnID{0}, DataType::Int, "a"),
+                                             pqp_subquery_(subquery_pqp, DataType::Int), value_(12345)));
 
   EXPECT_THROW(scan->create_impl(), std::logic_error);
 }
@@ -986,35 +994,38 @@ TEST_P(OperatorsTableScanTest, GetImpl) {
    * Test that the correct scanning backend is chosen
    */
 
-  const auto column_a = pqp_column_(ColumnID{0}, DataType::Int, false, "a");
-  const auto column_b = pqp_column_(ColumnID{1}, DataType::Float, false, "b");
-  const auto column_s = pqp_column_(ColumnID{1}, DataType::String, false, "c");
-  const auto column_an = pqp_column_(ColumnID{0}, DataType::String, true, "a");
+  const auto column_a = pqp_column_(ColumnID{0}, DataType::Int, "a");
+  const auto column_b = pqp_column_(ColumnID{1}, DataType::Float, "b");
+  const auto column_s = pqp_column_(ColumnID{1}, DataType::String, "c");
+  const auto column_an = pqp_column_(ColumnID{0}, DataType::String, "a");
 
   // clang-format off
-  EXPECT_TRUE(dynamic_cast<ColumnVsValueTableScanImpl*>(TableScan{get_int_float_op(), equals_(column_a, 5)}.create_impl().get()));  // NOLINT
-  EXPECT_TRUE(dynamic_cast<ColumnVsValueTableScanImpl*>(TableScan{get_int_float_op(), equals_(5, column_a)}.create_impl().get()));  // NOLINT
-  EXPECT_TRUE(dynamic_cast<ColumnVsValueTableScanImpl*>(TableScan{get_int_float_op(), equals_(5, column_a)}.create_impl().get()));  // NOLINT
-  EXPECT_TRUE(dynamic_cast<ColumnVsValueTableScanImpl*>(TableScan{get_int_float_op(), equals_(5.0f, column_a)}.create_impl().get()));  // NOLINT
-  EXPECT_TRUE(dynamic_cast<ColumnVsValueTableScanImpl*>(TableScan{get_int_float_op(), equals_(5, column_b)}.create_impl().get()));  // NOLINT
-  EXPECT_TRUE(dynamic_cast<ColumnVsValueTableScanImpl*>(TableScan{get_int_float_op(), equals_(5.5, column_b)}.create_impl().get()));  // NOLINT
-  EXPECT_TRUE(dynamic_cast<ColumnVsValueTableScanImpl*>(TableScan{get_int_float_op(), equals_(5.5f, column_b)}.create_impl().get()));  // NOLINT
-  EXPECT_TRUE(dynamic_cast<ColumnBetweenTableScanImpl*>(TableScan{get_int_float_op(), between_inclusive_(column_a, 0, 5)}.create_impl().get()));  // NOLINT
-  EXPECT_TRUE(dynamic_cast<ColumnBetweenTableScanImpl*>(TableScan{get_int_float_op(), between_inclusive_(column_a, 0.0f, 5.0)}.create_impl().get()));  // NOLINT
-  EXPECT_TRUE(dynamic_cast<ColumnVsColumnTableScanImpl*>(TableScan{get_int_float_op(), equals_(column_b, column_a)}.create_impl().get()));  // NOLINT
-  EXPECT_TRUE(dynamic_cast<ColumnLikeTableScanImpl*>(TableScan{get_int_string_op(), like_(column_s, "%s%")}.create_impl().get()));  // NOLINT
-  EXPECT_TRUE(dynamic_cast<ExpressionEvaluatorTableScanImpl*>(TableScan{get_int_string_op(), like_("hello", "%s%")}.create_impl().get()));  // NOLINT
-  EXPECT_TRUE(dynamic_cast<ExpressionEvaluatorTableScanImpl*>(TableScan{get_int_float_op(), in_(column_a, list_(1, 2, 3))}.create_impl().get()));  // NOLINT
-  EXPECT_TRUE(dynamic_cast<ExpressionEvaluatorTableScanImpl*>(TableScan{get_int_float_op(), in_(column_a, list_(1, 2, 3))}.create_impl().get()));  // NOLINT
-  EXPECT_TRUE(dynamic_cast<ExpressionEvaluatorTableScanImpl*>(TableScan{get_int_float_op(), and_(greater_than_(column_a, 5), less_than_(column_b, 6))}.create_impl().get()));  // NOLINT
-  EXPECT_TRUE(dynamic_cast<ExpressionEvaluatorTableScanImpl*>(TableScan{get_int_float_op(), greater_than_(column_a, 5.5f)}.create_impl().get()));  // NOLINT
-  EXPECT_TRUE(dynamic_cast<ExpressionEvaluatorTableScanImpl*>(TableScan{get_int_float_op(), greater_than_(column_b, 1e40)}.create_impl().get()));  // NOLINT
-  EXPECT_TRUE(dynamic_cast<ExpressionEvaluatorTableScanImpl*>(TableScan{get_int_float_op(), greater_than_(column_a, int64_t{3'000'000'000})}.create_impl().get()));  // NOLINT
-  EXPECT_TRUE(dynamic_cast<ExpressionEvaluatorTableScanImpl*>(TableScan{get_int_float_op(), equals_(column_a, "hello")}.create_impl().get()));  // NOLINT
-  EXPECT_TRUE(dynamic_cast<ExpressionEvaluatorTableScanImpl*>(TableScan{get_int_float_op(), between_inclusive_(column_a, 0.1f, 5.5)}.create_impl().get()));  // NOLINT
-  EXPECT_TRUE(dynamic_cast<ExpressionEvaluatorTableScanImpl*>(TableScan{get_int_float_op(), between_inclusive_(column_a, 0, null_())}.create_impl().get()));  // NOLINT
-  EXPECT_TRUE(dynamic_cast<ColumnIsNullTableScanImpl*>(TableScan{get_int_float_with_null_op(), is_null_(column_an)}.create_impl().get()));  // NOLINT
-  EXPECT_TRUE(dynamic_cast<ColumnIsNullTableScanImpl*>(TableScan{get_int_float_with_null_op(), is_not_null_(column_an)}.create_impl().get()));  // NOLINT
+  // NOLINTBEGIN(whitespace/line_length)
+  EXPECT_TRUE(dynamic_cast<ColumnVsValueTableScanImpl*>(TableScan{get_int_float_op(), equals_(column_a, 5)}.create_impl().get()));
+  EXPECT_TRUE(dynamic_cast<ColumnVsValueTableScanImpl*>(TableScan{get_int_float_op(), equals_(5, column_a)}.create_impl().get()));
+  EXPECT_TRUE(dynamic_cast<ColumnVsValueTableScanImpl*>(TableScan{get_int_float_op(), equals_(5, column_a)}.create_impl().get()));
+  EXPECT_TRUE(dynamic_cast<ColumnVsValueTableScanImpl*>(TableScan{get_int_float_op(), equals_(5.0f, column_a)}.create_impl().get()));
+  EXPECT_TRUE(dynamic_cast<ColumnVsValueTableScanImpl*>(TableScan{get_int_float_op(), equals_(5, column_b)}.create_impl().get()));
+  EXPECT_TRUE(dynamic_cast<ColumnVsValueTableScanImpl*>(TableScan{get_int_float_op(), equals_(5.5, column_b)}.create_impl().get()));
+  EXPECT_TRUE(dynamic_cast<ColumnVsValueTableScanImpl*>(TableScan{get_int_float_op(), equals_(5.5f, column_b)}.create_impl().get()));
+  EXPECT_TRUE(dynamic_cast<ColumnBetweenTableScanImpl*>(TableScan{get_int_float_op(), between_inclusive_(column_a, 0, 5)}.create_impl().get()));
+  EXPECT_TRUE(dynamic_cast<ColumnBetweenTableScanImpl*>(TableScan{get_int_float_op(), between_inclusive_(column_a, 0.0f, 5.0)}.create_impl().get()));
+  EXPECT_TRUE(dynamic_cast<ColumnVsColumnTableScanImpl*>(TableScan{get_int_float_op(), equals_(column_b, column_a)}.create_impl().get()));
+  EXPECT_TRUE(dynamic_cast<ColumnLikeTableScanImpl*>(TableScan{get_int_string_op(), like_(column_s, "%s%")}.create_impl().get()));
+  EXPECT_TRUE(dynamic_cast<ExpressionEvaluatorTableScanImpl*>(TableScan{get_int_string_op(), like_("hello", "%s%")}.create_impl().get()));
+  EXPECT_TRUE(dynamic_cast<ExpressionEvaluatorTableScanImpl*>(TableScan{get_int_float_op(), in_(column_a, list_(1, 2, 3))}.create_impl().get()));
+  EXPECT_TRUE(dynamic_cast<ExpressionEvaluatorTableScanImpl*>(TableScan{get_int_float_op(), in_(column_a, list_(1, 2, 3))}.create_impl().get()));
+  EXPECT_TRUE(dynamic_cast<ExpressionEvaluatorTableScanImpl*>(TableScan{get_int_float_op(), and_(greater_than_(column_a, 5), less_than_(column_b, 6))}.create_impl().get()));
+  EXPECT_TRUE(dynamic_cast<ExpressionEvaluatorTableScanImpl*>(TableScan{get_int_float_op(), greater_than_(column_a, 5.5f)}.create_impl().get()));
+  EXPECT_TRUE(dynamic_cast<ExpressionEvaluatorTableScanImpl*>(TableScan{get_int_float_op(), greater_than_(column_b, 1e40)}.create_impl().get()));
+  EXPECT_TRUE(dynamic_cast<ExpressionEvaluatorTableScanImpl*>(TableScan{get_int_float_op(), greater_than_(column_a, int64_t{3'000'000'000})}.create_impl().get()));
+  EXPECT_TRUE(dynamic_cast<ExpressionEvaluatorTableScanImpl*>(TableScan{get_int_float_op(), equals_(column_a, "hello")}.create_impl().get()));
+  EXPECT_TRUE(dynamic_cast<ExpressionEvaluatorTableScanImpl*>(TableScan{get_int_float_op(), between_inclusive_(column_a, 0.1f, 5.5)}.create_impl().get()));
+  EXPECT_TRUE(dynamic_cast<ExpressionEvaluatorTableScanImpl*>(TableScan{get_int_float_op(), between_inclusive_(column_a, 0, null_())}.create_impl().get()));
+  EXPECT_TRUE(dynamic_cast<ColumnIsNullTableScanImpl*>(TableScan{get_int_float_with_null_op(), is_null_(column_an)}.create_impl().get()));
+  EXPECT_TRUE(dynamic_cast<ColumnIsNullTableScanImpl*>(TableScan{get_int_float_with_null_op(), is_not_null_(column_an)}.create_impl().get()));
+  // NOLINTEND(whitespace/line_length)
+  // clang-format on
 
   // Cases where the lossless_predicate_cast is used and the predicate condition gets adjusted:
   {
@@ -1081,7 +1092,8 @@ TEST_P(OperatorsTableScanTest, GetImpl) {
   }
 
   {
-    const auto abstract_impl = TableScan{get_int_float_op(), between_upper_exclusive_(column_b, 3.1, 4.0)}.create_impl();  // NOLINT
+    const auto abstract_impl =
+        TableScan{get_int_float_op(), between_upper_exclusive_(column_b, 3.1, 4.0)}.create_impl();
     const auto impl = dynamic_cast<ColumnBetweenTableScanImpl*>(abstract_impl.get());
     ASSERT_TRUE(impl);
     EXPECT_EQ(impl->predicate_condition, PredicateCondition::BetweenUpperExclusive);
@@ -1120,8 +1132,6 @@ TEST_P(OperatorsTableScanTest, GetImpl) {
     ASSERT_TRUE(impl);
     // Cannot use ColumnBetweenTableScanImpl as upper bound is not a value
   }
-
-  // clang-format on
 }
 
 TEST_P(OperatorsTableScanTest, TwoBigScans) {
@@ -1149,7 +1159,7 @@ TEST_P(OperatorsTableScanTest, TwoBigScans) {
   data_table_wrapper->never_clear_output();
   data_table_wrapper->execute();
 
-  const auto column_a = pqp_column_(ColumnID{0}, DataType::Int, false, "a");
+  const auto column_a = pqp_column_(ColumnID{0}, DataType::Int, "a");
 
   // Scan for a >= 100'100
   const auto scan_a = std::make_shared<TableScan>(data_table_wrapper, greater_than_equals_(column_a, 100'100));

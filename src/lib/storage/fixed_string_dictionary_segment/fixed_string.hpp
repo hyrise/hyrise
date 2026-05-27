@@ -25,11 +25,15 @@ class FixedString {
 
   // Create a FixedString with an existing one
   FixedString(const FixedString& other);
+  // NOLINTNEXTLINE(cppcoreguidelines-noexcept-move-operations,hicpp-noexcept-move,performance-noexcept-move-constructor)
+  FixedString(FixedString&&);
 
   ~FixedString();
 
   // Copy assign
   FixedString& operator=(const FixedString& other);
+  // NOLINTNEXTLINE(cppcoreguidelines-noexcept-move-operations,hicpp-noexcept-move,performance-noexcept-move-constructor)
+  FixedString& operator=(FixedString&& other);
 
   // Returns the length of the string
   size_t size() const;
@@ -77,10 +81,10 @@ class FixedString {
   // Swap two FixedStrings by exchanging the underlying memory's content
   void swap(FixedString& other) noexcept;
 
- protected:
-  char* const _mem;
-  const size_t _maximum_length;
-  const bool _owns_memory = true;
+ private:
+  char* _mem;
+  size_t _maximum_length;
+  bool _owns_memory;
 };
 
 }  // namespace hyrise

@@ -21,8 +21,8 @@
 
 namespace {
 
-using namespace hyrise;                         // NOLINT(build/namespaces)
-using namespace hyrise::expression_functional;  // NOLINT(build/namespaces)
+using namespace hyrise;
+using namespace hyrise::expression_functional;
 
 void gather_rewrite_info(
     const std::shared_ptr<JoinNode>& join_node,
@@ -34,7 +34,7 @@ void gather_rewrite_info(
   }
 
   // We don't handle the more complicated case of multiple join predicates. Rewriting in these cases would require
-  // finding and combining multiple suitable predicates. We also only rewrite inner and semi joins. However,
+  // finding and combining multiple suitable predicates. We also only rewrite inner and semi-joins. However,
   // AntiNullAsFalse joins could be rewritten to a scan with PredicateCondition::NotEquals. We cannot rewrite outer or
   // cross joins, as the results of the original and the rewritten query plan would not be equal.
   if (join_node->join_predicates().size() != 1 ||
@@ -66,7 +66,7 @@ void gather_rewrite_info(
 
   // Now, we look for a predicate that can potentially be used in a subquery to replace the join. If we find an equals
   // predicate that filters on a UCC, a maximum of one tuple remains in the result relation. Since at this point, we al-
-  // ready know the candidate join is basically a semi join, we can further transform the join to a single predicate
+  // ready know the candidate join is basically a semi-join, we can further transform the join to a single predicate
   // node filtering the join column for the value of the remaining tuple's join attribute.
   visit_lqp(removable_subtree, [&removable_subtree, &rewrite_predicate, &optimization_context](auto& current_node) {
     if (current_node->type == LQPNodeType::Union) {

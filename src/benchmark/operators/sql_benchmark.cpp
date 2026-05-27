@@ -3,14 +3,15 @@
 
 #include "benchmark/benchmark.h"
 #include "SQLParser.h"
+#include "SQLParserResult.h"
 
 #include "hyrise.hpp"
 #include "logical_query_plan/lqp_translator.hpp"
 #include "micro_benchmark_basic_fixture.hpp"
 #include "sql/sql_pipeline_builder.hpp"
-#include "sql/sql_pipeline_statement.hpp"
 #include "sql/sql_plan_cache.hpp"
 #include "sql/sql_translator.hpp"
+#include "types.hpp"
 #include "utils/load_table.hpp"
 
 namespace hyrise {
@@ -20,7 +21,7 @@ using hsql::SQLParserResult;
 
 class SQLBenchmark : public MicroBenchmarkBasicFixture {
  public:
-  void SetUp(benchmark::State& st) override {
+  void SetUp(benchmark::State& /*st*/) override {
     // Add tables to StorageManager.
     // This is required for the translator to get the column names of a table.
     auto& storage_manager = Hyrise::get().storage_manager;

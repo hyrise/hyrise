@@ -4,6 +4,7 @@
 #include <string>
 
 #include "abstract_rule.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
@@ -15,7 +16,7 @@ class PredicateNode;
 // - a bunch of disjunctive predicate and union nodes (equivalent to `a = 1 OR a = 2`) if the elements are of the same
 //   type, if the `IN` is not part of a `FunctionExpression`. Also either the right side cannot have more than
 //   MAX_ELEMENTS_FOR_DISJUNCTION elements or the input's size must be larger than MIN_INPUT_ROWS_FOR_DISJUNCTION
-// - a semi/anti join (with the list of IN values being stored in a temporary table) if the right side has more than
+// - a semi-/anti-join (with the list of IN values being stored in a temporary table) if the right side has more than
 //   MIN_ELEMENTS_FOR_JOIN elements and the elements are of the same type. The exact value of MIN_ELEMENTS_FOR_JOIN
 //   also depends on the size of the input data (see #1817). Once this becomes relevant, we might want to add a cost
 //   estimator.
@@ -33,12 +34,12 @@ class InExpressionRewriteRule : public AbstractRule {
   // into disjunctive predicates.
   constexpr static auto MIN_INPUT_ROWS_FOR_DISJUNCTION = Cardinality{1'000'000};
 
-  // With the auto strategy, IN expressions with MIN_ELEMENTS_FOR_JOIN or more are rewritten into semi joins.
+  // With the auto strategy, IN expressions with MIN_ELEMENTS_FOR_JOIN or more are rewritten into semi-joins.
   constexpr static auto MIN_ELEMENTS_FOR_JOIN = 20;
 
   // Instead of using the automatic behavior described above, the three strategies may be chosen explicitly, too. This
   // is helpful for testing and benchmarks. Note that it does not circumvent the restrictions on the element type.
-  enum class Strategy { Auto, ExpressionEvaluator, Join, Disjunction };
+  enum class Strategy : uint8_t { Auto, ExpressionEvaluator, Join, Disjunction };
   Strategy strategy{Strategy::Auto};
 
  protected:

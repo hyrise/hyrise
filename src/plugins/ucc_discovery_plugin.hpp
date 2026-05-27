@@ -30,7 +30,6 @@ struct UccCandidate {
   const std::string table_name;
   const ColumnID column_id;
 
- private:
   // Disable default constructor with uninitialized members.
   UccCandidate() = delete;
 };

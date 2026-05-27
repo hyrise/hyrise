@@ -28,18 +28,36 @@ class JoinNestedLoop : public AbstractJoinOperator {
   const std::string& name() const override;
 
   struct JoinParams {
+    JoinParams() = delete;
+
+    JoinParams(RowIDPosList& init_pos_list_left, RowIDPosList& init_pos_list_right,
+               std::vector<bool>& init_left_matches, std::vector<bool>& init_right_matches,
+               bool init_track_left_matches, bool init_track_right_matches, JoinMode init_join_mode,
+               PredicateCondition init_predicate_condition,
+               MultiPredicateJoinEvaluator& init_secondary_predicate_evaluator, bool init_write_pos_lists)
+        : pos_list_left(init_pos_list_left),
+          pos_list_right(init_pos_list_right),
+          left_matches(init_left_matches),
+          right_matches(init_right_matches),
+          track_left_matches(init_track_left_matches),
+          track_right_matches(init_track_right_matches),
+          mode(init_join_mode),
+          predicate_condition(init_predicate_condition),
+          secondary_predicate_evaluator(init_secondary_predicate_evaluator),
+          write_pos_lists(init_write_pos_lists) {}
+
     RowIDPosList& pos_list_left;
     RowIDPosList& pos_list_right;
     std::vector<bool>& left_matches;
     std::vector<bool>& right_matches;
-    bool track_left_matches{};
-    bool track_right_matches{};
+    bool track_left_matches;
+    bool track_right_matches;
     JoinMode mode;
     PredicateCondition predicate_condition;
     MultiPredicateJoinEvaluator& secondary_predicate_evaluator;
 
     // Disable for Semi/Anti
-    bool write_pos_lists{};
+    bool write_pos_lists;
   };
 
  protected:

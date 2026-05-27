@@ -23,6 +23,7 @@
 #include "null_value.hpp"
 #include "types.hpp"
 
+// NOLINTBEGIN(cppcoreguidelines-macro-usage,readability-identifier-naming,bugprone-macro-parentheses)
 namespace hyrise {
 
 namespace hana = boost::hana;
@@ -152,3 +153,5 @@ struct hash<hyrise::AllTypeVariant> {
 };
 
 }  // namespace std
+
+// NOLINTEND(cppcoreguidelines-macro-usage,readability-identifier-naming,bugprone-macro-parentheses)

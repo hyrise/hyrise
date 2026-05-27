@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 
+#include "types.hpp"
+
 namespace hyrise {
 
 // Removes whitespaces from the front and back. Also reduces multiple whitespaces between words to a single one.
@@ -22,5 +24,8 @@ std::string trim_source_file_path(const std::string& path);
 // Some description() implementations print addresses, which are non-deterministic. This method replaces them with
 // a dummy address (e.g., for testing).
 std::string replace_addresses(const std::string& input);
+
+template <typename String>
+pmr_string string_to_lower(const String& input);
 
 }  // namespace hyrise

@@ -1,7 +1,15 @@
+#include <chrono>
+#include <cstdint>
+#include <memory>
 #include <regex>
+#include <string>
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "hyrise.hpp"
+#include "storage/table.hpp"
+#include "types.hpp"
+#include "utils/log_manager.hpp"
 #include "utils/meta_tables/meta_log_table.hpp"
 
 namespace hyrise {
