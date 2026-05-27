@@ -303,12 +303,11 @@ TEST_F(StorageLZ4SegmentTest, LongStringsFollowedByEmptyOnes) {
   constexpr auto row_count = 15'000;
   constexpr auto null_row_count = (row_count / 5) * 4;
 
-  for (auto index = size_t{0}; index < row_count; ++index) {
-    if (index < null_row_count) {
-      vs_str->append(NULL_VALUE);
-    } else {
-      vs_str->append(AllTypeVariant{pmr_string{"this is element number #" + std::to_string(index)}});
-    }
+  for (auto index = size_t{0}; index < null_row_count; ++index) {
+    vs_str->append(NULL_VALUE);
+  }
+  for (auto index = size_t{null_row_count}; index < row_count; ++index) {
+    vs_str->append(AllTypeVariant{pmr_string{"this is element number #" + std::to_string(index)}});
   }
 
   const auto lz4_segment = compress(vs_str, DataType::String);
