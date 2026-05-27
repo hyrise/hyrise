@@ -1,9 +1,13 @@
 #include "sqlite_wrapper.hpp"
 
+#include <sqlite3.h>
+
 #include <cstdint>
+#include <format>
 #include <memory>
 #include <sstream>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <boost/variant/get.hpp>
@@ -19,7 +23,7 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT
+using namespace hyrise;
 
 /*
  * Creates columns in given Hyrise table according to an sqlite intermediate statement (one result row).
@@ -141,8 +145,7 @@ namespace hyrise {
 // See also https://www.sqlite.org/inmemorydb.html, starting at "If two or more distinct but shareable
 // in-memory databases"
 SQLiteWrapper::SQLiteWrapper()
-    : _uri{std::string{"file:sqlitewrapper_"} + std::to_string(reinterpret_cast<uintptr_t>(this)) +  // NOLINT
-           "?mode=memory&cache=shared"},
+    : _uri{std::format("file:sqlitewrapper_{}?mode=memory&cache=shared", reinterpret_cast<uintptr_t>(this))},
       main_connection{_uri} {
   Assert(sqlite3_threadsafe(), "Expected sqlite to be compiled with thread safety.");
 }
@@ -150,11 +153,10 @@ SQLiteWrapper::SQLiteWrapper()
 SQLiteWrapper::Connection::Connection(const std::string& uri) {
   // Explicity set parallel mode. On Linux it seems to be the default, on Mac, it seems to make a difference.
   const auto ret =
-      sqlite3_open_v2(uri.c_str(), &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX,  // NOLINT
-                      nullptr);
+      sqlite3_open_v2(uri.c_str(), &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX, nullptr);
   if (ret != SQLITE_OK) {
     sqlite3_close(db);
-    Fail("Cannot open database '" + std::string(sqlite3_errmsg(db)) + "'.");
+    Fail(std::format("Cannot open database: {}", sqlite3_errmsg(db)));
   }
 
   // Make LIKE case sensitive, just like in Hyrise
@@ -163,6 +165,20 @@ SQLiteWrapper::Connection::Connection(const std::string& uri) {
 
 SQLiteWrapper::Connection::Connection(Connection&& other) noexcept : db(other.db) {
   other.db = nullptr;
+}
+
+SQLiteWrapper::Connection& SQLiteWrapper::Connection::operator=(SQLiteWrapper::Connection&& other) noexcept {
+  if (this == &other) {
+    return *this;
+  }
+
+  if (db) {
+    sqlite3_close(db);
+  }
+
+  db = other.db;
+  other.db = nullptr;
+  return *this;
 }
 
 SQLiteWrapper::Connection::~Connection() {
@@ -191,7 +207,7 @@ std::shared_ptr<Table> SQLiteWrapper::Connection::execute_query(const std::strin
 
     if (return_code != SQLITE_OK) {
       sqlite3_finalize(sqlite_statement);
-      Fail("Failed to execute query \"" + query + "\": " + std::string(sqlite3_errmsg(db)) + ".");
+      Fail(std::format("Failed to execute query '{}': {}", query, sqlite3_errmsg(db)));
     }
 
     while (sqlite3_step(sqlite_statement) != SQLITE_DONE) {}
@@ -200,7 +216,7 @@ std::shared_ptr<Table> SQLiteWrapper::Connection::execute_query(const std::strin
   return_code = sqlite3_prepare_v2(db, select_query.c_str(), -1, &sqlite_statement, nullptr);
 
   if (return_code != SQLITE_OK) {
-    auto error_message = "Failed to execute query \"" + select_query + "\": " + std::string(sqlite3_errmsg(db)) + ".";
+    const auto error_message = std::format("Failed to execute query '{}': {}", select_query, sqlite3_errmsg(db));
     sqlite3_finalize(sqlite_statement);
     Fail(error_message);
   }
@@ -234,7 +250,7 @@ void SQLiteWrapper::Connection::raw_execute_query(const std::string& sql) const 
   if (return_code != SQLITE_OK) {
     auto msg = std::string(err_msg);
     sqlite3_free(err_msg);
-    Fail("Failed to execute query (" + sql + "). SQL error: " + msg + "\n");
+    Fail(std::format("Failed to execute query '{}'. SQL error: {}", sql, msg));
   }
 }
 
@@ -261,7 +277,7 @@ void SQLiteWrapper::create_sqlite_table(const Table& table, const std::string& t
   }
 
   // SQLite doesn't like an unescaped "ORDER" as a table name, thus we escape all table names.
-  const auto escaped_table_name = std::string{"\""} + table_name + "\"";
+  const auto escaped_table_name = std::format("\"{}\"", table_name);
 
   auto create_table_query = std::stringstream{};
   create_table_query << "CREATE TABLE " << escaped_table_name << "(";
@@ -269,7 +285,7 @@ void SQLiteWrapper::create_sqlite_table(const Table& table, const std::string& t
   for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
     create_table_query << table.column_definitions()[column_id].name << " " << column_types[column_id];
 
-    if (column_id + 1u < column_count) {
+    if (std::cmp_less(column_id + 1, column_count)) {
       create_table_query << ", ";
     }
   }
@@ -281,7 +297,7 @@ void SQLiteWrapper::create_sqlite_table(const Table& table, const std::string& t
   insert_into_stream << "INSERT INTO " << escaped_table_name << " VALUES (";
   for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
     insert_into_stream << "?";
-    if (static_cast<ColumnCount>(column_id + 1u) < column_count) {
+    if (static_cast<ColumnCount>(column_id + 1) < column_count) {
       insert_into_stream << ", ";
     }
   }
@@ -293,7 +309,7 @@ void SQLiteWrapper::create_sqlite_table(const Table& table, const std::string& t
       sqlite3_prepare_v2(main_connection.db, insert_into_str.c_str(), static_cast<int>(insert_into_str.size() + 1),
                          &insert_into_statement, nullptr);
   Assert(sqlite3_prepare_return_code == SQLITE_OK,
-         "Failed to prepare statement: " + std::string(sqlite3_errmsg(main_connection.db)) + ".");
+         std::format("Failed to prepare statement: {}", sqlite3_errmsg(main_connection.db)));
 
   // Insert values row-by-row
   const auto chunk_count = table.chunk_count();
@@ -335,10 +351,9 @@ void SQLiteWrapper::create_sqlite_table(const Table& table, const std::string& t
               break;
             case DataType::String: {
               const auto& string_value = boost::get<pmr_string>(value);
-              // clang-tidy doesn't like SQLITE_TRANSIENT
-              // clang-format off
-              sqlite3_bind_return_code = sqlite3_bind_text(insert_into_statement, sqlite_column_id, string_value.c_str(), static_cast<int>(string_value.size()), SQLITE_TRANSIENT);  // NOLINT
-              // clang-format on
+              sqlite3_bind_return_code =
+                  sqlite3_bind_text(insert_into_statement, sqlite_column_id, string_value.c_str(),
+                                    static_cast<int>(string_value.size()), SQLITE_TRANSIENT);
             } break;
             case DataType::Null:
               Fail("SQLiteWrapper: column type not supported.");
@@ -347,16 +362,16 @@ void SQLiteWrapper::create_sqlite_table(const Table& table, const std::string& t
         }
 
         Assert(sqlite3_bind_return_code == SQLITE_OK,
-               "Failed to bind value: " + std::string(sqlite3_errmsg(main_connection.db)) + ".");
+               std::format("Failed to bind value: {}", sqlite3_errmsg(main_connection.db)));
       }
 
       const auto sqlite3_step_return_code = sqlite3_step(insert_into_statement);
       Assert(sqlite3_step_return_code == SQLITE_DONE,
-             "Failed to step INSERT: " + std::string(sqlite3_errmsg(main_connection.db)) + ".");
+             std::format("Failed to step INSERT: {}", sqlite3_errmsg(main_connection.db)));
 
       const auto sqlite3_reset_return_code = sqlite3_reset(insert_into_statement);
       Assert(sqlite3_reset_return_code == SQLITE_OK,
-             "Failed to reset statement: " + std::string(sqlite3_errmsg(main_connection.db)) + ".");
+             std::format("Failed to reset statement: {}", sqlite3_errmsg(main_connection.db)));
     }
   }
 
@@ -365,11 +380,10 @@ void SQLiteWrapper::create_sqlite_table(const Table& table, const std::string& t
 
 void SQLiteWrapper::reset_table_from_copy(const std::string& table_name_to_reset,
                                           const std::string& table_name_to_copy_from) const {
-  auto command_sstream = std::stringstream{};
-  command_sstream << "DROP TABLE IF EXISTS " << table_name_to_reset << ";";
-  command_sstream << "CREATE TABLE " << table_name_to_reset << " AS SELECT * FROM " << table_name_to_copy_from << ";";
+  const auto command = std::format("DROP TABLE IF EXISTS {0}; CREATE TABLE {0} AS SELECT * FROM {1};",
+                                   table_name_to_reset, table_name_to_copy_from);
 
-  main_connection.raw_execute_query(command_sstream.str());
+  main_connection.raw_execute_query(command);
 }
 
 }  // namespace hyrise

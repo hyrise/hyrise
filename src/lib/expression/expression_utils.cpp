@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <format>
 #include <memory>
 #include <optional>
 #include <sstream>
@@ -35,7 +36,7 @@
 
 namespace hyrise {
 
-using namespace expression_functional;  // NOLINT(build/namespaces)
+using namespace expression_functional;
 
 bool expressions_equal(const std::vector<std::shared_ptr<AbstractExpression>>& expressions_a,
                        const std::vector<std::shared_ptr<AbstractExpression>>& expressions_b) {
@@ -148,7 +149,7 @@ std::shared_ptr<LQPColumnExpression> expression_adapt_to_different_lqp(const LQP
   Assert(node, "LQPColumnExpression is expired.");
   const auto node_mapping_iter = node_mapping.find(node);
   Assert(node_mapping_iter != node_mapping.end(),
-         "Could not find referenced node (" + node->description() + ") in NodeMapping.");
+         std::format("Could not find referenced node '{}' in NodeMapping.", node->description()));
 
   return std::make_shared<LQPColumnExpression>(node_mapping_iter->second, lqp_column_expression.original_column_id);
 }
@@ -383,8 +384,8 @@ std::optional<AllTypeVariant> expression_get_value_or_parameter(const AbstractEx
         // lossy_variant_cast returns std::nullopt when it casts from a NULL value. We have handled this above.
         result = *lossy_variant_cast<TargetDataType>(value_expression.value);
       } catch (boost::bad_lexical_cast&) {
-        Fail("Cannot cast " + cast_expression.argument()->as_column_name() + " as " +
-             std::string{magic_enum::enum_name(expression.data_type())} + ".");
+        Fail(std::format("Cannot cast '{}' as '{}'.", cast_expression.argument()->as_column_name(),
+                         magic_enum::enum_name(expression.data_type())));
       }
     });
     return result;

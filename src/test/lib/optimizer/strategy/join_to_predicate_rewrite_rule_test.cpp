@@ -1,28 +1,30 @@
+#include <memory>
+#include <set>
+
 #include "magic_enum/magic_enum.hpp"
 
+#include "all_type_variant.hpp"
+#include "base_test.hpp"
 #include "expression/expression_functional.hpp"
-#include "logical_query_plan/aggregate_node.hpp"
-#include "logical_query_plan/change_meta_table_node.hpp"
-#include "logical_query_plan/delete_node.hpp"
-#include "logical_query_plan/export_node.hpp"
-#include "logical_query_plan/insert_node.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
-#include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/update_node.hpp"
 #include "optimizer/strategy/abstract_rule.hpp"
 #include "optimizer/strategy/column_pruning_rule.hpp"
 #include "optimizer/strategy/join_to_predicate_rewrite_rule.hpp"
+#include "storage/constraints/table_key_constraint.hpp"
 #include "strategy_base_test.hpp"
+#include "testing_assert.hpp"
 #include "types.hpp"
 
 namespace hyrise {
 
-using namespace expression_functional;  // NOLINT(build/namespaces)
+using namespace expression_functional;
 
 class JoinToPredicateRewriteRuleTest : public StrategyBaseTest {
  public:
@@ -56,7 +58,7 @@ INSTANTIATE_TEST_SUITE_P(JoinToPredicateRewriteRuleJoinModeTestInstance, JoinToP
                          ::testing::ValuesIn(magic_enum::enum_values<JoinMode>()), enum_formatter<JoinMode>);
 
 TEST_P(JoinToPredicateRewriteRuleJoinModeTest, PerformRewrite) {
-  // The rule should only rewrite inner and semi joins.
+  // The rule should only rewrite inner and semi-joins.
   auto key_constraints = TableKeyConstraints{};
   key_constraints.emplace(std::set<ColumnID>{u->original_column_id}, KeyConstraintType::UNIQUE);
   // Add a non-genuine UCC.
@@ -89,7 +91,7 @@ TEST_P(JoinToPredicateRewriteRuleJoinModeTest, PerformRewrite) {
   }
   _apply_rule(rule, _lqp);
 
-  // The rule should only rewrite inner and semi joins. The UCC is not genuine. Therefore, the result should not
+  // The rule should only rewrite inner and semi-joins. The UCC is not genuine. Therefore, the result should not
   // be cacheable in this case.
   EXPECT_FALSE((GetParam() == JoinMode::Inner || GetParam() == JoinMode::Semi) && _optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);

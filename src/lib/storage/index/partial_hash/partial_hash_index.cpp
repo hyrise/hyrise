@@ -70,7 +70,7 @@ PartialHashIndex::Iterator PartialHashIndex::_null_cend() const {
 }
 
 size_t PartialHashIndex::estimate_memory_usage() const {
-  auto bytes = size_t{0u};
+  auto bytes = size_t{0};
   bytes += sizeof(_impl);
   bytes += sizeof(_column_id);
   bytes += sizeof(_data_access_mutex);

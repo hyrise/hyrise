@@ -13,7 +13,7 @@ namespace hyrise {
  * Makes handling atomics in containers easier
  *
  * Attention: The following is not an atomic operation
- *   copyable_atomic<int> a = 3, b = 4;
+ *   CopyableAtomic<int> a = 3, b = 4;
  *   a = b; // not atomic!
  *
  *   // internally this happens
@@ -22,23 +22,31 @@ namespace hyrise {
  *   a.store(tmp);
  */
 template <typename T>
-class copyable_atomic {
+class CopyableAtomic {
   static_assert(std::is_trivially_copyable_v<T>, "T must be trivially copyable.");
 
  public:
-  copyable_atomic() noexcept = default;
+  CopyableAtomic() noexcept = default;
 
-  copyable_atomic(const copyable_atomic<T>& other) {
+  CopyableAtomic(CopyableAtomic&&) = default;
+  CopyableAtomic& operator=(CopyableAtomic&&) = default;
+  ~CopyableAtomic() = default;
+
+  CopyableAtomic(const CopyableAtomic<T>& other) {
     _atomic.store(other._atomic.load());
   }
 
-  explicit constexpr copyable_atomic(T desired) noexcept : _atomic{desired} {}
+  explicit constexpr CopyableAtomic(T desired) noexcept : _atomic{desired} {}
 
+  // NOLINTNEXTLINE(cppcoreguidelines-c-copy-assignment-signature,misc-unconventional-assign-operator)
   T operator=(T desired) noexcept {
     return _atomic.operator=(desired);
   }
 
-  copyable_atomic& operator=(const copyable_atomic<T>& other) {
+  CopyableAtomic& operator=(const CopyableAtomic<T>& other) {
+    if (this == &other) {
+      return *this;
+    }
     _atomic.store(other._atomic.load());
     return *this;
   }
@@ -47,6 +55,7 @@ class copyable_atomic {
     return _atomic.is_lock_free();
   }
 
+  // NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)
   operator T() const noexcept {
     return _atomic.load();
   }

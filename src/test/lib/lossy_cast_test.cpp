@@ -1,12 +1,18 @@
+#include <cstdint>
+#include <limits>
+#include <optional>
+
 #include "base_test.hpp"
 #include "lossy_cast.hpp"
+#include "null_value.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
 class LossyCastTest : public BaseTest {};
 
 TEST_F(LossyCastTest, LossyVariantCast) {
-  EXPECT_EQ(lossy_variant_cast<int32_t>(int32_t(5)), int32_t(5));
+  EXPECT_EQ(lossy_variant_cast<int32_t>(int32_t{5}), int32_t{5});
   EXPECT_EQ(lossy_variant_cast<int32_t>(NullValue{}), std::nullopt);
   EXPECT_EQ(lossy_variant_cast<int32_t>(3.5f), int32_t{3});
   EXPECT_EQ(lossy_variant_cast<pmr_string>(3), "3");

@@ -1,6 +1,7 @@
 #include "load_table.hpp"
 
 #include <cstddef>
+#include <format>
 #include <fstream>
 #include <memory>
 #include <string>
@@ -41,7 +42,7 @@ std::shared_ptr<Table> create_table_from_header(std::ifstream& infile, ChunkOffs
   for (auto index = size_t{0}; index < column_name_count; ++index) {
     const auto data_type = data_type_to_string.right.find(column_types[index]);
     Assert(data_type != data_type_to_string.right.end(),
-           std::string("Invalid data type ") + column_types[index] + " for column " + column_names[index] + ".");
+           std::format("Invalid data type '{}' for column '{}'.", column_types[index], column_names[index]));
     column_definitions.emplace_back(column_names[index], data_type->second, column_nullable[index]);
   }
 
@@ -50,14 +51,14 @@ std::shared_ptr<Table> create_table_from_header(std::ifstream& infile, ChunkOffs
 
 std::shared_ptr<Table> create_table_from_header(const std::string& file_name, ChunkOffset chunk_size) {
   auto infile = std::ifstream{file_name};
-  Assert(infile.is_open(), "load_table: Could not find file '" + file_name + "'.");
+  Assert(infile.is_open(), std::format("load_table: Could not find file '{}'.", file_name));
   return create_table_from_header(infile, chunk_size);
 }
 
 std::shared_ptr<Table> load_table(const std::string& file_name, ChunkOffset chunk_size,
                                   SetLastChunkImmutable mark_last_chunk_immutable) {
   auto infile = std::ifstream{file_name};
-  Assert(infile.is_open(), "load_table: Could not find file '" + file_name + "'.");
+  Assert(infile.is_open(), std::format("load_table: Could not find file '{}'.", file_name));
 
   auto table = create_table_from_header(infile, chunk_size);
 

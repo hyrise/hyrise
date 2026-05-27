@@ -18,7 +18,7 @@ class Table;
 class TransactionContext;
 class PQPSubqueryExpression;
 
-enum class OperatorType {
+enum class OperatorType : uint8_t {
   Aggregate,
   Alias,
   ChangeMetaTable,
@@ -54,7 +54,7 @@ enum class OperatorType {
 };
 
 // The state enum values are declared in progressive order to allow for comparisons involving the >, >= operators.
-enum class OperatorState { Created, Running, ExecutedAndAvailable, ExecutedAndCleared };
+enum class OperatorState : uint8_t { Created, Running, ExecutedAndAvailable, ExecutedAndCleared };
 
 /**
  * AbstractOperator is the abstract super class for all operators. All operators have up to two input tables and one
@@ -114,12 +114,18 @@ enum class OperatorState { Created, Running, ExecutedAndAvailable, ExecutedAndCl
  */
 class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, private Noncopyable {
  public:
-  AbstractOperator(const OperatorType type, const std::shared_ptr<const AbstractOperator>& left = nullptr,
-                   const std::shared_ptr<const AbstractOperator>& right = nullptr,
-                   std::unique_ptr<AbstractOperatorPerformanceData> performance_data =
-                       std::make_unique<OperatorPerformanceData<AbstractOperatorPerformanceData::NoSteps>>());
+  explicit AbstractOperator(const OperatorType type, const std::shared_ptr<const AbstractOperator>& left = nullptr,
+                            const std::shared_ptr<const AbstractOperator>& right = nullptr,
+                            std::unique_ptr<AbstractOperatorPerformanceData> performance_data =
+                                std::make_unique<OperatorPerformanceData<AbstractOperatorPerformanceData::NoSteps>>());
 
-  virtual ~AbstractOperator();
+  ~AbstractOperator() override;
+  AbstractOperator(const AbstractOperator&) = delete;
+  AbstractOperator& operator=(const AbstractOperator&) = delete;
+  // These two need not be deleted, but they are for the same reason that std::atomic has them deleted.
+  // You can implement them, but you should think about the implications for this class.
+  AbstractOperator(AbstractOperator&&) = delete;
+  AbstractOperator& operator=(AbstractOperator&&) = delete;
 
   OperatorType type() const;
 

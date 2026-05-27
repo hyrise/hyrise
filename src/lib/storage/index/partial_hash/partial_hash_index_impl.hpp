@@ -27,8 +27,6 @@ class BasePartialHashIndexImpl : public Noncopyable {
   using IteratorRange = std::pair<Iterator, Iterator>;
   using IteratorRangePair = std::pair<IteratorRange, IteratorRange>;
 
-  virtual ~BasePartialHashIndexImpl() = default;
-
   /**
    * Adds the given chunks to this index. If a chunk is already indexed, it is not indexed again.
    *
@@ -58,7 +56,7 @@ class BasePartialHashIndexImpl : public Noncopyable {
   virtual tsl::sparse_set<ChunkID> get_indexed_chunk_ids() const = 0;
 };
 
-/** 
+/**
  * Templated implementation of the PartialHashIndex. It is possible to index any immutable chunk of the indexed column.
  * Chunks can be added via `insert()`.
  *
@@ -74,8 +72,9 @@ class PartialHashIndexImpl : public BasePartialHashIndexImpl {
   PartialHashIndexImpl() = delete;
   PartialHashIndexImpl(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>&, const ColumnID);
 
-  size_t insert(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>&, const ColumnID) final;
-  size_t remove(const std::vector<ChunkID>&) final;
+  size_t insert(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>& /*unused*/,
+                const ColumnID /*unused*/) final;
+  size_t remove(const std::vector<ChunkID>& /*unused*/) final;
 
   bool indexed_null_values() const final;
 
@@ -93,7 +92,7 @@ class PartialHashIndexImpl : public BasePartialHashIndexImpl {
  private:
   tsl::sparse_map<DataType, std::vector<RowID>> _positions;
   tsl::sparse_map<DataType, std::vector<RowID>> _null_positions;
-  tsl::sparse_set<ChunkID> _indexed_chunk_ids = {};
+  tsl::sparse_set<ChunkID> _indexed_chunk_ids;
 };
 
 }  // namespace hyrise

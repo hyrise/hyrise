@@ -1,5 +1,6 @@
 #pragma once
 
+#include <format>
 #include <stdexcept>
 #include <string>
 
@@ -50,12 +51,14 @@ namespace detail {
 
 }  // namespace detail
 
+// NOLINTBEGIN(cppcoreguidelines-macro-usage)
 #define Fail(msg)                                                                                             \
-  hyrise::detail::fail(hyrise::trim_source_file_path(__FILE__) + ":" BOOST_PP_STRINGIZE(__LINE__) " " + msg); \
+  hyrise::detail::fail(                                                                                       \
+      std::format("{}:{} {}", hyrise::trim_source_file_path(__FILE__), BOOST_PP_STRINGIZE(__LINE__), (msg))); \
   static_assert(true, "End call of macro with a semicolon.")
 
 [[noreturn]] inline void FailInput(const std::string& msg) {  // NOLINT(readability-identifier-naming)
-  throw InvalidInputException(std::string("Invalid input error: ") + msg);
+  throw InvalidInputException(std::format("Invalid input error: {}", (msg)));
 }
 
 }  // namespace hyrise
@@ -66,10 +69,10 @@ namespace detail {
   }                               \
   static_assert(true, "End call of macro with a semicolon.")
 
-#define AssertInput(expr, msg)                                               \
-  if (!static_cast<bool>(expr)) {                                            \
-    throw InvalidInputException(std::string("Invalid input error: ") + msg); \
-  }                                                                          \
+#define AssertInput(expr, msg)                                                  \
+  if (!static_cast<bool>(expr)) {                                               \
+    throw InvalidInputException(std::format("Invalid input error: {}", (msg))); \
+  }                                                                             \
   static_assert(true, "End call of macro with a semicolon.")
 
 #if HYRISE_DEBUG
@@ -77,3 +80,5 @@ namespace detail {
 #else
 #define DebugAssert(expr, msg)
 #endif
+
+// NOLINTEND(cppcoreguidelines-macro-usage)

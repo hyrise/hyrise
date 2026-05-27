@@ -7,6 +7,7 @@
 #include <string>
 #include <unordered_map>
 
+#include "abstract_read_write_operator.hpp"
 #include "all_type_variant.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "hyrise.hpp"
@@ -23,7 +24,7 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT(build/namespaces)
+using namespace hyrise;
 
 template <typename T>
 void copy_value_range(const std::shared_ptr<const AbstractSegment>& source_abstract_segment,

@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cstddef>
+#include <format>
 #include <optional>
 #include <ostream>
 #include <regex>
@@ -18,7 +19,7 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT(build/namespaces)
+using namespace hyrise;
 
 size_t get_index_of_next_wildcard(const pmr_string& pattern, const size_t offset) {
   return pattern.find_first_of("_%", offset);
@@ -50,7 +51,7 @@ std::string sql_like_to_regex(pmr_string sql_like) {
     boost::replace_all(sql_like, original, replacement);
   }
 
-  return std::string{"^" + sql_like + "$"};
+  return std::format("^{}$", sql_like);
 }
 
 }  // namespace

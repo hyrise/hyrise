@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <atomic>
 #include <cstddef>
+#include <format>
 #include <iostream>
 #include <memory>
 #include <numeric>
@@ -44,6 +45,7 @@ TPCHBenchmarkItemRunner::TPCHBenchmarkItemRunner(const std::shared_ptr<Benchmark
       _scale_factor(scale_factor),
       _clustering_configuration(clustering_configuration) {
   _items.resize(22);
+  // NOLINTNEXTLINE(modernize-use-ranges): We need LLVM 21's libc++ for std::ranges::iota.
   std::iota(_items.begin(), _items.end(), BenchmarkItemID{0});
 }
 
@@ -160,7 +162,7 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
       const auto date =
           date_interval(boost::gregorian::date{1998, 12, 01}, -date_diff_dist(random_engine), DatetimeComponent::Day);
 
-      parameters.emplace_back("'" + date_to_string(date) + "'");
+      parameters.emplace_back(std::format("'{}'", date_to_string(date)));
       break;
     }
 
@@ -171,9 +173,9 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
       const auto* const region = regions.list[region_dist(random_engine)].text;
 
       parameters.emplace_back(std::to_string(size));
-      parameters.emplace_back(std::string{"'%"} + material + "'");
-      parameters.emplace_back(std::string{"'"} + region + "'");
-      parameters.emplace_back(std::string{"'"} + region + "'");
+      parameters.emplace_back(std::format("'%{}'", material));
+      parameters.emplace_back(std::format("'{}'", region));
+      parameters.emplace_back(std::format("'{}'", region));
       break;
     }
 
@@ -183,9 +185,9 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
       const auto date =
           date_interval(boost::gregorian::date{1995, 03, 01}, date_diff_dist(random_engine), DatetimeComponent::Day);
 
-      parameters.emplace_back(std::string{"'"} + segment + "'");
-      parameters.emplace_back("'" + date_to_string(date) + "'");
-      parameters.emplace_back("'" + date_to_string(date) + "'");
+      parameters.emplace_back(std::format("'{}'", segment));
+      parameters.emplace_back(std::format("'{}'", date_to_string(date)));
+      parameters.emplace_back(std::format("'{}'", date_to_string(date)));
       break;
     }
 
@@ -195,8 +197,8 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
       const auto begin_date = date_interval(boost::gregorian::date{1993, 01, 01}, diff, DatetimeComponent::Month);
       const auto end_date = date_interval(begin_date, 3, DatetimeComponent::Month);
 
-      parameters.emplace_back("'" + date_to_string(begin_date) + "'");
-      parameters.emplace_back("'" + date_to_string(end_date) + "'");
+      parameters.emplace_back(std::format("'{}'", date_to_string(begin_date)));
+      parameters.emplace_back(std::format("'{}'", date_to_string(end_date)));
       break;
     }
 
@@ -208,9 +210,9 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
       const auto begin_date = date_interval(boost::gregorian::date{1993, 01, 01}, diff, DatetimeComponent::Year);
       const auto end_date = date_interval(begin_date, 1, DatetimeComponent::Year);
 
-      parameters.emplace_back(std::string{"'"} + region + "'");
-      parameters.emplace_back("'" + date_to_string(begin_date) + "'");
-      parameters.emplace_back("'" + date_to_string(end_date) + "'");
+      parameters.emplace_back(std::format("'{}'", region));
+      parameters.emplace_back(std::format("'{}'", date_to_string(begin_date)));
+      parameters.emplace_back(std::format("'{}'", date_to_string(end_date)));
       break;
     }
 
@@ -226,8 +228,8 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
       auto quantity_dist = std::uniform_int_distribution<>{24, 25};
       const auto quantity = quantity_dist(random_engine);
 
-      parameters.emplace_back("'" + date_to_string(begin_date) + "'");
-      parameters.emplace_back("'" + date_to_string(end_date) + "'");
+      parameters.emplace_back(std::format("'{}'", date_to_string(begin_date)));
+      parameters.emplace_back(std::format("'{}'", date_to_string(end_date)));
       parameters.emplace_back(std::to_string(discount));
       parameters.emplace_back(std::to_string(discount));
       parameters.emplace_back(std::to_string(quantity));
@@ -242,10 +244,10 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
         nation2 = nations.list[nation_dist(random_engine)].text;
       } while (nation1 == nation2);
 
-      parameters.emplace_back(std::string{"'"} + nation1 + "'");
-      parameters.emplace_back(std::string{"'"} + nation2 + "'");
-      parameters.emplace_back(std::string{"'"} + nation2 + "'");
-      parameters.emplace_back(std::string{"'"} + nation1 + "'");
+      parameters.emplace_back(std::format("'{}'", nation1));
+      parameters.emplace_back(std::format("'{}'", nation2));
+      parameters.emplace_back(std::format("'{}'", nation2));
+      parameters.emplace_back(std::format("'{}'", nation1));
 
       // Hard-coded in TPC-H, but used in JCC-H
       parameters.emplace_back("'1995-01-01'");
@@ -263,14 +265,14 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
 
       const auto* const type = p_types_set.list[type_dist(random_engine)].text;
 
-      parameters.emplace_back(std::string{"'"} + nation + "'");
-      parameters.emplace_back(std::string{"'"} + region + "'");
+      parameters.emplace_back(std::format("'{}'", nation));
+      parameters.emplace_back(std::format("'{}'", region));
 
       // Hard-coded in TPC-H, but used in JCC-H
       parameters.emplace_back("'1995-01-01'");
       parameters.emplace_back("'1996-12-31'");
 
-      parameters.emplace_back(std::string{"'"} + type + "'");
+      parameters.emplace_back(std::format("'{}'", type));
 
       break;
     }
@@ -278,7 +280,7 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
     case 9 - 1: {
       const auto* const color = colors.list[color_dist(random_engine)].text;
 
-      parameters.emplace_back(std::string{"'%"} + color + "%'");
+      parameters.emplace_back(std::format("'%{}%'", color));
       break;
     }
 
@@ -288,8 +290,8 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
       const auto begin_date = date_interval(boost::gregorian::date{1993, 01, 01}, diff, DatetimeComponent::Month);
       const auto end_date = date_interval(begin_date, 3, DatetimeComponent::Month);
 
-      parameters.emplace_back("'" + date_to_string(begin_date) + "'");
-      parameters.emplace_back("'" + date_to_string(end_date) + "'");
+      parameters.emplace_back(std::format("'{}'", date_to_string(begin_date)));
+      parameters.emplace_back(std::format("'{}'", date_to_string(end_date)));
       break;
     }
 
@@ -297,9 +299,9 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
       const auto* const nation = nations.list[nation_dist(random_engine)].text;
       const auto fraction = 0.0001 / (_scale_factor > 0 ? _scale_factor : 1);
 
-      parameters.emplace_back(std::string{"'"} + nation + "'");
+      parameters.emplace_back(std::format("'{}'", nation));
       parameters.emplace_back(std::to_string(fraction));
-      parameters.emplace_back(std::string{"'"} + nation + "'");
+      parameters.emplace_back(std::format("'{}'", nation));
       break;
     }
 
@@ -316,10 +318,10 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
       const auto begin_date = date_interval(boost::gregorian::date{1993, 01, 01}, diff, DatetimeComponent::Year);
       const auto end_date = date_interval(begin_date, 1, DatetimeComponent::Year);
 
-      parameters.emplace_back(std::string{"'"} + shipmode1 + "'");
-      parameters.emplace_back(std::string{"'"} + shipmode2 + "'");
-      parameters.emplace_back("'" + date_to_string(begin_date) + "'");
-      parameters.emplace_back("'" + date_to_string(end_date) + "'");
+      parameters.emplace_back(std::format("'{}'", shipmode1));
+      parameters.emplace_back(std::format("'{}'", shipmode2));
+      parameters.emplace_back(std::format("'{}'", date_to_string(begin_date)));
+      parameters.emplace_back(std::format("'{}'", date_to_string(end_date)));
       break;
     }
 
@@ -329,8 +331,8 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
 
       auto word_dist = std::uniform_int_distribution<>{0, 3};
 
-      parameters.emplace_back(std::string{"'%"} + words1[word_dist(random_engine)] + '%' +
-                              words2[word_dist(random_engine)] + "%'");
+      parameters.emplace_back(
+          std::format("'%{}%{}%'", words1[word_dist(random_engine)], words2[word_dist(random_engine)]));
       break;
     }
 
@@ -340,8 +342,8 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
       const auto begin_date = date_interval(boost::gregorian::date{1993, 01, 01}, diff, DatetimeComponent::Month);
       const auto end_date = date_interval(begin_date, 1, DatetimeComponent::Month);
 
-      parameters.emplace_back("'" + date_to_string(begin_date) + "'");
-      parameters.emplace_back("'" + date_to_string(end_date) + "'");
+      parameters.emplace_back(std::format("'{}'", date_to_string(begin_date)));
+      parameters.emplace_back(std::format("'{}'", date_to_string(end_date)));
       break;
     }
 
@@ -365,7 +367,7 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
       query_15.replace(END_DATE_OFFSET, 10, date_to_string(end_date));
 
       const auto view_id = std::atomic_fetch_add(&_q15_view_id, size_t{1});
-      boost::replace_all(query_15, std::string("revenue_view"), std::string("revenue") + std::to_string(view_id));
+      boost::replace_all(query_15, std::string("revenue_view"), std::format("revenue{}", view_id));
 
       // Not using _substitute_placeholders here
       return query_15;
@@ -380,8 +382,8 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
       auto sizes_copy = sizes;
       std::ranges::shuffle(sizes_copy, random_engine);
 
-      parameters.emplace_back("'Brand#" + std::to_string(brand) + "'");
-      parameters.emplace_back("'" + partial_type + "%'");
+      parameters.emplace_back(std::format("'Brand#{}'", brand));
+      parameters.emplace_back(std::format("'{}%'", partial_type));
       for (auto parameter_index = size_t{0}; parameter_index < 8; ++parameter_index) {
         parameters.emplace_back(std::to_string(sizes_copy[parameter_index]));
       }
@@ -392,8 +394,8 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
       const auto brand = (brand_char_dist(random_engine) * 10) + brand_char_dist(random_engine);
       const auto* const container = p_cntr_set.list[container_dist(random_engine)].text;
 
-      parameters.emplace_back("'Brand#" + std::to_string(brand) + "'");
-      parameters.emplace_back(std::string{"'"} + container + "'");
+      parameters.emplace_back(std::format("'Brand#{}'", brand));
+      parameters.emplace_back(std::format("'{}'", container));
       break;
     }
 
@@ -416,13 +418,13 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
       const auto brand2 = (brand_char_dist(random_engine) * 10) + brand_char_dist(random_engine);
       const auto brand3 = (brand_char_dist(random_engine) * 10) + brand_char_dist(random_engine);
 
-      parameters.emplace_back("'Brand#" + std::to_string(brand1) + "'");
+      parameters.emplace_back(std::format("'Brand#{}'", brand1));
       parameters.emplace_back(std::to_string(quantity1));
       parameters.emplace_back(std::to_string(quantity1));
-      parameters.emplace_back("'Brand#" + std::to_string(brand2) + "'");
+      parameters.emplace_back(std::format("'Brand#{}'", brand2));
       parameters.emplace_back(std::to_string(quantity2));
       parameters.emplace_back(std::to_string(quantity2));
-      parameters.emplace_back("'Brand#" + std::to_string(brand3) + "'");
+      parameters.emplace_back(std::format("'Brand#{}'", brand3));
       parameters.emplace_back(std::to_string(quantity3));
       parameters.emplace_back(std::to_string(quantity3));
 
@@ -437,17 +439,17 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
       const auto end_date = date_interval(begin_date, 1, DatetimeComponent::Year);
       const auto* const nation = nations.list[nation_dist(random_engine)].text;
 
-      parameters.emplace_back(std::string{"'"} + color + "%'");
-      parameters.emplace_back("'" + date_to_string(begin_date) + "'");
-      parameters.emplace_back("'" + date_to_string(end_date) + "'");
-      parameters.emplace_back(std::string{"'"} + nation + "'");
+      parameters.emplace_back(std::format("'{}%'", color));
+      parameters.emplace_back(std::format("'{}'", date_to_string(begin_date)));
+      parameters.emplace_back(std::format("'{}'", date_to_string(end_date)));
+      parameters.emplace_back(std::format("'{}'", nation));
       break;
     }
 
     case 21 - 1: {
       const auto* const nation = nations.list[nation_dist(random_engine)].text;
 
-      parameters.emplace_back(std::string{"'"} + nation + "'");
+      parameters.emplace_back(std::format("'{}'", nation));
       break;
     }
 
@@ -457,10 +459,10 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
 
       // We need the same country code twice - have a look at the query
       for (auto parameter_index = size_t{0}; parameter_index < 7; ++parameter_index) {
-        parameters.emplace_back("'" + std::to_string(country_codes_copy[parameter_index]) + "'");
+        parameters.emplace_back(std::format("'{}'", country_codes_copy[parameter_index]));
       }
       for (auto parameter_index = size_t{0}; parameter_index < 7; ++parameter_index) {
-        parameters.emplace_back("'" + std::to_string(country_codes_copy[parameter_index]) + "'");
+        parameters.emplace_back(std::format("'{}'", country_codes_copy[parameter_index]));
       }
       break;
     }
@@ -470,7 +472,7 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
   }
 
   return _substitute_placeholders(item_id, parameters);
-}  // NOLINT
+}  // NOLINT(readability/fn_size)
 
 std::string TPCHBenchmarkItemRunner::_build_deterministic_query(const BenchmarkItemID item_id) const {
   DebugAssert(item_id < 22, "There are only 22 TPC-H queries.");
@@ -482,7 +484,7 @@ std::string TPCHBenchmarkItemRunner::_build_deterministic_query(const BenchmarkI
     // TPC-H query 15 uses "stream ids" to name the views. While not supported right now, we might want to execute
     // multiple instances of Q15 simultaneously and will need unique view names for that.
     static auto view_id = 0;
-    boost::replace_all(query_15, std::string("revenueview"), std::string("revenue") + std::to_string(view_id++));
+    boost::replace_all(query_15, std::string("revenueview"), std::format("revenue{}", view_id++));
     return query_15;
   }
 
@@ -518,16 +520,14 @@ std::string TPCHBenchmarkItemRunner::_build_deterministic_query(const BenchmarkI
 
 std::string TPCHBenchmarkItemRunner::item_name(const BenchmarkItemID item_id) const {
   Assert(item_id < 22, "item_id out of range.");
-  return std::string("TPC-H ") + (item_id + 1 < 10 ? "0" : "") + std::to_string(item_id + 1);
+  return std::format("TPC-H {:0>2}", item_id.t + 1);
 }
 
 std::string TPCHBenchmarkItemRunner::_substitute_placeholders(const BenchmarkItemID item_id,
                                                               const std::vector<std::string>& parameter_values) const {
   if (_use_prepared_statements) {
     // Join the parameter values for an "EXECUTE TPCHn VALUES (...)" string
-    auto sql = std::stringstream{};
-    sql << "EXECUTE TPCH" << (item_id + 1) << " (" << boost::algorithm::join(parameter_values, ", ") << ")";
-    return sql.str();
+    return std::format("EXECUTE TPCH{} ({})", item_id + 1, boost::algorithm::join(parameter_values, ", "));
   }
 
   // Take the SQL query (from tpch_queries.cpp) and replace one placeholder (question mark) after another

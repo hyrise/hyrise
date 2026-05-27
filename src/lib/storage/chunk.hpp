@@ -51,8 +51,8 @@ class Chunk : private Noncopyable {
   // account for NULL being encoded as a separate value ID.
   static constexpr auto DEFAULT_SIZE = ChunkOffset{65'535};
 
-  Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data = nullptr,
-        PolymorphicAllocator<Chunk> alloc = PolymorphicAllocator<Chunk>{}, Indexes indexes = {});
+  explicit Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data = nullptr,
+                 PolymorphicAllocator<Chunk> alloc = PolymorphicAllocator<Chunk>{}, Indexes indexes = {});
 
   // Returns whether new rows can be appended to this chunk. Chunks are set immutable during `set_immutable().
   bool is_mutable() const;
@@ -98,7 +98,7 @@ class Chunk : private Noncopyable {
       const std::vector<std::shared_ptr<const AbstractSegment>>& segments_to_index) {
     if constexpr (HYRISE_DEBUG) {
       for (const auto& segment : segments_to_index) {
-        const auto segment_it = std::find(_segments.cbegin(), _segments.cend(), segment);
+        const auto segment_it = std::ranges::find(_segments, segment);
         Assert(segment_it != _segments.cend(), "All segments must be part of the chunk.");
       }
     }
@@ -118,7 +118,11 @@ class Chunk : private Noncopyable {
 
   void migrate(MemoryResource& memory_resource);
 
-  bool references_exactly_one_table() const;
+  /**
+   * Some operators only check the first segment to obtain positions (e.g. Delete and Validate).
+   * This method checks that all reference segments point to the same positions list and the same table.
+   */
+  bool segments_share_table_and_positions() const;
 
   const PolymorphicAllocator<Chunk>& get_allocator() const;
 

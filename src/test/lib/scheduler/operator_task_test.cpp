@@ -1,13 +1,20 @@
-#include <future>
+#include <functional>
 #include <memory>
+#include <stdexcept>
 #include <string>
+#include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "expression/expression_functional.hpp"
+#include "expression/pqp_column_expression.hpp"
+#include "expression/window_function_expression.hpp"
 #include "hyrise.hpp"
-#include "operators/abstract_join_operator.hpp"
+#include "operators/abstract_operator.hpp"
+#include "operators/abstract_read_only_operator.hpp"
 #include "operators/aggregate_hash.hpp"
 #include "operators/get_table.hpp"
 #include "operators/join_hash.hpp"
@@ -15,12 +22,15 @@
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/union_positions.hpp"
-#include "scheduler/node_queue_scheduler.hpp"
+#include "scheduler/abstract_task.hpp"
 #include "scheduler/operator_task.hpp"
+#include "testing_assert.hpp"
+#include "types.hpp"
+#include "utils/load_table.hpp"
 
 namespace hyrise {
 
-using namespace expression_functional;  // NOLINT(build/namespaces)
+using namespace expression_functional;
 
 class OperatorTaskTest : public BaseTest {
  protected:
@@ -131,15 +141,14 @@ TEST_F(OperatorTaskTest, UncorrelatedSubqueries) {
   // SELECT AVG(table_a.a) FROM table_a WHERE table_a.a > <subquery_result>
   const auto gt_a = std::make_shared<GetTable>("table_a");
   const auto a_a = PQPColumnExpression::from_table(*_test_table_a, "a");
-  const auto scan =
-      std::make_shared<TableScan>(gt_a, greater_than_(a_a, pqp_subquery_(aggregate_a, DataType::Int, false)));
+  const auto scan = std::make_shared<TableScan>(gt_a, greater_than_(a_a, pqp_subquery_(aggregate_a, DataType::Int)));
   auto aggregate_b =
       std::make_shared<AggregateHash>(scan, WindowFunctionExpressions{avg_(a_a)}, std::vector<ColumnID>{});
 
   // SELECT 1 + <subquery_result>
   const auto table_wrapper = std::make_shared<TableWrapper>(Projection::dummy_table());
   const auto projection = std::make_shared<Projection>(
-      table_wrapper, expression_vector(add_(value_(1), pqp_subquery_(aggregate_b, DataType::Double, false))));
+      table_wrapper, expression_vector(add_(value_(1), pqp_subquery_(aggregate_b, DataType::Double))));
 
   const auto& [tasks, root_operator_task] = OperatorTask::make_tasks_from_operator(projection);
 
@@ -242,13 +251,12 @@ TEST_F(OperatorTaskTest, LinkPrunableSubqueries) {
   const auto get_table_b = std::make_shared<GetTable>("table_b");
 
   const auto aggregate = std::make_shared<AggregateHash>(
-      get_table_b, std::vector{min_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"))}, std::vector<ColumnID>{});
+      get_table_b, std::vector{min_(pqp_column_(ColumnID{0}, DataType::Int, "a"))}, std::vector<ColumnID>{});
   const auto projection =
-      std::make_shared<Projection>(aggregate, expression_vector(pqp_column_(ColumnID{0}, DataType::Int, false, "a")));
+      std::make_shared<Projection>(aggregate, expression_vector(pqp_column_(ColumnID{0}, DataType::Int, "a")));
 
   const auto table_scan = std::make_shared<TableScan>(
-      get_table_a,
-      equals_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"), pqp_subquery_(projection, DataType::Int, false)));
+      get_table_a, equals_(pqp_column_(ColumnID{0}, DataType::Int, "a"), pqp_subquery_(projection, DataType::Int)));
 
   get_table_a->set_prunable_subquery_predicates({table_scan});
 
@@ -282,13 +290,13 @@ TEST_F(OperatorTaskTest, PrunableSubqueriesWithCycles) {
   const auto get_table = std::make_shared<GetTable>("table_a");
 
   const auto aggregate = std::make_shared<AggregateHash>(
-      get_table, std::vector{avg_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"))}, std::vector<ColumnID>{});
-  const auto projection = std::make_shared<Projection>(
-      aggregate, expression_vector(pqp_column_(ColumnID{0}, DataType::Double, false, "a")));
+      get_table, std::vector{avg_(pqp_column_(ColumnID{0}, DataType::Int, "a"))}, std::vector<ColumnID>{});
+  const auto projection =
+      std::make_shared<Projection>(aggregate, expression_vector(pqp_column_(ColumnID{0}, DataType::Double, "a")));
 
-  const auto table_scan =
-      std::make_shared<TableScan>(get_table, greater_than_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"),
-                                                           pqp_subquery_(projection, DataType::Double, false)));
+  const auto table_scan = std::make_shared<TableScan>(
+      get_table,
+      greater_than_(pqp_column_(ColumnID{0}, DataType::Int, "a"), pqp_subquery_(projection, DataType::Double)));
 
   get_table->set_prunable_subquery_predicates({table_scan});
 

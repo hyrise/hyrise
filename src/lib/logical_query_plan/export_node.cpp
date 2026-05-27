@@ -1,6 +1,7 @@
 #include "export_node.hpp"
 
 #include <cstddef>
+#include <format>
 #include <memory>
 #include <string>
 #include <utility>
@@ -26,7 +27,7 @@ ExportNode::ExportNode(const std::string& init_file_name, const FileType init_fi
 std::string ExportNode::description(const DescriptionMode /*mode*/) const {
   auto file_type_str = std::string{magic_enum::enum_name(file_type)};
   boost::algorithm::to_lower(file_type_str);
-  return "[Export] to '" + file_name + "' (" + file_type_str + ")";
+  return std::format("[Export] to '{}' ({})", file_name, file_type_str);
 }
 
 size_t ExportNode::_on_shallow_hash() const {
