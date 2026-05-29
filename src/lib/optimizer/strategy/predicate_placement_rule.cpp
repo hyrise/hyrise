@@ -426,6 +426,8 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
   }
 }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnrvo"
 std::vector<std::shared_ptr<AbstractLQPNode>> PredicatePlacementRule::_pull_up_traversal(
     const std::shared_ptr<AbstractLQPNode>& current_node, const LQPInputSide input_side) {
   if (!current_node) {
@@ -499,6 +501,7 @@ std::vector<std::shared_ptr<AbstractLQPNode>> PredicatePlacementRule::_pull_up_t
 
   Fail("GCC thinks this is reachable.");
 }
+#pragma clang diagnostic pop
 
 void PredicatePlacementRule::_insert_nodes(const std::shared_ptr<AbstractLQPNode>& node, const LQPInputSide input_side,
                                            const std::vector<std::shared_ptr<AbstractLQPNode>>& predicate_nodes) {

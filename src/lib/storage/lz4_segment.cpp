@@ -506,11 +506,10 @@ std::optional<CompressedVectorType> LZ4Segment<T>::compressed_vector_type() cons
 // compression type. So if the vector compression becomes configurable, this method does not need to be touched.
 template <>
 std::optional<CompressedVectorType> LZ4Segment<pmr_string>::compressed_vector_type() const {
-  auto type = std::optional<CompressedVectorType>{};
   if (_string_offsets) {
     return _string_offsets->type();
   }
-  return type;
+  return std::nullopt;
 }
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(LZ4Segment);
