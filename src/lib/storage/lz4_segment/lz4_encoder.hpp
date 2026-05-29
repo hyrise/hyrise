@@ -403,7 +403,8 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
 
     // If the generation failed, then compress without a dictionary (the compression ratio will suffer).
     if (ZDICT_isError(dictionary_size)) {
-      return pmr_vector<char>{};
+      dictionary = pmr_vector<char>{};
+      return dictionary;
     }
 
     Assert(dictionary_size <= max_dictionary_size,

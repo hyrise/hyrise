@@ -47,7 +47,7 @@ std::shared_ptr<AbstractTask> TaskQueue::pull() {
 
   // We waited for the semaphore to enter pull() but did not receive a task. Ensure that queues are checked again.
   semaphore.signal();
-  return nullptr;
+  return task;
 }
 
 std::shared_ptr<AbstractTask> TaskQueue::steal() {
@@ -65,7 +65,7 @@ std::shared_ptr<AbstractTask> TaskQueue::steal() {
 
   // We waited for the semaphore to enter steal() but did not receive a task. Ensure that queues are checked again.
   semaphore.signal();
-  return nullptr;
+  return task;
 }
 
 size_t TaskQueue::estimate_load() const {

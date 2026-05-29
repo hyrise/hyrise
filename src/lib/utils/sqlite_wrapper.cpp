@@ -228,7 +228,7 @@ std::shared_ptr<Table> SQLiteWrapper::Connection::execute_query(const std::strin
     // re-execute the modification
     Assert(!result_table, "Modifying statement was expected to return empty table.");
     sqlite3_finalize(sqlite_statement);
-    return nullptr;
+    return result_table;
   }
 
   sqlite3_reset(sqlite_statement);

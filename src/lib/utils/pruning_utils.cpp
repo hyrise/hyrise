@@ -158,7 +158,7 @@ std::set<ChunkID> compute_chunk_exclude_list(
     // End of hacky.
 
     if (!operator_predicates) {
-      return {};
+      return excluded_chunk_ids;
     }
 
     auto current_excluded_chunk_ids = std::set<ChunkID>{};

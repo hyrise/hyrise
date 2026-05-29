@@ -80,6 +80,8 @@ std::string DependentGroupByReductionRule::name() const {
   return name;
 }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnrvo"
 void DependentGroupByReductionRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root,
                                                                       OptimizationContext& optimization_context) const {
   visit_lqp(lqp_root, [&](const auto& node) {
@@ -216,5 +218,6 @@ void DependentGroupByReductionRule::_apply_to_plan_without_subqueries(const std:
     return LQPVisitation::VisitInputs;
   });
 }
+#pragma clang diagnostic pop
 
 }  // namespace hyrise

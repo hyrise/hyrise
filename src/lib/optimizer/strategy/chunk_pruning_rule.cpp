@@ -294,7 +294,8 @@ std::set<ChunkID> ChunkPruningRule::_intersect_chunk_ids(const std::vector<std::
   for (auto set_idx = size_t{1}; set_idx < chunk_id_set_count; ++set_idx) {
     const auto& current_chunk_id_set = chunk_id_sets[set_idx];
     if (current_chunk_id_set.empty()) {
-      return {};
+      chunk_id_set = std::set<ChunkID>{};
+      return chunk_id_set;
     }
 
     auto intersection = std::set<ChunkID>{};

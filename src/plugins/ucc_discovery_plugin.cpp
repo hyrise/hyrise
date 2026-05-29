@@ -361,6 +361,8 @@ void UccDiscoveryPlugin::_ucc_candidates_from_aggregate_node(const std::shared_p
   }
 }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnrvo"
 void UccDiscoveryPlugin::_ucc_candidates_from_join_node(const std::shared_ptr<const AbstractLQPNode>& node,
                                                         UccCandidates& ucc_candidates) {
   const auto& join_node = static_cast<const JoinNode&>(*node);
@@ -433,6 +435,7 @@ void UccDiscoveryPlugin::_ucc_candidates_from_join_node(const std::shared_ptr<co
       return;
   }
 }
+#pragma clang diagnostic pop
 
 void UccDiscoveryPlugin::_ucc_candidates_from_removable_join_input(
     const std::shared_ptr<const AbstractLQPNode>& root_node,

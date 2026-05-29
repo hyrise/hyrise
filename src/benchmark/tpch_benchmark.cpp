@@ -46,6 +46,8 @@ using namespace hyrise;
  * The same binary is used to run the JCC-H benchmark. For this, simply use the -j flag.
  */
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnrvo"
 int main(int argc, char* argv[]) {
   auto cli_options = BenchmarkRunner::get_basic_cli_options("TPC-H/JCC-H Benchmark");
 
@@ -218,3 +220,4 @@ int main(int argc, char* argv[]) {
 
   benchmark_runner->run();
 }
+#pragma clang diagnostic pop
