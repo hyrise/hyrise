@@ -167,56 +167,46 @@ TEST_F(JoinHashStepsTest, MaterializeAndBuildWithKeepNulls) {
 }
 
 TEST_F(JoinHashStepsTest, MaterializeOutputBloomFilter) {
-  {
-    std::vector<std::vector<size_t>> histograms;  // Ignored in this test
-    BloomFilter bloom_filter;
+  auto histograms = std::vector<std::vector<size_t>>{};  // Ignored in this test.
+  auto bloom_filter = BloomFilter{};
 
-    materialize_input<int, int, false>(_table_with_nulls_and_zeros->get_output(), ColumnID{0}, histograms, 1,
-                                       bloom_filter);
+  materialize_input<int, int, false>(_table_with_nulls_and_zeros->get_output(), ColumnID{0}, histograms, 1,
+                                      bloom_filter);
 
-    // For all input values, their position in the bloom filter should be correctly set to true
-    for (auto value : std::vector<int>{0, 6, 7, 9, 13, 18}) {
-      EXPECT_TRUE(bloom_filter[value]);
-
-      // Set to false for easier checking of the values that should be false
-      bloom_filter[value] = false;
-    }
-
-    // All other slots should be false
-    EXPECT_EQ(bloom_filter, BloomFilter{BLOOM_FILTER_SIZE});
+  // For all input values, their position in the bloom filter should be correctly set to true.
+  for (auto value : std::vector<int>{0, 6, 7, 9, 13, 18}) {
+    EXPECT_FALSE(bloom_filter.does_not_contain(value));
   }
 }
 
 TEST_F(JoinHashStepsTest, MaterializeInputBloomFilter) {
-  {
-    std::vector<std::vector<size_t>> histograms;  // Ignored in this test
-    BloomFilter output_bloom_filter;
+  std::vector<std::vector<size_t>> histograms;  // Ignored in this test
+  auto output_bloom_filter = BloomFilter{};
 
-    // Fill input_bloom_filter
-    BloomFilter input_bloom_filter(BLOOM_FILTER_SIZE);
-    for (auto value : std::vector<int>{6, 7, 9}) {
-      input_bloom_filter[value] = true;
-    }
-
-    auto container = materialize_input<int, int, false>(_table_with_nulls_and_zeros->get_output(), ColumnID{0},
-                                                        histograms, 1, output_bloom_filter, input_bloom_filter);
-
-    auto materialized_values = std::vector<int>{};
-    auto chunk_offsets = std::vector<int>{};
-
-    for (const auto& partition : container) {
-      for (const auto& element : partition.elements) {
-        materialized_values.emplace_back(element.value);
-        chunk_offsets.emplace_back(static_cast<int>(element.row_id.chunk_offset));
-      }
-    }
-
-    const auto expected_values = std::vector<int>{7, 7, 9, 6, 9, 7};
-    const auto expected_offsets = std::vector<int>{1, 2, 3, 4, 8, 9};
-
-    EXPECT_EQ(materialized_values, expected_values);
-    EXPECT_EQ(chunk_offsets, expected_offsets);
+  // Fill input_bloom_filter
+  auto input_bloom_filter = BloomFilter{};
+  for (auto value : std::vector<int>{6, 7, 9}) {
+    input_bloom_filter.add(value);
   }
+
+  auto container = materialize_input<int, int, false>(_table_with_nulls_and_zeros->get_output(), ColumnID{0},
+                                                      histograms, 1, output_bloom_filter, input_bloom_filter);
+
+  auto materialized_values = std::vector<int>{};
+  auto chunk_offsets = std::vector<int>{};
+
+  for (const auto& partition : container) {
+    for (const auto& element : partition.elements) {
+      materialized_values.emplace_back(element.value);
+      chunk_offsets.emplace_back(static_cast<int>(element.row_id.chunk_offset));
+    }
+  }
+
+  const auto expected_values = std::vector<int>{7, 7, 9, 6, 9, 7};
+  const auto expected_offsets = std::vector<int>{1, 2, 3, 4, 8, 9};
+
+  EXPECT_EQ(materialized_values, expected_values);
+  EXPECT_EQ(chunk_offsets, expected_offsets);
 }
 
 TEST_F(JoinHashStepsTest, MaterializeInputHistograms) {
@@ -292,12 +282,12 @@ TEST_F(JoinHashStepsTest, RadixClusteringOfNulls) {
 
 TEST_F(JoinHashStepsTest, BuildRespectsBloomFilter) {
   std::vector<std::vector<size_t>> histograms;  // Ignored in this test
-  BloomFilter output_bloom_filter;              // Ignored in this test
+  auto output_bloom_filter = BloomFilter{};              // Ignored in this test
 
   // Fill input_bloom_filter
-  BloomFilter input_bloom_filter(BLOOM_FILTER_SIZE);
+  auto input_bloom_filter = BloomFilter{};
   for (auto value : std::vector<int>{6, 7, 9}) {
-    input_bloom_filter[value] = true;
+    input_bloom_filter.add(value);
   }
 
   auto container = materialize_input<int, int, false>(_table_with_nulls_and_zeros->get_output(), ColumnID{0},

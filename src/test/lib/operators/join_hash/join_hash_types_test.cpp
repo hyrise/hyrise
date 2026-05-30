@@ -21,15 +21,15 @@ class JoinHashTypesTest : public BaseTest {};
 template <typename T, typename HashType>
 void test_hash_map(const std::vector<T>& values) {
   Partition<T> partition;
-  for (ChunkOffset i = ChunkOffset{0}; i < values.size(); ++i) {
-    RowID row_id{ChunkID{17}, i};
+  for (auto i = ChunkOffset{0}; i < values.size(); ++i) {
+    auto row_id = RowID{ChunkID{17}, i};
     partition.elements.emplace_back(PartitionedElement<T>{row_id, static_cast<T>(values.at(i))});
     partition.null_values.emplace_back(false);
   }
 
   // Build a BloomFilter that cannot be used to skip any entries by creating a BloomFilter with every value being false
   // and using bitwise negation (~x).
-  auto bloom_filter = ~BloomFilter(BLOOM_FILTER_SIZE);
+  auto bloom_filter = BloomFilter{true};
 
   auto hash_maps = build<T, HashType>(RadixContainer<T>{partition}, JoinHashBuildMode::AllPositions, 0, bloom_filter);
 
@@ -38,14 +38,14 @@ void test_hash_map(const std::vector<T>& values) {
 
   const auto& first_hash_map = *hash_maps.at(0);
 
-  ChunkOffset offset = ChunkOffset{0};
+  auto offset = ChunkOffset{0};
   for (const auto& element : partition.elements) {
     const auto probe_value = element.value;
 
     const auto [begin, end] = first_hash_map.find(probe_value);
     const auto result_list = RowIDPosList{begin, end};
 
-    const RowID probe_row_id{ChunkID{17}, offset};
+    const auto probe_row_id = RowID{ChunkID{17}, offset};
     EXPECT_TRUE(std::find(result_list.begin(), result_list.end(), probe_row_id) != result_list.end());
     ++offset;
   }
@@ -55,8 +55,8 @@ using JoinHashTypesTestDataTypes = ::testing::Types<int, float, double>;
 TYPED_TEST_SUITE(JoinHashTypesTest, JoinHashTypesTestDataTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(JoinHashTypesTest, BuildSingleValueLargePosList) {
-  int test_item_count = 500;
-  std::vector<TypeParam> values;
+  auto test_item_count = int{500};
+  auto values = std::vector<TypeParam>{};
   for (int i = 0; i < test_item_count; ++i) {
     values.push_back(static_cast<TypeParam>(17));
   }
@@ -65,8 +65,8 @@ TYPED_TEST(JoinHashTypesTest, BuildSingleValueLargePosList) {
 }
 
 TYPED_TEST(JoinHashTypesTest, BuildSingleRowIds) {
-  int test_item_count = 500;
-  std::vector<TypeParam> values;
+  auto test_item_count = int{500};
+  auto values = std::vector<TypeParam>{};
   for (int i = 0; i < test_item_count; ++i) {
     values.push_back(static_cast<TypeParam>(pow(i, 3)));
   }

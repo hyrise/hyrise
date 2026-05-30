@@ -22,8 +22,6 @@
 #include "logical_query_plan/create_view_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "operators/print.hpp"
-#include "scheduler/node_queue_scheduler.hpp"
-#include "scheduler/operator_task.hpp"
 #include "sql/sql_pipeline.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_pipeline_statement.hpp"

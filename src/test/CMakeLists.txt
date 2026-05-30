@@ -220,9 +220,10 @@ set(
     lib/storage/value_segment_test.cpp
     lib/tasks/chunk_compression_task_test.cpp
     lib/utils/atomic_max_test.cpp
+    lib/utils/bloom_filter_test.cpp
     lib/utils/check_table_equal_test.cpp
-    lib/utils/pruning_utils_test.cpp
     lib/utils/date_time_utils_test.cpp
+    lib/utils/pruning_utils_test.cpp
     lib/utils/format_bytes_test.cpp
     lib/utils/format_duration_test.cpp
     lib/utils/load_table_test.cpp
