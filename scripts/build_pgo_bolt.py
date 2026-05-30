@@ -157,7 +157,6 @@ def build(
             "--split-eh",
             "--dyno-stats",
             "--icf",
-            "--indirect-call-promotion=all",
             "--peepholes=all",
         )
 
