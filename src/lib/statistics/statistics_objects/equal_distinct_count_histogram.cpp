@@ -38,9 +38,6 @@ using ValueDistributionMap = boost::unordered_flat_map<T, size_t>;
 template <typename T>
 using ValueDistributionVector = std::vector<std::pair<T, size_t>>;
 
-// constexpr auto MIN_CHUNK_COUNT_TO_INCLUDE = ChunkID{10'000};
-constexpr auto MIN_CHUNK_COUNT_TO_INCLUDE = ChunkID{10'000'000};  // For testing.
-
 template <typename T>
 void process_segment(AbstractSegment& segment, ValueDistributionVector<T>& value_distribution_vector,
                      const HistogramDomain<T>& domain) {
@@ -98,7 +95,7 @@ ValueDistributionVector<T> add_segment_to_value_distribution(const size_t max_pa
     right = add_segment_to_value_distribution(max_parallel_level, level + 1, middle, segment_iterator_end, domain);
   };
 
-  if (level < max_parallel_level) {
+  if (level < max_parallel_level && (left.size() + right.size()) > 10'000) {
     auto tasks = std::vector<std::shared_ptr<AbstractTask>>{std::make_shared<JobTask>(left_task),
                                                             std::make_shared<JobTask>(right_task)};
     Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
@@ -113,6 +110,21 @@ ValueDistributionVector<T> add_segment_to_value_distribution(const size_t max_pa
   auto left_iter = left.begin();
   auto right_iter = right.begin();
 
+  if constexpr (HYRISE_DEBUG) {
+    const auto validate_uniqueness = [](const auto& value_distribution_vector) {
+      // We expect sorted and unique vectors.
+      Assert(std::ranges::is_sorted(value_distribution_vector, [&](const auto& lhs, const auto& rhs) {
+                           return lhs.first < rhs.first;
+                         }), "a");
+      Assert(std::ranges::adjacent_find(value_distribution_vector) == value_distribution_vector.cend(), "b");
+    };
+
+    validate_uniqueness(left);
+    validate_uniqueness(right);
+  }
+
+  // We manually merge instead of using std::merge as we aggregate along the way. When we see two elements with the same
+  // value, we add the counts and emit the result (no run contains a key more than once).
   while (left_iter != left.end() || right_iter != right.end()) {
     if (left_iter == left.end()) {
       result.emplace_back(*right_iter);
@@ -146,48 +158,33 @@ ValueDistributionVector<T> value_distribution_from_column(const Table& table, co
                                                           const HistogramDomain<T>& domain) {
   const auto chunk_count = table.chunk_count();
   auto segments_to_process = std::vector<std::pair<ChunkID, std::shared_ptr<AbstractSegment>>>{};
-  segments_to_process.reserve(std::min(chunk_count, MIN_CHUNK_COUNT_TO_INCLUDE));
+  segments_to_process.reserve(chunk_count);
 
-  // On average, we sample every 2.5th segment. Previous analyses of Hyrise histograms showed that the accuracy of
-  // sample histograms quickly deteriorates with sampling rates below 33 %. We thus choose a safer rate of ~40%.
-  auto random_engine = std::ranlux24_base{17};  // Fast random engine. Sufficient for our case.
-  auto skip_lengths = std::uniform_int_distribution<>{0, 4};
-
-  auto current_chunk_id = ChunkID{0};
-  while (current_chunk_id < chunk_count) {
-    const auto chunk = table.get_chunk(current_chunk_id);
-    if (!chunk) {
-      continue;
-    }
-
-    segments_to_process.emplace_back(current_chunk_id, chunk->get_segment(column_id));
-
-    if (current_chunk_id < MIN_CHUNK_COUNT_TO_INCLUDE / 2 ||
-        current_chunk_id >= (chunk_count - (MIN_CHUNK_COUNT_TO_INCLUDE / 2))) {
-      ++current_chunk_id;
-      continue;
-    }
-
-    current_chunk_id += (skip_lengths(random_engine) % 4) + 1;
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+    const auto chunk = table.get_chunk(chunk_id);
+    Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
+    segments_to_process.emplace_back(chunk_id, chunk->get_segment(column_id));
   }
 
   auto result = ValueDistributionVector<T>{};
-  if (chunk_count > 0) {
-    // We determine the recursion steps (i.e., merge levels) that we want to parallelize. We try to create up to 2x the
-    // number of workers to fully utilize a system with a bit of straggler mitigation (thus 2x) while not overloading
-    // the scheduler. As the leaves of the created merge tree are single chunks, we would otherwise create tens of
-    // thousands of nested jobs for SF 100 TPC-H data. When the limit is reached, each worker executes the recursion on
-    // its own sequentially.
-    auto worker_count = size_t{1};
-    if (const auto node_queue_scheduler = std::dynamic_pointer_cast<NodeQueueScheduler>(Hyrise::get().scheduler())) {
-      worker_count = node_queue_scheduler->workers().size();
-    }
-    const auto max_parallel_levels = std::bit_width(worker_count) + 1;
-    result = add_segment_to_value_distribution<T>(max_parallel_levels, 0, segments_to_process.begin(),
-                                                  segments_to_process.end(), domain);
+  if (chunk_count == 0) {
+    return result;
   }
 
-  return std::move(result);
+  // We determine the recursion steps (i.e., merge levels) that we want to parallelize. We try to create up to 2x the
+  // number of workers to fully utilize a system with a bit of straggler mitigation (thus 2x) while not overloading
+  // the scheduler. As the leaves of the created merge tree are single chunks, we would otherwise create tens of
+  // thousands of nested jobs for SF 100 TPC-H data. When the limit is reached, each worker executes the recursion on
+  // its own sequentially.
+  auto worker_count = size_t{1};
+  if (const auto node_queue_scheduler = std::dynamic_pointer_cast<NodeQueueScheduler>(Hyrise::get().scheduler())) {
+    worker_count = node_queue_scheduler->workers().size();
+  }
+  const auto max_parallel_levels = std::bit_width(worker_count) + 1;
+  result = add_segment_to_value_distribution<T>(max_parallel_levels, 0, segments_to_process.begin(),
+                                                segments_to_process.end(), domain);
+
+  return result;
 }
 
 }  // namespace
