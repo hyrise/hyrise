@@ -120,7 +120,7 @@ ValueDistributionVector<T> add_segment_to_value_distribution(const size_t max_pa
              "Expected vector to be sorted by key.");
       Assert(std::ranges::adjacent_find(value_distribution_vector,
                                         [&](const auto& lhs, const auto& rhs) {
-                                          return lhs.first < rhs.first;
+                                          return lhs.first == rhs.first;
                                         }) == value_distribution_vector.cend(),
              "Expected keys of vector (first element of pairs) to be unique.");
     };
