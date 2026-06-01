@@ -156,8 +156,6 @@ def build(
             "--split-all-cold",
             "--split-eh",
             "--dyno-stats",
-            "--icf",
-            "--peepholes=all",
         )
 
 
@@ -180,9 +178,6 @@ def build_with_bolt_from_previous_build(*targets):
         "--split-all-cold",
         "--split-eh",
         "--dyno-stats",
-        "--icf",
-        "--indirect-call-promotion=all",
-        "--peepholes=all",
     )
 
 
