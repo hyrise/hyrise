@@ -113,10 +113,16 @@ ValueDistributionVector<T> add_segment_to_value_distribution(const size_t max_pa
   if constexpr (HYRISE_DEBUG) {
     const auto validate_uniqueness = [](const auto& value_distribution_vector) {
       // We expect sorted and unique vectors.
-      Assert(std::ranges::is_sorted(value_distribution_vector, [&](const auto& lhs, const auto& rhs) {
-                           return lhs.first < rhs.first;
-                         }), "a");
-      Assert(std::ranges::adjacent_find(value_distribution_vector) == value_distribution_vector.cend(), "b");
+      Assert(std::ranges::is_sorted(value_distribution_vector,
+                                    [&](const auto& lhs, const auto& rhs) {
+                                      return lhs.first < rhs.first;
+                                    }),
+             "Expected vector to be sorted by key.");
+      Assert(std::ranges::adjacent_find(value_distribution_vector,
+                                        [&](const auto& lhs, const auto& rhs) {
+                                          return lhs.first < rhs.first;
+                                        }) == value_distribution_vector.cend(),
+             "Expected keys of vector (first element of pairs) to be unique.");
     };
 
     validate_uniqueness(left);
