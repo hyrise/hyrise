@@ -1,10 +1,11 @@
 #include "equal_distinct_count_histogram.hpp"
 
 #include <algorithm>
+#include <bit>
 #include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <numeric>
-#include <random>
 #include <string>
 #include <utility>
 #include <vector>
@@ -14,7 +15,6 @@
 
 #include "all_type_variant.hpp"
 #include "hyrise.hpp"
-#include "resolve_type.hpp"
 #include "scheduler/job_task.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "statistics/statistics_objects/abstract_histogram.hpp"
@@ -136,7 +136,9 @@ ValueDistributionVector<T> add_segment_to_value_distribution(const size_t max_pa
       result.emplace_back(*right_iter);
       ++right_iter;
       continue;
-    } else if (right_iter == right.end()) {
+    }
+
+    if (right_iter == right.end()) {
       result.emplace_back(*left_iter);
       ++left_iter;
       continue;

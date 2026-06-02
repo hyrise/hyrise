@@ -1,7 +1,5 @@
 #include "table_statistics.hpp"
 
-#include <algorithm>
-#include <cstddef>
 #include <memory>
 #include <ostream>
 #include <utility>
