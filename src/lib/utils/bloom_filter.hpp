@@ -1,9 +1,10 @@
-// Simple BloomFilter implementation with a fixed size of 1 MiB. A single filter does not support concurrent accesses
+// Simple BloomFilter implementation with a fixed size of 256 KiB. A single filter does not support concurrent accesses
 // (i.e., writing and reading should only be done from a single thread). However, multiple filters can concurrently
 // merged into another. and Merging can be done in parallel as the filter uses atomic integers for storing its data.
 class BloomFilter {
  public:
-  static constexpr auto VECTOR_SIZE = size_t{2 << (20 - 6)};
+  static constexpr auto VECTOR_SIZE_BYTES = 256 * 1024;  // 256 KiB
+  static constexpr auto VECTOR_SIZE = VECTOR_SIZE_BYTES / sizeof(uint64_t);
 
   BloomFilter() : _filter(VECTOR_SIZE), _non_atomic_view{reinterpret_cast<uint64_t*>(_filter.data())} {
     static_assert(decltype(_filter)::value_type::is_always_lock_free);
@@ -33,12 +34,20 @@ class BloomFilter {
 
     if (forward_iteration) {
       for (auto index = size_t{0}; index < VECTOR_SIZE; ++index) {
-        _filter[index] |= other_filter_view[index];
+        _filter[index].fetch_or(other_filter_view[index], std::memory_order_relaxed);
       }
     } else {
       for (auto index = int64_t{VECTOR_SIZE - 1}; index >= 0; --index) {
-        _filter[index] |= other_filter_view[index];
+        _filter[index].fetch_or(other_filter_view[index], std::memory_order_relaxed);
       }
+    }
+  }
+
+  void non_atomic_merge(const BloomFilter& other_filter) {
+    const auto* other_filter_view = other_filter.non_atomic_view();
+
+    for (auto index = size_t{0}; index < VECTOR_SIZE; ++index) {
+      _non_atomic_view[index] |= other_filter_view[index];
     }
   }
 

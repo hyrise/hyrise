@@ -300,6 +300,8 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
 
   // Assert(input_bloom_filter.size() == BLOOM_FILTER_SIZE, "Invalid input_bloom_filter.");
 
+  auto bloom_filters = std::vector<BloomFilter>(chunk_count);
+
   // Create histograms per chunk
   histograms.resize(chunk_count);
 
@@ -314,13 +316,12 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
     const auto num_rows = chunk_in->size();
 
     const auto materialize = [&, chunk_in, chunk_id, num_rows]() {
-      auto local_output_bloom_filter = BloomFilter{};
-      std::reference_wrapper<BloomFilter> used_output_bloom_filter = output_bloom_filter;
+      auto& local_output_bloom_filter = bloom_filters[chunk_id];
+      // std::reference_wrapper<BloomFilter> used_output_bloom_filter = output_bloom_filter;
       // if (Hyrise::get().is_multi_threaded()) {
         // We cannot write to BloomFilter concurrently, so we build a local one first.
         // local_output_bloom_filter = BloomFilter(BLOOM_FILTER_SIZE, false);
-        local_output_bloom_filter = BloomFilter{};
-        used_output_bloom_filter = local_output_bloom_filter;
+        // used_output_bloom_filter = local_output_bloom_filter;
       // }
 
       // Skip chunks that were physically deleted.
@@ -375,7 +376,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
 
             if (!skip) {
               // Fill the corresponding slot in the bloom filter
-              used_output_bloom_filter.get().add(hashed_value);
+              local_output_bloom_filter.add(hashed_value);
 
               /*
               For ReferenceSegments we do not use the RowIDs from the referenced tables.
@@ -424,16 +425,37 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
         // Merge the local_output_bloom_filter into output_bloom_filter
         // const auto lock = std::lock_guard<std::mutex>{output_bloom_filter_mutex};
         // output_bloom_filter |= local_output_bloom_filter;
-        output_bloom_filter.merge(local_output_bloom_filter);
       // }
+
+      // output_bloom_filter.merge(local_output_bloom_filter);
     };
     if (JoinHash::JOB_SPAWN_THRESHOLD > num_rows) {
       materialize();
+      // std::cerr << "Seq\n";
     } else {
       jobs.emplace_back(std::make_shared<JobTask>(materialize));
+      // std::cerr << "Par\n";
     }
   }
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+
+  // std::cerr << "merge\n";
+  for (const auto& local_bloom_filter : bloom_filters) {
+    output_bloom_filter.non_atomic_merge(local_bloom_filter);
+  }
+  // std::cerr << "done\n";
+
+  // std::cerr << "merge\n";
+  // auto* view = output_bloom_filter.non_atomic_view();
+  // for (auto index = size_t{0}; index < output_bloom_filter.size(); ++index) {
+  //   auto tmp = int64_t{0};
+  //   for (const auto& bloom_filter : bloom_filters) {
+  //     const auto* view2 = bloom_filter.non_atomic_view();
+  //     tmp |= view2[index];
+  //   }
+  //   view[index] = tmp;
+  // }
+  // std::cerr << "done\n";
 
   return radix_container;
 }
