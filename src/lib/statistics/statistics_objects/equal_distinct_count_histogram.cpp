@@ -95,7 +95,7 @@ ValueDistributionVector<T> add_segment_to_value_distribution(const size_t max_pa
     right = add_segment_to_value_distribution(max_parallel_level, level + 1, middle, segment_iterator_end, domain);
   };
 
-  if (level < max_parallel_level && (left.size() + right.size()) > 10'000) {
+  if (level < max_parallel_level) {
     auto tasks = std::vector<std::shared_ptr<AbstractTask>>{std::make_shared<JobTask>(left_task),
                                                             std::make_shared<JobTask>(right_task)};
     Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
