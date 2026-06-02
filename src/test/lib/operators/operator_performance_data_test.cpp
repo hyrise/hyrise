@@ -232,7 +232,7 @@ TEST_F(OperatorPerformanceDataTest, JoinHashBloomFilterReductions) {
   EXPECT_EQ(inner_perf.hash_tables_position_count, 3);           // positions 1,2,3
   EXPECT_TRUE(inner_perf.left_input_is_build_side);
 
-  // Semi join case: We check that no positions are stored (see explanation for "AllPositions" mode in hash map).
+  // Semi-join case: We check that no positions are stored (see explanation for "AllPositions" mode in hash map).
   // Further, we force the larger input to be the build side. As we first materialize the smaller side (i.e., the probe
   // side in this case) and create the initial bloom filter with that, there will be no reduction due to bloom
   // filtering on the probe side.

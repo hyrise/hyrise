@@ -58,7 +58,7 @@ INSTANTIATE_TEST_SUITE_P(JoinToPredicateRewriteRuleJoinModeTestInstance, JoinToP
                          ::testing::ValuesIn(magic_enum::enum_values<JoinMode>()), enum_formatter<JoinMode>);
 
 TEST_P(JoinToPredicateRewriteRuleJoinModeTest, PerformRewrite) {
-  // The rule should only rewrite inner and semi joins.
+  // The rule should only rewrite inner and semi-joins.
   auto key_constraints = TableKeyConstraints{};
   key_constraints.emplace(std::set<ColumnID>{u->original_column_id}, KeyConstraintType::UNIQUE);
   // Add a non-genuine UCC.
@@ -91,7 +91,7 @@ TEST_P(JoinToPredicateRewriteRuleJoinModeTest, PerformRewrite) {
   }
   _apply_rule(rule, _lqp);
 
-  // The rule should only rewrite inner and semi joins. The UCC is not genuine. Therefore, the result should not
+  // The rule should only rewrite inner and semi-joins. The UCC is not genuine. Therefore, the result should not
   // be cacheable in this case.
   EXPECT_FALSE((GetParam() == JoinMode::Inner || GetParam() == JoinMode::Semi) && _optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
