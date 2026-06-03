@@ -1,21 +1,21 @@
-#include <gtest/gtest.h>
-
 #include <filesystem>
+#include <optional>
+#include <string>
 
 #include "base_test.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 
-std::string hyrise::test_data_path;        // NOLINT
-std::string hyrise::test_executable_path;  // NOLINT
+std::string hyrise::test_data_path;        // NOLINT(runtime/string)
+std::string hyrise::test_executable_path;  // NOLINT(runtime/string)
 
 void create_test_data_directory(std::optional<std::string>& prefix) {
   Assert(!std::filesystem::exists(hyrise::test_data_path),
-         "Cannot create directory for test data: \"" + hyrise::test_data_path + "\" already exists.");
+         std::format("Cannot create directory for test data: '{}' already exists.", hyrise::test_data_path));
 
   if (prefix) {
-    Assert(std::filesystem::exists("./" + *prefix),
-           "Cannot create directory for test data because \"" + *prefix + "\" does not exist");
+    Assert(std::filesystem::exists(std::format("./{}", *prefix)),
+           std::format("Cannot create directory for test data because '{}' does not exist", *prefix));
   }
 
   std::filesystem::create_directory(hyrise::test_data_path);

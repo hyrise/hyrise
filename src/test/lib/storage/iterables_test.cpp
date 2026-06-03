@@ -1,22 +1,25 @@
+#include <algorithm>
+#include <cctype>
 #include <cstdint>
-#include <limits>
 #include <memory>
 #include <string>
+#include <tuple>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
-#include "encoding_test.hpp"
+#include "base_test.hpp"
+#include "resolve_type.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/create_iterable_from_segment.hpp"
-#include "storage/dictionary_segment.hpp"
-#include "storage/dictionary_segment/dictionary_segment_iterable.hpp"
 #include "storage/encoding_type.hpp"
-#include "storage/fixed_string_dictionary_segment.hpp"
-#include "storage/lz4_segment/lz4_segment_iterable.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/reference_segment/reference_segment_iterable.hpp"
 #include "storage/table.hpp"
 #include "storage/value_segment.hpp"
 #include "storage/value_segment/value_segment_iterable.hpp"
+#include "types.hpp"
+#include "utils/load_table.hpp"
 
 namespace hyrise {
 
@@ -141,10 +144,10 @@ auto formatter_iterables = [](const ::testing::TestParamInfo<std::tuple<SegmentE
   return string;
 };
 
-/*  
-* EncodedSegmentIterablesTest: 
-* Summing up all values in an Int segment using iterators with all applicable segment encodings, 
-* nullable/not nullable columns and a position filter. 
+/*
+* EncodedSegmentIterablesTest:
+* Summing up all values in an Int segment using iterators with all applicable segment encodings,
+* nullable/not nullable columns and a position filter.
 */
 
 INSTANTIATE_TEST_SUITE_P(SegmentEncoding, EncodedSegmentIterablesTest,
@@ -254,9 +257,9 @@ auto formatter_iterables_string = [](const ::testing::TestParamInfo<std::tuple<S
   return string;
 };
 
-/*  
-* EncodedStringSegmentIterablesTest: 
-* Concatenationg all values in a String segment using iterators with all applicable segment encodings 
+/*
+* EncodedStringSegmentIterablesTest:
+* Concatenationg all values in a String segment using iterators with all applicable segment encodings
 * and a position filter.
 */
 
@@ -327,9 +330,9 @@ auto formatter_chunk_offset = [](const ::testing::TestParamInfo<SegmentEncodingS
   return string;
 };
 
-/*  
-* EncodedSegmentChunkOffsetTest: 
-* Testing the decrement capabilities of end-iteraors on all segment encodings. 
+/*
+* EncodedSegmentChunkOffsetTest:
+* Testing the decrement capabilities of end-iteraors on all segment encodings.
 * Use Case: retrieving the last value of a segment using *(end - 1)
 */
 

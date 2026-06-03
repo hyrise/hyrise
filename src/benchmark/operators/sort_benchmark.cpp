@@ -1,21 +1,29 @@
-#include <memory>
+#include <benchmark/benchmark.h>
 
+#include <cstddef>
+#include <cstdint>
+#include <limits>
+#include <memory>
+#include <optional>
+#include <vector>
+
+#include "all_type_variant.hpp"
 #include "expression/expression_functional.hpp"
-#include "hyrise.hpp"
 #include "logical_query_plan/lqp_translator.hpp"
-#include "micro_benchmark_basic_fixture.hpp"
 #include "micro_benchmark_utils.hpp"
 #include "operators/limit.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_wrapper.hpp"
-#include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_translator.hpp"
+#include "storage/encoding_type.hpp"
 #include "synthetic_table_generator.hpp"
+#include "types.hpp"
 
-namespace hyrise {
+namespace {
+using namespace hyrise;
 
-static std::shared_ptr<Table> generate_custom_table(const size_t row_count, const DataType data_type = DataType::Int,
-                                                    const float null_ratio = 0.0f) {
+std::shared_ptr<Table> generate_custom_table(const size_t row_count, const DataType data_type = DataType::Int,
+                                             const float null_ratio = 0.0) {
   const auto table_generator = std::make_shared<SyntheticTableGenerator>();
 
   constexpr auto NUM_COLUMNS = 2;
@@ -30,9 +38,9 @@ static std::shared_ptr<Table> generate_custom_table(const size_t row_count, cons
   return table_generator->generate_table(column_specifications, row_count);
 }
 
-static void BM_RunSort(benchmark::State& state, const size_t row_count = 40'000,
-                       const DataType data_type = DataType::Int, const float null_ratio = 0.0f,
-                       const bool multi_column_sort = true, const bool use_reference_segment = false) {
+void BM_RunSort(benchmark::State& state, const size_t row_count = 40'000, const DataType data_type = DataType::Int,
+                const float null_ratio = 0.0, const bool multi_column_sort = true,
+                const bool use_reference_segment = false) {
   micro_benchmark_clear_cache();
 
   const auto input_table = generate_custom_table(row_count, data_type, null_ratio);
@@ -62,35 +70,39 @@ static void BM_RunSort(benchmark::State& state, const size_t row_count = 40'000,
   }
 }
 
-static void BM_Sort(benchmark::State& state) {
+void BM_Sort(benchmark::State& state) {
   const size_t row_count = state.range(0);
   BM_RunSort(state, row_count);
 }
 
-static void BM_SortTwoColumns(benchmark::State& state) {
+void BM_SortTwoColumns(benchmark::State& state) {
   const size_t row_count = state.range(0);
   BM_RunSort(state, row_count, DataType::Int, 0.0f, true);
 }
 
-static void BM_SortWithNullValues(benchmark::State& state) {
+void BM_SortWithNullValues(benchmark::State& state) {
   const size_t row_count = state.range(0);
   BM_RunSort(state, row_count, DataType::Int, 0.2f);
 }
 
-static void BM_SortWithReferenceSegments(benchmark::State& state) {
+void BM_SortWithReferenceSegments(benchmark::State& state) {
   const size_t row_count = state.range(0);
   BM_RunSort(state, row_count, DataType::Int, 0.0f, false, true);
 }
 
-static void BM_SortWithReferenceSegmentsTwoColumns(benchmark::State& state) {
+void BM_SortWithReferenceSegmentsTwoColumns(benchmark::State& state) {
   const size_t row_count = state.range(0);
   BM_RunSort(state, row_count, DataType::Int, 0.0f, true, true);
 }
 
-static void BM_SortWithStrings(benchmark::State& state) {
+void BM_SortWithStrings(benchmark::State& state) {
   const size_t row_count = state.range(0);
   BM_RunSort(state, row_count, DataType::String);
 }
+
+}  // namespace
+
+namespace hyrise {
 
 BENCHMARK(BM_Sort)->RangeMultiplier(100)->Range(100, 1'000'000);
 BENCHMARK(BM_SortTwoColumns)->RangeMultiplier(100)->Range(100, 1'000'000);

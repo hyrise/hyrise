@@ -13,13 +13,13 @@
 
 namespace hyrise {
 
-TPCCDelivery::TPCCDelivery(const int num_warehouses, BenchmarkSQLExecutor& sql_executor)
-    : AbstractTPCCProcedure(sql_executor), ol_delivery_d{static_cast<int32_t>(std::time(nullptr))} {
+TPCCDelivery::TPCCDelivery(const int num_warehouses, BenchmarkSQLExecutor& init_sql_executor)
+    : AbstractTPCCProcedure(init_sql_executor), ol_delivery_d{static_cast<int32_t>(std::time(nullptr))} {
   auto warehouse_dist = std::uniform_int_distribution<>{1, num_warehouses};
-  w_id = warehouse_dist(_random_engine);
+  w_id = warehouse_dist(random_engine);
 
   auto carrier_dist = std::uniform_int_distribution<>{1, 10};
-  o_carrier_id = carrier_dist(_random_engine);
+  o_carrier_id = carrier_dist(random_engine);
 }
 
 bool TPCCDelivery::_on_execute() {

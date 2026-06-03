@@ -30,7 +30,7 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT(build/namespaces)
+using namespace hyrise;
 
 /**
  * This function traverses the LQP upwards from @param next_node to find all predicates that filter

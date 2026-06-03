@@ -99,7 +99,7 @@ class Topology final : public Noncopyable {
   bool _fake_numa_topology{false};
   bool _filtered_by_affinity{false};
 
-  static const int _number_of_hardware_nodes;
+  static const int number_of_hardware_nodes;
 };
 
 std::ostream& operator<<(std::ostream& stream, const Topology& topology);

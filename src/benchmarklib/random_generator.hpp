@@ -11,7 +11,7 @@ namespace hyrise {
 class RandomGenerator {
  public:
   // Fix random seed by default, to make sure the benchmark is deterministic.
-  explicit RandomGenerator(uint32_t seed = 42) : engine(seed) {}
+  explicit RandomGenerator(uint32_t seed = 42) : _engine(seed) {}
 
   /**
    * Generates a random number between lower and upper.
@@ -21,7 +21,7 @@ class RandomGenerator {
    */
   uint64_t random_number(uint64_t lower, uint64_t upper) {
     auto dist = std::uniform_int_distribution<uint64_t>{lower, upper};
-    return dist(engine);
+    return dist(_engine);
   }
 
   /**
@@ -45,6 +45,6 @@ class RandomGenerator {
   }
 
  protected:
-  std::default_random_engine engine;
+  std::default_random_engine _engine;
 };
 }  // namespace hyrise

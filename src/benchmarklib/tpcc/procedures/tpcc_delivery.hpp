@@ -13,7 +13,7 @@ namespace hyrise {
 
 class TPCCDelivery : public AbstractTPCCProcedure {
  public:
-  TPCCDelivery(const int num_warehouses, BenchmarkSQLExecutor& sql_executor);
+  TPCCDelivery(const int num_warehouses, BenchmarkSQLExecutor& init_sql_executor);
 
   [[nodiscard]] bool _on_execute() override;
 

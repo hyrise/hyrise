@@ -1,17 +1,26 @@
+#include <cstdint>
 #include <cstdio>
+#include <exception>
 #include <fstream>
+#include <iostream>
+#include <iterator>
 #include <memory>
 #include <string>
 #include <utility>
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "import_export/csv/csv_meta.hpp"
 #include "import_export/csv/csv_writer.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk_encoder.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/table.hpp"
+#include "storage/table_column_definition.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
+#include "utils/load_table.hpp"
 
 namespace hyrise {
 
@@ -36,7 +45,7 @@ class CsvWriterTest : public BaseTest {
 
   bool compare_file(const std::string& filename, const std::string& expected_content) {
     std::ifstream file(filename);
-    Assert(file.is_open(), "compare_file: Could not find file " + filename);
+    Assert(file.is_open(), std::format("compare_file: Could not find file '{}'.", filename));
 
     std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 

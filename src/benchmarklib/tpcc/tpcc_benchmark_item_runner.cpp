@@ -1,6 +1,7 @@
 #include "tpcc_benchmark_item_runner.hpp"
 
 #include <memory>
+#include <span>
 #include <string>
 #include <vector>
 

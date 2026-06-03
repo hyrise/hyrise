@@ -1,8 +1,10 @@
-#include <cstdlib>
-#include <string>
+#include <cstdint>
+#include <limits>
+#include <vector>
 
 #include <boost/variant.hpp>
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "types.hpp"
 

@@ -1,6 +1,7 @@
 #include "lqp_visualizer.hpp"
 
 #include <cmath>
+#include <format>
 #include <iomanip>
 #include <ios>
 #include <locale>
@@ -15,11 +16,11 @@
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_subquery_expression.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/abstract_non_query_node.hpp"
 #include "logical_query_plan/data_dependencies/functional_dependency.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
-#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "statistics/cardinality_estimator.hpp"
 #include "types.hpp"
 #include "visualization/abstract_visualizer.hpp"
@@ -59,7 +60,7 @@ void LQPVisualizer::_build_subtree(const std::shared_ptr<AbstractLQPNode>& node,
 
   auto node_label = node->description();
   if (!node->comment.empty()) {
-    node_label += "\n(" + node->comment + ")";
+    node_label += std::format("\n({})", node->comment);
   }
   _add_vertex(node, node_label);
 
@@ -90,8 +91,8 @@ void LQPVisualizer::_build_subtree(const std::shared_ptr<AbstractLQPNode>& node,
       _build_subtree(subquery_expression->lqp, visualized_nodes, visualized_sub_queries, cardinality_estimator);
 
       auto edge_info = _default_edge;
-      auto correlated_str = std::string(subquery_expression->is_correlated() ? "correlated" : "uncorrelated");
-      edge_info.label = correlated_str + " subquery";
+      edge_info.label =
+          std::format("{} subquery", subquery_expression->is_correlated() ? "correlated" : "uncorrelated");
       edge_info.style = "dashed";
       _add_edge(subquery_expression->lqp, node, edge_info);
 
@@ -145,7 +146,7 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& sour
   const auto& output_expressions = source_node->output_expressions();
   const auto output_expression_count = output_expressions.size();
   for (auto column_id = ColumnID{0}; column_id < output_expression_count; ++column_id) {
-    tooltip_stream << " (" << column_id + 1 << ") ";
+    tooltip_stream << std::format(" ({})", column_id + 1);
     tooltip_stream << output_expressions.at(column_id)->as_column_name();
     if (source_node->is_column_nullable(column_id)) {
       tooltip_stream << " NULL";

@@ -1,6 +1,7 @@
 #include "benchmark_sql_executor.hpp"
 
 #include <filesystem>
+#include <format>
 #include <iostream>
 #include <memory>
 #include <optional>
@@ -131,7 +132,7 @@ void BenchmarkSQLExecutor::_compare_tables(const std::shared_ptr<const Table>& a
     if (expected_result_table->row_count() == 0) {
       any_verification_failed = true;
       if (description) {
-        std::cout << "- " + *description << "\n";
+        std::cout << std::format("- {}\n", *description);
       }
       std::cout << "- Verification failed: Hyrise's actual result is not empty, but the expected result is ("
                 << timer.lap_formatted() << ")\n";
@@ -167,15 +168,15 @@ void BenchmarkSQLExecutor::_visualize(SQLPipeline& pipeline) {
 
   if (_num_visualized_plans == 1) {
     // We have already visualized a prior SQL pipeline in this benchmark item - rename the existing file
-    std::filesystem::rename(prefix + "-LQP.svg", prefix + "-0-LQP.svg");
-    std::filesystem::rename(prefix + "-PQP.svg", prefix + "-0-PQP.svg");
+    std::filesystem::rename(std::format("{}-LQP.svg", prefix), std::format("{}-0-LQP.svg", prefix));
+    std::filesystem::rename(std::format("{}-PQP.svg", prefix), std::format("{}-0-PQP.svg", prefix));
   }
   if (_num_visualized_plans > 0) {
-    prefix += "-" + std::to_string(_num_visualized_plans);
+    prefix += std::format("-{}", _num_visualized_plans);
   }
 
-  LQPVisualizer{graphviz_config, {}, {}, {}}.visualize(lqps, prefix + "-LQP.svg");
-  PQPVisualizer{graphviz_config, {}, {}, {}}.visualize(pqps, prefix + "-PQP.svg");
+  LQPVisualizer{graphviz_config, {}, {}, {}}.visualize(lqps, std::format("{}-LQP.svg", prefix));
+  PQPVisualizer{graphviz_config, {}, {}, {}}.visualize(pqps, std::format("{}-PQP.svg", prefix));
 
   ++_num_visualized_plans;
 }

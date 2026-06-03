@@ -20,7 +20,7 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT(build/namespaces)
+using namespace hyrise;
 
 // Only if we expect num_output_rows <= num_input_rows * selectivity_threshold, the ScanType can be set to IndexScan.
 // This threshold is kind of arbitrarily chosen, but Kester et al. suggest something similar in "Access Path Selection

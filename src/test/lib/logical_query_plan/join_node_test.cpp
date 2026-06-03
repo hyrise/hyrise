@@ -1,19 +1,28 @@
+#include <memory>
 #include <optional>
+#include <stdexcept>
+#include <string>
 #include <vector>
 
+#include "magic_enum/magic_enum.hpp"
+
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
+#include "expression/expression_functional.hpp"
 #include "logical_query_plan/data_dependencies/functional_dependency.hpp"
 #include "logical_query_plan/data_dependencies/order_dependency.hpp"
 #include "logical_query_plan/join_node.hpp"
+#include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
+#include "storage/constraints/table_key_constraint.hpp"
 #include "types.hpp"
 #include "utils/data_dependency_test_utils.hpp"
 
 namespace hyrise {
 
-using namespace expression_functional;  // NOLINT(build/namespaces)
+using namespace expression_functional;
 
 class JoinNodeTest : public BaseTest {
  protected:
@@ -175,13 +184,15 @@ TEST_F(JoinNodeTest, IsColumnNullableWithOuterJoin) {
   EXPECT_TRUE(lqp_left_join_basic->is_column_nullable(ColumnID{3}));
   EXPECT_TRUE(lqp_left_join_basic->is_column_nullable(ColumnID{4}));
 
+  // NOLINTBEGIN(whitespace/line_length)
   // clang-format off
   const auto lqp_left_join =
-  ProjectionNode::make(expression_vector(_t_a_a, _t_b_x, add_(_t_a_a, _t_b_x), add_(_t_a_a, 3), is_null_(add_(_t_a_a, _t_b_x))),  // NOLINT
+  ProjectionNode::make(expression_vector(_t_a_a, _t_b_x, add_(_t_a_a, _t_b_x), add_(_t_a_a, 3), is_null_(add_(_t_a_a, _t_b_x))),
     JoinNode::make(JoinMode::Left, equals_(_t_a_a, _t_b_x),
       _mock_node_a,
       _mock_node_b));
   // clang-format on
+  // NOLINTEND(whitespace/line_length)
 
   EXPECT_FALSE(lqp_left_join->is_column_nullable(ColumnID{0}));
   EXPECT_TRUE(lqp_left_join->is_column_nullable(ColumnID{1}));
@@ -189,13 +200,15 @@ TEST_F(JoinNodeTest, IsColumnNullableWithOuterJoin) {
   EXPECT_FALSE(lqp_left_join->is_column_nullable(ColumnID{3}));
   EXPECT_FALSE(lqp_left_join->is_column_nullable(ColumnID{4}));
 
+  // NOLINTBEGIN(whitespace/line_length)
   // clang-format off
   const auto lqp_right_join =
-  ProjectionNode::make(expression_vector(_t_a_a, _t_b_x, add_(_t_a_a, _t_b_x), add_(_t_a_a, 3), is_null_(add_(_t_a_a, _t_b_x))),  // NOLINT
+  ProjectionNode::make(expression_vector(_t_a_a, _t_b_x, add_(_t_a_a, _t_b_x), add_(_t_a_a, 3), is_null_(add_(_t_a_a, _t_b_x))),
     JoinNode::make(JoinMode::Right, equals_(_t_a_a, _t_b_x),
       _mock_node_a,
       _mock_node_b));
   // clang-format on
+  // NOLINTEND(whitespace/line_length)
 
   EXPECT_TRUE(lqp_right_join->is_column_nullable(ColumnID{0}));
   EXPECT_FALSE(lqp_right_join->is_column_nullable(ColumnID{1}));
@@ -203,13 +216,15 @@ TEST_F(JoinNodeTest, IsColumnNullableWithOuterJoin) {
   EXPECT_TRUE(lqp_right_join->is_column_nullable(ColumnID{3}));
   EXPECT_FALSE(lqp_right_join->is_column_nullable(ColumnID{4}));
 
+  // NOLINTBEGIN(whitespace/line_length)
   // clang-format off
   const auto lqp_full_join =
-  ProjectionNode::make(expression_vector(_t_a_a, _t_b_x, add_(_t_a_a, _t_b_x), add_(_t_a_a, 3), is_null_(add_(_t_a_a, _t_b_x))),  // NOLINT
+  ProjectionNode::make(expression_vector(_t_a_a, _t_b_x, add_(_t_a_a, _t_b_x), add_(_t_a_a, 3), is_null_(add_(_t_a_a, _t_b_x))),
     JoinNode::make(JoinMode::FullOuter, equals_(_t_a_a, _t_b_x),
       _mock_node_a,
       _mock_node_b));
   // clang-format on
+  // NOLINTEND(whitespace/line_length)
 
   EXPECT_TRUE(lqp_full_join->is_column_nullable(ColumnID{0}));
   EXPECT_TRUE(lqp_full_join->is_column_nullable(ColumnID{1}));
@@ -328,7 +343,7 @@ TEST_P(JoinNodeMultiJoinModeTest, FunctionalDependenciesForwardNonTrivialBothAnd
      *  - We specify UCCs for both input tables.
      *  - We enforce the dismissal of UCCs for all join modes by making none of the join columns unique.
      *    Consequently, we expect non-trivial FDs that were derived from the input nodes' unique column combinations.
-     *  - Semi- and Anti-Joins preserve the UCCs, so they should not generate non-trivial FDs but keep the left input's
+     *  - Semi-/anti-joins preserve the UCCs, so they should not generate non-trivial FDs but keep the left input's
      *    UCCs of the left input.
      */
   const auto fd_a = FunctionalDependency{{_t_a_a}, {_t_a_b}};
@@ -524,7 +539,7 @@ TEST_P(JoinNodeMultiJoinModeTest, UniqueColumnCombinationsNoJoinColumnUnique) {
 
   const auto& join_unique_column_combinations = join_node->unique_column_combinations();
   if (is_semi_or_anti_join(join_mode)) {
-    // Semi- and Anti-Joins act as filters for the left input and preserve its unique column combinations.
+    // Semi-/anti-joins act as filters for the left input and preserve its unique column combinations.
     EXPECT_EQ(join_unique_column_combinations.size(), 1);
     EXPECT_TRUE(find_ucc_by_key_constraint(*_key_constraint_b_c, join_unique_column_combinations));
   } else {
@@ -561,7 +576,7 @@ TEST_P(JoinNodeMultiJoinModeTest, UniqueColumnCombinationsLeftJoinColumnUnique) 
     case JoinMode::Semi:
     case JoinMode::AntiNullAsTrue:
     case JoinMode::AntiNullAsFalse:
-      // Semi- and Anti-Joins act as filters for the left input and preserve its unique column combinations.
+      // Semi-/anti-joins act as filters for the left input and preserve its unique column combinations.
       EXPECT_EQ(join_unique_column_combinations.size(), 2);
       EXPECT_EQ(join_unique_column_combinations, _mock_node_a->unique_column_combinations());
       break;
@@ -648,8 +663,8 @@ TEST_P(JoinNodeMultiJoinModeTest, UniqueColumnCombinationsBothJoinColumnsUnique)
 }
 
 TEST_P(JoinNodeMultiJoinModeTest, UniqueColumnCombinationsNonEquiJoin) {
-  // Currently, we do not support UCC forwarding for Non-Equi- or Theta-Joins. Semi-, Cross-, and Anti-Joins only
-  // support Equi-Joins.
+  // Currently, we do not support UCC forwarding for non-equi or theta joins. Semi-/anti-joins, as well as cross joins,
+  // only support equi joins.
   const auto join_mode = GetParam();
   if (join_mode == JoinMode::Cross || is_semi_or_anti_join(join_mode)) {
     GTEST_SKIP();
@@ -668,7 +683,7 @@ TEST_P(JoinNodeMultiJoinModeTest, UniqueColumnCombinationsNonEquiJoin) {
 }
 
 TEST_P(JoinNodeMultiJoinModeTest, UniqueColumnCombinationsMultiPredicateJoin) {
-  // Except for Semi- and Anti-Joins, we do not support forwarding of UCCs for multi-predicate joins.
+  // Except for semi-/anti-joins, we do not support forwarding of UCCs for multi-predicate joins.
   const auto join_mode = GetParam();
   if (join_mode == JoinMode::Cross) {
     GTEST_SKIP();
@@ -700,7 +715,7 @@ TEST_F(JoinNodeTest, OrderDependenciesSemiAndAntiJoin) {
   EXPECT_EQ(_mock_node_a->order_dependencies().size(), 1);
   EXPECT_EQ(_mock_node_b->order_dependencies().size(), 1);
 
-  // Semi and anti joins should forward ODs from left input.
+  // Semi-/anti-joins should forward ODs from left input.
   for (const auto join_mode : {JoinMode::Semi, JoinMode::AntiNullAsTrue, JoinMode::AntiNullAsFalse}) {
     const auto join_node = JoinNode::make(join_mode, equals_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
     const auto& order_dependencies = join_node->order_dependencies();
@@ -887,7 +902,7 @@ TEST_F(JoinNodeTest, GetOrFindReducedJoinNode) {
   const auto join_node = std::static_pointer_cast<JoinNode>(lqp);
   semi_reduction_node->mark_as_semi_reduction(join_node);
 
-  // The semi join reduction node should use the stored weak pointer to create and return a shared pointer to the
+  // The semi-join reduction node should use the stored weak pointer to create and return a shared pointer to the
   // reduced join.
   EXPECT_EQ(semi_reduction_node->get_or_find_reduced_join_node(), join_node);
 
@@ -924,7 +939,7 @@ TEST_F(JoinNodeTest, GetOrFindReducedJoinNodeWithMultiplePredicates) {
   const auto join_node = std::static_pointer_cast<JoinNode>(lqp);
   semi_reduction_node->mark_as_semi_reduction(join_node);
 
-  // The semi join reduction node should use the stored weak pointer to create and return a shared pointer to the
+  // The semi-join reduction node should use the stored weak pointer to create and return a shared pointer to the
   // reduced join.
   EXPECT_EQ(semi_reduction_node->get_or_find_reduced_join_node(), join_node);
 

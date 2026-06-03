@@ -17,7 +17,7 @@ class AbstractLQPNode;
 class LQPColumnExpression;
 class TransactionContext;
 class PQPSubqueryExpression;
-enum class LogicalOperator;
+enum class LogicalOperator : uint8_t;
 
 /**
  * Utility to check whether two vectors of Expressions are equal according to AbstractExpression::operator==()
@@ -93,7 +93,7 @@ std::shared_ptr<LQPColumnExpression> expression_adapt_to_different_lqp(const LQP
 std::string expression_descriptions(const std::vector<std::shared_ptr<AbstractExpression>>& expressions,
                                     const AbstractExpression::DescriptionMode mode);
 
-enum class ExpressionVisitation { VisitArguments, DoNotVisitArguments };
+enum class ExpressionVisitation : uint8_t { VisitArguments, DoNotVisitArguments };
 
 /**
  * Calls the passed @param visitor on each sub-expression of the @param expression. The visitor returns

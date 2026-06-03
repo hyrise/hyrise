@@ -1,14 +1,22 @@
+#include <cstdint>
+#include <memory>
 #include <optional>
+#include <stdexcept>
+#include <utility>
+#include <vector>
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
+#include "expression/abstract_expression.hpp"
 #include "expression/arithmetic_expression.hpp"
+#include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "expression/pqp_subquery_expression.hpp"
+#include "expression/value_expression.hpp"
 #include "expression/window_expression.hpp"
-#include "expression/window_function_expression.hpp"
 #include "hyrise.hpp"
 #include "import_export/file_type.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
@@ -30,6 +38,7 @@
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
 #include "logical_query_plan/window_node.hpp"
+#include "operators/abstract_operator.hpp"
 #include "operators/aggregate_hash.hpp"
 #include "operators/change_meta_table.hpp"
 #include "operators/export.hpp"
@@ -49,16 +58,17 @@
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/union_all.hpp"
-#include "operators/union_positions.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
 #include "storage/prepared_plan.hpp"
 #include "storage/table.hpp"
+#include "types.hpp"
+#include "utils/invalid_input_exception.hpp"
 #include "utils/load_table.hpp"
 
 namespace hyrise {
 
-using namespace expression_functional;  // NOLINT(build/namespaces)
+using namespace expression_functional;
 
 class LQPTranslatorTest : public BaseTest {
  public:
@@ -694,12 +704,14 @@ TEST_F(LQPTranslatorTest, AggregateNodeSimple) {
   /**
    * Build LQP and translate to PQP.
    */
+  // NOLINTBEGIN(whitespace/line_length)
   // clang-format off
   const auto lqp =
-  AggregateNode::make(expression_vector(int_float_a), expression_vector(sum_(add_(int_float_b, int_float_a)), count_star_(int_float_node)),  // NOLINT
+  AggregateNode::make(expression_vector(int_float_a), expression_vector(sum_(add_(int_float_b, int_float_a)), count_star_(int_float_node)),
     ProjectionNode::make(expression_vector(int_float_b, int_float_a, add_(int_float_b, int_float_a)),
       int_float_node));
   // clang-format on
+  // NOLINTEND(whitespace/line_length)
   const auto op = LQPTranslator{}.translate_node(lqp);
 
   /**
@@ -712,10 +724,10 @@ TEST_F(LQPTranslatorTest, AggregateNodeSimple) {
   EXPECT_EQ(aggregate_op->groupby_column_ids().at(0), ColumnID{1});
 
   const auto sum = aggregate_op->aggregates()[0];
-  EXPECT_EQ(*sum, *sum_(pqp_column_(ColumnID{2}, DataType::Float, false, "b + a")));
+  EXPECT_EQ(*sum, *sum_(pqp_column_(ColumnID{2}, DataType::Float, "b + a")));
 
   const auto count = aggregate_op->aggregates()[1];
-  EXPECT_EQ(*count, *count_(pqp_column_(INVALID_COLUMN_ID, DataType::Long, false, "*")));
+  EXPECT_EQ(*count, *count_(pqp_column_(INVALID_COLUMN_ID, DataType::Long, "*")));
 }
 
 TEST_F(LQPTranslatorTest, JoinAndPredicates) {
@@ -1027,7 +1039,7 @@ TEST_F(LQPTranslatorTest, ReuseInputExpressions) {
   ASSERT_NE(projection_a, nullptr);
   ASSERT_NE(projection_b, nullptr);
 
-  const auto a_plus_b_in_temporary_column = pqp_column_(ColumnID{1}, DataType::Float, false, "a + b");
+  const auto a_plus_b_in_temporary_column = pqp_column_(ColumnID{1}, DataType::Float, "a + b");
   const auto scan_column_expression =
       std::dynamic_pointer_cast<PQPColumnExpression>(table_scan->predicate()->arguments.at(0));
 
@@ -1067,7 +1079,7 @@ TEST_F(LQPTranslatorTest, ReuseSubqueryExpression) {
 
   // As subquery columns without an explicit alias get the LQP/PQP address as their name, we need to retrieve it first.
   const auto column_name = subquery_a->as_column_name();
-  const auto subquery_in_temporary_column = pqp_column_(ColumnID{1}, DataType::Int, false, column_name);
+  const auto subquery_in_temporary_column = pqp_column_(ColumnID{1}, DataType::Int, column_name);
 
   EXPECT_EQ(*projection_a->expressions.at(0), *add_(subquery_in_temporary_column, 3));
 }

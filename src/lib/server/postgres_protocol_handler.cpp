@@ -23,7 +23,7 @@ PostgresProtocolHandler<SocketType>::PostgresProtocolHandler(const std::shared_p
 template <typename SocketType>
 uint32_t PostgresProtocolHandler<SocketType>::read_startup_packet_header() {
   // Special SSL version number that we catch to deny SSL support
-  constexpr auto SSL_REQUEST_CODE = 80877103u;
+  constexpr auto SSL_REQUEST_CODE = size_t{80877103};
 
   const auto body_length = _read_buffer.template get_value<uint32_t>();
   const auto protocol_version = _read_buffer.template get_value<uint32_t>();
@@ -58,7 +58,7 @@ void PostgresProtocolHandler<SocketType>::send_authentication_response() {
 template <typename SocketType>
 void PostgresProtocolHandler<SocketType>::send_parameter(const std::string& key, const std::string& value) {
   // 2 null terminators, one for each string
-  const auto packet_size = LENGTH_FIELD_SIZE + key.size() + value.size() + 2u /* null terminators */;
+  const auto packet_size = LENGTH_FIELD_SIZE + key.size() + value.size() + 2 /* null terminators */;
   _write_buffer.template put_value<PostgresMessageType>(PostgresMessageType::ParameterStatus);
   _write_buffer.template put_value<uint32_t>(static_cast<uint32_t>(packet_size));
   _write_buffer.put_string(key);
@@ -107,13 +107,13 @@ void PostgresProtocolHandler<SocketType>::send_row_description(const std::string
   _write_buffer.put_string(column_name);
   // This field contains the table ID (OID in postgres). We have to set it in order to fulfill the protocol
   // specification. We do not know what it's good for.
-  _write_buffer.template put_value<int32_t>(0u);  // No object id
+  _write_buffer.template put_value<int32_t>(0);  // No object id
   // This field contains the attribute ID (OID in postgres). We do not know what it's good for either.
-  _write_buffer.template put_value<int16_t>(0u);          // No attribute number
+  _write_buffer.template put_value<int16_t>(0);           // No attribute number
   _write_buffer.template put_value<int32_t>(object_id);   // Object id of type
   _write_buffer.template put_value<int16_t>(type_width);  // Data type size
   _write_buffer.template put_value<int32_t>(-1);          // No modifier
-  _write_buffer.template put_value<int16_t>(0u);          // Text format
+  _write_buffer.template put_value<int16_t>(0);           // Text format
 }
 
 template <typename SocketType>
@@ -148,7 +148,7 @@ void PostgresProtocolHandler<SocketType>::send_data_row(
 
 template <typename SocketType>
 void PostgresProtocolHandler<SocketType>::send_command_complete(const std::string& command_complete_message) {
-  const auto packet_size = LENGTH_FIELD_SIZE + command_complete_message.size() + 1u /* null terminator */;
+  const auto packet_size = LENGTH_FIELD_SIZE + command_complete_message.size() + 1 /* null terminator */;
   _write_buffer.template put_value<PostgresMessageType>(PostgresMessageType::CommandComplete);
   _write_buffer.template put_value<uint32_t>(static_cast<uint32_t>(packet_size));
   _write_buffer.put_string(command_complete_message);
@@ -248,11 +248,11 @@ void PostgresProtocolHandler<SocketType>::send_error_message(const ErrorMessages
   // Calculate size of error message strings
   auto string_length_sum = size_t{0};
   for (const auto& error_message : error_messages) {
-    string_length_sum += error_message.second.size() + 1ul /* null terminator */;
+    string_length_sum += error_message.second.size() + 1 /* null terminator */;
   }
 
   const auto packet_size = LENGTH_FIELD_SIZE + (error_messages.size() * sizeof(PostgresMessageType)) +
-                           string_length_sum + 1u /* null terminator */;
+                           string_length_sum + 1 /* null terminator */;
   _write_buffer.template put_value<uint32_t>(static_cast<uint32_t>(packet_size));
 
   for (const auto& [message_type, content] : error_messages) {
@@ -270,7 +270,7 @@ void PostgresProtocolHandler<SocketType>::send_execution_info(const std::string&
   _write_buffer.template put_value<PostgresMessageType>(PostgresMessageType::Notice);
   // Message has 2 null terminators: one terminates the error string, the other one terminates the message
   const auto packet_size =
-      LENGTH_FIELD_SIZE + sizeof(PostgresMessageType) + execution_information.size() + 2u /* null terminators */;
+      LENGTH_FIELD_SIZE + sizeof(PostgresMessageType) + execution_information.size() + 2 /* null terminators */;
   _write_buffer.template put_value<uint32_t>(static_cast<uint32_t>(packet_size));
   // Send the error message with type 'M' that indicates that the following body is a plain message to be displayed
   _write_buffer.template put_value<PostgresMessageType>(PostgresMessageType::HumanReadableError);

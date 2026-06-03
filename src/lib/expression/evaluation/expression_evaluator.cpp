@@ -3,10 +3,10 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <format>
 #include <iterator>
 #include <limits>
 #include <memory>
-#include <sstream>
 #include <string>
 #include <type_traits>
 #include <unordered_map>
@@ -60,8 +60,8 @@
 
 namespace {
 
-using namespace hyrise;                         // NOLINT(build/namespaces)
-using namespace hyrise::expression_functional;  // NOLINT(build/namespaces)
+using namespace hyrise;
+using namespace hyrise::expression_functional;
 
 template <typename Functor>
 void resolve_binary_predicate_evaluator(const PredicateCondition predicate_condition, const Functor functor) {
@@ -950,9 +950,9 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_extract
         // do lazy checks only whenever required. Though parsing the string values leads to degraded performance
         // compared to, e.g., accessing substrings or accessing member variables, we ensure correct results.
         // TODO(anyone): Revisit for performance if we use this in actual benchmarks.
-        Assert(value.size() >= 10, "Invalid ISO 8601 extended timestamp '" + value + "'.");
+        Assert(value.size() >= 10, std::format("Invalid ISO 8601 extended timestamp '{}'.", value));
         const auto& timestamp = string_to_timestamp(value);
-        Assert(timestamp, "Invalid ISO 8601 extended timestamp '" + value + "'.");
+        Assert(timestamp, std::format("Invalid ISO 8601 extended timestamp '{}'.", value));
         values[chunk_offset] = extract_component(*timestamp);
       }
     }
@@ -1169,7 +1169,7 @@ RowIDPosList ExpressionEvaluator::evaluate_expression_to_pos_list(const Abstract
             resolve_binary_predicate_evaluator(predicate_condition, [&](const auto functor) {
               using ExpressionFunctorType = typename decltype(functor)::type;
 
-              if constexpr (ExpressionFunctorType::template supports<ExpressionEvaluator::Bool, LeftDataType,
+              if constexpr (ExpressionFunctorType::template Supports<ExpressionEvaluator::Bool, LeftDataType,
                                                                      RightDataType>::value) {
                 for (auto chunk_offset = ChunkOffset{0}; chunk_offset < row_count; ++chunk_offset) {
                   if (left_result.is_null(chunk_offset) || right_result.is_null(chunk_offset)) {
@@ -1343,7 +1343,7 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_binary_
     using LeftDataType = typename std::decay_t<decltype(left)>::Type;
     using RightDataType = typename std::decay_t<decltype(right)>::Type;
 
-    if constexpr (Functor::template supports<Result, LeftDataType, RightDataType>::value) {
+    if constexpr (Functor::template Supports<Result, LeftDataType, RightDataType>::value) {
       const auto result_size = _result_size(left.size(), right.size());
       values.resize(result_size);
       nulls = _evaluate_default_null_logic(left.nulls, right.nulls);
@@ -1379,7 +1379,7 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_binary_
     using LeftDataType = typename std::decay_t<decltype(left)>::Type;
     using RightDataType = typename std::decay_t<decltype(right)>::Type;
 
-    if constexpr (Functor::template supports<Result, LeftDataType, RightDataType>::value) {
+    if constexpr (Functor::template Supports<Result, LeftDataType, RightDataType>::value) {
       const auto result_row_count = _result_size(left.size(), right.size());
 
       auto nulls = pmr_vector<bool>(result_row_count);

@@ -1,9 +1,9 @@
 #include "prepared_plan.hpp"
 
 #include <cstddef>
+#include <format>
 #include <memory>
 #include <ostream>
-#include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -21,7 +21,7 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT
+using namespace hyrise;
 
 void lqp_bind_placeholders_impl(const std::shared_ptr<AbstractLQPNode>& lqp,
                                 const std::unordered_map<ParameterID, std::shared_ptr<AbstractExpression>>& parameters,
@@ -91,9 +91,9 @@ size_t PreparedPlan::hash() const {
 
 std::shared_ptr<AbstractLQPNode> PreparedPlan::instantiate(
     const std::vector<std::shared_ptr<AbstractExpression>>& parameters) const {
-  Assert(parameters.size() == parameter_ids.size(), std::string("Incorrect number of parameters supplied - expected ") +
-                                                        std::to_string(parameter_ids.size()) + " got " +
-                                                        std::to_string(parameters.size()));
+  Assert(parameters.size() == parameter_ids.size(),
+         std::format("Incorrect number of parameters supplied: expected {} got {}.", parameter_ids.size(),
+                     parameters.size()));
 
   auto parameters_by_id = std::unordered_map<ParameterID, std::shared_ptr<AbstractExpression>>{};
   for (auto parameter_idx = size_t{0}; parameter_idx < parameters.size(); ++parameter_idx) {

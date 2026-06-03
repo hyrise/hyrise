@@ -1,10 +1,14 @@
+#include <cstddef>
+#include <utility>
+#include <vector>
+
 #include "base_test.hpp"
 #include "optimizer/join_ordering/enumerate_ccp.hpp"
 #include "utils/assert.hpp"
 
 namespace {
 
-using namespace hyrise;  // NOLINT(build/namespaces)
+using namespace hyrise;
 
 template <typename T>
 bool equals(const std::pair<boost::dynamic_bitset<>, boost::dynamic_bitset<>>& lhs, const std::pair<T, T>& rhs) {

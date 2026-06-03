@@ -1,10 +1,18 @@
+#include <cstddef>
+#include <cstdint>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
-#include "expression/case_expression.hpp"
+#include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/pqp_column_expression.hpp"
+#include "expression/window_function_expression.hpp"
 #include "hyrise.hpp"
-#include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/static_table_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
@@ -13,12 +21,13 @@
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/union_positions.hpp"
+#include "types.hpp"
 #include "utils/load_table.hpp"
 
 namespace hyrise {
 
-using namespace std::string_literals;   // NOLINT(build/namespaces)
-using namespace expression_functional;  // NOLINT(build/namespaces)
+using namespace std::string_literals;
+using namespace expression_functional;
 
 /**
  * Tests for most expression types, excluding Subqueries, since they have no complex behaviour that would warrant their
@@ -133,14 +142,10 @@ TEST_F(ExpressionTest, DeepCopySubplanDeduplication) {
   auto projection_int3 = std::make_shared<Projection>(union_positions, expression_vector(pqp_column_a));
   auto projection_string =
       std::make_shared<Projection>(union_positions, expression_vector(cast_(pqp_column_a, DataType::String)));
-  auto pqp_subquery_expression_int1 = std::make_shared<PQPSubqueryExpression>(projection_int1, DataType::Int, false,
-                                                                              PQPSubqueryExpression::Parameters{});
-  auto pqp_subquery_expression_int2 = std::make_shared<PQPSubqueryExpression>(projection_int2, DataType::Int, false,
-                                                                              PQPSubqueryExpression::Parameters{});
-  auto pqp_subquery_expression_int3 = std::make_shared<PQPSubqueryExpression>(projection_int3, DataType::Int, false,
-                                                                              PQPSubqueryExpression::Parameters{});
-  auto pqp_subquery_expression_string = std::make_shared<PQPSubqueryExpression>(
-      projection_string, DataType::String, false, PQPSubqueryExpression::Parameters{});
+  auto pqp_subquery_expression_int1 = pqp_subquery_(projection_int1, DataType::Int);
+  auto pqp_subquery_expression_int2 = pqp_subquery_(projection_int2, DataType::Int);
+  auto pqp_subquery_expression_int3 = pqp_subquery_(projection_int3, DataType::Int);
+  auto pqp_subquery_expression_string = pqp_subquery_(projection_string, DataType::String);
 
   // We are going to check whether the following property survives deep_copy(). We do not want to see duplicated
   // operators in copied PQPs.
@@ -245,7 +250,7 @@ TEST_F(ExpressionTest, RequiresCalculation) {
   EXPECT_TRUE(not_in_(5, subquery_expression)->requires_computation());
 
   const auto get_table = std::make_shared<GetTable>("int_float");
-  const auto pqp_subquery_expression = std::make_shared<PQPSubqueryExpression>(get_table);
+  const auto pqp_subquery_expression = pqp_subquery_(get_table, DataType::Int);
 
   EXPECT_TRUE(pqp_subquery_expression->requires_computation());
 }
@@ -505,19 +510,17 @@ TEST_F(ExpressionTest, EqualsAndHash) {
   expressions.emplace_back(__LINE__, placeholder_(ParameterID{1}));
 
   // PQPColumnExpression
-  expressions.emplace_back(__LINE__, pqp_column_(ColumnID{0}, DataType::Float, false, "a + b"));
-  expressions.emplace_back(__LINE__, pqp_column_(ColumnID{1}, DataType::Float, false, "a + b"));
-  expressions.emplace_back(__LINE__, pqp_column_(ColumnID{1}, DataType::Int, false, "a + b"));
-  expressions.emplace_back(__LINE__, pqp_column_(ColumnID{1}, DataType::Int, true, "a + b"));
-  expressions.emplace_back(__LINE__, pqp_column_(ColumnID{1}, DataType::Int, true, "alias"));
+  expressions.emplace_back(__LINE__, pqp_column_(ColumnID{0}, DataType::Float, "a + b"));
+  expressions.emplace_back(__LINE__, pqp_column_(ColumnID{1}, DataType::Int, "a + b"));
+  expressions.emplace_back(__LINE__, pqp_column_(ColumnID{1}, DataType::Int, "alias"));
 
   // PQPSubqueryExpression
-  expressions.emplace_back(__LINE__, pqp_subquery_(std::make_shared<GetTable>("a"), DataType::Int, false));
-  expressions.emplace_back(__LINE__, pqp_subquery_(std::make_shared<GetTable>("b"), DataType::Int, false));
-  expressions.emplace_back(__LINE__, pqp_subquery_(std::make_shared<GetTable>("b"), DataType::Float, false));
-  expressions.emplace_back(__LINE__, pqp_subquery_(std::make_shared<GetTable>("b"), DataType::Float, true));
+  expressions.emplace_back(__LINE__, pqp_subquery_(std::make_shared<GetTable>("a"), DataType::Int));
+  expressions.emplace_back(__LINE__, pqp_subquery_(std::make_shared<GetTable>("b"), DataType::Int));
+  expressions.emplace_back(__LINE__, pqp_subquery_(std::make_shared<GetTable>("b"), DataType::Float));
+  expressions.emplace_back(__LINE__, pqp_subquery_(std::make_shared<GetTable>("b"), DataType::Float));
   const auto parameter = std::make_pair(ParameterID{0}, ColumnID{0});
-  expressions.emplace_back(__LINE__, pqp_subquery_(std::make_shared<GetTable>("b"), DataType::Float, true, parameter));
+  expressions.emplace_back(__LINE__, pqp_subquery_(std::make_shared<GetTable>("b"), DataType::Float, parameter));
 
   // UnaryMinusExpression
   expressions.emplace_back(__LINE__, unary_minus_(3));
