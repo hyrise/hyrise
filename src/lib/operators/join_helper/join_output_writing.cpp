@@ -150,7 +150,7 @@ void write_output_segments(Segments& output_segments, const std::shared_ptr<cons
         if (common_chunk_id && *common_chunk_id != INVALID_CHUNK_ID) {
           // Track the occuring chunk ids and set the single chunk guarantee if possible. Generally, this is the case
           // if both of the following are true: (1) The probe side input already had this guarantee and (2) no radix
-          // partitioning was used. If multiple small PosLists were merged (see MIN_SIZE), this  guarantee cannot be
+          // partitioning was used. If multiple small PosLists were merged (see MIN_SIZE), this guarantee cannot be
           // given.
           new_pos_list->guarantee_single_chunk();
         }
