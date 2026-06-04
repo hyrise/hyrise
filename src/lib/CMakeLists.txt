@@ -17,18 +17,21 @@ if (${COMPILE_FOR_BOLT})
         add_compile_options(-fno-reorder-blocks-and-partition)
     endif()
     add_link_options(-Wl,--emit-relocs)
+    message(STATUS "Configuring for BOLT.")
 endif()
 
 option(PGO_INSTRUMENT "Set to TRUE to build an instrumented hyrise binary that will generate PGO profile data when run. Default: FALSE" FALSE)
 if (${PGO_INSTRUMENT})
     add_compile_options(-fprofile-generate)
     add_link_options(-fprofile-generate)
+    message(STATUS "Configuring for PGO profiling.")
 endif()
 
 set(PGO_OPTIMIZE "" CACHE PATH "Set path to a PGO profile in order to use PGO")
 if (PGO_OPTIMIZE)
     add_compile_options(-fprofile-use=${PGO_OPTIMIZE})
     add_link_options(-fprofile-use=${PGO_OPTIMIZE})
+    message(STATUS "Configuring for PGO optimization.")
 endif()
 
 # Sources and libraries shared among the different builds of the lib

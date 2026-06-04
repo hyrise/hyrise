@@ -11,8 +11,8 @@
 #   https://github.com/hyrise/hyrise/pull/2724#issuecomment-3734286523
 #
 # BENCHMARKING:
-#   `benchmark_all.sh` is also PGO/BOLT aware. To evaluate a commit with PGO/BOLT, use the --export option,
-#   which places the profiles in the resources folder, where `benchmark_all.sh` picks it up.
+#   `benchmark_all.sh` is also PGO/BOLT aware. To evaluate a commit with PGO/BOLT, first use the --export option, which
+#   places the profiles in the resources folder, where `benchmark_all.sh` picks it up.
 #
 #
 # CURRENT PIPELINE
@@ -21,6 +21,8 @@
 #   We found this combination to work well with LLVM 20. For newer LLVM versions, this pipeline should be re-evaluated.
 #   Another option that might further improve performance is a second context-sensitive PGO run (CSIR PGO), see
 #   https://github.com/llvm/llvm-project/issues/56274#issuecomment-1406427363.
+#   For the BOLT options, we selected a widely used and rather conservative set. We hope those options results in stable
+#   performance for upcoming LLVM versions without the need of frequent adaption.
 
 import platform
 import psutil
