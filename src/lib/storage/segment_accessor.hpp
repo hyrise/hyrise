@@ -60,6 +60,12 @@ class SegmentAccessor final : public AbstractSegmentAccessor<T> {
     return _segment.get_typed_value(offset);
   }
 
+  void prefetch(ChunkOffset offset) const final {
+    if constexpr (std::is_same_v<SegmentType, ValueSegment<T>>) {
+      __builtin_prefetch(&_segment.values()[offset], 0, 0);
+    }
+  }
+
   ~SegmentAccessor() override {
     _segment.access_counter[SegmentAccessCounter::AccessType::Random] += _accesses;
   }
@@ -82,7 +88,8 @@ class MultipleChunkReferenceSegmentAccessor final : public AbstractSegmentAccess
       : _segment{segment}, _table{segment.referenced_table()} {}
 
   std::optional<T> access(ChunkOffset offset) const final {
-    const auto& row_id = (*_segment.pos_list())[offset];
+    const auto& pos_list = *_segment.pos_list();
+    const auto& row_id = pos_list[offset];
     if (row_id.is_null()) {
       return std::nullopt;
     }
@@ -94,19 +101,25 @@ class MultipleChunkReferenceSegmentAccessor final : public AbstractSegmentAccess
       _accessors.resize(static_cast<size_t>(chunk_id + _accessors.size()));
     }
 
-    if (!_accessors[chunk_id]) {
+    if (!_accessors[chunk_id].second) {
+      const auto segment = _table->get_chunk(chunk_id)->get_segment(_segment.referenced_column_id());
+      const auto value_segment = std::dynamic_pointer_cast<ValueSegment<T>>(segment);
       _accessors[chunk_id] =
-          create_segment_accessor<T>(_table->get_chunk(chunk_id)->get_segment(_segment.referenced_column_id()));
+          {value_segment != nullptr, create_segment_accessor<T>(std::move(segment))};
     }
 
-    return _accessors[chunk_id]->access(row_id.chunk_offset);
+    if (_accessors[chunk_id].first && (offset+32 < pos_list.size())) {
+      _accessors[chunk_id].second->prefetch(pos_list[offset+32].chunk_offset);
+    }
+
+    return _accessors[chunk_id].second->access(row_id.chunk_offset);
   }
 
  protected:
   const ReferenceSegment& _segment;
   const std::shared_ptr<const Table> _table;
   // Serves as a "dictionary" from ChunkID to Accessor. Lazily increased in size as Chunks are accessed.
-  mutable std::vector<std::unique_ptr<AbstractSegmentAccessor<T>>> _accessors{1};
+  mutable std::vector<std::pair<bool, std::unique_ptr<AbstractSegmentAccessor<T>>>> _accessors{1};
 };
 
 // Accessor for ReferenceSegments that reference single chunks - see comment above
