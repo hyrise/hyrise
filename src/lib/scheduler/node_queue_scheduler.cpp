@@ -54,16 +54,16 @@ void NodeQueueScheduler::begin() {
       std::max(size_t{2 * MIN_GROUP_COUNT},
                static_cast<size_t>(2.0 * static_cast<double>(_worker_count) * NUM_GROUPS_MIN_FACTOR));
 
-  // Starting from a queue load of _queue_load_capped, we use the minimal group count.
-  _queue_load_capped = static_cast<double>(std::max(size_t{8}, UPPER_LIMIT_QUEUE_SIZE_FACTOR * _worker_count));
+  // Starting from a queue load of _max_considered_queue_load, we use the minimal group count.
+  _max_considered_queue_load = static_cast<double>(std::max(size_t{8}, UPPER_LIMIT_QUEUE_SIZE_FACTOR * _worker_count));
 
-  _min_group_count =
+  const auto min_group_count =
       std::max(static_cast<double>(MIN_GROUP_COUNT), NUM_GROUPS_MIN_FACTOR * static_cast<float>(_worker_count));
   _max_group_count = NUM_GROUPS_MAX_FACTOR * static_cast<double>(_worker_count);
 
-  // We later
-  _step_size = (_max_group_count - _min_group_count) / _queue_load_capped;
-  Assert((_step_size * _queue_load_capped) == (_max_group_count - _min_group_count), "...");
+  // We precalculate the "step size" as we know potential queue loads (between 0 and the cap).
+  _step_size = (_max_group_count - min_group_count) / _max_considered_queue_load;
+  Assert((_step_size * _max_considered_queue_load) == (_max_group_count - min_group_count), "...");
 
   // For every task list of size >= _regrouping_upper_limit, we use the minimal value for grouping. For 64 workers, a
   // queue load of 640 (i.e., ~640 normal priority tasks) is enough to use the minimum number of groups.
@@ -271,9 +271,9 @@ std::optional<size_t> NodeQueueScheduler::determine_group_count(
     return std::nullopt;
   }
 
-  // We check the first task for a node assignment. We assume that the passed tasks are not assigned to different
-  // nodes. If this assumption becomes invalid (e.g., due to work on NUMA optimizations), the current code should be
-  // revisited (see check for common NodeID in _group_tasks()).
+  // We check the first task for a node assignment. We assume that the passed tasks are not assigned to different nodes.
+  // If this assumption becomes invalid (e.g., due to work on NUMA optimizations), the current code should be revisited
+  // (see check for common NodeID in _group_tasks()).
   const auto first_task_node_id = tasks[0]->node_id();
 
   // Ensure check below (first_task_node_id >= CURRENT_NODE_ID) is valid.
@@ -285,7 +285,7 @@ std::optional<size_t> NodeQueueScheduler::determine_group_count(
   const auto queue_load = static_cast<double>(_queues[node_id_for_queue_check]->estimate_load());
 
   const auto group_count =
-      static_cast<size_t>(_max_group_count - (std::min(_queue_load_capped, queue_load) * _step_size));
+      static_cast<size_t>(_max_group_count - (std::min(_max_considered_queue_load, queue_load) * _step_size));
 
   // If the resulting groups are smaller than two tasks, skip grouping.
   if ((task_count / group_count) < 2) {

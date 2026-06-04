@@ -157,7 +157,6 @@ class NodeQueueScheduler final : public AbstractScheduler {
   size_t _worker_count{8};
   size_t _regrouping_upper_limit{32};
 
-  double _min_group_count{0};
   double _max_group_count{0};
 
   double _queue_load_capped{8};
