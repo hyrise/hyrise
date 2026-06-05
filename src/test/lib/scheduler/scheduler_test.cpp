@@ -457,31 +457,26 @@ TEST_F(SchedulerTest, NumGroupDeterminationDifferentLoads) {
   // Create a large number of tasks to avoid early out.
   constexpr auto TASK_FACTOR = HYRISE_WITH_TSAN ? size_t{10} : size_t{100};
   const auto task_count = TASK_FACTOR * worker_count;
-  // std::cerr << "task_count: " << task_count << "\n";
   auto tasks_1 = std::vector<std::shared_ptr<AbstractTask>>{};
   tasks_1.reserve(task_count);
   for (auto task_id = TaskID{0}; task_id < task_count; ++task_id) {
     tasks_1.push_back(std::make_shared<JobTask>([&]() {}));
   }
 
-  // std::cerr << "after tasks1: " <<  node_queue_scheduler->queues()[0]->estimate_load() << '\n';
-
-  // For 40 (4 workers * 20) tasks, grouping should happen.
+  // For a large number of tasks and no load on the scheduler, grouping should happen.
   const auto num_groups_without_load = node_queue_scheduler->determine_group_count(tasks_1);
   ASSERT_TRUE(num_groups_without_load);
+  // We should receive a large group count when the queue load is low (here, no load at time of grouping).
+  EXPECT_EQ(*num_groups_without_load, static_cast<size_t>(node_queue_scheduler::detail::NUM_GROUPS_MAX_FACTOR *
+                                                          static_cast<double>(worker_count)));
 
-  // std::cerr << "after tasks1: " <<  node_queue_scheduler->queues()[0]->estimate_load() << '\n';
-
-  // Create load on queue. Schedule jobs that are blocked on `block_jobs`.
+  // Create load on queue. Schedule jobs that are blocked on the unblock_jobs latch.
   auto unblock_jobs = std::latch{1};
-  // std::cerr << "Starting tasks2\n";
   auto tasks_2 = std::vector<std::shared_ptr<AbstractTask>>{};
   tasks_2.reserve(task_count);
   for (auto task_id = TaskID{0}; task_id < task_count; ++task_id) {
     tasks_2.push_back(std::make_shared<JobTask>([&]() {
-      // std::cerr << "w";
       unblock_jobs.wait();
-      // std::cerr << "d";
     }));
     tasks_2.back()->schedule();
   }
@@ -489,24 +484,15 @@ TEST_F(SchedulerTest, NumGroupDeterminationDifferentLoads) {
   const auto num_groups_with_load = node_queue_scheduler->determine_group_count(tasks_2);
   ASSERT_TRUE(num_groups_with_load);
 
-  // std::cerr << "all are scheduled now: " <<  node_queue_scheduler->queues()[0]->estimate_load() << '\n';
-
-  // We should receive a large group count when the queue load is low (here, no load at time of grouping).
-  EXPECT_EQ(*num_groups_without_load, static_cast<size_t>(node_queue_scheduler::detail::NUM_GROUPS_MAX_FACTOR *
-                                                          static_cast<double>(worker_count)));
   // We should receive the minimum group count when the queue load is high.
   EXPECT_EQ(*num_groups_with_load, std::max(node_queue_scheduler::detail::MIN_GROUP_COUNT,
                                             static_cast<size_t>(node_queue_scheduler::detail::NUM_GROUPS_MIN_FACTOR *
                                                                 static_cast<double>(worker_count))));
 
   // Shutdown. Unblock scheduled jobs.
-  // std::cerr << "count down\n";
   unblock_jobs.count_down();
-  // std::cerr << "scheduling2\n";
-  node_queue_scheduler->wait_for_tasks(tasks_2);
-  // std::cerr << "scheduling1\n";
   node_queue_scheduler->schedule_and_wait_for_tasks(tasks_1);
-  // std::cerr << "done\n";
+  node_queue_scheduler->wait_for_tasks(tasks_2);
 }
 
 template <typename Iterator>
