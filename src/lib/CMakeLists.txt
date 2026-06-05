@@ -785,7 +785,7 @@ target_include_directories(hyrise_impl PUBLIC ${CMAKE_BINARY_DIR})
 # Precompile the most expensive headers. Only add headers here if you know what you are doing, as this has the potential
 # of negatively affecting the build time.
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-target_compile_options(hyrise_impl PUBLIC -Xclang -fno-pch-timestamp)
+    target_compile_options(hyrise_impl PUBLIC -Xclang -fno-pch-timestamp)
 endif()
 target_precompile_headers(hyrise_impl PRIVATE
   all_parameter_variant.hpp
