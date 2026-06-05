@@ -1,5 +1,7 @@
 #include "plugin_test_utils.hpp"
 
+#include <string>
+
 namespace hyrise {
 
 #ifdef __APPLE__

@@ -41,9 +41,9 @@ class Insert : public AbstractReadWriteOperator {
 
   // Ranges of rows to which the inserted values are written.
   struct ChunkRange {
-    ChunkID chunk_id{};
-    ChunkOffset begin_chunk_offset{};
-    ChunkOffset end_chunk_offset{};
+    ChunkID chunk_id;
+    ChunkOffset begin_chunk_offset;
+    ChunkOffset end_chunk_offset;
   };
 
   std::vector<ChunkRange> _target_chunk_ranges;

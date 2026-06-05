@@ -1,10 +1,20 @@
-#include <algorithm>
+#include <cstddef>
+#include <cstdint>
+#include <memory>
+#include <stdexcept>
+#include <vector>
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "operators/join_hash/join_hash_steps.hpp"
+#include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "resolve_type.hpp"
 #include "storage/create_iterable_from_segment.hpp"
+#include "storage/table.hpp"
+#include "storage/table_column_definition.hpp"
+#include "types.hpp"
+#include "utils/load_table.hpp"
 
 namespace hyrise {
 

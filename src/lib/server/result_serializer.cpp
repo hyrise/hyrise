@@ -1,6 +1,7 @@
 #include "result_serializer.hpp"
 
 #include <cstdint>
+#include <format>
 #include <memory>
 #include <optional>
 #include <string>
@@ -133,7 +134,7 @@ std::string ResultSerializer::build_command_complete_message(const OperatorType 
     }
     default:
       // Assuming normal query
-      return "SELECT " + std::to_string(row_count);
+      return std::format("SELECT {}", row_count);
   }
 }
 

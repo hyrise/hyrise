@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <ctime>
+#include <format>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -147,11 +148,10 @@ void BenchmarkRunner::run() {
     while (track_system_utilization) {
       const auto timestamp = std::chrono::nanoseconds{std::chrono::steady_clock::now() - _benchmark_start}.count();
 
-      auto sql_builder = std::stringstream{};
-      sql_builder << "INSERT INTO benchmark_system_utilization_log SELECT CAST(" << timestamp
-                  << "as LONG), * FROM meta_system_utilization";
-
-      SQLPipelineBuilder{sql_builder.str()}.create_pipeline().get_result_table();
+      const auto sql = std::format(
+          "INSERT INTO benchmark_system_utilization_log SELECT CAST({} as LONG), * FROM meta_system_utilization",
+          timestamp);
+      SQLPipelineBuilder{sql}.create_pipeline().get_result_table();
 
       std::this_thread::sleep_for(SYSTEM_UTILIZATION_TRACKING_INTERVAL);
     }
@@ -521,8 +521,8 @@ nlohmann::json BenchmarkRunner::_create_report() const {
   // We have to use system_clock here, as the LogManager uses it to provide human-readable timestamps.
   // Because the system_clock can be readjusted anytime, the timestamps could be slightly out of line.
   const auto benchmark_start_ns = std::chrono::nanoseconds{_benchmark_wall_clock_start.time_since_epoch()}.count();
-  auto log_json = _sql_to_json(std::string{"SELECT \"timestamp\" - "} + std::to_string(benchmark_start_ns) +
-                               " AS \"timestamp\", log_level, reporter, message FROM meta_log");
+  auto log_json = _sql_to_json(std::format(
+      R"(SELECT "timestamp" - {} AS "timestamp", log_level, reporter, message FROM meta_log)", benchmark_start_ns));
 
   auto report = nlohmann::json{{"context", _context},
                                {"benchmarks", std::move(benchmarks)},
@@ -576,9 +576,9 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
     ("w,warmup", "Number of seconds that each item is run for warm up. Warming up also caches the query plans", cxxopts::value<uint64_t>()->default_value("0"))  // NOLINT(whitespace/line_length)
     ("o,output", "JSON file to output results to, don't specify for stdout", cxxopts::value<std::string>()->default_value(""))  // NOLINT(whitespace/line_length)
     ("m,mode", "Ordered or Shuffled", cxxopts::value<std::string>()->default_value(default_mode))
-    ("e,encoding", "Specify Chunk encoding as a string or as a JSON config file (for more detailed configuration, see --full_help). String options: " + all_encoding_options(), cxxopts::value<std::string>()->default_value("Automatic"))  // NOLINT(whitespace/line_length)
+    ("e,encoding", std::format("Specify Chunk encoding as a string or as a JSON config file (for more detailed configuration, see --full_help). String options: {}", all_encoding_options()), cxxopts::value<std::string>()->default_value("Automatic"))  // NOLINT(whitespace/line_length)
     ("p,plugins", "Specify plugins to be loaded and execute their pre-/post-benchmark hooks (comma-separated paths to shared libraries w/o whitespaces)", cxxopts::value<std::string>()->default_value(""))  // NOLINT(whitespace/line_length)
-    ("compression", "Specify vector compression as a string. Options: " + compression_strings_option, cxxopts::value<std::string>()->default_value(""))  // NOLINT(whitespace/line_length)
+    ("compression", std::format("Specify vector compression as a string. Options: {}", compression_strings_option), cxxopts::value<std::string>()->default_value(""))  // NOLINT(whitespace/line_length)
     ("chunk_indexes", "Create chunk indexes (separate index per chunk; columns defined by benchmark)", cxxopts::value<bool>()->default_value("false"))  // NOLINT(whitespace/line_length)
     ("table_indexes", "Create table indexes (index per table column; columns defined by benchmark)", cxxopts::value<bool>()->default_value(default_table_indexes))  // NOLINT(whitespace/line_length)
     ("scheduler", "Enable or disable the scheduler", cxxopts::value<bool>()->default_value("false"))
@@ -604,19 +604,18 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
   timestamp_stream << std::put_time(&local_time, "%Y-%m-%d %H:%M:%S");
 
   // clang-format off
-  auto compiler = std::stringstream{};
   #if defined(__clang__)
-    compiler << "clang " << __clang_major__ << "." << __clang_minor__ << "." << __clang_patchlevel__;
+    const auto compiler = std::format("clang {}.{}.{}", __clang_major__, __clang_minor__, __clang_patchlevel__);
   #elif defined(__GNUC__)
-    compiler << "gcc " << __GNUC__ << "." << __GNUC_MINOR__;
+    const auto compiler = std::format("gcc {}.{}", __GNUC__, __GNUC_MINOR__);
   #else
-    compiler << "unknown";
+    const auto compiler = "unknown";
   #endif
   // clang-format on
 
   return nlohmann::json{{"date", timestamp_stream.str()},
                         {"chunk_size", static_cast<ChunkOffset::base_type>(config.chunk_size)},
-                        {"compiler", compiler.str()},
+                        {"compiler", compiler},
                         {"build_type", HYRISE_DEBUG ? "debug" : "release"},
                         {"encoding", config.encoding_config.to_json()},
                         {"chunk_indexes", config.chunk_indexes},
@@ -630,7 +629,7 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
                         {"data_preparation_cores", config.data_preparation_cores},
                         {"verify", config.verify},
                         {"time_unit", "ns"},
-                        {"GIT-HASH", GIT_HEAD_SHA1 + std::string(GIT_IS_DIRTY ? "-dirty" : "")}};
+                        {"GIT-HASH", GIT_IS_DIRTY ? std::format("{}-dirty", GIT_HEAD_SHA1) : GIT_HEAD_SHA1}};
 }
 
 nlohmann::json BenchmarkRunner::_sql_to_json(const std::string& sql) {
@@ -675,11 +674,10 @@ void BenchmarkRunner::_snapshot_segment_access_counters(const std::string& momen
 
   ++_snapshot_id;
 
-  auto sql_builder = std::stringstream{};
-  sql_builder << "INSERT INTO benchmark_segments_log SELECT " << _snapshot_id << ", '" << moment_or_timestamp + "'"
-              << ", * FROM meta_segments WHERE table_name NOT LIKE 'benchmark%'";
-
-  SQLPipelineBuilder{sql_builder.str()}.create_pipeline().get_result_table();
+  const auto sql = std::format(
+      "INSERT INTO benchmark_segments_log SELECT {}, '{}', * FROM meta_segments WHERE table_name NOT LIKE 'benchmark%'",
+      _snapshot_id, moment_or_timestamp);
+  SQLPipelineBuilder{sql}.create_pipeline().get_result_table();
 }
 
 Duration BenchmarkRunner::_calculate_item_duration(const BenchmarkItemResult& result) const {

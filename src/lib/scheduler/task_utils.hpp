@@ -6,7 +6,7 @@
 
 namespace hyrise {
 
-enum class TaskVisitation { VisitPredecessors, DoNotVisitPredecessors };
+enum class TaskVisitation : uint8_t { VisitPredecessors, DoNotVisitPredecessors };
 
 /**
  * Calls the passed @param visitor on @param task and recursively on its PREDECESSORS. The visitor returns
@@ -40,7 +40,7 @@ void visit_tasks(const std::shared_ptr<Task>& task, Visitor visitor) {
   }
 }
 
-enum class TaskUpwardVisitation { VisitSuccessors, DoNotVisitSuccessors };
+enum class TaskUpwardVisitation : uint8_t { VisitSuccessors, DoNotVisitSuccessors };
 
 /**
  * Calls the passed @param visitor on @param task and recursively on its SUCCESSORS. The visitor returns

@@ -22,8 +22,8 @@
 
 namespace {
 
-using namespace hyrise;                 // NOLINT(build/namespaces)
-using namespace expression_functional;  // NOLINT(build/namespaces)
+using namespace hyrise;
+using namespace expression_functional;
 
 /**
  * This function reduces the group-by columns of @param aggregate_node for a given functional dependency (@param fd).
@@ -145,7 +145,7 @@ void DependentGroupByReductionRule::_apply_to_plan_without_subqueries(const std:
       column_ids.reserve(determinants.size());
       for (const auto& expression : determinants) {
         const auto column_id = find_expression_idx(*expression, initial_aggregate_output_expressions);
-        Assert(column_id, "Could not find column " + expression->as_column_name());
+        Assert(column_id, std::format("Could not find column '{}'.", expression->as_column_name()));
         column_ids.emplace_back(*column_id);
       }
       std::ranges::sort(column_ids);

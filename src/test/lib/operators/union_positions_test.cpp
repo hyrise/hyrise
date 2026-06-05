@@ -1,16 +1,23 @@
 #include <memory>
-#include <utility>
+#include <stdexcept>
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
+#include "expression/expression_functional.hpp"
 #include "hyrise.hpp"
 #include "operators/get_table.hpp"
 #include "operators/join_nested_loop.hpp"
 #include "operators/operator_join_predicate.hpp"
-#include "operators/print.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/union_positions.hpp"
+#include "storage/chunk.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/reference_segment.hpp"
+#include "storage/table_column_definition.hpp"
+#include "testing_assert.hpp"
+#include "types.hpp"
+#include "utils/load_table.hpp"
 
 namespace hyrise {
 

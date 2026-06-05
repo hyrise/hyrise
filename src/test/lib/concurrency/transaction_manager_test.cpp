@@ -1,9 +1,11 @@
 #include <algorithm>
+#include <optional>
+#include <unordered_set>
 #include <vector>
 
 #include "base_test.hpp"
-#include "concurrency/transaction_context.hpp"
 #include "hyrise.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 

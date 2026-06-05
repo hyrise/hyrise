@@ -366,7 +366,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
       // When materializing the first side (here: the build side), we do not yet have a Bloom filter. To keep the number
       // of code paths low, materialize_*_side always expects a Bloom filter. For the first step, we thus pass in a
       // Bloom filter that returns true for every probe.
-      materialize_build_side(ALL_TRUE_BLOOM_FILTER);
+      materialize_build_side(all_true_bloom_filter);
       _performance_data.set_step_runtime(OperatorSteps::BuildSideMaterializing, timer_materialization.lap());
       materialize_probe_side(build_side_bloom_filter);
       _performance_data.set_step_runtime(OperatorSteps::ProbeSideMaterializing, timer_materialization.lap());
@@ -374,7 +374,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
       // Here, we first materialize the probe side and use the resulting Bloom filter in the materialization of the
       // build side. Consequently, the Bloom filter later passed into build() will have no effect as it has already
       // been used here to filter non-matching values.
-      materialize_probe_side(ALL_TRUE_BLOOM_FILTER);
+      materialize_probe_side(all_true_bloom_filter);
       _performance_data.set_step_runtime(OperatorSteps::ProbeSideMaterializing, timer_materialization.lap());
       materialize_build_side(probe_side_bloom_filter);
       _performance_data.set_step_runtime(OperatorSteps::BuildSideMaterializing, timer_materialization.lap());
@@ -441,7 +441,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
 
     /**
      * 3. Build hash tables.
-     *    In the case of semi or anti joins, we do not need to track all rows on the hashed side, just one per value.
+     *    In the case of semi-/anti-joins, we do not need to track all rows on the hashed side, just one per value.
      *    value. However, if we have secondary predicates, those might fail on that single row. In that case, we DO need
      *    all rows.
      *    We use the probe side's Bloom filter to exclude values from the hash table that will not be accessed in the

@@ -1,11 +1,14 @@
 #include "micro_benchmark_basic_fixture.hpp"
 
+#include <cstddef>
 #include <memory>
 
 #include "benchmark/benchmark.h"
 
 #include "hyrise.hpp"
+#include "micro_benchmark_utils.hpp"
 #include "operators/table_wrapper.hpp"
+#include "storage/encoding_type.hpp"
 #include "synthetic_table_generator.hpp"
 #include "types.hpp"
 
@@ -33,10 +36,6 @@ void MicroBenchmarkBasicFixture::SetUp(::benchmark::State& /*state*/) {
 
 void MicroBenchmarkBasicFixture::TearDown(::benchmark::State& /*state*/) {
   Hyrise::reset();
-}
-
-void MicroBenchmarkBasicFixture::_clear_cache() {
-  micro_benchmark_clear_cache();
 }
 
 }  // namespace hyrise

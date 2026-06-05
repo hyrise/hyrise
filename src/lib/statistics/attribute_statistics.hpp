@@ -22,8 +22,6 @@ template <typename T>
 class AttributeStatistics : public BaseAttributeStatistics,
                             public std::enable_shared_from_this<AttributeStatistics<T>> {
  public:
-  AttributeStatistics();
-
   void set_statistics_object(const std::shared_ptr<const AbstractStatisticsObject>& statistics_object) override;
 
   std::shared_ptr<const BaseAttributeStatistics> scaled(const Selectivity selectivity) const override;
@@ -35,6 +33,8 @@ class AttributeStatistics : public BaseAttributeStatistics,
   std::shared_ptr<const BaseAttributeStatistics> pruned(
       const size_t num_values_pruned, const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
       const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override;
+
+  DataType data_type() const override;
 
   std::shared_ptr<const AbstractHistogram<T>> histogram;
   std::shared_ptr<const MinMaxFilter<T>> min_max_filter;

@@ -13,8 +13,8 @@ class PredicateNode;
 
 /**
  * Heuristic rule pushing non-expensive predicates down as far as possible (to reduce the result set early on) and
- * pulling expensive predicates up as far as possible. For the purpose of this rule, single-predicate semi- and
- * anti-joins are treated as predicates, as well. We do not treat multi-predicate semi- and anti-joins as predicates.
+ * pulling expensive predicates up as far as possible. For the purpose of this rule, single-predicate semi-/anti-joins
+ * are treated as predicates, as well. We do not treat multi-predicate semi-/anti-joins as predicates.
  * Though they also filter the left input, we cannot use shortcuts in the join implementation, which makes them
  * equivalent to regular joins.
  *
