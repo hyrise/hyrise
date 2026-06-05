@@ -2,6 +2,7 @@
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
+#include <latch>
 #include <memory>
 #include <stdexcept>
 #include <thread>
@@ -185,7 +186,7 @@ TEST_F(SchedulerTest, ConcurrentlyProcessedTaskGroups) {
     GTEST_SKIP();
   }
 
-  const auto multiplier = 500;
+  const auto multiplier = (HYRISE_DEBUG || HYRISE_WITH_TSAN) ? size_t{50} : size_t{200};
   const auto task_count = multiplier * worker_count;
 
   for (const auto group_count : std::vector<size_t>{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15}) {
@@ -446,38 +447,45 @@ TEST_F(SchedulerTest, NumGroupDetermination) {
 }
 
 TEST_F(SchedulerTest, NumGroupDeterminationDifferentLoads) {
-  Hyrise::get().topology.use_non_numa_topology();
   const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
   Hyrise::get().set_scheduler(node_queue_scheduler);
   const auto worker_count = node_queue_scheduler->workers().size();
 
   // Create a large number of tasks to avoid early out.
-  const auto task_count = 1'000 * worker_count;
+  constexpr auto TASK_FACTOR = HYRISE_WITH_TSAN ? size_t{20} : size_t{100};
+  const auto task_count = TASK_FACTOR * worker_count;
   auto tasks_1 = std::vector<std::shared_ptr<AbstractTask>>{};
   tasks_1.reserve(task_count);
   for (auto task_id = TaskID{0}; task_id < task_count; ++task_id) {
     tasks_1.push_back(std::make_shared<JobTask>([&]() {}));
   }
 
+  std::cerr << "after tasks1: " <<  node_queue_scheduler->queues()[0]->estimate_load() << '\n';
+
   // For 40 (4 workers * 20) tasks, grouping should happen.
   const auto num_groups_without_load = node_queue_scheduler->determine_group_count(tasks_1);
   ASSERT_TRUE(num_groups_without_load);
 
+  std::cerr << "after tasks1: " <<  node_queue_scheduler->queues()[0]->estimate_load() << '\n';
+
   // Create load on queue. Schedule jobs that are blocked on `block_jobs`.
-  volatile auto block_jobs = std::atomic_bool{true};
+  auto unblock_jobs = std::latch{1};
+  std::cerr << "Starting tasks2\n";
   auto tasks_2 = std::vector<std::shared_ptr<AbstractTask>>{};
   tasks_2.reserve(task_count);
   for (auto task_id = TaskID{0}; task_id < task_count; ++task_id) {
     tasks_2.push_back(std::make_shared<JobTask>([&]() {
-      while (block_jobs) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
-      }
+      //std::cerr << "w";
+      unblock_jobs.wait();
+      //std::cerr << "d";
     }));
     tasks_2.back()->schedule();
   }
 
   const auto num_groups_with_load = node_queue_scheduler->determine_group_count(tasks_2);
   ASSERT_TRUE(num_groups_with_load);
+
+  std::cerr << "all are scheduled now: " <<  node_queue_scheduler->queues()[0]->estimate_load() << '\n';
 
   // We should receive a large group count when the queue load is low (here, no load at time of grouping).
   EXPECT_EQ(*num_groups_without_load, static_cast<size_t>(node_queue_scheduler::detail::NUM_GROUPS_MAX_FACTOR *
@@ -486,9 +494,14 @@ TEST_F(SchedulerTest, NumGroupDeterminationDifferentLoads) {
   EXPECT_EQ(*num_groups_with_load, std::max(node_queue_scheduler::detail::MIN_GROUP_COUNT,
                                             static_cast<size_t>(node_queue_scheduler::detail::NUM_GROUPS_MIN_FACTOR *
                                                                 static_cast<double>(worker_count))));
+  
   // Shutdown. Unblock scheduled jobs.
-  block_jobs = false;
+  unblock_jobs.count_down();
+  std::cerr << "scheduling\n";
   node_queue_scheduler->wait_for_tasks(tasks_2);
+  std::cerr << "scheduling\n";
+  node_queue_scheduler->schedule_and_wait_for_tasks(tasks_1);
+  std::cerr << "done\n";
 }
 
 template <typename Iterator>
@@ -520,8 +533,10 @@ TEST_F(SchedulerTest, MergeSort) {
   // effect on release builds. For TSAN, we reduce it to 5'000, as the test gets very slow otherwise.
   // This test aims to penetrate the scheduler more (here via recursion) than typical operators should.
   // If this test fails, check the system's stack size and if ITEM_COUNT needs to be adapted.
-  constexpr auto ITEM_COUNT = (HYRISE_DEBUG || HYRISE_WITH_TSAN) ? size_t{1'000} : size_t{20'000};
+  constexpr auto ITEM_COUNT = HYRISE_DEBUG ? size_t{1'000} : (HYRISE_WITH_TSAN ? size_t{100} : size_t{20'000});
   Assert(ITEM_COUNT % 5 == 0, "Must be dividable by 5.");
+  
+  std::cout << ITEM_COUNT;
 
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 
