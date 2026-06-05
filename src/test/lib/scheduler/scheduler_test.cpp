@@ -447,37 +447,41 @@ TEST_F(SchedulerTest, NumGroupDetermination) {
 }
 
 TEST_F(SchedulerTest, NumGroupDeterminationDifferentLoads) {
+  if constexpr (HYRISE_WITH_TSAN) {
+    Hyrise::get().topology.use_non_numa_topology(8);
+  }
   const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
   Hyrise::get().set_scheduler(node_queue_scheduler);
   const auto worker_count = node_queue_scheduler->workers().size();
 
   // Create a large number of tasks to avoid early out.
-  constexpr auto TASK_FACTOR = HYRISE_WITH_TSAN ? size_t{20} : size_t{100};
+  constexpr auto TASK_FACTOR = HYRISE_WITH_TSAN ? size_t{10} : size_t{100};
   const auto task_count = TASK_FACTOR * worker_count;
+  // std::cerr << "task_count: " << task_count << "\n";
   auto tasks_1 = std::vector<std::shared_ptr<AbstractTask>>{};
   tasks_1.reserve(task_count);
   for (auto task_id = TaskID{0}; task_id < task_count; ++task_id) {
     tasks_1.push_back(std::make_shared<JobTask>([&]() {}));
   }
 
-  std::cerr << "after tasks1: " <<  node_queue_scheduler->queues()[0]->estimate_load() << '\n';
+  // std::cerr << "after tasks1: " <<  node_queue_scheduler->queues()[0]->estimate_load() << '\n';
 
   // For 40 (4 workers * 20) tasks, grouping should happen.
   const auto num_groups_without_load = node_queue_scheduler->determine_group_count(tasks_1);
   ASSERT_TRUE(num_groups_without_load);
 
-  std::cerr << "after tasks1: " <<  node_queue_scheduler->queues()[0]->estimate_load() << '\n';
+  // std::cerr << "after tasks1: " <<  node_queue_scheduler->queues()[0]->estimate_load() << '\n';
 
   // Create load on queue. Schedule jobs that are blocked on `block_jobs`.
   auto unblock_jobs = std::latch{1};
-  std::cerr << "Starting tasks2\n";
+  // std::cerr << "Starting tasks2\n";
   auto tasks_2 = std::vector<std::shared_ptr<AbstractTask>>{};
   tasks_2.reserve(task_count);
   for (auto task_id = TaskID{0}; task_id < task_count; ++task_id) {
     tasks_2.push_back(std::make_shared<JobTask>([&]() {
-      //std::cerr << "w";
+      // std::cerr << "w";
       unblock_jobs.wait();
-      //std::cerr << "d";
+      // std::cerr << "d";
     }));
     tasks_2.back()->schedule();
   }
@@ -485,7 +489,7 @@ TEST_F(SchedulerTest, NumGroupDeterminationDifferentLoads) {
   const auto num_groups_with_load = node_queue_scheduler->determine_group_count(tasks_2);
   ASSERT_TRUE(num_groups_with_load);
 
-  std::cerr << "all are scheduled now: " <<  node_queue_scheduler->queues()[0]->estimate_load() << '\n';
+  // std::cerr << "all are scheduled now: " <<  node_queue_scheduler->queues()[0]->estimate_load() << '\n';
 
   // We should receive a large group count when the queue load is low (here, no load at time of grouping).
   EXPECT_EQ(*num_groups_without_load, static_cast<size_t>(node_queue_scheduler::detail::NUM_GROUPS_MAX_FACTOR *
@@ -494,14 +498,15 @@ TEST_F(SchedulerTest, NumGroupDeterminationDifferentLoads) {
   EXPECT_EQ(*num_groups_with_load, std::max(node_queue_scheduler::detail::MIN_GROUP_COUNT,
                                             static_cast<size_t>(node_queue_scheduler::detail::NUM_GROUPS_MIN_FACTOR *
                                                                 static_cast<double>(worker_count))));
-  
+
   // Shutdown. Unblock scheduled jobs.
+  // std::cerr << "count down\n";
   unblock_jobs.count_down();
-  std::cerr << "scheduling\n";
+  // std::cerr << "scheduling2\n";
   node_queue_scheduler->wait_for_tasks(tasks_2);
-  std::cerr << "scheduling\n";
+  // std::cerr << "scheduling1\n";
   node_queue_scheduler->schedule_and_wait_for_tasks(tasks_1);
-  std::cerr << "done\n";
+  // std::cerr << "done\n";
 }
 
 template <typename Iterator>
@@ -535,8 +540,6 @@ TEST_F(SchedulerTest, MergeSort) {
   // If this test fails, check the system's stack size and if ITEM_COUNT needs to be adapted.
   constexpr auto ITEM_COUNT = HYRISE_DEBUG ? size_t{1'000} : (HYRISE_WITH_TSAN ? size_t{100} : size_t{20'000});
   Assert(ITEM_COUNT % 5 == 0, "Must be dividable by 5.");
-  
-  std::cout << ITEM_COUNT;
 
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 

@@ -23,7 +23,6 @@
 #include "utils/assert.hpp"
 #include "worker.hpp"
 
-
 namespace hyrise {
 
 using namespace node_queue_scheduler::detail;
