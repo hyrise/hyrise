@@ -276,13 +276,12 @@ std::optional<size_t> NodeQueueScheduler::determine_group_count(
   // revisited (see check for common NodeID in _group_tasks()).
   const auto first_task_node_id = tasks[0]->node_id();
 
-  // Ensure shortcuts taken below to test for node_id are valid.
-  DebugAssert(INVALID_NODE_ID == std::numeric_limits<NodeID::base_type>::max(),
-              "Unexpected value for INVALID_NODE_ID.");
-  DebugAssert(CURRENT_NODE_ID == INVALID_NODE_ID - 1, "Unexpected value for CURRENT_NODE_ID.");
+  // Ensure check below (first_task_node_id >= CURRENT_NODE_ID) is valid.
+  static_assert(INVALID_NODE_ID == std::numeric_limits<NodeID::base_type>::max(),
+                "Unexpected value for INVALID_NODE_ID.");
+  static_assert(CURRENT_NODE_ID == INVALID_NODE_ID - 1, "Unexpected value for CURRENT_NODE_ID.");
 
-  const auto node_id_for_queue_check =
-      (first_task_node_id >= CURRENT_NODE_ID) ? determine_queue_id(first_task_node_id) : first_task_node_id;
+  const auto node_id_for_queue_check = determine_queue_id(first_task_node_id);
   const auto queue_load = static_cast<double>(_queues[node_id_for_queue_check]->estimate_load());
 
   const auto group_count =
