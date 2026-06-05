@@ -277,11 +277,8 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& table, c
                                     std::vector<std::vector<size_t>>& histograms, const size_t radix_bits,
                                     BloomFilter& output_bloom_filter,
                                     const BloomFilter& input_bloom_filter = all_true_bloom_filter) {
-  // Retrieve input chunk_count as it might change during execution if we work on a non-reference table
-  auto chunk_count = in_table->chunk_count();
-
-  const std::hash<HashedType> hash_function;
-  // List of all elements that will be partitioned
+  const auto hash_function = std::hash<HashedType>{};
+  // List of all elements that will be partitioned.
   auto radix_container = RadixContainer<T>{};
 
   // Fan-out
