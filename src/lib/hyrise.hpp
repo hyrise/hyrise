@@ -24,9 +24,9 @@ class BenchmarkRunner;
 // always call `Hyrise::get()` to access fields in this singleton.
 class Hyrise : public Singleton<Hyrise> {
  public:
-  // Resets the Hyrise state by deleting its members (e.g., StorageManager) and
-  // creating new ones. This is used especially in tests and can lead to a lot of
-  // issues if there are still running tasks / threads that want to access a resource.
+  // Resets the Hyrise state by deleting its members (e.g., StorageManager) and creating new ones. This is used
+  // especially in tests and can lead to a lot of issues if there are still running tasks / threads that want to access
+  // a resource.
   // You should be very sure that this is what you want.
   static void reset();
 
@@ -63,8 +63,8 @@ class Hyrise : public Singleton<Hyrise> {
   std::shared_ptr<SQLPhysicalPlanCache> default_pqp_cache;
   std::shared_ptr<SQLLogicalPlanCache> default_lqp_cache;
 
-  // The BenchmarkRunner is available here so that non-benchmark components can add information to the benchmark
-  // result JSON.
+  // The BenchmarkRunner is available here so that non-benchmark components can add information to the benchmark result
+  // JSON.
   std::weak_ptr<BenchmarkRunner> benchmark_runner;
 
  private:
