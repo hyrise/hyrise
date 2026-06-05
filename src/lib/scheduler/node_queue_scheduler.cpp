@@ -54,7 +54,7 @@ void NodeQueueScheduler::begin() {
       std::max(size_t{2 * MIN_GROUP_COUNT},
                static_cast<size_t>(2.0 * static_cast<double>(_worker_count) * NUM_GROUPS_MIN_FACTOR));
 
-  // Starting from a queue load of `_queue_load_capped`, we use the minimal group count.
+  // Starting from a queue load of _queue_load_capped, we use the minimal group count.
   _queue_load_capped = static_cast<double>(std::max(size_t{8}, UPPER_LIMIT_QUEUE_SIZE_FACTOR * _worker_count));
 
   _min_group_count =
@@ -65,7 +65,7 @@ void NodeQueueScheduler::begin() {
   _step_size = (_max_group_count - _min_group_count) / _queue_load_capped;
   Assert((_step_size * _queue_load_capped) == (_max_group_count - _min_group_count), "...");
 
-  // For every task list of size >= `_regrouping_upper_limit`, we use the minimal value for grouping. For 64 workers, a
+  // For every task list of size >= _regrouping_upper_limit, we use the minimal value for grouping. For 64 workers, a
   // queue load of 640 (i.e., ~640 normal priority tasks) is enough to use the minimum number of groups.
   _regrouping_upper_limit = _worker_count * UPPER_LIMIT_QUEUE_SIZE_FACTOR;
 
