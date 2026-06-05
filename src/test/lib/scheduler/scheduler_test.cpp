@@ -106,8 +106,6 @@ class SchedulerTest : public BaseTest {
     task3->schedule();
     task1->schedule();
     task2->schedule();
-
-    Hyrise::get().scheduler()->finish();
   }
 
   void increment_counter_in_subtasks(std::atomic_uint32_t& counter) {

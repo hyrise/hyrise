@@ -114,6 +114,11 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
       const auto segment_iterable = create_any_segment_iterable<T>(*referenced_segment);
       segment_iterable.with_iterators(position_filter, functor);
     } else {
+      const auto& position_filter = _segment.pos_list();
+      // std::cerr << std::format("(RSIposlist:{})", position_filter->size());
+      // for (const auto p : *position_filter) {
+      //   std::cerr << "(" << p << ")";
+      // }
       using Accessors = std::vector<std::pair<bool, std::shared_ptr<AbstractSegmentAccessor<T>>>>;
 
       auto accessors = std::make_shared<Accessors>(referenced_table->chunk_count());
@@ -187,7 +192,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
     SegmentPosition<T> dereference() const {
       const auto pos_list_offset = static_cast<ChunkOffset>(_pos_list_it - _begin_pos_list_it);
 
-      if (_pos_list_it->is_null()) {
+      if (_pos_list_it->is_null()) [[unlikely]] {
         return SegmentPosition<T>{T{}, true, pos_list_offset};
       }
 
@@ -197,17 +202,21 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
         _create_accessor(chunk_id);
       }
 
-      const auto chunk_offset = _pos_list_it->chunk_offset;
-
-      const auto prefetch_iter = _pos_list_it + 32;
       const auto& accessor = (*_accessors)[chunk_id];
-      if (accessor.first && prefetch_iter < _end_pos_list_it) {
-        accessor.second->prefetch(prefetch_iter->chunk_offset);
+      if (accessor.first) {
+        const auto prefetch_iter = _pos_list_it + 16;
+        if (prefetch_iter < _end_pos_list_it) [[likely]] {
+          const auto prefetch_offset = prefetch_iter->chunk_offset;
+          if (prefetch_offset != INVALID_CHUNK_OFFSET) [[likely]] {
+            accessor.second->prefetch(prefetch_iter->chunk_offset);
+          }
+        }
       }
 
+      const auto chunk_offset = _pos_list_it->chunk_offset;
       const auto typed_value = accessor.second->access(chunk_offset);
 
-      if (typed_value) {
+      if (typed_value) [[likely]] {
         return SegmentPosition<T>{std::move(*typed_value), false, pos_list_offset};
       }
       return SegmentPosition<T>{T{}, true, pos_list_offset};

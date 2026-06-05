@@ -53,16 +53,24 @@ class SegmentAccessor final : public AbstractSegmentAccessor<T> {
   SegmentAccessor& operator=(const SegmentAccessor&) = delete;
   SegmentAccessor& operator=(SegmentAccessor&&) = delete;
 
-  explicit SegmentAccessor(const SegmentType& segment) : AbstractSegmentAccessor<T>{}, _segment{segment} {}
+  explicit SegmentAccessor(const SegmentType& segment) : AbstractSegmentAccessor<T>{}, _segment{segment} {
+    if constexpr (std::is_same_v<SegmentType, ValueSegment<T>>) {
+     _ptr = const_cast<T*>(_segment.values().data());
+   }
+  }
 
   std::optional<T> access(ChunkOffset offset) const final {
     ++_accesses;
+    // if constexpr (std::is_same_v<SegmentType, ValueSegment<T>>) {
+      // std::cerr << std::format("(acc_o:{}-v:{}-ptr:", static_cast<size_t>(offset), _ptr[offset]) << &_ptr[offset] << ")";
+    // }
     return _segment.get_typed_value(offset);
   }
 
-  void prefetch(ChunkOffset offset) const final {
+  void prefetch(ChunkOffset offset) const override final {
     if constexpr (std::is_same_v<SegmentType, ValueSegment<T>>) {
-      __builtin_prefetch(&_segment.values()[offset], 0, 0);
+      // std::cerr << std::format("(pref_o:{}-v:{}-ptr:", static_cast<size_t>(offset), _ptr[offset]) << &_ptr[offset] << ")";
+      __builtin_prefetch(&_ptr[offset], 0, 0);
     }
   }
 
@@ -73,10 +81,11 @@ class SegmentAccessor final : public AbstractSegmentAccessor<T> {
  protected:
   mutable uint64_t _accesses{0};
   const SegmentType& _segment;
+  T* _ptr;
 };
 
 /**
- * For ReferenceSegments, we don't use the SegmentAccessor but either the MultipleChunkReferenceSegmentAccessor or the.
+ * For ReferenceSegments, we do not use the SegmentAccessor but either the MultipleChunkReferenceSegmentAccessor or the
  * SingleChunkReferenceSegmentAccessor. The first one is generally applicable. However, we will have more overhead,
  * because we cannot be sure that two consecutive offsets reference the same chunk. In the
  * SingleChunkReferenceSegmentAccessor, we know that the same chunk is referenced, so we create the accessor only once.
