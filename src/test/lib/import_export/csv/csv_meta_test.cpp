@@ -28,7 +28,7 @@ TEST_F(CsvMetaTest, JsonSyntaxError) {
   EXPECT_THROW(process_csv_meta_file("resources/test_data/csv/json_syntax_error.csv.json"), nlohmann::json::exception);
 }
 
-TEST_F(CsvMetaTest, ParseConfigOnlySingleCharacters) {
+TEST_F(CsvMetaTest, CsvParseConfigOnlySingleCharacters) {
   auto json_meta = nlohmann::json::parse(R"(
     {
       "columns": [

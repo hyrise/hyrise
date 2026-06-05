@@ -9,7 +9,7 @@
 
 namespace hyrise {
 
-void BaseCsvConverter::unescape(std::string& field, const ParseConfig& config) {
+void BaseCsvConverter::unescape(std::string& field, const CsvParseConfig& config) {
   // String does not contain escaping if it is not surrounded with quotes
   if (field.empty() || field.front() != config.quote) {
     return;
@@ -41,7 +41,7 @@ void BaseCsvConverter::unescape(std::string& field, const ParseConfig& config) {
   field = std::move(unescaped_string);
 }
 
-std::string BaseCsvConverter::unescape_copy(const std::string& field, const ParseConfig& config) {
+std::string BaseCsvConverter::unescape_copy(const std::string& field, const CsvParseConfig& config) {
   auto field_copy = field;
   unescape(field_copy, config);
   return field_copy;
