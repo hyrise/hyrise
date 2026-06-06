@@ -1,3 +1,6 @@
+#include <memory>
+#include <vector>
+
 #include "base_test.hpp"
 #include "hyrise.hpp"
 #include "operators/table_wrapper.hpp"
