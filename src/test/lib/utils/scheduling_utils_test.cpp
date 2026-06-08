@@ -27,11 +27,11 @@ TEST_F(SchedulingUtilsTest, SingleThreadedGrouping) {
   if constexpr (HYRISE_DEBUG) {
     const auto [jobs, chunk_ids] = group_chunks_for_scheduling(table, [&](auto, auto) {});
     EXPECT_EQ(jobs.size(), CHUNK_COUNT);
-    EXPECT_EQ(chunk_ids->size(), table->chunk_count());
+    EXPECT_EQ(chunk_ids.size(), table->chunk_count());
   } else {
     const auto [jobs, chunk_ids] = group_chunks_for_scheduling(table, [&](auto, auto) {});
     EXPECT_EQ(jobs.size(), 1);
-    EXPECT_EQ(chunk_ids->size(), table->chunk_count());
+    EXPECT_EQ(chunk_ids.size(), table->chunk_count());
   }
 }
 
@@ -52,37 +52,26 @@ TEST_F(SchedulingUtilsTest, MultiThreadedGrouping) {
     ++sum;
     EXPECT_EQ(CHUNK_COUNT / THREAD_COUNT, chunks.size());
 
-    std::stringstream s;
-    s << "(";
-    s << chunks.data() << "@" << chunks.size() << "_";
     for (const auto chunk_id : chunks) {
-      s << chunk_id << " = ";
-      chunk_markers[chunk_id] = 17;
+      chunk_markers[chunk_id] = chunk_id;
     }
-    s << ")\n";
-    std::cerr << s.str();
 
     ASSERT_FALSE(group_markers.empty());
     // As we resize to the returned group size before spawning the jobs, this write should be safe.
-    group_markers[group_id] = 17;
+    group_markers[group_id] = group_id;
   });
   const auto group_count = jobs.size();
   group_markers.resize(group_count);
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 
-  for (auto x : *chunk_ids) {
-    std::cout << x << " = ";
-  }
-
-  EXPECT_EQ(chunk_ids->size(), table->chunk_count());
+  EXPECT_EQ(chunk_ids.size(), table->chunk_count());
   EXPECT_EQ(group_count, THREAD_COUNT);
   EXPECT_EQ(group_count, sum);
-  for (const auto& marker : group_markers) {
-    EXPECT_EQ(marker, 17);
+  for (auto marker_index = size_t{0}; marker_index < group_markers.size(); ++marker_index) {
+    EXPECT_EQ(group_markers[marker_index], marker_index);
   }
-
-  for (const auto& marker : chunk_markers) {
-    EXPECT_EQ(marker, 17);
+  for (auto chunk_index = size_t{0}; chunk_index < chunk_markers.size(); ++chunk_index) {
+    EXPECT_EQ(chunk_markers[chunk_index], chunk_index);
   }
 }
 

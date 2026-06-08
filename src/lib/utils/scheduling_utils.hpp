@@ -80,13 +80,7 @@ TaskBatchingResult group_chunks_for_scheduling(const std::shared_ptr<const Table
     jobs.emplace_back(std::make_shared<JobTask>([&, group_id, first, last, owned_functor]() {
       owned_functor(group_id, std::span(first, last));
     }));
-    std::stringstream s;
-    s << "((<<";
-    for (auto x : std::span(first, last)) {
-      s << x << "-";
-    }
-    s << ">>))\n";
-    std::cerr << s.str() << std::endl;
+
     chunk_ids_start_offset = chunk_ids.size();
     group_size = 0;
     ++group_id;
