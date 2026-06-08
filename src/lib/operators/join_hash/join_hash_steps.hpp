@@ -299,7 +299,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& table, c
     return radix_container;
   }
 
-  const auto [jobs, _] = batch_chunks_for_scheduling(table, [&](size_t group_id, std::span<ChunkID>&& chunk_ids) {
+  const auto [jobs, _] = batch_chunks_for_scheduling(table, [&](size_t group_id, const std::span<ChunkID> chunk_ids) {
     auto local_output_bloom_filter = BloomFilter{};
     std::reference_wrapper<BloomFilter> used_output_bloom_filter = output_bloom_filter;
     if (Hyrise::get().is_multi_threaded()) {

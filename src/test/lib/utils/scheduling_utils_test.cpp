@@ -48,7 +48,7 @@ TEST_F(SchedulingUtilsTest, MultiThreadedGrouping) {
   auto sum = std::atomic<size_t>{0};
   auto group_markers = std::vector<size_t>{};
   auto chunk_markers = std::vector<size_t>(CHUNK_COUNT);
-  const auto [jobs, chunk_ids] = batch_chunks_for_scheduling(table, [&](const auto group_id, auto&& chunks) {
+  const auto [jobs, chunk_ids] = batch_chunks_for_scheduling(table, [&](const auto group_id, const auto chunks) {
     ++sum;
     EXPECT_EQ(CHUNK_COUNT / THREAD_COUNT, chunks.size());
 
