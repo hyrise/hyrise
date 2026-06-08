@@ -299,9 +299,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& table, c
     return radix_container;
   }
 
-  const auto jobs = group_chunks_for_scheduling(table, [&](size_t group_id,
-                                                           std::shared_ptr<boost::container::small_vector<ChunkID, 1>>
-                                                               chunk_ids) {
+  const auto [jobs, _] = group_chunks_for_scheduling(table, [&](size_t group_id, std::span<ChunkID> chunk_ids) {
     auto local_output_bloom_filter = BloomFilter{};
     std::reference_wrapper<BloomFilter> used_output_bloom_filter = output_bloom_filter;
     if (Hyrise::get().is_multi_threaded()) {
@@ -310,11 +308,11 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& table, c
       used_output_bloom_filter = local_output_bloom_filter;
     }
 
-    // Gather shared pointers to chunks and overall row count for chunks to process.
+    // Gather shared pointers to chunks (ensure their lifetime) and overall row count for chunks to process.
     auto row_count = int64_t{0};
     auto chunks = std::vector<std::pair<ChunkID, std::shared_ptr<const Chunk>>>{};
-    chunks.reserve(chunk_ids->size());
-    for (const auto chunk_id : *chunk_ids) {
+    chunks.reserve(chunk_ids.size());
+    for (const auto chunk_id : chunk_ids) {
       auto chunk = table->get_chunk(chunk_id);
       // Skip chunks that were physically deleted.
       if (!chunk) {

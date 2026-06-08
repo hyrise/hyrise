@@ -25,11 +25,13 @@ TEST_F(SchedulingUtilsTest, SingleThreadedGrouping) {
   EXPECT_EQ(table->chunk_count(), CHUNK_COUNT);
 
   if constexpr (HYRISE_DEBUG) {
-    const auto jobs = group_chunks_for_scheduling(table, [&](auto, auto) {});
+    const auto [jobs, chunk_ids] = group_chunks_for_scheduling(table, [&](auto, auto) {});
     EXPECT_EQ(jobs.size(), CHUNK_COUNT);
+    EXPECT_EQ(chunk_ids->size(), table->chunk_count());
   } else {
-    const auto jobs = group_chunks_for_scheduling(table, [&](auto, auto) {});
+    const auto [jobs, chunk_ids] = group_chunks_for_scheduling(table, [&](auto, auto) {});
     EXPECT_EQ(jobs.size(), 1);
+    EXPECT_EQ(chunk_ids->size(), table->chunk_count());
   }
 }
 
@@ -44,26 +46,44 @@ TEST_F(SchedulingUtilsTest, MultiThreadedGrouping) {
   EXPECT_EQ(table->chunk_count(), CHUNK_COUNT);
 
   auto sum = std::atomic<size_t>{0};
-  auto markers = std::vector<size_t>{};
-  const auto jobs = group_chunks_for_scheduling(table, [&](const auto group_id, const auto chunks) {
+  auto group_markers = std::vector<size_t>{};
+  auto chunk_markers = std::vector<size_t>(CHUNK_COUNT);
+  const auto [jobs, chunk_ids] = group_chunks_for_scheduling(table, [&](const auto group_id, auto&& chunks) {
     ++sum;
-    EXPECT_EQ(CHUNK_COUNT / THREAD_COUNT, chunks->size());
+    EXPECT_EQ(CHUNK_COUNT / THREAD_COUNT, chunks.size());
 
-    ASSERT_FALSE(markers.empty());
+    std::stringstream s;
+    s << "(";
+    s << chunks.data() << "@" << chunks.size() << "_";
+    for (const auto chunk_id : chunks) {
+      s << chunk_id << " = ";
+      chunk_markers[chunk_id] = 17;
+    }
+    s << ")\n";
+    std::cerr << s.str();
+
+    ASSERT_FALSE(group_markers.empty());
     // As we resize to the returned group size before spawning the jobs, this write should be safe.
-    markers[group_id] = 17;
+    group_markers[group_id] = 17;
   });
   const auto group_count = jobs.size();
-  markers.resize(group_count);
+  group_markers.resize(group_count);
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 
+  for (auto x : *chunk_ids) {
+    std::cout << x << " = ";
+  }
+
+  EXPECT_EQ(chunk_ids->size(), table->chunk_count());
   EXPECT_EQ(group_count, THREAD_COUNT);
   EXPECT_EQ(group_count, sum);
-  for (const auto& marker : markers) {
+  for (const auto& marker : group_markers) {
     EXPECT_EQ(marker, 17);
   }
 
-  Hyrise::get().scheduler()->finish();
+  for (const auto& marker : chunk_markers) {
+    EXPECT_EQ(marker, 17);
+  }
 }
 
 }  // namespace hyrise

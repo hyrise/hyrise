@@ -11,9 +11,16 @@
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
+#include "storage/table.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
+
+struct TaskBatchingResult {
+  std::vector<std::shared_ptr<AbstractTask>> jobs;
+  std::vector<ChunkID> chunk_ids;
+};
 
 /**
  * EXPLAIN THAT NORMALLY, SCAN-LIKE PARALLELIZATION IS FINE ...
@@ -30,14 +37,14 @@ namespace hyrise {
  * scheduled.
  */
 template <typename Functor>
-std::vector<std::shared_ptr<AbstractTask>> group_chunks_for_scheduling(const std::shared_ptr<const Table>& table,
+TaskBatchingResult group_chunks_for_scheduling(const std::shared_ptr<const Table>& table,
                                                                        Functor&& functor) {
   const auto chunk_count = table->chunk_count();
   Assert(chunk_count > 0, "Tables without any chunks must be handled by the caller.");
 
   auto owned_functor = std::forward<Functor>(functor);
 
-  // If Hyrise is running single-threaded, we do not gain anything for grouping chunks but increase the coordination
+  // If Hyrise is running single-threaded, we do not gain anything by grouping chunks but increase the coordination
   // overhead afterwards. Thus, we use a single large group for all chunks. However, for testing we use one group per
   // chunk to make sure that the coordination afterwards is properly tested.
   auto group_count = HYRISE_DEBUG ? size_t{chunk_count} : size_t{1};
@@ -53,37 +60,52 @@ std::vector<std::shared_ptr<AbstractTask>> group_chunks_for_scheduling(const std
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   jobs.reserve(group_count);
 
-  // We use Boost's small_vector with a size of one to ensure that we do not have any unneccessary heap allocations for
-  // transactional workloads (mostly few chunks processed).
-  auto task_items = std::make_shared<boost::container::small_vector<ChunkID, 1>>();
-  task_items->reserve(tasks_per_group);
+  auto chunk_ids = std::vector<ChunkID>{};
+  chunk_ids.reserve(chunk_count);
+  auto chunk_ids_start_offset = size_t{0};
+  auto group_size = size_t{0};
   auto group_id = size_t{0};
 
   // The concurrent vector of chunks in a table does not allow us to use something like `views::chunk()`.
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-    task_items->push_back(chunk_id);
+    chunk_ids.push_back(chunk_id);
+    ++group_size;
 
-    if (task_items->size() == tasks_per_group) {
-      jobs.emplace_back(std::make_shared<JobTask>([&, group_id, task_items, owned_functor]() {
-        owned_functor(group_id, std::move(task_items));
-      }));
-      task_items = std::make_shared<boost::container::small_vector<ChunkID, 1>>();
-      task_items->reserve(tasks_per_group);
-      ++group_id;
+    if (group_size < tasks_per_group) {
+      continue;
     }
+
+    const auto first = chunk_ids.begin() + chunk_ids_start_offset;
+    const auto last = chunk_ids.end();
+    jobs.emplace_back(std::make_shared<JobTask>([&, group_id, first, last, owned_functor]() {
+      owned_functor(group_id, std::span(first, last));
+    }));
+    std::stringstream s;
+    s << "((<<";
+    for (auto x : std::span(first, last)) {
+      s << x << "-";
+    }
+    s << ">>))\n";
+    std::cerr << s.str() << std::endl;
+    chunk_ids_start_offset = chunk_ids.size();
+    group_size = 0;
+    ++group_id;
   }
 
-  if (!task_items->empty()) {
-    jobs.emplace_back(std::make_shared<JobTask>([&, group_id, task_items, owned_functor]() {
-      owned_functor(group_id, std::move(task_items));
+  if (chunk_ids_start_offset < chunk_ids.size()) {
+    const auto first = chunk_ids.begin() + chunk_ids_start_offset;
+    const auto last = chunk_ids.end();
+    jobs.emplace_back(std::make_shared<JobTask>([&, group_id, first, last, owned_functor]() {
+      owned_functor(group_id, std::span(first, last));
     }));
     ++group_id;
   }
 
   DebugAssert(group_id == jobs.size(), "Group count unexpectedly deviates from number of created jobs.");
 
-  // No jobs have been scheduled at this point. It is up to the caller.
-  return jobs;
+  // No jobs have been scheduled at this point. Scheduling is up to the caller. We further pass chunk_ids along which
+  // needs to be kept alive as the jobs reference ChunkIDs in this vector.
+  return {.jobs = std::move(jobs), .chunk_ids = std::move(chunk_ids)};
 }
 
 }  // namespace hyrise
