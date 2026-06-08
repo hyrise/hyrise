@@ -128,7 +128,7 @@ try {
             mkdir clang-release-addr-ub-leak-sanitizers && cd clang-release-addr-ub-leak-sanitizers &&   ${cmake} ${release}        ${clang}   ${unity}           ${ninja} -DENABLE_ADDR_UB_LEAK_SANITIZATION=ON .. &\
             mkdir clang-relwithdebinfo-thread-sanitizer && cd clang-relwithdebinfo-thread-sanitizer &&   ${cmake} ${relwithdebinfo} ${clang}   ${unity}           ${ninja} -DENABLE_THREAD_SANITIZATION=ON .. &\
             mkdir clang-release && cd clang-release &&                                                   ${cmake} ${release}        ${clang}   ${unity}           ${ninja} .. &\
-            mkdir gcc-debug && cd gcc-debug &&                                                           ${cmake} ${debug}          ${gcc}     ${unity}           ${ninja} .. &\
+            mkdir gcc-debug && cd gcc-debug &&                                                           ${cmake} ${debug}          ${gcc}                        ${ninja} .. &\
             mkdir gcc-release && cd gcc-release &&                                                       ${cmake} ${release}        ${gcc}     ${unity} ${no_lto} ${ninja} .. &\
             mkdir clang-19-debug && cd clang-19-debug &&                                                 ${cmake} ${debug}          ${clang19} ${unity}           ${ninja} .. &\
             mkdir gcc-13-debug && cd gcc-13-debug &&                                                     ${cmake} ${debug}          ${gcc13}   ${unity}           ${ninja} .. &\
