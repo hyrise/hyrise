@@ -4,6 +4,7 @@
 
 #include "hyrise.hpp"
 #include "operators/table_wrapper.hpp"
+#include "scheduler/node_queue_scheduler.hpp"
 #include "synthetic_table_generator.hpp"
 #include "types.hpp"
 #include "utils/scheduling_utils.hpp"
@@ -11,6 +12,12 @@
 namespace hyrise {
 
 static void BM_ChunkGroupingForScheduling(benchmark::State& state) {
+  const auto use_scheduler = static_cast<bool>(state.range(0));
+
+  if (use_scheduler) {
+    Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+  }
+
   constexpr auto CHUNK_COUNT = size_t{100'000};
   const auto table_generator = std::make_shared<SyntheticTableGenerator>();
 
@@ -18,14 +25,20 @@ static void BM_ChunkGroupingForScheduling(benchmark::State& state) {
 
   auto sum = size_t{0};
   for (auto _ : state) {
-    auto jobs = group_chunks_for_scheduling(table, [&](auto, auto) {
+    auto batching_result = batch_chunks_for_scheduling(table, [&](auto, auto) {
       ++sum;
     });
-    benchmark::DoNotOptimize(jobs);
+    benchmark::DoNotOptimize(batching_result);
     benchmark::DoNotOptimize(sum);
+  }
+
+  if (use_scheduler) {
+    Hyrise::get().scheduler()->finish();
   }
 }
 
-BENCHMARK(BM_ChunkGroupingForScheduling);
+BENCHMARK(BM_ChunkGroupingForScheduling)
+    ->Arg(0)  // single-threaded
+    ->Arg(1); // multi-threaded
 
 }  // namespace hyrise

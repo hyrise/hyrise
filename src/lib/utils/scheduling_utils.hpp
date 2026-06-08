@@ -37,7 +37,7 @@ struct TaskBatchingResult {
  * scheduled.
  */
 template <typename Functor>
-TaskBatchingResult group_chunks_for_scheduling(const std::shared_ptr<const Table>& table,
+TaskBatchingResult batch_chunks_for_scheduling(const std::shared_ptr<const Table>& table,
                                                                        Functor&& functor) {
   const auto chunk_count = table->chunk_count();
   Assert(chunk_count > 0, "Tables without any chunks must be handled by the caller.");

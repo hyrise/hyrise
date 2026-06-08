@@ -15,7 +15,7 @@ class SchedulingUtilsTest : public BaseTest {};
 
 TEST_F(SchedulingUtilsTest, NoChunksTableGrouping) {
   const auto empty_table = Table::create_dummy_table({{"a", DataType::Int, false}});
-  EXPECT_THROW(group_chunks_for_scheduling(empty_table, [&](auto, auto) {}), std::logic_error);
+  EXPECT_THROW(batch_chunks_for_scheduling(empty_table, [&](auto, auto) {}), std::logic_error);
 }
 
 TEST_F(SchedulingUtilsTest, SingleThreadedGrouping) {
@@ -25,11 +25,11 @@ TEST_F(SchedulingUtilsTest, SingleThreadedGrouping) {
   EXPECT_EQ(table->chunk_count(), CHUNK_COUNT);
 
   if constexpr (HYRISE_DEBUG) {
-    const auto [jobs, chunk_ids] = group_chunks_for_scheduling(table, [&](auto, auto) {});
+    const auto [jobs, chunk_ids] = batch_chunks_for_scheduling(table, [&](auto, auto) {});
     EXPECT_EQ(jobs.size(), CHUNK_COUNT);
     EXPECT_EQ(chunk_ids.size(), table->chunk_count());
   } else {
-    const auto [jobs, chunk_ids] = group_chunks_for_scheduling(table, [&](auto, auto) {});
+    const auto [jobs, chunk_ids] = batch_chunks_for_scheduling(table, [&](auto, auto) {});
     EXPECT_EQ(jobs.size(), 1);
     EXPECT_EQ(chunk_ids.size(), table->chunk_count());
   }
@@ -48,7 +48,7 @@ TEST_F(SchedulingUtilsTest, MultiThreadedGrouping) {
   auto sum = std::atomic<size_t>{0};
   auto group_markers = std::vector<size_t>{};
   auto chunk_markers = std::vector<size_t>(CHUNK_COUNT);
-  const auto [jobs, chunk_ids] = group_chunks_for_scheduling(table, [&](const auto group_id, auto&& chunks) {
+  const auto [jobs, chunk_ids] = batch_chunks_for_scheduling(table, [&](const auto group_id, auto&& chunks) {
     ++sum;
     EXPECT_EQ(CHUNK_COUNT / THREAD_COUNT, chunks.size());
 
