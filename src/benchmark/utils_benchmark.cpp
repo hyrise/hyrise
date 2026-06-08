@@ -38,7 +38,7 @@ static void BM_ChunkGroupingForScheduling(benchmark::State& state) {
 }
 
 BENCHMARK(BM_ChunkGroupingForScheduling)
-    ->Arg(0)  // single-threaded
-    ->Arg(1); // multi-threaded
+    ->Arg(0)   // Single-threaded
+    ->Arg(1);  // Multi-threaded
 
 }  // namespace hyrise
