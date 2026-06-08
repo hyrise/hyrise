@@ -75,7 +75,7 @@ TaskBatchingResult batch_chunks_for_scheduling(const std::shared_ptr<const Table
       continue;
     }
 
-    const auto first = chunk_ids.begin() + static_cast<size_t>(chunk_ids_start_offset);
+    const auto first = chunk_ids.begin() + static_cast<std::ptrdiff_t>(chunk_ids_start_offset);
     const auto last = chunk_ids.end();
     jobs.emplace_back(std::make_shared<JobTask>([&, group_id, first, last, owned_functor]() {
       owned_functor(group_id, std::span(first, last));
@@ -87,7 +87,7 @@ TaskBatchingResult batch_chunks_for_scheduling(const std::shared_ptr<const Table
   }
 
   if (chunk_ids_start_offset < chunk_ids.size()) {
-    const auto first = chunk_ids.begin() + static_cast<size_t>(chunk_ids_start_offset);
+    const auto first = chunk_ids.begin() + static_cast<std::ptrdiff_t>(chunk_ids_start_offset);
     const auto last = chunk_ids.end();
     jobs.emplace_back(std::make_shared<JobTask>([&, group_id, first, last, owned_functor]() {
       owned_functor(group_id, std::span(first, last));
