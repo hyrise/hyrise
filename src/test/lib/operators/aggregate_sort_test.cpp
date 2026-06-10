@@ -140,6 +140,32 @@ TEST_F(AggregateSortTest, SingleAggregateAvgSorted) {
   }
 }
 
+TEST_F(AggregateSortTest, SingleAggregateCountStarSorted) {
+  for (const auto& sort_by_column_id : {ColumnID{0}, ColumnID{1}}) {
+    const auto sort = std::make_shared<Sort>(
+        this->_table_wrapper_1, std::vector<SortColumnDefinition>{SortColumnDefinition{sort_by_column_id}});
+    sort->execute();
+    test_aggregate_output(sort, {{INVALID_COLUMN_ID, WindowFunction::Count}}, {ColumnID{0}},
+                          "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/count_star.tbl");
+  }
+}
+
+TEST_F(AggregateSortTest, MultiChunkSingleAggregateCountStarSorted) {
+  const auto aggregate_expressions =
+      std::vector<std::shared_ptr<WindowFunctionExpression>>{std::make_shared<WindowFunctionExpression>(
+          WindowFunction::Count, pqp_column_(INVALID_COLUMN_ID, DataType::Long, "*"))};
+  const auto groupby_column_ids = std::vector<ColumnID>{ColumnID{0}};
+
+  // NOTE: `_table_wrapper_1` spans two chunks.
+  const auto sorted_aggregate =
+      std::make_shared<AggregateSort>(this->_table_wrapper_1, aggregate_expressions, groupby_column_ids);
+  const auto hash_aggregate =
+      std::make_shared<AggregateHash>(this->_table_wrapper_1, aggregate_expressions, groupby_column_ids);
+  sorted_aggregate->execute();
+  hash_aggregate->execute();
+  EXPECT_TABLE_EQ_UNORDERED(sorted_aggregate->get_output(), hash_aggregate->get_output());
+}
+
 TEST_F(AggregateSortTest, AggregateMaxMultiColumnSorted) {
   // Test for sorted by each column.
   const auto input_table = this->_table_wrapper_multi_columns->get_output();
