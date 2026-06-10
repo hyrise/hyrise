@@ -3,6 +3,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <tuple>
 #include <type_traits>
@@ -275,7 +276,7 @@ TEST_F(OperatorsImportTest, CSVNeedsMetaFileOrPreexistingTable) {
 
   auto importer = std::make_shared<Import>(reference_filename, "a", Chunk::DEFAULT_SIZE);
 
-  EXPECT_THROW(importer->execute(), InvalidInputException);
+  EXPECT_THROW(importer->execute(), std::logic_error);
 }
 
 TEST_F(OperatorsImportTest, ExistingTableImmutable) {
