@@ -133,10 +133,18 @@ TEST_F(FixedStringTest, MoveWithOwnsMemoryTest) {
 TEST_F(FixedStringTest, SwapFixedString) {
   std::vector<char> char_vector = {'b', 'a', 'r'};
   auto fixed_string = FixedString(&char_vector[0], 3u);
-  fixed_string.swap(fixed_string1);
-  EXPECT_EQ(fixed_string1, "bar");
-  EXPECT_EQ(fixed_string, "foo");
+  auto fixed_string1_copy = FixedString(fixed_string1);
+  fixed_string.swap(fixed_string1_copy);
+  EXPECT_EQ(fixed_string1_copy.string(), "bar");
+  EXPECT_EQ(fixed_string.string(), "foo");
   // EXPECT_THROW(fixed_string1.swap(fixed_string2), std::logic_error);
+  if constexpr (!HYRISE_DEBUG) {
+    fixed_string2.swap(fixed_string1);
+    EXPECT_EQ(fixed_string1.string(), "bar");
+    EXPECT_EQ(fixed_string1.maximum_length(), 3);
+    EXPECT_EQ(fixed_string2.string(), "foo");
+    EXPECT_EQ(fixed_string2.maximum_length(), 6);
+  }
 }
 
 }  // namespace hyrise
