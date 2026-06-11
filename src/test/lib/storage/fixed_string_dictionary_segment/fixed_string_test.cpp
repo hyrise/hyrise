@@ -121,7 +121,7 @@ TEST_F(FixedStringTest, OutputToStream) {
   EXPECT_EQ(sstream.str().find("foo"), 0u);
 }
 
-TEST_F(FixedStringTest, MoveWithOwnsMemoryTest) {
+TEST_F(FixedStringTest, MoveWithOwnsMemory) {
   auto fixed_string = FixedString(fixed_string1);
   auto new_fixed_string = FixedString(fixed_string2);
   new_fixed_string = std::move(fixed_string);
@@ -137,7 +137,6 @@ TEST_F(FixedStringTest, SwapFixedString) {
   fixed_string.swap(fixed_string1_copy);
   EXPECT_EQ(fixed_string1_copy.string(), "bar");
   EXPECT_EQ(fixed_string.string(), "foo");
-  // EXPECT_THROW(fixed_string1.swap(fixed_string2), std::logic_error);
   if constexpr (!HYRISE_DEBUG) {
     fixed_string2.swap(fixed_string1);
     EXPECT_EQ(fixed_string1.string(), "bar");
