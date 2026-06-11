@@ -91,6 +91,21 @@ TEST_F(OperatorsPrintTest, TableColumnDefinitions) {
   EXPECT_TRUE(output_string.find("string") != std::string::npos);
 }
 
+TEST_F(OperatorsPrintTest, PrintEmptyChunk) {
+  auto tab = Hyrise::get().storage_manager.get_table(_table_name);
+  tab->append_mutable_chunk();
+
+  auto tw = std::make_shared<TableWrapper>(tab);
+  tw->execute();
+
+  auto pr = std::make_shared<Print>(tw, PrintFlags::None, output);
+  pr->execute();
+  
+  auto output_string = output.str();
+
+  EXPECT_TRUE(output_string.find("Empty chunk.") != std::string::npos);
+}
+
 TEST_F(OperatorsPrintTest, FilledTable) {
   const size_t chunk_count = 117;
   auto tab = Hyrise::get().storage_manager.get_table(_table_name);
