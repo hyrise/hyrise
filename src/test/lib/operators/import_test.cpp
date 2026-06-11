@@ -298,7 +298,7 @@ TEST_F(OperatorsImportTest, ExistingTableImmutable) {
   const auto importer = std::make_shared<Import>("resources/test_data/csv/float.csv", "a", ChunkOffset{2});
   importer->execute();
 
-  // The 1st chunk should be unchanged. The 2nd chunk should now be immutable.
+  // The 1st chunk should be unchanged. The 2nd chunk should now be immutable because of the import.
   EXPECT_FALSE(Hyrise::get().storage_manager.get_table("a")->get_chunk(ChunkID{0})->is_mutable());
   EXPECT_FALSE(Hyrise::get().storage_manager.get_table("a")->get_chunk(ChunkID{1})->is_mutable());
 
