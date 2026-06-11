@@ -121,4 +121,13 @@ TEST_F(FixedStringTest, OutputToStream) {
   EXPECT_EQ(sstream.str().find("foo"), 0u);
 }
 
+TEST_F(FixedStringTest, MoveWithOwnsMemoryTest) {
+  FixedString fixed_string = FixedString(fixed_string1);
+  FixedString new_fixed_string = FixedString(fixed_string2);
+  new_fixed_string = std::move(fixed_string);
+  EXPECT_EQ(new_fixed_string, fixed_string1);
+  // The maximum_length being set correctly implies that the move operator was successful.
+  EXPECT_EQ(new_fixed_string.maximum_length(), fixed_string1.maximum_length());
+}
+
 }  // namespace hyrise
