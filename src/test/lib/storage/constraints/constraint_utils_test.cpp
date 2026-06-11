@@ -175,10 +175,10 @@ TEST_F(ConstraintUtilsTest, CheckIfTableKeyConstraintIsKnownToBeInvalid) {
 
 TEST_F(ConstraintUtilsTest, CheckConstraintEqualityOperator) {
   EXPECT_EQ(TableKeyConstraint({ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY),
-    TableKeyConstraint({ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY));
+            TableKeyConstraint({ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY));
 
   EXPECT_NE(TableKeyConstraint({ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY),
-    TableKeyConstraint({ColumnID{0}, ColumnID{1}}, KeyConstraintType::UNIQUE));
+            TableKeyConstraint({ColumnID{0}, ColumnID{1}}, KeyConstraintType::UNIQUE));
 }
 
 }  // namespace hyrise
