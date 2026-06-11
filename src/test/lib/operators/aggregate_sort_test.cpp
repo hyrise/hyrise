@@ -159,11 +159,15 @@ TEST_F(AggregateSortTest, MultiChunkSingleAggregateCountStarSorted) {
   // NOTE: `_table_wrapper_1` spans two chunks.
   const auto sorted_aggregate =
       std::make_shared<AggregateSort>(this->_table_wrapper_1, aggregate_expressions, groupby_column_ids);
-  const auto hash_aggregate =
-      std::make_shared<AggregateHash>(this->_table_wrapper_1, aggregate_expressions, groupby_column_ids);
+
+  const auto expected_table = std::make_shared<Table>(
+      TableColumnDefinitions{{"a", DataType::Int, false}, {"COUNT(*)", DataType::Long, false}}, TableType::Data);
+  expected_table->append({AllTypeVariant{12}, AllTypeVariant{int64_t{1}}});
+  expected_table->append({AllTypeVariant{123}, AllTypeVariant{int64_t{1}}});
+  expected_table->append({AllTypeVariant{12345}, AllTypeVariant{int64_t{2}}});
+
   sorted_aggregate->execute();
-  hash_aggregate->execute();
-  EXPECT_TABLE_EQ_UNORDERED(sorted_aggregate->get_output(), hash_aggregate->get_output());
+  EXPECT_TABLE_EQ_UNORDERED(sorted_aggregate->get_output(), expected_table);
 }
 
 TEST_F(AggregateSortTest, AggregateMaxMultiColumnSorted) {

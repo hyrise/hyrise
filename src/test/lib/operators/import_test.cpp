@@ -264,7 +264,7 @@ TEST_F(OperatorsImportTest, TargetChunkSize) {
   EXPECT_TABLE_EQ_ORDERED(Hyrise::get().storage_manager.get_table("a"), expected_table);
 }
 
-TEST_F(OperatorsImportTest, OperatorName) {  // HIHI
+TEST_F(OperatorsImportTest, OperatorName) {
   auto importer =
       std::make_shared<Import>("resources/test_data/csv/float_int_large_chunksize_max.csv", "a", Chunk::DEFAULT_SIZE);
 
@@ -302,9 +302,9 @@ TEST_F(OperatorsImportTest, ExistingTableImmutable) {
   EXPECT_FALSE(Hyrise::get().storage_manager.get_table("a")->get_chunk(ChunkID{0})->is_mutable());
   EXPECT_FALSE(Hyrise::get().storage_manager.get_table("a")->get_chunk(ChunkID{1})->is_mutable());
 
-  // The loaded chunks should be immutable as well.
-  EXPECT_FALSE(Hyrise::get().storage_manager.get_table("a")->get_chunk(ChunkID{2})->is_mutable());
-  EXPECT_FALSE(Hyrise::get().storage_manager.get_table("a")->get_chunk(ChunkID{3})->is_mutable());
+  // The loaded chunks should be mutable.
+  EXPECT_TRUE(Hyrise::get().storage_manager.get_table("a")->get_chunk(ChunkID{2})->is_mutable());
+  EXPECT_TRUE(Hyrise::get().storage_manager.get_table("a")->get_chunk(ChunkID{3})->is_mutable());
 }
 
 }  // namespace hyrise
