@@ -2,10 +2,10 @@
 
 unamestr=$(uname)
 if [[ "$unamestr" == 'Darwin' ]]; then
-	clang_format="$(brew --prefix llvm)/bin/clang-format-21"
+	clang_format="$(brew --prefix llvm)/bin/clang-format"
 	format_cmd="$clang_format -i -style=file '{}'"
 elif [[ "$unamestr" == 'Linux' ]]; then
-	format_cmd="clang-format-21 -i -style=file '{}'"
+	format_cmd="clang-format -i -style=file '{}'"
 fi
 
 
