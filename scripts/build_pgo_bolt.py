@@ -49,10 +49,12 @@ parser.add_argument(
     "--time",
     type=int,
     default=3600,
-    help="The time to run each benchmark in seconds. The default value has been used in our evaluation and has "
-    "generated noticable optimization results. Keep in mind that this is the time for each of the five benchmarks, "
-    "which are first run for PGO and then another time for BOLT. The runtime of the script is, therefore, at least "
-    "10x this value, in practice longer.",
+    help=(
+        "The time to run each benchmark in seconds. The default value has been used in our evaluation and has "
+        "generated noticable optimization results. Keep in mind that this is the time for each of the five benchmarks, "
+        "which are first run for PGO and then another time for BOLT. The runtime of the script is, therefore, at least "
+        "10x this value, in practice longer."
+    ),
 )
 parser.add_argument(
     "-n",
@@ -66,23 +68,29 @@ parser.add_argument(
     "--ci",
     action=BooleanOptionalAction,
     default=False,
-    help="Whether this script is run in the CI. Improves runtime while reducing profile quality to an absolute "
-    "minimum. This is not intended for actual optimization, just to test the script.",
+    help=(
+        "Whether this script is run in the CI. Improves runtime while reducing profile quality to an absolute "
+        "minimum. This is not intended for actual optimization, just to test the script."
+    ),
 )
 parser.add_argument(
     "-e",
     "--export-profile",
     action=BooleanOptionalAction,
     default=False,
-    help="Do not build an optimized library, just benchmark and export the profile to the resources folder. Useful if "
-    "you want to reuse your profiles, or even store them in git.",
+    help=(
+        "Do not build an optimized library, just benchmark and export the profile to the resources folder. Useful if "
+        "you want to reuse your profiles, or even store them in git."
+    ),
 )
 parser.add_argument(
     "-i",
     "--import-profile",
     action=BooleanOptionalAction,
     default=False,
-    help="Do not run benchmarks, just import the profile data from the resources folder and build an optimized library.",
+    help=(
+        "Do not run benchmarks, just import the profile data from the resources folder and build an optimized library."
+    ),
 )
 parser.add_argument(
     "-p", "--pgo", action=BooleanOptionalAction, default=True, help="Use PGO for profiling / optimization."
