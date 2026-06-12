@@ -73,7 +73,7 @@ FixedString& FixedString::operator=(FixedString&& other) {
     // memory. So we just call the copy assignment operator instead.
     return *this = const_cast<const FixedString&>(other);
   }
-
+  delete[] _mem;
   _mem = other._mem;
   _maximum_length = other._maximum_length;
   other._mem = nullptr;
