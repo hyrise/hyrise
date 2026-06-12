@@ -33,8 +33,6 @@ TEST_F(PrintUtilsTest, print_directed_acyclic_graph) {
   // clang-format on
 
   // Functor to access the MockNode's inputs.
-  #pragma clang diagnostic push
-  #pragma clang diagnostic ignored "-Wnrvo"
   const auto get_inputs_fn = [](const auto& node) {
     std::vector<std::shared_ptr<const AbstractLQPNode>> inputs;
     if (node->left_input()) {
@@ -47,7 +45,6 @@ TEST_F(PrintUtilsTest, print_directed_acyclic_graph) {
 
     return inputs;
   };
-  #pragma clang diagnostic pop
 
   // Functor to print the MockNode's name.
   const auto node_print_fn = [](const auto& node, auto& stream) {

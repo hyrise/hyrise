@@ -58,45 +58,39 @@ void lqp_create_node_mapping_impl(LQPNodeMapping& mapping, const std::shared_ptr
 
 std::optional<LQPMismatch> lqp_find_structure_mismatch(const std::shared_ptr<const AbstractLQPNode>& lhs,
                                                        const std::shared_ptr<const AbstractLQPNode>& rhs) {
-  auto res = std::optional<LQPMismatch>{};
   if (!lhs && !rhs) {
-    return res;
+    return std::nullopt;
   }
 
   if (!(lhs && rhs) || lhs->type != rhs->type) {
-    res = LQPMismatch(lhs, rhs);
-    return res;
+    return LQPMismatch(lhs, rhs);
   }
 
-  res = lqp_find_structure_mismatch(lhs->left_input(), rhs->left_input());
-  if (res) {
-    return res;
+  auto mismatch_left = lqp_find_structure_mismatch(lhs->left_input(), rhs->left_input());
+  if (mismatch_left) {
+    return mismatch_left;
   }
 
-  res = lqp_find_structure_mismatch(lhs->right_input(), rhs->right_input());
-  return res;
+  return lqp_find_structure_mismatch(lhs->right_input(), rhs->right_input());
 }
 
 std::optional<LQPMismatch> lqp_find_subplan_mismatch_impl(const LQPNodeMapping& node_mapping,
                                                           const std::shared_ptr<const AbstractLQPNode>& lhs,
                                                           const std::shared_ptr<const AbstractLQPNode>& rhs) {
-  auto res = std::optional<LQPMismatch>{};
   if (!lhs && !rhs) {
-    return res;
+    return std::nullopt;
   }
 
   if (!lhs->shallow_equals(*rhs, node_mapping)) {
-    res = LQPMismatch(lhs, rhs);
-    return res;
+    return LQPMismatch(lhs, rhs);
   }
 
-  res = lqp_find_subplan_mismatch_impl(node_mapping, lhs->left_input(), rhs->left_input());
-  if (res) {
-    return res;
+  auto mismatch_left = lqp_find_subplan_mismatch_impl(node_mapping, lhs->left_input(), rhs->left_input());
+  if (mismatch_left) {
+    return mismatch_left;
   }
 
-  res = lqp_find_subplan_mismatch_impl(node_mapping, lhs->right_input(), rhs->right_input());
-  return res;
+  return lqp_find_subplan_mismatch_impl(node_mapping, lhs->right_input(), rhs->right_input());
 }
 
 void lqp_find_subplan_roots_impl(std::vector<std::shared_ptr<AbstractLQPNode>>& root_nodes,
@@ -169,8 +163,6 @@ void recursively_collect_lqp_subquery_expressions_by_lqp(
  * translated expressions to the translation of its children nodes, which allows to add the translated expression of
  * child node before its parent node to the output expression.
  */
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wnrvo"
 std::shared_ptr<AbstractExpression> lqp_subplan_to_boolean_expression_impl(
     const std::shared_ptr<AbstractLQPNode>& begin, const std::optional<const std::shared_ptr<AbstractLQPNode>>& end,
     const std::optional<const std::shared_ptr<AbstractExpression>>& subsequent_expression) {
@@ -214,7 +206,6 @@ std::shared_ptr<AbstractExpression> lqp_subplan_to_boolean_expression_impl(
       return nullptr;
   }
 }
-#pragma clang diagnostic pop
 
 }  // namespace
 
@@ -250,8 +241,7 @@ std::optional<LQPMismatch> lqp_find_subplan_mismatch(const std::shared_ptr<const
   const auto mutable_rhs = std::const_pointer_cast<AbstractLQPNode>(rhs);
   const auto node_mapping = lqp_create_node_mapping(mutable_lhs, mutable_rhs);
 
-  mismatch = lqp_find_subplan_mismatch_impl(node_mapping, lhs, rhs);
-  return mismatch;
+  return lqp_find_subplan_mismatch_impl(node_mapping, lhs, rhs);
 }
 
 void lqp_replace_node(const std::shared_ptr<AbstractLQPNode>& original_node,
@@ -517,8 +507,6 @@ std::vector<std::shared_ptr<AbstractExpression>> get_expressions_for_column_ids(
   return column_expressions;
 }
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wnrvo"
 UniqueColumnCombinations::const_iterator find_ucc(const UniqueColumnCombinations& unique_column_combinations,
                                                   const ExpressionUnorderedSet& expressions) {
   DebugAssert(!unique_column_combinations.empty(), "Invalid input: Set of UCCs should not be empty.");
@@ -544,7 +532,6 @@ UniqueColumnCombinations::const_iterator find_ucc(const UniqueColumnCombinations
   }
   return matching_ucc;
 }
-#pragma clang diagnostic pop
 
 FunctionalDependencies fds_from_unique_column_combinations(const std::shared_ptr<const AbstractLQPNode>& lqp,
                                                            const UniqueColumnCombinations& unique_column_combinations) {

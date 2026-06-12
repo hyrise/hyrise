@@ -148,8 +148,6 @@ void print_table_key_constraints(const std::shared_ptr<const Table>& table, std:
   }
 }
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wnrvo"
 void print_expressions(const ExpressionUnorderedSet& expressions, std::ostream& stream, const std::string& separator) {
   auto expressions_vector = std::vector<std::shared_ptr<AbstractExpression>>{expressions.begin(), expressions.end()};
 
@@ -176,7 +174,6 @@ void print_expressions(const ExpressionUnorderedSet& expressions, std::ostream& 
 
   print_expressions(expressions_vector, stream, separator);
 }
-#pragma clang diagnostic pop
 
 void print_expressions(const std::vector<std::shared_ptr<AbstractExpression>>& expressions, std::ostream& stream,
                        const std::string& separator) {

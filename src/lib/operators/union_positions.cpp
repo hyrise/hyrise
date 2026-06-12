@@ -97,8 +97,8 @@ const std::string& UnionPositions::name() const {
 }
 
 std::shared_ptr<const Table> UnionPositions::_on_execute() {
-  // auto early_result = _prepare_operator();
-  if (auto early_result = _prepare_operator()) {
+  auto early_result = _prepare_operator();
+  if (early_result) {
     return early_result;
   }
 

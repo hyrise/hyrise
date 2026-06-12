@@ -1,5 +1,3 @@
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wnrvo"
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -811,4 +809,3 @@ INSTANTIATE_TEST_SUITE_P(JoinIndex, JoinTestRunner,
                          testing::ValuesIn(JoinTestRunner::create_configurations<JoinIndex>()));
 
 }  // namespace hyrise
-#pragma clang diagnostic pop

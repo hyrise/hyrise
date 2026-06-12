@@ -217,7 +217,7 @@ std::string Print::_truncate_cell(const AllTypeVariant& cell, uint16_t max_width
   auto cell_string = boost::lexical_cast<std::string>(cell);
   DebugAssert(max_width > 3, "Cannot truncate string with '...' at end with max_width <= 3");
   if (cell_string.length() > max_width) {
-    cell_string = cell_string.substr(0, max_width - 3) + "...";
+    return cell_string.substr(0, max_width - 3) + "...";
   }
   return cell_string;
 }

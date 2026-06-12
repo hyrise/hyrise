@@ -440,8 +440,6 @@ void BenchmarkRunner::_warmup(const BenchmarkItemID item_id) {
   Assert(_currently_running_clients == 0, "All runs must be finished at this point.");
 }
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wnrvo"
 nlohmann::json BenchmarkRunner::_create_report() const {
   const std::chrono::nanoseconds total_duration = std::chrono::steady_clock::now() - _benchmark_start;
 
@@ -542,7 +540,6 @@ nlohmann::json BenchmarkRunner::_create_report() const {
   }
   return report;
 }
-#pragma clang diagnostic pop
 
 void BenchmarkRunner::_write_report_to_file(const std::string& file_name, const nlohmann::json& report) {
   std::ofstream{file_name} << std::setw(2) << report << '\n';
@@ -683,8 +680,6 @@ void BenchmarkRunner::_snapshot_segment_access_counters(const std::string& momen
   SQLPipelineBuilder{sql}.create_pipeline().get_result_table();
 }
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wnrvo"
 Duration BenchmarkRunner::_calculate_item_duration(const BenchmarkItemResult& result) const {
   // Our scripts use the period from the start of the first item run until the end of the last item run only to
   // calculate the throughput (overall time / successful runs) - latencies are calculated from the individual runs.
@@ -711,6 +706,5 @@ Duration BenchmarkRunner::_calculate_item_duration(const BenchmarkItemResult& re
 
   return std::max(last_run_end(result.successful_runs), last_run_end(result.unsuccessful_runs));
 }
-#pragma clang diagnostic pop
 
 }  // namespace hyrise

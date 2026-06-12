@@ -492,8 +492,6 @@ AbstractExpression::DescriptionMode AbstractLQPNode::_expression_description_mod
   Fail("Unhandled DescriptionMode");
 }
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wnrvo"
 std::ostream& operator<<(std::ostream& stream, const AbstractLQPNode& node) {
   // Recursively collect all LQPs in LQPSubqueryExpressions (and any anywhere within those) in this LQP into a list and
   // then print them
@@ -541,6 +539,5 @@ std::ostream& operator<<(std::ostream& stream, const AbstractLQPNode& node) {
 
   return stream;
 }
-#pragma clang diagnostic pop
 
 }  // namespace hyrise

@@ -1930,8 +1930,6 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate_expression(
   Fail("Invalid enum value.");
 }
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wnrvo"
 std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
     const hsql::Expr& expr, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver,
     bool allow_window_functions) {
@@ -2413,7 +2411,6 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
   }
   Fail("Invalid enum value.");
 }
-#pragma clang diagnostic pop
 
 std::shared_ptr<LQPSubqueryExpression> SQLTranslator::_translate_hsql_subquery(
     const hsql::SelectStatement& select, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver) {

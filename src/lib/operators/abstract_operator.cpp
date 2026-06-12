@@ -416,8 +416,6 @@ void AbstractOperator::_search_and_register_uncorrelated_subqueries(
   }
 }
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wnrvo"
 std::ostream& operator<<(std::ostream& stream, const AbstractOperator& abstract_operator) {
   const auto get_children_fn = [](const auto& op) {
     auto children = std::vector<std::shared_ptr<const AbstractOperator>>{};
@@ -450,7 +448,6 @@ std::ostream& operator<<(std::ostream& stream, const AbstractOperator& abstract_
 
   return stream;
 }
-#pragma clang diagnostic pop
 
 void AbstractOperator::_transition_to(const OperatorState new_state) {
   const auto previous_state = _state.exchange(new_state);
