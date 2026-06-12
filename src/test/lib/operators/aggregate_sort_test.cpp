@@ -159,7 +159,7 @@ TEST_F(AggregateSortTest, MultiChunkSingleAggregateCountStarSorted) {
   // NOTE: `table_1` contains values 12, 123, and 12345 (2 times) in column 0. It has a `target_chunk_size` of 2, so
   // the first chunk contains 12 and 123, while the second chunk contains the two rows with 12345. It is already set
   // and marked as sorted and clustered. So the `group_boundaries` will be `{RowID{0, 1}, RowID{1, 0}}`. Therefore, the
-  // second group will 'spanning' two chunks.
+  // second group will span two chunks.
   const auto sorted_aggregate =
       std::make_shared<AggregateSort>(_table_wrapper_1, aggregate_expressions, groupby_column_ids);
 
