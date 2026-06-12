@@ -1,7 +1,12 @@
 #include <algorithm>
 #include <fstream>
 #include <iostream>
+#include <memory>
+#include <queue>
 #include <random>
+#include <string>
+#include <utility>
+#include <vector>
 
 // This playground only compiles on Linux as we require Linux's perf and perfetto.
 #include "hyrise.hpp"

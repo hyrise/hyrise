@@ -1,21 +1,24 @@
 #include <algorithm>
 #include <fstream>
 #include <iostream>
+#include <memory>
 #include <random>
+#include <string>
+#include <utility>
+#include <vector>
 
 #include "benchmark_config.hpp"
 #include "expression/expression_functional.hpp"
 #include "hyrise.hpp"
 #include "operators/aggregate_dyod.hpp"
 #include "operators/get_table.hpp"
+#include "operators/join_hash.hpp"
 #include "operators/operator_join_predicate.hpp"
 #include "operators/print.hpp"
-#include "operators/join_hash.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "scheduler/immediate_execution_scheduler.hpp"
 #include "scheduler/job_task.hpp"
-#include "scheduler/immediate_execution_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "storage/chunk.hpp"
@@ -36,7 +39,8 @@ enum class BenchmarkType : uint8_t { tpch, tpcds };
 const auto ENCODING_CONFIGS = std::vector<EncodingConfig>{EncodingConfig{SegmentEncodingSpec{EncodingType::Dictionary}},
                                                           EncodingConfig{SegmentEncodingSpec{EncodingType::Unencoded}}};
 
-static void silent_tpcx_table_generation(const BenchmarkType benchmark_type, float scale_factor, std::shared_ptr<BenchmarkConfig> config) {
+static void silent_tpcx_table_generation(const BenchmarkType benchmark_type, float scale_factor,
+                                         std::shared_ptr<BenchmarkConfig> config) {
   auto* initial_buffer = std::cout.rdbuf();
 
   std::cout.rdbuf(nullptr);
@@ -48,8 +52,8 @@ static void silent_tpcx_table_generation(const BenchmarkType benchmark_type, flo
   std::cout.rdbuf(initial_buffer);
 }
 
-void append_to_csv(const std::string& benchmark, const float scale, const int8_t scheduler,
-                   const std::string& encoding, const std::vector<size_t>& runtimes, const std::string note = "") {
+void append_to_csv(const std::string& benchmark, const float scale, const int8_t scheduler, const std::string& encoding,
+                   const std::vector<size_t>& runtimes, const std::string note = "") {
   auto out_file = std::ofstream(FILENAME, std::ios::app);
 
   auto run_id = size_t{0};
@@ -133,8 +137,8 @@ static void TPCDSQ97(const float scale_factor, const EncodingConfig encoding_con
 
     const auto [date_dim_t, date_dim_gt] =
         setup_get_table("date_dim", std::vector<std::string>{"d_date_sk", "d_month_seq"});
-    const auto [catalog_sales_t, catalog_sales_gt] = setup_get_table(
-        "store_sales", std::vector<std::string>{"ss_sold_date_sk", "ss_item_sk", "ss_customer_sk"});
+    const auto [catalog_sales_t, catalog_sales_gt] =
+        setup_get_table("store_sales", std::vector<std::string>{"ss_sold_date_sk", "ss_item_sk", "ss_customer_sk"});
 
     const auto date_dim_month_seq = std::make_shared<PQPColumnExpression>(ColumnID{1}, DataType::Int, "d_month_seq");
     const auto table_scan =
@@ -143,14 +147,16 @@ static void TPCDSQ97(const float scale_factor, const EncodingConfig encoding_con
     table_scan->execute();
 
     // ss_sold_date_sk = d_date_sk
-    const auto join = std::make_shared<JoinHash>(catalog_sales_gt, date_dim_gt, JoinMode::Inner,
+    const auto join = std::make_shared<JoinHash>(
+        catalog_sales_gt, date_dim_gt, JoinMode::Inner,
         OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals});
     join->never_clear_output();
     join->execute();
 
     const auto ss_customer_sk = std::make_shared<PQPColumnExpression>(ColumnID{2}, DataType::Int, "ss_customer_sk");
     const auto ss_item_sk = std::make_shared<PQPColumnExpression>(ColumnID{1}, DataType::Int, "ss_item_sk");
-    const auto aggregates = std::vector<std::shared_ptr<WindowFunctionExpression>>{any_(ss_customer_sk), any_(ss_item_sk)};
+    const auto aggregates =
+        std::vector<std::shared_ptr<WindowFunctionExpression>>{any_(ss_customer_sk), any_(ss_item_sk)};
     const auto groupby_column_ids = std::vector<ColumnID>{ColumnID{2}, ColumnID{1}};
 
     // GROUP BY ss_customer_sk, ss_item_sk
@@ -182,18 +188,19 @@ static void TPCHQ01(const float scale_factor, const EncodingConfig encoding_conf
       Hyrise::get().set_scheduler(std::make_shared<ImmediateExecutionScheduler>());
     }
 
-    const auto q1_pre_aggregation_sql = " SELECT"
-                                        "      l_returnflag,"
-                                        "      l_linestatus,"
-                                        "      l_quantity as qty,"
-                                        "      l_extendedprice as base_price,"
-                                        "      l_extendedprice*(1-l_discount) as disc_price,"
-                                        "      l_extendedprice*(1-l_discount)*(1+l_tax) as charge,"
-                                        "      l_discount as disc"
-                                        " FROM"
-                                        "      lineitem"
-                                        " WHERE"
-                                        "      l_shipdate <= date '1998-12-01' - interval '30' day";
+    const auto q1_pre_aggregation_sql =
+        " SELECT"
+        "      l_returnflag,"
+        "      l_linestatus,"
+        "      l_quantity as qty,"
+        "      l_extendedprice as base_price,"
+        "      l_extendedprice*(1-l_discount) as disc_price,"
+        "      l_extendedprice*(1-l_discount)*(1+l_tax) as charge,"
+        "      l_discount as disc"
+        " FROM"
+        "      lineitem"
+        " WHERE"
+        "      l_shipdate <= date '1998-12-01' - interval '30' day";
     auto sql_pipeline = SQLPipelineBuilder{q1_pre_aggregation_sql}.create_pipeline();
     const auto result = sql_pipeline.get_result_table();
     Assert(result.first, "Preparation query failed.");
@@ -208,16 +215,9 @@ static void TPCHQ01(const float scale_factor, const EncodingConfig encoding_conf
     const auto charge = std::make_shared<PQPColumnExpression>(ColumnID{5}, DataType::Float, "charge");
     const auto disc = std::make_shared<PQPColumnExpression>(ColumnID{6}, DataType::Float, "disc");
 
-    const auto aggregates = std::vector<std::shared_ptr<WindowFunctionExpression>>{any_(l_returnflag),
-                                                                                   any_(l_linestatus),
-                                                                                   sum_(qty),
-                                                                                   sum_(base_price),
-                                                                                   sum_(disc_price),
-                                                                                   sum_(charge),
-                                                                                   avg_(qty),
-                                                                                   avg_(base_price),
-                                                                                   avg_(disc),
-                                                                                   count_(INVALID_COLUMN_ID)};
+    const auto aggregates = std::vector<std::shared_ptr<WindowFunctionExpression>>{
+        any_(l_returnflag), any_(l_linestatus), sum_(qty),        sum_(base_price), sum_(disc_price),
+        sum_(charge),       avg_(qty),          avg_(base_price), avg_(disc),       count_(INVALID_COLUMN_ID)};
     const auto groupby_column_ids = std::vector<ColumnID>{ColumnID{0}, ColumnID{1}};
     const auto table_wrapper = std::make_shared<TableWrapper>(result_table);
     table_wrapper->never_clear_output();
@@ -230,7 +230,7 @@ static void TPCHQ01(const float scale_factor, const EncodingConfig encoding_conf
 
     auto aggregate = std::make_shared<AggregateDYOD>(table_wrapper, aggregates, groupby_column_ids);
     aggregate->execute();
-    // Assert(aggregate->get_output()->row_count() == 4, "Unexpected result size.");
+    Assert(aggregate->get_output()->row_count() == 4, "Unexpected result size.");
 
     append_to_csv("TPCHQ01", scale_factor, use_scheduler, encoding_config, runtimes, "");
 
@@ -261,8 +261,7 @@ static void TPCHQ18(const float scale_factor, const EncodingConfig encoding_conf
     const auto l_orderkey = std::make_shared<PQPColumnExpression>(ColumnID{0}, DataType::Int, "l_orderkey");
     const auto l_quantity = std::make_shared<PQPColumnExpression>(ColumnID{1}, DataType::Float, "l_quantity");
 
-    const auto aggregates = std::vector<std::shared_ptr<WindowFunctionExpression>>{any_(l_orderkey),
-                                                                                   sum_(l_quantity)};
+    const auto aggregates = std::vector<std::shared_ptr<WindowFunctionExpression>>{any_(l_orderkey), sum_(l_quantity)};
     const auto groupby_column_ids = std::vector<ColumnID>{ColumnID{0}};
 
     const auto [runtime_sum, runtimes] = measure_runtime(RUN_COUNT, [&]() {
@@ -277,7 +276,6 @@ static void TPCHQ18(const float scale_factor, const EncodingConfig encoding_conf
     }
   }
 }
-
 
 // static void DuckDBTPCDS_C_Integers(const float scale_factor, const EncodingConfig encoding_config) {
 //   const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
@@ -489,25 +487,25 @@ int main(int argc, char* argv[]) {
 
   if (argc == 2) {
     // try {
-      const auto scale_factor = std::stof(argv[1]);
-      std::cout << "Running TPC benchmarks with scale factor " << scale_factor << ".\n";
+    const auto scale_factor = std::stof(argv[1]);
+    std::cout << "Running TPC benchmarks with scale factor " << scale_factor << ".\n";
 
-      for (const auto& encoding_config : ENCODING_CONFIGS) {
-        TPCHQ18(scale_factor, encoding_config);
-        TPCDSQ97(scale_factor, encoding_config);
-        TPCHQ01(scale_factor, encoding_config);
-      }
+    for (const auto& encoding_config : ENCODING_CONFIGS) {
+      TPCHQ18(scale_factor, encoding_config);
+      TPCDSQ97(scale_factor, encoding_config);
+      TPCHQ01(scale_factor, encoding_config);
+    }
     // } catch (...) {
-      // const auto argument = std::string{argv[1]};
-      // if (argument != "hidden") {
-      //   std::cerr << "Unexpected argument\n";
-      //   return 1;
-      // }
+    // const auto argument = std::string{argv[1]};
+    // if (argument != "hidden") {
+    //   std::cerr << "Unexpected argument\n";
+    //   return 1;
+    // }
 
-      HiddenTest1();
-      HiddenTest2();
-      HiddenTest3();
-      HiddenTest4();
+    HiddenTest1();
+    HiddenTest2();
+    HiddenTest3();
+    HiddenTest4();
     // }
 
     return 0;
