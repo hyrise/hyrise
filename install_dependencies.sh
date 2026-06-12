@@ -56,9 +56,18 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
                     exit 1
                 fi
 
-                wget https://apt.llvm.org/llvm.sh
-                chmod +x llvm.sh
-                sudo ./llvm.sh 21 all
+                if ! wget https://apt.llvm.org/llvm.sh -O llvm.sh; then
+                    echo "Error while downloading llvm.sh."
+                    exit 1
+                fi
+                if ! chmod +x llvm.sh; then
+                    echo "Error while making llvm.sh executable."
+                    exit 1
+                fi
+                if ! sudo ./llvm.sh 21 all; then
+                    echo "Error during LLVM/Clang 21 installation."
+                    exit 1
+                fi
 
                 if ! git submodule update --jobs 5 --init --recursive; then
                     echo "Error during git fetching submodules."
@@ -71,7 +80,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
                 fi
 
                 sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-15 90 --slave /usr/bin/g++ g++ /usr/bin/g++-15
-                sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-21 90 --slave /usr/bin/clang++ clang++ /usr/bin/clang++-21 --slave /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-21 --slave /usr/bin/llvm-profdata llvm-profdata /usr/bin/llvm-profdata-21 --slave /usr/bin/llvm-cov llvm-cov /usr/bin/llvm-cov-21 --slave /usr/bin/clang-format clang-format /usr/bin/clang-format-21  --slave /usr/bin/ld.lld ld.lld /usr/bin/ld.lld-21
+                sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-21 90 --slave /usr/bin/clang++ clang++ /usr/bin/clang++-21 --slave /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-21 --slave /usr/bin/llvm-profdata llvm-profdata /usr/bin/llvm-profdata-21 --slave /usr/bin/llvm-cov llvm-cov /usr/bin/llvm-cov-21 --slave /usr/bin/clang-format clang-format /usr/bin/clang-format-21 --slave /usr/bin/ld.lld ld.lld /usr/bin/ld.lld-21 --slave /usr/bin/llvm-bolt llvm-bolt /usr/bin/llvm-bolt-21 --slave /usr/bin/merge-fdata merge-fdata /usr/bin/merge-fdata-21 --slave /usr/lib/libbolt_rt_instr.a libbolt_rt_instr.a /usr/lib/llvm-21/lib/libbolt_rt_instr.a
             else
                 echo "Error during installation."
                 exit 1
