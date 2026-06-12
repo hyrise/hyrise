@@ -93,6 +93,7 @@ if (NOT "${HYRISE_RELAXED_BUILD}")
                                                 # we know what we do (e.g., uninitialized vector works like this).
             -Wno-weak-vtables                   # Some of our base classes have no out-of-line virtual method
                                                 # definitions. I do not know if this is fixable.
+            -Wno-undefined-func-template
         )
     endif()
 

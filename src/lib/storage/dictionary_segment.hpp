@@ -90,6 +90,6 @@ class DictionarySegment : public BaseDictionarySegment {
   std::unique_ptr<BaseVectorDecompressor> _decompressor;
 };
 
-EXPLICITLY_DECLARE_DATA_TYPES(DictionarySegment);
+// EXPLICITLY_DECLARE_DATA_TYPES(DictionarySegment);
 
 }  // namespace hyrise
