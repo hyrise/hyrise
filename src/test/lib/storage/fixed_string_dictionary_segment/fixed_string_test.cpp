@@ -141,8 +141,8 @@ TEST_F(FixedStringTest, SwapFixedString) {
   EXPECT_EQ(fixed_string.string(), "foo");
 
   swap(fixed_string, fixed_string1_copy);
-  EXPECT_EQ(fixed_string1_copy.string(), "bar");
-  EXPECT_EQ(fixed_string.string(), "foo");
+  EXPECT_EQ(fixed_string1_copy.string(), "foo");
+  EXPECT_EQ(fixed_string.string(), "bar");
 
   if constexpr (!HYRISE_DEBUG) {
     fixed_string2.swap(fixed_string1);
