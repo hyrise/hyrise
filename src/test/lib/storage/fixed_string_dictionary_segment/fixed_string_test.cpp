@@ -134,14 +134,13 @@ TEST_F(FixedStringTest, MoveWithOwnsMemory) {
 TEST_F(FixedStringTest, SwapFixedString) {
   std::vector<char> char_vector = {'b', 'a', 'r'};
   auto fixed_string = FixedString(&char_vector[0], 3u);
-  auto fixed_string1_copy = FixedString(fixed_string1);
 
-  fixed_string.swap(fixed_string1_copy);
-  EXPECT_EQ(fixed_string1_copy.string(), "bar");
+  fixed_string.swap(fixed_string1);
+  EXPECT_EQ(fixed_string1.string(), "bar");
   EXPECT_EQ(fixed_string.string(), "foo");
 
-  swap(fixed_string, fixed_string1_copy);
-  EXPECT_EQ(fixed_string1_copy.string(), "bar");
+  swap(fixed_string, fixed_string1);
+  EXPECT_EQ(fixed_string1.string(), "bar");
   EXPECT_EQ(fixed_string.string(), "foo");
 }
 
