@@ -63,7 +63,6 @@ add_compile_options(
 # system)
 if (NOT "${HYRISE_RELAXED_BUILD}")
     add_compile_options(
-        -pthread
         -Wall
         -Wextra
         -pedantic
@@ -76,13 +75,13 @@ if (NOT "${HYRISE_RELAXED_BUILD}")
         add_compile_options(
             -Weverything
             -Wno-c++98-compat-pedantic          # We are incompatible with C++98.
+            -Wno-ctad-maybe-unsupported         # We use CTAD.
             -Wno-documentation                  # We do not use Doxygen.
             -Wno-exit-time-destructors          # We use declarations that require exit-time destructors.
             -Wno-float-equal                    # Currently we compare floats for equality or inequality.
             -Wno-global-constructors            # We use declarations that require global destructors.
             -Wno-missing-prototypes             # Messes with our tests and benchmarks.
-            -Wno-ctad-maybe-unsupported         # Blabla
-            -Wno-padded                         # Of course the compiler adds padding to our classes.
+            -Wno-padded                         # Do not warn when structs not have been manually padded.
             -Wno-pass-failed                    # Complains about failed loop unrolling when building release builds
                                                 # with sanitization.
             -Wno-sign-conversion                # Currently we do many implicit conversions that change signedness.
