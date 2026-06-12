@@ -140,11 +140,20 @@ TEST_F(FixedStringTest, SwapFixedString) {
   EXPECT_EQ(fixed_string1_copy.string(), "bar");
   EXPECT_EQ(fixed_string.string(), "foo");
 
+  swap(fixed_string, fixed_string1_copy);
+  EXPECT_EQ(fixed_string1_copy.string(), "bar");
+  EXPECT_EQ(fixed_string.string(), "foo");
+
   if constexpr (!HYRISE_DEBUG) {
     fixed_string2.swap(fixed_string1);
     EXPECT_EQ(fixed_string1.string(), "bar");
     EXPECT_EQ(fixed_string1.maximum_length(), 3);
     EXPECT_EQ(fixed_string2.string(), "foo");
+    EXPECT_EQ(fixed_string2.maximum_length(), 6);
+    fixed_string2.swap(fixed_string1);
+    EXPECT_EQ(fixed_string1.string(), "foo");
+    EXPECT_EQ(fixed_string1.maximum_length(), 3);
+    EXPECT_EQ(fixed_string2.string(), "barbaz");
     EXPECT_EQ(fixed_string2.maximum_length(), 6);
   }
 }
