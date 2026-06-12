@@ -37,7 +37,7 @@ from argparse import (
 from os import getcwd
 from subprocess import run
 
-if platform.system() != 'Linux':
+if platform.system() != "Linux":
     # Note: macOS support is possible but currently out of scope.
     print("PGO/BOLT builds have only been tested on Linux.")
     sys.exit(1)
@@ -82,7 +82,7 @@ parser.add_argument(
     "--import-profile",
     action=BooleanOptionalAction,
     default=False,
-    help="Do not run benchmarks, just import the profile data from the resources folder and build an optimized library."
+    help="Do not run benchmarks, just import the profile data from the resources folder and build an optimized library.",
 )
 parser.add_argument(
     "-p", "--pgo", action=BooleanOptionalAction, default=True, help="Use PGO for profiling / optimization."
