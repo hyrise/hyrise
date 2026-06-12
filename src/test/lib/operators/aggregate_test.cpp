@@ -11,6 +11,7 @@
 #include "expression/expression_functional.hpp"
 #include "expression/window_function_expression.hpp"
 #include "operators/abstract_operator.hpp"
+#include "operators/aggregate_dyod.hpp"
 #include "operators/aggregate_hash.hpp"
 #include "operators/aggregate_sort.hpp"
 #include "operators/join_hash.hpp"
@@ -200,7 +201,7 @@ class OperatorsAggregateTest : public BaseTest {
       _table_wrapper_int_int;
 };
 
-using AggregateTypes = ::testing::Types<AggregateHash, AggregateSort>;
+using AggregateTypes = ::testing::Types<AggregateDYOD, AggregateHash, AggregateSort>;
 TYPED_TEST_SUITE(OperatorsAggregateTest, AggregateTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(OperatorsAggregateTest, OperatorName) {

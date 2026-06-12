@@ -23,6 +23,20 @@ target_link_libraries(
     hyriseBenchmarkLib
 )
 
+# Configure DYODEvaluation
+add_executable(
+    hyriseDYODEvaluation
+
+    dyod_evaluation.cpp
+)
+
+target_link_libraries(
+    hyriseDYODEvaluation
+
+    hyrise
+    hyriseBenchmarkLib
+)
+
 # Configure client
 add_executable(
     hyriseClient
