@@ -57,7 +57,7 @@ namespace node_queue_scheduler::detail {
 constexpr auto NUM_GROUPS_MIN_FACTOR = 0.1;
 constexpr auto NUM_GROUPS_MAX_FACTOR = 2.0;
 
-// For small machines, where NUM_GROUPS_MIN_FACTOR * cores can yield small group_counts, we cut of at `MIN_GROUP_COUNT`.
+// For small machines, where NUM_GROUPS_MIN_FACTOR * cores can yield small group_counts, we cut of at MIN_GROUP_COUNT.
 // We found for "small" machines (e.g., 12 core MacBooks but also 32-thread servers), the calculated minimal group
 // counts perform worse than ensuring at least a group count of eight.
 constexpr auto MIN_GROUP_COUNT = size_t{8};
@@ -102,7 +102,7 @@ class NodeQueueScheduler final : public AbstractScheduler {
 
   /**
    * @param  preferred_node_id
-   * @return `preferred_node_id` if a non-default preferred node ID is passed. When the node is the default of
+   * @return preferred_node_id if a non-default preferred node ID is passed. When the node is the default of
    *         CURRENT_NODE_ID but no current node (where the task is executed) can be obtained, the node ID of the node
    *         with the lowest queue pressure is returned.
    */
@@ -123,13 +123,13 @@ class NodeQueueScheduler final : public AbstractScheduler {
 
  protected:
   /**
-   * @brief Adds predecessor/successor relationships between tasks so that only `group_count` tasks can be executed in
+   * @brief Adds predecessor/successor relationships between tasks so that only group_count tasks can be executed in
    *        parallel (tasks with predecessors/successors are not scheduled). Grouping thus reduces load on the task
    *        queues and allows workers to process multiple tasks without coordinating with task queues. On the other
    *        hand, it can reduce potential parallelism if too few groups are formed. We use a round robin assignment due
    *        to the assumption that chunk characteristics change for older data (e.g., old and infrequently accessed data
    *        might be tiered or heavily compressed). A simpler grouping (e.g., forming the first chain with the first
-   *        `group_count` tasks) could cause chain processing to be imbalanced (chains processing frequently accessed
+   *        group_count tasks) could cause chain processing to be imbalanced (chains processing frequently accessed
    *        data might be less expensive than ones processing tiered data).
    *
    * @param tasks: list of tasks to group
@@ -159,7 +159,7 @@ class NodeQueueScheduler final : public AbstractScheduler {
 
   double _max_group_count{0};
 
-  double _queue_load_capped{8};
+  double _max_considered_queue_load{8};
   double _step_size{0};
 
   std::atomic_bool _active{false};
