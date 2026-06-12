@@ -101,10 +101,6 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
 
     const NullValueVector& _null_values;
   };
-
-  template <typename PosListIteratorType>
-  explicit PointAccessIterator(const NullValueVector&, const PosListIteratorType, PosListIteratorType)
-      -> PointAccessIterator<PosListIteratorType>;
 };
 
 // NOLINTEND(readability-identifier-naming)

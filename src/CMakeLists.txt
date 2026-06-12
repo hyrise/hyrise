@@ -81,6 +81,7 @@ if (NOT "${HYRISE_RELAXED_BUILD}")
             -Wno-float-equal                    # Currently we compare floats for equality or inequality.
             -Wno-global-constructors            # We use declarations that require global destructors.
             -Wno-missing-prototypes             # Messes with our tests and benchmarks.
+            -Wno-ctad-maybe-unsupported         # Blabla
             -Wno-padded                         # Of course the compiler adds padding to our classes.
             -Wno-pass-failed                    # Complains about failed loop unrolling when building release builds
                                                 # with sanitization.
