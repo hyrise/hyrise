@@ -231,7 +231,7 @@ SELECT t1.b FROM mixed AS t1, mixed_null AS t2, id_int_int_int_100 AS t3 WHERE t
 -- (not) exists to semi(/anti) join reformulation
 SELECT * FROM id_int_int_int_100 WHERE EXISTS (SELECT * FROM int_date WHERE id_int_int_int_100.id = int_date.a)
 SELECT * FROM id_int_int_int_100 WHERE NOT EXISTS (SELECT * FROM int_date WHERE id_int_int_int_100.id = int_date.a)
--- exists to semi join reformulation: query not rewriteable
+-- exists to semi-join reformulation: query not rewriteable
 SELECT * FROM id_int_int_int_100 WHERE EXISTS (SELECT * FROM int_date WHERE id_int_int_int_100.id = int_date.a) OR id < 20
 
 -- Join on constant

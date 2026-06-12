@@ -507,7 +507,7 @@ void JoinIndex::_append_matches_non_inner(const bool is_semi_or_anti_join) {
   _probe_pos_list->shrink_to_fit();
   _index_pos_list->shrink_to_fit();
 
-  // Write PosLists for Semi/Anti Joins, which so far haven't written any results to the PosLists
+  // Write PosLists for semi-/anti-joins, which so far haven't written any results to the PosLists
   // We use `_probe_matches` to determine whether a tuple from the probe side found a match.
   if (is_semi_or_anti_join) {
     const auto invert = _mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue;

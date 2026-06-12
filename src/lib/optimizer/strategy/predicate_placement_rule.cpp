@@ -136,7 +136,7 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
     case LQPNodeType::Join: {
       const auto join_node = std::static_pointer_cast<JoinNode>(input_node);
 
-      // We pick up single-predicate semi- and anti-joins on the way and treat them as if they were predicates.
+      // We pick up single-predicate semi-/anti-joins on the way and treat them as if they were predicates.
       if (is_semi_or_anti_join(join_node->join_mode) && join_node->join_predicates().size() == 1) {
         // First, we need to recurse into the right side to make sure that it is optimized as well.
         auto right_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
@@ -146,7 +146,7 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
         break;
       }
 
-      // Not a semi-/ anti-join. We need to check if we can push the nodes in push_down_nodes past the join or if they
+      // Not a semi-/anti-join. We need to check if we can push the nodes in push_down_nodes past the join or if they
       // need to be inserted here before proceeding.
 
       // Left empty for non-push-past joins
