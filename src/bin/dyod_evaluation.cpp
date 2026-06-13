@@ -256,7 +256,7 @@ static void TPCHQ18(const float scale_factor, const EncodingConfig encoding_conf
     }
 
     const auto [lineitem_t, lineitem_gt] =
-        setup_get_table("lineitem", std::vector<std::string>{"l_returnflag", "l_quantity"});
+        setup_get_table("lineitem", std::vector<std::string>{"l_orderkey", "l_quantity"});
 
     const auto l_orderkey = std::make_shared<PQPColumnExpression>(ColumnID{0}, DataType::Int, "l_orderkey");
     const auto l_quantity = std::make_shared<PQPColumnExpression>(ColumnID{1}, DataType::Float, "l_quantity");
