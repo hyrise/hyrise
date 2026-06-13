@@ -261,7 +261,7 @@ static void TPCHQ18(const float scale_factor, const EncodingConfig encoding_conf
     const auto l_orderkey = std::make_shared<PQPColumnExpression>(ColumnID{0}, DataType::Int, "l_orderkey");
     const auto l_quantity = std::make_shared<PQPColumnExpression>(ColumnID{1}, DataType::Float, "l_quantity");
 
-    const auto aggregates = std::vector<std::shared_ptr<WindowFunctionExpression>>{any_(l_orderkey), sum_(l_quantity)};
+    const auto aggregates = std::vector<std::shared_ptr<WindowFunctionExpression>>{sum_(l_quantity)};
     const auto groupby_column_ids = std::vector<ColumnID>{ColumnID{0}};
 
     const auto [runtime_sum, runtimes] = measure_runtime(RUN_COUNT, [&]() {
