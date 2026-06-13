@@ -10,7 +10,7 @@
 
 // This playground only compiles on Linux as we require Linux's perf and perfetto.
 #include "hyrise.hpp"
-#include "perfcpp/event_counter.h"
+#include "perfcpp/event_counter.hpp"
 #include "perfetto.h"
 #include "scheduler/job_task.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
