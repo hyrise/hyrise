@@ -156,7 +156,7 @@ static void TPCDSQ97(const float scale_factor, const EncodingConfig encoding_con
     const auto ss_customer_sk = std::make_shared<PQPColumnExpression>(ColumnID{2}, DataType::Int, "ss_customer_sk");
     const auto ss_item_sk = std::make_shared<PQPColumnExpression>(ColumnID{1}, DataType::Int, "ss_item_sk");
     const auto aggregates =
-        std::vector<std::shared_ptr<WindowFunctionExpression>>{any_(ss_customer_sk), any_(ss_item_sk)};
+        std::vector<std::shared_ptr<WindowFunctionExpression>>{};
     const auto groupby_column_ids = std::vector<ColumnID>{ColumnID{2}, ColumnID{1}};
 
     // GROUP BY ss_customer_sk, ss_item_sk
@@ -205,8 +205,6 @@ static void TPCHQ01(const float scale_factor, const EncodingConfig encoding_conf
     const auto result = sql_pipeline.get_result_table();
     Assert(result.first, "Preparation query failed.");
 
-    const auto result_table = result.second;
-
     const auto l_returnflag = std::make_shared<PQPColumnExpression>(ColumnID{0}, DataType::String, "l_returnflag");
     const auto l_linestatus = std::make_shared<PQPColumnExpression>(ColumnID{1}, DataType::String, "l_linestatus");
     const auto qty = std::make_shared<PQPColumnExpression>(ColumnID{2}, DataType::Float, "qty");
@@ -216,9 +214,13 @@ static void TPCHQ01(const float scale_factor, const EncodingConfig encoding_conf
     const auto disc = std::make_shared<PQPColumnExpression>(ColumnID{6}, DataType::Float, "disc");
 
     const auto aggregates = std::vector<std::shared_ptr<WindowFunctionExpression>>{
-        any_(l_returnflag), any_(l_linestatus), sum_(qty),        sum_(base_price), sum_(disc_price),
-        sum_(charge),       avg_(qty),          avg_(base_price), avg_(disc),       count_(INVALID_COLUMN_ID)};
+        sum_(qty), sum_(base_price), sum_(disc_price), sum_(charge),
+        avg_(qty), avg_(base_price), avg_(disc),
+        std::make_shared<WindowFunctionExpression>(WindowFunction::Count, pqp_column_(INVALID_COLUMN_ID, DataType::Long, "*"))
+      };
     const auto groupby_column_ids = std::vector<ColumnID>{ColumnID{0}, ColumnID{1}};
+
+    const auto result_table = result.second;
     const auto table_wrapper = std::make_shared<TableWrapper>(result_table);
     table_wrapper->never_clear_output();
     table_wrapper->execute();
@@ -229,6 +231,7 @@ static void TPCHQ01(const float scale_factor, const EncodingConfig encoding_conf
     });
 
     auto aggregate = std::make_shared<AggregateDYOD>(table_wrapper, aggregates, groupby_column_ids);
+    aggregate->never_clear_output();
     aggregate->execute();
     Assert(aggregate->get_output()->row_count() == 4, "Unexpected result size.");
 
@@ -277,118 +280,7 @@ static void TPCHQ18(const float scale_factor, const EncodingConfig encoding_conf
   }
 }
 
-// static void DuckDBTPCDS_C_Integers(const float scale_factor, const EncodingConfig encoding_config) {
-//   const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
-//   Hyrise::get().set_scheduler(node_queue_scheduler);
-
-//   auto benchmark_config = std::make_shared<BenchmarkConfig>();
-//   benchmark_config->cache_binary_tables = true;
-//   benchmark_config->encoding_config = encoding_config;
-
-//   silent_tpcx_table_generation(BenchmarkType::tpcds, scale_factor, benchmark_config);
-
-//   const auto sort_columns = std::vector<std::string>{"c_birth_year", "c_birth_month", "c_birth_day"};
-//   const auto get_table_and_sort_definitions =
-//       setup_get_table_and_sort_definitions(std::string{"customer"}, sort_columns, std::string{"c_customer_sk"});
-//   const auto table = std::get<0>(get_table_and_sort_definitions);
-//   const auto get_table = std::get<1>(get_table_and_sort_definitions);
-//   const auto sort_definitions = std::get<2>(get_table_and_sort_definitions);
-
-//   const auto [runtime_sum, runtimes] = measure_runtime(RUN_COUNT, [&]() {
-//     auto sort =
-//         std::make_shared<Sort>(get_table, sort_definitions, Chunk::DEFAULT_SIZE, Sort::ForceMaterialization::Yes);
-//     sort->execute();
-//   });
-
-//   append_to_csv("TPC-DS_Customer_Integers", scale_factor, encoding_config, runtimes, "multi-threaded");
-
-//   node_queue_scheduler->finish();
-// }
-
-// static void DuckDBSynthetic(const bool type_is_integer) {
-//   const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
-//   Hyrise::get().set_scheduler(node_queue_scheduler);
-
-//   auto pseudorandom_engine = std::mt19937{17};
-//   auto probability_dist = std::uniform_real_distribution<float>{-1e9f, 1e9};
-
-//   auto generate_element = [&]<typename T>(const int32_t& row_id) {
-//     if constexpr (std::is_same_v<int32_t, T>) {
-//       return row_id;
-//     } else {
-//       return probability_dist(pseudorandom_engine);
-//     }
-//   };  // NOLINT(readability/braces)
-
-//   for (auto row_count = 10'000'000; row_count <= 100'000'000; row_count += 10'000'000) {
-//     auto segments = std::vector<std::shared_ptr<AbstractSegment>>{};
-
-//     auto column_definitions = TableColumnDefinitions{};
-//     if (type_is_integer) {
-//       column_definitions = TableColumnDefinitions{{"a", DataType::Int, false}};
-//     } else {
-//       column_definitions = TableColumnDefinitions{{"a", DataType::Float, false}};
-//     }
-//     auto table = std::make_shared<Table>(column_definitions, TableType::Data);
-
-//     if (type_is_integer) {
-//       auto segment = pmr_vector<int32_t>{};
-//       for (auto row_id = int32_t{0}; row_id < row_count; ++row_id) {
-//         segment.emplace_back(generate_element.operator()<int32_t>(row_id));
-
-//         if (row_id > 0 && row_id % Chunk::DEFAULT_SIZE == 0) {
-//           std::ranges::shuffle(segment, pseudorandom_engine);
-//           segments.emplace_back(std::make_shared<ValueSegment<int32_t>>(std::move(segment)));
-//           segment = pmr_vector<int32_t>{};
-//         }
-//       }
-
-//       std::ranges::shuffle(segment, pseudorandom_engine);
-//       segments.emplace_back(std::make_shared<ValueSegment<int32_t>>(std::move(segment)));
-//     } else {
-//       auto segment = pmr_vector<float>{};
-//       for (auto row_id = int32_t{0}; row_id < row_count; ++row_id) {
-//         segment.emplace_back(generate_element.operator()<int32_t>(row_id));
-
-//         if (row_id > 0 && row_id % Chunk::DEFAULT_SIZE == 0) {
-//           std::ranges::shuffle(segment, pseudorandom_engine);
-//           segments.emplace_back(std::make_shared<ValueSegment<float>>(std::move(segment)));
-//           segment = pmr_vector<float>{};
-//         }
-//       }
-
-//       std::ranges::shuffle(segment, pseudorandom_engine);
-//       segments.emplace_back(std::make_shared<ValueSegment<float>>(std::move(segment)));
-//     }
-
-//     for (const auto& segment : segments) {
-//       table->append_chunk(pmr_vector<std::shared_ptr<AbstractSegment>>{segment});
-//       table->last_chunk()->set_immutable();
-//     }
-
-//     std::cout << "Synthetic sort experiment with " << table->row_count() << " rows. "
-//               << "Type is " << (type_is_integer ? std::string{"integer"} : std::string{"float"}) << ". "
-//               << "Memory Usage: " << table->memory_usage(MemoryUsageCalculationMode::Sampled) << ".\n";
-
-//     const auto table_wrapper = std::make_shared<TableWrapper>(table);
-//     table_wrapper->never_clear_output();
-//     table_wrapper->execute();
-
-//     const auto sort_definitions = std::vector{SortColumnDefinition{ColumnID{0}}};
-//     const auto [runtime_sum, runtimes] = measure_runtime(RUN_COUNT, [&]() {
-//       auto sort = std::make_shared<Sort>(table_wrapper, sort_definitions, Chunk::DEFAULT_SIZE,
-//                                          Sort::ForceMaterialization::No);
-//       sort->execute();
-//     });
-
-//     append_to_csv(type_is_integer ? std::string{"SyntheticSortingInteger"} : std::string{"SyntheticSortingFloat"},
-//                   row_count, "Unencoded", runtimes, "multi-threaded");
-//   }
-
-//   node_queue_scheduler->finish();
-// }
-
-// static void StringPrefix() {
+// static void JOBlikeMINMAX() {
 //   const auto chunk_count = ChunkID{8};  // ~524k rows.
 //   const auto sort_count = size_t{50};
 //   const auto thread_count = size_t{2};
@@ -491,9 +383,9 @@ int main(int argc, char* argv[]) {
     std::cout << "Running TPC benchmarks with scale factor " << scale_factor << ".\n";
 
     for (const auto& encoding_config : ENCODING_CONFIGS) {
+      TPCHQ01(scale_factor, encoding_config);
       TPCHQ18(scale_factor, encoding_config);
       TPCDSQ97(scale_factor, encoding_config);
-      TPCHQ01(scale_factor, encoding_config);
     }
     // } catch (...) {
     // const auto argument = std::string{argv[1]};
