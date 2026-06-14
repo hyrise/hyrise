@@ -155,8 +155,7 @@ static void TPCDSQ97(const float scale_factor, const EncodingConfig encoding_con
 
     const auto ss_customer_sk = std::make_shared<PQPColumnExpression>(ColumnID{2}, DataType::Int, "ss_customer_sk");
     const auto ss_item_sk = std::make_shared<PQPColumnExpression>(ColumnID{1}, DataType::Int, "ss_item_sk");
-    const auto aggregates =
-        std::vector<std::shared_ptr<WindowFunctionExpression>>{};
+    const auto aggregates = std::vector<std::shared_ptr<WindowFunctionExpression>>{};
     const auto groupby_column_ids = std::vector<ColumnID>{ColumnID{2}, ColumnID{1}};
 
     // GROUP BY ss_customer_sk, ss_item_sk
@@ -214,10 +213,15 @@ static void TPCHQ01(const float scale_factor, const EncodingConfig encoding_conf
     const auto disc = std::make_shared<PQPColumnExpression>(ColumnID{6}, DataType::Float, "disc");
 
     const auto aggregates = std::vector<std::shared_ptr<WindowFunctionExpression>>{
-        sum_(qty), sum_(base_price), sum_(disc_price), sum_(charge),
-        avg_(qty), avg_(base_price), avg_(disc),
-        std::make_shared<WindowFunctionExpression>(WindowFunction::Count, pqp_column_(INVALID_COLUMN_ID, DataType::Long, "*"))
-      };
+        sum_(qty),
+        sum_(base_price),
+        sum_(disc_price),
+        sum_(charge),
+        avg_(qty),
+        avg_(base_price),
+        avg_(disc),
+        std::make_shared<WindowFunctionExpression>(WindowFunction::Count,
+                                                   pqp_column_(INVALID_COLUMN_ID, DataType::Long, "*"))};
     const auto groupby_column_ids = std::vector<ColumnID>{ColumnID{0}, ColumnID{1}};
 
     const auto result_table = result.second;
