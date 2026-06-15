@@ -270,7 +270,7 @@ static void TPCHQ18(const float scale_factor, const EncodingConfig encoding_conf
 
 static void JOBlikeMINMAX(const EncodingConfig encoding_config) {
   const auto chunk_count = ChunkID{512};  // ~33 M rows.
-  const auto agg_execution_count = size_t{30};
+  const auto agg_execution_count = size_t{16};
   const auto thread_count = size_t{4};
 
   auto pseudorandom_engine = std::mt19937{17};
