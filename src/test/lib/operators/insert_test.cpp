@@ -519,4 +519,49 @@ TEST_F(OperatorsInsertTest, MarkMultipleChunksImmutable) {
   }
 }
 
+TEST_F(OperatorsInsertTest, InsertNullFromEncodedSegment) {
+  auto target_table_name = "target_table";
+  auto source_table_name = "source_table";
+
+  // create target table with a nullable column
+  auto column_definitions = TableColumnDefinitions{};
+  column_definitions.emplace_back("a", DataType::Int, true);
+  const auto target_table =
+      std::make_shared<Table>(column_definitions, TableType::Data, Chunk::DEFAULT_SIZE, UseMvcc::Yes);
+  Hyrise::get().storage_manager.add_table(target_table_name, target_table);
+
+  // create source table and add NULL
+  const auto source_table =
+      std::make_shared<Table>(column_definitions, TableType::Data, Chunk::DEFAULT_SIZE, UseMvcc::Yes);
+  source_table->append({NullValue{}});
+  source_table->append({int32_t{1}});
+
+  source_table->last_chunk()->set_immutable();
+
+  // encode the source table to take fallback path (segment_with_iterators)
+  ChunkEncoder::encode_all_chunks(source_table);
+
+  const auto source_segment = source_table->get_chunk(ChunkID{0})->get_segment(ColumnID{0});
+  EXPECT_FALSE(std::dynamic_pointer_cast<BaseValueSegment>(source_segment));
+
+  Hyrise::get().storage_manager.add_table(source_table_name, source_table);
+
+  auto get_table = std::make_shared<GetTable>(source_table_name);
+  get_table->execute();
+
+  auto insert = std::make_shared<Insert>(target_table_name, get_table);
+  auto context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
+  insert->set_transaction_context(context);
+  insert->execute();
+  context->commit();
+
+  EXPECT_EQ(target_table->row_count(), 2u);
+
+  const auto inserted_null_variant = (*target_table->get_chunk(ChunkID{0})->get_segment(ColumnID{0}))[ChunkOffset{0}];
+  EXPECT_TRUE(variant_is_null(inserted_null_variant));
+
+  const auto inserted_int_variant = (*target_table->get_chunk(ChunkID{0})->get_segment(ColumnID{0}))[ChunkOffset{1}];
+  EXPECT_EQ(inserted_int_variant, AllTypeVariant{int32_t{1}});
+}
+
 }  // namespace hyrise
