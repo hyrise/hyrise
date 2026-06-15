@@ -22,6 +22,7 @@
 #include "scheduler/node_queue_scheduler.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "storage/chunk.hpp"
+#include "storage/chunk_encoder.hpp"
 #include "tpcds/tpcds_table_generator.hpp"
 #include "tpch/tpch_constants.hpp"
 #include "tpch/tpch_table_generator.hpp"
@@ -52,24 +53,22 @@ static void silent_tpcx_table_generation(const BenchmarkType benchmark_type, flo
   std::cout.rdbuf(initial_buffer);
 }
 
-void append_to_csv(const std::string& benchmark, const float scale, const int8_t scheduler, const std::string& encoding,
+void append_to_csv(const std::string& benchmark, const float scale, const std::string& encoding,
                    const std::vector<size_t>& runtimes, const std::string note = "") {
   auto out_file = std::ofstream(FILENAME, std::ios::app);
 
   auto run_id = size_t{0};
   for (const auto& runtime : runtimes) {
-    out_file << std::format("\"{}\",{},{},\"{}\",\"{}\",{},{}\n", benchmark, scale, scheduler, encoding, note, run_id,
-                            runtime);
+    out_file << std::format("\"{}\",{},\"{}\",\"{}\",{},{}\n", benchmark, scale, encoding, note, run_id, runtime);
     ++run_id;
   }
 }
 
-void append_to_csv(const std::string& benchmark, const float scale, const bool scheduler,
-                   const EncodingConfig& encoding_config, const std::vector<size_t>& runtimes,
-                   const std::string note = "") {
+void append_to_csv(const std::string& benchmark, const float scale, const EncodingConfig& encoding_config,
+                   const std::vector<size_t>& runtimes, const std::string note = "") {
   auto sstream = std::stringstream{};
   sstream << *encoding_config.preferred_encoding_spec;
-  append_to_csv(benchmark, scale, static_cast<int8_t>(scheduler), sstream.str(), runtimes, note);
+  append_to_csv(benchmark, scale, sstream.str(), runtimes, note);
 }
 
 std::pair<size_t, std::vector<size_t>> measure_runtime(const size_t run_count, const std::function<void()> function) {
@@ -121,12 +120,6 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<GetTable>> setup_get_table(
 }
 
 static void TPCDSQ97(const float scale_factor, const EncodingConfig encoding_config) {
-  auto benchmark_config = std::make_shared<BenchmarkConfig>();
-  benchmark_config->cache_binary_tables = true;
-  benchmark_config->encoding_config = encoding_config;
-
-  silent_tpcx_table_generation(BenchmarkType::tpcds, scale_factor, benchmark_config);
-
   for (const auto use_scheduler : {true, false}) {
     const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
     if (use_scheduler) {
@@ -164,7 +157,8 @@ static void TPCDSQ97(const float scale_factor, const EncodingConfig encoding_con
       aggregate->execute();
     });
 
-    append_to_csv("TPCDSQ97", scale_factor, use_scheduler, encoding_config, runtimes, "");
+    append_to_csv("TPCDSQ97", scale_factor, encoding_config, runtimes,
+                  use_scheduler ? "multi-threaded" : "single-threaded");
 
     if (use_scheduler) {
       node_queue_scheduler->finish();
@@ -173,12 +167,6 @@ static void TPCDSQ97(const float scale_factor, const EncodingConfig encoding_con
 }
 
 static void TPCHQ01(const float scale_factor, const EncodingConfig encoding_config) {
-  auto benchmark_config = std::make_shared<BenchmarkConfig>();
-  benchmark_config->cache_binary_tables = true;
-  benchmark_config->encoding_config = encoding_config;
-
-  silent_tpcx_table_generation(BenchmarkType::tpch, scale_factor, benchmark_config);
-
   for (const auto use_scheduler : {true, false}) {
     const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
     if (use_scheduler) {
@@ -239,7 +227,8 @@ static void TPCHQ01(const float scale_factor, const EncodingConfig encoding_conf
     aggregate->execute();
     Assert(aggregate->get_output()->row_count() == 4, "Unexpected result size.");
 
-    append_to_csv("TPCHQ01", scale_factor, use_scheduler, encoding_config, runtimes, "");
+    append_to_csv("TPCHQ01", scale_factor, encoding_config, runtimes,
+                  use_scheduler ? "multi-threaded" : "single-threaded");
 
     if (use_scheduler) {
       node_queue_scheduler->finish();
@@ -248,12 +237,6 @@ static void TPCHQ01(const float scale_factor, const EncodingConfig encoding_conf
 }
 
 static void TPCHQ18(const float scale_factor, const EncodingConfig encoding_config) {
-  auto benchmark_config = std::make_shared<BenchmarkConfig>();
-  benchmark_config->cache_binary_tables = true;
-  benchmark_config->encoding_config = encoding_config;
-
-  silent_tpcx_table_generation(BenchmarkType::tpch, scale_factor, benchmark_config);
-
   for (const auto use_scheduler : {true, false}) {
     const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
     if (use_scheduler) {
@@ -276,7 +259,8 @@ static void TPCHQ18(const float scale_factor, const EncodingConfig encoding_conf
       aggregate->execute();
     });
 
-    append_to_csv("TPCHQ18", scale_factor, use_scheduler, encoding_config, runtimes, "");
+    append_to_csv("TPCHQ18", scale_factor, encoding_config, runtimes,
+                  use_scheduler ? "multi-threaded" : "single-threaded");
 
     if (use_scheduler) {
       node_queue_scheduler->finish();
@@ -284,85 +268,112 @@ static void TPCHQ18(const float scale_factor, const EncodingConfig encoding_conf
   }
 }
 
-// static void JOBlikeMINMAX() {
-//   const auto chunk_count = ChunkID{8};  // ~524k rows.
-//   const auto sort_count = size_t{50};
-//   const auto thread_count = size_t{2};
+static void JOBlikeMINMAX(const EncodingConfig encoding_config) {
+  const auto chunk_count = ChunkID{512};  // ~33 M rows.
+  const auto agg_execution_count = size_t{30};
+  const auto thread_count = size_t{4};
 
-//   auto pseudorandom_engine = std::mt19937{17};
-//   auto probability_dist = std::uniform_int_distribution{1, 31};
+  auto pseudorandom_engine = std::mt19937{17};
+  auto probability_dist = std::uniform_int_distribution{1, 31};
 
-//   const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
-//   Hyrise::get().set_scheduler(node_queue_scheduler);
+  for (const auto use_scheduler : {true, false}) {
+    const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
+    if (use_scheduler) {
+      Hyrise::get().set_scheduler(node_queue_scheduler);
+    } else {
+      Hyrise::get().set_scheduler(std::make_shared<ImmediateExecutionScheduler>());
+    }
 
-//   auto column_definitions = TableColumnDefinitions{
-//       {"col_0", DataType::Int, true}, {"col_1", DataType::String, true}, {"col_2", DataType::Long, true}};
-//   auto sort_definitions = std::vector<SortColumnDefinition>{
-//       SortColumnDefinition{ColumnID{1}}, SortColumnDefinition{ColumnID{2}}, SortColumnDefinition{ColumnID{0}}};
-//   auto table = std::make_shared<Table>(column_definitions, TableType::Data);
+    auto column_definitions = TableColumnDefinitions{
+        {"col_0", DataType::Int, true}, {"col_1", DataType::String, true}, {"col_2", DataType::Long, true}};
+    auto table = std::make_shared<Table>(column_definitions, TableType::Data);
 
-//   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-//     auto col_0_segment = pmr_vector<int32_t>{};
-//     auto col_1_segment = pmr_vector<pmr_string>{};
-//     auto col_2_segment = pmr_vector<int64_t>{};
+    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+      auto col_0_segment = pmr_vector<int32_t>{};
+      auto col_1_segment = pmr_vector<pmr_string>{};
+      auto col_2_segment = pmr_vector<int64_t>{};
 
-//     for (auto row_id = ChunkOffset{0}; row_id < Chunk::DEFAULT_SIZE; ++row_id) {
-//       col_0_segment.emplace_back(static_cast<int32_t>(probability_dist(pseudorandom_engine)));
-//       col_1_segment.emplace_back("2025-07-" + std::format("{:02} 12:{:02}:17",
-//                                                           probability_dist(pseudorandom_engine),
-//                                                           probability_dist(pseudorandom_engine)));
-//       col_2_segment.emplace_back(static_cast<int64_t>(probability_dist(pseudorandom_engine)));
-//     }
+      for (auto row_id = ChunkOffset{0}; row_id < Chunk::DEFAULT_SIZE; ++row_id) {
+        col_0_segment.emplace_back(static_cast<int32_t>(probability_dist(pseudorandom_engine)));
+        auto string_value = "2025-07-" + std::format("{:02} 12:{:02}:17", probability_dist(pseudorandom_engine),
+                                                     probability_dist(pseudorandom_engine));
+        if (row_id == 4'913) {
+          string_value +=
+              " // Important note: for unknown reasons there is a long string comment appended to this"
+              " row. People are still not sure what the purpose is.";
+        }
+        col_1_segment.emplace_back(string_value);
+        col_2_segment.emplace_back(static_cast<int64_t>(probability_dist(pseudorandom_engine)));
+      }
 
-//     auto segments = pmr_vector<std::shared_ptr<AbstractSegment>>{};
-//     segments.emplace_back(std::make_shared<ValueSegment<int32_t>>(std::move(col_0_segment)));
-//     segments.emplace_back(std::make_shared<ValueSegment<pmr_string>>(std::move(col_1_segment)));
-//     segments.emplace_back(std::make_shared<ValueSegment<int64_t>>(std::move(col_2_segment)));
+      auto segments = pmr_vector<std::shared_ptr<AbstractSegment>>{};
+      segments.emplace_back(std::make_shared<ValueSegment<int32_t>>(std::move(col_0_segment)));
+      segments.emplace_back(std::make_shared<ValueSegment<pmr_string>>(std::move(col_1_segment)));
+      segments.emplace_back(std::make_shared<ValueSegment<int64_t>>(std::move(col_2_segment)));
 
-//     table->append_chunk(segments);
-//     table->last_chunk()->set_immutable();
-//   }
+      table->append_chunk(segments);
+      table->last_chunk()->set_immutable();
+    }
 
-//   const auto table_wrapper = std::make_shared<TableWrapper>(table);
-//   table_wrapper->never_clear_output();
-//   table_wrapper->execute();
+    const auto encoding_spec = *encoding_config.preferred_encoding_spec;
+    ChunkEncoder::encode_all_chunks(table, encoding_spec);
 
-//   // We measure the time it takes to sort the input table `sort_count` times.
-//   auto runtimes = std::vector<size_t>{};
-//   for (auto run_id = size_t{0}; run_id < RUN_COUNT; ++run_id) {
-//     auto threads = std::vector<std::thread>{};
-//     auto stop_flag = std::atomic_flag{};
+    const auto table_wrapper = std::make_shared<TableWrapper>(table);
+    table_wrapper->never_clear_output();
+    table_wrapper->execute();
 
-//     auto sort_counter = std::atomic<size_t>{};
-//     const auto start = std::chrono::steady_clock::now();
-//     auto end = std::chrono::steady_clock::now();
+    // We measure the time it takes to aggregate the input table `agg_execution_count` times.
+    auto runtimes = std::vector<size_t>{};
+    for (auto run_id = size_t{0}; run_id < RUN_COUNT; ++run_id) {
+      auto threads = std::vector<std::thread>{};
+      auto stop_flag = std::atomic_flag{};
 
-//     for (auto thread_id = size_t{0}; thread_id < thread_count; ++thread_id) {
-//       threads.emplace_back([&]() {
-//         while (!stop_flag.test()) {
-//           auto sort = std::make_shared<Sort>(table_wrapper, sort_definitions, Chunk::DEFAULT_SIZE);
-//           sort->execute();
-//           const auto old_count = sort_counter++;
+      auto agg_execution_counter = std::atomic<size_t>{};
 
-//           if (old_count == sort_count - 1) {
-//             stop_flag.test_and_set();
-//             end = std::chrono::steady_clock::now();
-//           }
-//         }
-//       });
-//     }
+      const auto col_1 = std::make_shared<PQPColumnExpression>(ColumnID{1}, DataType::String, "col_1");
 
-//     for (auto& thread : threads) {
-//       thread.join();
-//     }
+      const auto aggregates = std::vector<std::shared_ptr<WindowFunctionExpression>>{min_(col_1), max_(col_1)};
+      const auto groupby_column_ids = std::vector<ColumnID>{};
 
-//     runtimes.push_back(std::chrono::duration_cast<std::chrono::microseconds>(end - start).count());
-//   }
+      auto end = std::chrono::steady_clock::now();
+      const auto start = std::chrono::steady_clock::now();
 
-//   append_to_csv("StringPrefix", table->row_count(), "Unencoded", runtimes, "multi-threaded");
+      for (auto thread_id = size_t{0}; thread_id < thread_count; ++thread_id) {
+        threads.emplace_back([&]() {
+          while (!stop_flag.test()) {
+            auto aggregate = std::make_shared<AggregateDYOD>(table_wrapper, aggregates, groupby_column_ids);
+            aggregate->execute();
+            const auto old_count = agg_execution_counter++;
 
-//   Hyrise::get().scheduler()->finish();
-// }
+            if (old_count == agg_execution_count - 1) {
+              stop_flag.test_and_set();
+              end = std::chrono::steady_clock::now();
+            }
+          }
+        });
+      }
+
+      for (auto& thread : threads) {
+        thread.join();
+      }
+
+      Assert(end > start, "Benchmark did not run properly: negative runtime.");
+
+      if (run_id > 0) {
+        runtimes.push_back(std::chrono::duration_cast<std::chrono::microseconds>(end - start).count());
+      }
+    }
+
+    auto sstream = std::stringstream{};
+    sstream << encoding_spec;
+    append_to_csv("JOBlikeMINMAX", static_cast<float>(table->row_count()), sstream.str(), runtimes,
+                  use_scheduler ? "multi-threaded" : "single-threaded");
+
+    if (use_scheduler) {
+      node_queue_scheduler->finish();
+    }
+  }
+}
 
 static void HiddenTest1() {}
 
@@ -379,7 +390,7 @@ int main(int argc, char* argv[]) {
   }
 
   auto out_file = std::ofstream{FILENAME};
-  out_file << "EXPERIMENT,SCALE,SCHEDULER,ENCODING,NOTE,RUN_ID,RUNTIME_US\n";
+  out_file << "EXPERIMENT,SCALE,ENCODING,NOTE,RUN_ID,RUNTIME_US\n";
   out_file.close();
 
   if (argc == 2) {
@@ -388,6 +399,13 @@ int main(int argc, char* argv[]) {
     std::cout << "Running TPC benchmarks with scale factor " << scale_factor << ".\n";
 
     for (const auto& encoding_config : ENCODING_CONFIGS) {
+      auto benchmark_config = std::make_shared<BenchmarkConfig>();
+      benchmark_config->cache_binary_tables = true;
+      benchmark_config->encoding_config = encoding_config;
+
+      silent_tpcx_table_generation(BenchmarkType::tpch, scale_factor, benchmark_config);
+      silent_tpcx_table_generation(BenchmarkType::tpcds, scale_factor, benchmark_config);
+
       TPCHQ01(scale_factor, encoding_config);
       TPCHQ18(scale_factor, encoding_config);
       TPCDSQ97(scale_factor, encoding_config);
@@ -408,7 +426,9 @@ int main(int argc, char* argv[]) {
     return 0;
   }
 
-  // JOBlikeMINMAX();
+  for (const auto& encoding_config : ENCODING_CONFIGS) {
+    JOBlikeMINMAX(encoding_config);
+  }
 
   return 0;
 }
