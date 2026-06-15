@@ -202,9 +202,9 @@ set(
     lib/storage/index/group_key/variable_length_key_store_test.cpp
     lib/storage/index/group_key/variable_length_key_test.cpp
     lib/storage/index/multi_segment_index_test.cpp
-    lib/storage/index/table_index_statistics_test.cpp
     lib/storage/index/partial_hash/partial_hash_index_test.cpp
     lib/storage/index/single_segment_index_test.cpp
+    lib/storage/index/table_index_statistics_test.cpp
     lib/storage/iterables_test.cpp
     lib/storage/lz4_segment_test.cpp
     lib/storage/materialize_test.cpp
