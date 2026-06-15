@@ -100,7 +100,7 @@ TEST_F(OperatorsPrintTest, PrintEmptyChunk) {
 
   auto pr = std::make_shared<Print>(tw, PrintFlags::None, output);
   pr->execute();
-  
+
   auto output_string = output.str();
 
   EXPECT_TRUE(output_string.find("Empty chunk.") != std::string::npos);

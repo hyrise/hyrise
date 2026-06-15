@@ -206,13 +206,14 @@ TEST_F(TransactionContextTest, PrintCommitTransactionPhase) {
   auto context = manager().new_transaction_context(AutoCommit::No);
   const auto empty_callback = [](TransactionID) {};
   std::stringstream out;
-  
+
   std::string expected_active = "Active";
   out << context->phase();
   EXPECT_EQ(expected_active, out.str());
   out.str(std::string());
 
-  // Before reaching the "Committed" TransactionPhase the context may also be in the "Committing" TransactionPhase, when waiting on another operation before committing.
+  // Before reaching the "Committed" TransactionPhase the context may also be in the "Committing" TransactionPhase,
+  // when waiting on another operation before committing.
   // This case is hard to reproduce as "Committing" is not a persistent TransactionPhase.
   context->commit_async(empty_callback);
   std::string expected_commited = "Committed";
@@ -223,9 +224,9 @@ TEST_F(TransactionContextTest, PrintCommitTransactionPhase) {
 TEST_F(TransactionContextTest, PrintRolledBackByUserTransactionPhase) {
   auto context = manager().new_transaction_context(AutoCommit::No);
   auto context_user_rollback = manager().new_transaction_context(AutoCommit::No);
-  
+
   std::stringstream out;
-  
+
   std::string expected_active = "Active";
   out << context->phase();
   EXPECT_EQ(expected_active, out.str());
@@ -242,13 +243,14 @@ TEST_F(TransactionContextTest, PrintConflictedTransactionPhase) {
   auto context = manager().new_transaction_context(AutoCommit::No);
 
   std::stringstream out;
-  
+
   std::string expected_active = "Active";
   out << context->phase();
   EXPECT_EQ(expected_active, out.str());
   out.str(std::string());
 
-  // Before reaching the "RolledBackAfterConflict" TransactionPhase the context will be in the "Conflicted" TransactionPhase, after an operator has failed.
+  // Before reaching the "RolledBackAfterConflict" TransactionPhase the context will be
+  // in the "Conflicted" TransactionPhase, after an operator has failed.
   // This case is hard to reproduce as "Conflicted" is not a persistent TransactionPhase.
   context->rollback(RollbackReason::Conflict);
   std::string expected_rollback_after_conflict = "RolledBackAfterConflict";
