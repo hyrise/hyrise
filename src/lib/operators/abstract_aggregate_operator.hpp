@@ -117,6 +117,21 @@ class WindowFunctionBuilder<ColumnDataType, AggregateType, WindowFunction::Stand
 };
 
 template <typename ColumnDataType, typename AggregateType>
+class WindowFunctionBuilder<ColumnDataType, AggregateType, WindowFunction::Any> {
+ public:
+  auto get_aggregate_function() {
+    return [](const ColumnDataType& new_value, const size_t aggregate_count, AggregateType& accumulator) {
+      // ANY() returns an arbitrary value of the group. As all values are guaranteed to be equal when ANY() is used
+      // (it is only emitted for columns functionally dependent on the group-by columns), keeping the first value seen
+      // is sufficient.
+      if (aggregate_count == 0) {
+        accumulator = new_value;
+      }
+    };
+  }
+};
+
+template <typename ColumnDataType, typename AggregateType>
 class WindowFunctionBuilder<ColumnDataType, AggregateType, WindowFunction::Count> {
  public:
   auto get_aggregate_function() {
