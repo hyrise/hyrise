@@ -42,13 +42,13 @@ namespace hyrise {
 
 namespace node_queue_scheduler::detail {
 /**
- * Hyrise groups tasks to lower the pressure on the scheduler and the tasks queues. Grouping happens by dividing a large
- * set of tasks into groups and only scheduling one task of this group. All other tasks are chained as dependencies.
+ * Hyrise groups tasks to reduce pressure on the scheduler and the tasks queues. Grouping happens by dividing a large
+ * set of tasks into groups and only scheduling one task of each group. All other tasks are chained as dependencies.
  * When a worker pulls the first task and executes it, it will then process the entire chain without any further
  * communication with the scheduler.
  * The number of groups to use is hard to determine and depends on the current load. In case of a single user, we can
  * use a high group count (to allow parallelism and balance load evenly even when some tasks straggle) as the task queue
- * is usually not congested. In case of multiple clients, we lower the number of groups to take pressure off the
+ * is usually not congested. In case of multiple clients, we decrease the number of groups to take pressure off the
  * scheduler and the tasks queues (see discussion in #2243).
  *
  * We scale number of groups linearly between (NUM_GROUPS_MIN_FACTOR * _workers_per_node) and (NUM_GROUPS_MAX_FACTOR *
