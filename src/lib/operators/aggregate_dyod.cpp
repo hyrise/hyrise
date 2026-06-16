@@ -174,10 +174,11 @@ int64_t _count_distinct_all_values(const std::shared_ptr<const Table>& input_tab
 // The shared skeleton for the group-by path. All output columns (the group-by columns and every aggregate) are
 // indexed by a group's position in `keys`, so they line up row-for-row regardless of hash-map iteration order.
 using GroupKey = std::vector<AllTypeVariant>;
+
 struct GroupKeyData {
-  std::vector<GroupKey> keys;                                              // distinct group keys, first-encounter order
+  std::vector<GroupKey> keys;  // distinct group keys, first-encounter order
   std::unordered_map<GroupKey, size_t, GroupKeyHash, GroupKeyEqual> index;  // group key -> its position in `keys`
-  std::vector<size_t> row_counts;                                          // number of rows per group (for COUNT(*))
+  std::vector<size_t> row_counts;                                           // number of rows per group (for COUNT(*))
 };
 
 // Reads the group-by column values of `chunk_offset` into `key`.
@@ -236,8 +237,8 @@ void _build_groupby_segments(const GroupKeyData& groups, const std::vector<Colum
         }
       }
       if (is_nullable) {
-        output_segments.emplace_back(std::make_shared<ValueSegment<GroupKeyDataType>>(std::move(values),
-                                                                                      std::move(nulls)));
+        output_segments.emplace_back(
+            std::make_shared<ValueSegment<GroupKeyDataType>>(std::move(values), std::move(nulls)));
       } else {
         output_segments.emplace_back(std::make_shared<ValueSegment<GroupKeyDataType>>(std::move(values)));
       }
@@ -301,8 +302,7 @@ std::pair<pmr_vector<AggregateType>, pmr_vector<bool>> _aggregate_grouped(
 
 // COUNT(DISTINCT), indexed per group: number of distinct non-NULL values. Never NULL (0 for an all-NULL group).
 template <typename ColumnDataType>
-pmr_vector<int64_t> _count_distinct_grouped(const GroupKeyData& groups,
-                                            const std::vector<ColumnID>& groupby_column_ids,
+pmr_vector<int64_t> _count_distinct_grouped(const GroupKeyData& groups, const std::vector<ColumnID>& groupby_column_ids,
                                             const std::shared_ptr<const Table>& input_table,
                                             const ColumnID input_column_id) {
   const auto group_count = groups.keys.size();
@@ -335,9 +335,10 @@ pmr_vector<int64_t> _count_distinct_grouped(const GroupKeyData& groups,
 // ANY(), indexed per group: the first value seen per group, NULL included (the value is passed through, not
 // aggregated, so all-NULL groups stay).
 template <typename ColumnDataType>
-std::pair<pmr_vector<ColumnDataType>, pmr_vector<bool>> _any_grouped(
-    const GroupKeyData& groups, const std::vector<ColumnID>& groupby_column_ids,
-    const std::shared_ptr<const Table>& input_table, const ColumnID input_column_id) {
+std::pair<pmr_vector<ColumnDataType>, pmr_vector<bool>> _any_grouped(const GroupKeyData& groups,
+                                                                     const std::vector<ColumnID>& groupby_column_ids,
+                                                                     const std::shared_ptr<const Table>& input_table,
+                                                                     const ColumnID input_column_id) {
   const auto group_count = groups.keys.size();
   auto seen = std::vector<bool>(group_count, false);
   auto values = pmr_vector<ColumnDataType>(group_count);
@@ -634,8 +635,7 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
           if constexpr (std::is_arithmetic_v<ColumnDataType>) {
             auto [values, nulls] = _standard_deviation_sample_grouped<ColumnDataType>(groups, _groupby_column_ids,
                                                                                       input_table, input_column_id);
-            output_segments.emplace_back(
-                std::make_shared<ValueSegment<double>>(std::move(values), std::move(nulls)));
+            output_segments.emplace_back(std::make_shared<ValueSegment<double>>(std::move(values), std::move(nulls)));
           } else {
             Fail("StandardDeviationSample is not available on non-arithmetic types.");
           }
@@ -654,8 +654,7 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
           break;
         }
         default:
-          Fail(std::format("Unsupported aggregate function '{}'.",
-                           window_function_to_string.left.at(window_function)));
+          Fail(std::format("Unsupported aggregate function '{}'.", window_function_to_string.left.at(window_function)));
       }
     });
   }
