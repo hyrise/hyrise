@@ -117,7 +117,7 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
           case WindowFunction::Avg: {
             using AggregateType = typename WindowFunctionTraits<ColumnDataType, WindowFunction::Avg>::ReturnType;
             const auto result =
-                _aggregate_all_values<ColumnDataType, AggregateType, WindowFunction::Avg>(input_table, );
+                _aggregate_all_values<ColumnDataType, AggregateType, WindowFunction::Avg>(input_table, input_column_id);
             result_values.emplace_back(result);
             break;
           }
