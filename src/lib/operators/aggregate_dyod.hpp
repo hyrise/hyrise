@@ -10,6 +10,7 @@
 #include "abstract_read_only_operator.hpp"
 #include "aggregate/window_function_traits.hpp"
 #include "expression/window_function_expression.hpp"
+#include "operators/abstract_operator.hpp"
 #include "resolve_type.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/value_segment.hpp"
