@@ -400,7 +400,7 @@ int main(int argc, char* argv[]) {
 
     for (const auto& encoding_config : ENCODING_CONFIGS) {
       auto benchmark_config = std::make_shared<BenchmarkConfig>();
-      benchmark_config->cache_binary_tables = true;
+      benchmark_config->cache_binary_tables = false;
       benchmark_config->encoding_config = encoding_config;
 
       silent_tpcx_table_generation(BenchmarkType::tpch, scale_factor, benchmark_config);

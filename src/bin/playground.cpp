@@ -8,7 +8,10 @@
 #include <utility>
 #include <vector>
 
+#include <boost/container_hash/hash.hpp>
+
 // This playground only compiles on Linux as we require Linux's perf and perfetto.
+#include "all_type_variant.hpp"
 #include "hyrise.hpp"
 #include "perfcpp/event_counter.h"
 #include "perfetto.h"
@@ -26,6 +29,23 @@ constexpr auto STRING_COUNT = size_t{100'000'000};  // Careful: 100M has an RSS 
 PERFETTO_DEFINE_CATEGORIES(perfetto::Category("Sort").SetDescription("Benchmark parallel sorting"));
 
 PERFETTO_TRACK_EVENT_STATIC_STORAGE();
+
+namespace std {
+
+template <>
+struct hash<std::vector<AllTypeVariant>> {
+  size_t operator()(const std::vector<AllTypeVariant>& values) const {
+    auto hash = size_t{0};
+
+    for (const auto& value : values) {
+      boost::hash_combine(hash, value);
+    }
+
+    return hash;
+  }
+};
+
+}  // namespace std
 
 std::vector<std::string> get_top_by_stdsort(const size_t k, std::vector<std::string>& input) {
   std::ranges::sort(input);
@@ -127,7 +147,7 @@ std::vector<std::string> get_std_strings(auto& generator, auto& random_distribut
   return std_strings;
 }
 
-int main() {
+void perfcpp_example() {
   auto generator = std::mt19937{17};
   auto random_distribution = std::uniform_int_distribution<uint32_t>();
 
@@ -176,10 +196,17 @@ int main() {
     }
     std::cout << '\n';
   }
+}
 
+void perfetto_example() {
   /**
    * Initialize Perfetto.
    */
+  auto generator = std::mt19937{17};
+  auto random_distribution = std::uniform_int_distribution<uint32_t>();
+
+  auto base_data = get_std_strings(generator, random_distribution);
+
   auto track_event_cfg = perfetto::protos::gen::TrackEventConfig{};
   track_event_cfg.add_enabled_categories("Sort");
 
@@ -205,9 +232,91 @@ int main() {
   auto trace_data = std::vector<char>(tracing_session->ReadTraceBlocking());
 
   auto output = std::ofstream{};
-  output.open("dyod2025_mergesort.perfetto-trace", std::ios::out | std::ios::binary);
+  output.open("dyod_mergesort.perfetto-trace", std::ios::out | std::ios::binary);
   output.write(&trace_data[0], trace_data.size());
   output.close();
+}
+
+void key_normalization_example() {
+  const auto grouping_key_row_1 = std::vector<AllTypeVariant>{int32_t{0}, int32_t{1}, float{2}};
+  const auto grouping_key_row_2 = std::vector<AllTypeVariant>{int32_t{1}, int32_t{2}, float{3}};
+
+  std::cout << "Are row 1 and 2 the same? Hash values " << std::hash<std::vector<AllTypeVariant>>{}(grouping_key_row_1)
+            << " and " << std::hash<std::vector<AllTypeVariant>>{}(grouping_key_row_2) << '\n';
+  std::cout << "Even in hash maps, we need to check for actual equality. Equal? " << std::boolalpha
+            << (grouping_key_row_1 == grouping_key_row_2) << '\n';
+
+  constexpr auto ROW_COUNT = int32_t{100'000'000};
+  constexpr auto COLUMN_COUNT = int32_t{3};
+
+  // Fake a simple materialized table. Depending on where the difference is (first, middle, last), the vector-based
+  // approach can be even faster if it can short-cut.
+  auto table = std::vector<AllTypeVariant>(COLUMN_COUNT * ROW_COUNT);
+  for (auto row_index = int32_t{0}; row_index < ROW_COUNT - 1; ++row_index) {
+    table[row_index * COLUMN_COUNT] = int32_t{1};
+    table[row_index * COLUMN_COUNT + 1] = int32_t{row_index};
+    table[row_index * COLUMN_COUNT + 2] = float{2};
+  }
+  table[(ROW_COUNT - 1) * COLUMN_COUNT] = int32_t{1};  // Last row equal to previous.
+  table[(ROW_COUNT - 1) * COLUMN_COUNT + 1] = int32_t{ROW_COUNT - 2};
+  table[(ROW_COUNT - 1) * COLUMN_COUNT + 2] = float{2};
+
+  {
+    auto counters = perf::CounterDefinition{};
+    auto event_counter = perf::EventCounter{counters};
+    event_counter.add({"seconds", "instructions", "cycles", "branches"});
+
+    auto matches = size_t{0};
+    event_counter.start();
+    for (auto row_index = size_t{1}; row_index < ROW_COUNT; ++row_index) {
+      auto tuple_matches = true;
+      for (auto column_index = uint8_t{0}; column_index < COLUMN_COUNT; ++column_index) {
+        if (table[row_index * COLUMN_COUNT + column_index] != table[(row_index - 1) * COLUMN_COUNT + column_index]) {
+          tuple_matches = false;
+          break;
+        }
+      }
+      matches += static_cast<size_t>(tuple_matches);
+    }
+    event_counter.stop();
+    std::cout << "element-wise compare: " << matches << " matche(s)\n";
+
+    const auto perf_result = event_counter.result();
+    for (const auto& [event_name, value] : perf_result) {
+      std::cout << event_name << ": " << value << '\n';
+    }
+    std::cout << '\n';
+  }
+
+  {
+    auto counters = perf::CounterDefinition{};
+    auto event_counter = perf::EventCounter{counters};
+    event_counter.add({"seconds", "instructions", "cycles", "branches"});
+
+    auto matches = size_t{0};
+    event_counter.start();
+    constexpr auto key_width = COLUMN_COUNT * sizeof(AllTypeVariant);
+    for (auto row_index = size_t{1}; row_index < ROW_COUNT; ++row_index) {
+      const auto position_row_1 = reinterpret_cast<std::byte*>(table.data()) + ((row_index - 1) * key_width);
+      const auto position_row_2 = reinterpret_cast<std::byte*>(table.data()) + (row_index * key_width);
+      matches += (std::memcmp(position_row_1, position_row_2, key_width) == 0);
+    }
+    event_counter.stop();
+    std::cout << "memcmp: " << matches << " matche(s)\n";
+
+    const auto perf_result = event_counter.result();
+    for (const auto& [event_name, value] : perf_result) {
+      std::cout << event_name << ": " << value << '\n';
+    }
+    std::cout << '\n';
+  }
+
+  // And that's the bummer. Better avoid for key materialization.
+  std::cout << "Size of AllTypeVariant is " << sizeof(AllTypeVariant) << '\n';
+}
+
+int main() {
+  key_normalization_example();
 
   return 0;
 }
