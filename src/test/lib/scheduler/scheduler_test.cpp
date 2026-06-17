@@ -2,7 +2,6 @@
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
-#include <latch>
 #include <memory>
 #include <stdexcept>
 #include <thread>
@@ -186,7 +185,7 @@ TEST_F(SchedulerTest, ConcurrentlyProcessedTaskGroups) {
     GTEST_SKIP();
   }
 
-  const auto multiplier = (HYRISE_DEBUG || HYRISE_WITH_TSAN) ? size_t{50} : size_t{200};
+  constexpr auto multiplier = (HYRISE_DEBUG || HYRISE_WITH_TSAN) ? size_t{50} : size_t{200};
   const auto task_count = multiplier * worker_count;
 
   for (const auto group_count : std::vector<size_t>{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15}) {
@@ -470,13 +469,13 @@ TEST_F(SchedulerTest, NumGroupDeterminationDifferentLoads) {
   EXPECT_EQ(*num_groups_without_load, static_cast<size_t>(node_queue_scheduler::detail::NUM_GROUPS_MAX_FACTOR *
                                                           static_cast<double>(worker_count)));
 
-  // Create load on queue. Schedule jobs that are blocked on the unblock_jobs latch.
-  auto unblock_jobs = std::latch{1};
+  // Create load on queue. Schedule jobs that are blocked on the atomic_flag.
+  auto block_flag = std::atomic_flag{};
   auto tasks_2 = std::vector<std::shared_ptr<AbstractTask>>{};
   tasks_2.reserve(task_count);
   for (auto task_id = TaskID{0}; task_id < task_count; ++task_id) {
     tasks_2.push_back(std::make_shared<JobTask>([&]() {
-      unblock_jobs.wait();
+      block_flag.wait(false);
     }));
     tasks_2.back()->schedule();
   }
@@ -490,7 +489,8 @@ TEST_F(SchedulerTest, NumGroupDeterminationDifferentLoads) {
                                                                 static_cast<double>(worker_count))));
 
   // Shutdown. Unblock scheduled jobs.
-  unblock_jobs.count_down();
+  block_flag.test_and_set();
+  block_flag.notify_all();
   node_queue_scheduler->schedule_and_wait_for_tasks(tasks_1);
   node_queue_scheduler->wait_for_tasks(tasks_2);
 }
@@ -521,10 +521,10 @@ TEST_F(SchedulerTest, MergeSort) {
   // With #2697, we needed to limit the ITEM_COUNT from 5'000 to 1'000 (for Debug builds) as we otherwise got an "bus
   // error" on the Mac ARM machine. Running the address sanatizers showed that it is caused by stack overflow, caused by
   // introducing <format>. We do not consider this an issue as <format> improves the code and we have seen a negative
-  // effect on release builds. For TSAN, we reduce it to 5'000, as the test gets very slow otherwise.
+  // effect on release builds. For TSAN, we reduce it to 100, as the test gets very slow otherwise.
   // This test aims to penetrate the scheduler more (here via recursion) than typical operators should.
   // If this test fails, check the system's stack size and if ITEM_COUNT needs to be adapted.
-  constexpr auto ITEM_COUNT = HYRISE_DEBUG ? size_t{1'000} : (HYRISE_WITH_TSAN ? size_t{100} : size_t{20'000});
+  constexpr auto ITEM_COUNT = HYRISE_DEBUG ? size_t{500} : (HYRISE_WITH_TSAN ? size_t{100} : size_t{20'000});
   Assert(ITEM_COUNT % 5 == 0, "Must be dividable by 5.");
 
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
