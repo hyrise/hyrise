@@ -176,6 +176,7 @@ TEST_F(SchedulerTest, LinearDependenciesWithScheduler) {
   EXPECT_EQ(counter, 3);
 }
 
+// Test that task grouping works, i.e., no more tasks than the requested group count are processed at the same time.
 TEST_F(SchedulerTest, ConcurrentlyProcessedTaskGroups) {
   const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
   Hyrise::get().set_scheduler(node_queue_scheduler);
@@ -210,6 +211,7 @@ TEST_F(SchedulerTest, ConcurrentlyProcessedTaskGroups) {
   }
 }
 
+// Test that tasks are assigned to groups in a round-robin manner.
 TEST_F(SchedulerTest, GroupingOrderOfTasks) {
   auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
   Hyrise::get().set_scheduler(node_queue_scheduler);
@@ -422,7 +424,10 @@ TEST_F(SchedulerTest, NumGroupDetermination) {
     const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
     Hyrise::get().set_scheduler(node_queue_scheduler);
 
-    const auto tasks = std::vector<std::shared_ptr<AbstractTask>>{std::make_shared<JobTask>([&]() {})};
+    const auto tasks = std::vector<std::shared_ptr<AbstractTask>>{std::make_shared<JobTask>([&]() {}),
+                                                                  std::make_shared<JobTask>([&]() {}),
+                                                                  std::make_shared<JobTask>([&]() {}),
+                                                                  std::make_shared<JobTask>([&]() {})};
     EXPECT_FALSE(node_queue_scheduler->determine_group_count(tasks));
   }
 
@@ -518,12 +523,12 @@ void merge_sort(Iterator first, Iterator last) {
 // Recursive merge sort. Creates a typical divide-and-conquer fan out pattern of tasks. We use the text book
 // implementation that recurses until the vector length is 1 to increase the depth of the fan out.
 TEST_F(SchedulerTest, MergeSort) {
-  // With #2697, we needed to limit the ITEM_COUNT from 5'000 to 1'000 (for Debug builds) as we otherwise got an "bus
-  // error" on the Mac ARM machine. Running the address sanatizers showed that it is caused by stack overflow, caused by
-  // introducing <format>. We do not consider this an issue as <format> improves the code and we have seen a negative
-  // effect on release builds. For TSAN, we reduce it to 100, as the test gets very slow otherwise.
   // This test aims to penetrate the scheduler more (here via recursion) than typical operators should.
   // If this test fails, check the system's stack size and if ITEM_COUNT needs to be adapted.
+  // With #2697, we needed to limit the ITEM_COUNT (for Debug builds) as we otherwise got a "bus error" on the Mac ARM
+  // machine. Running the address sanitizers showed that it is caused by stack overflow, caused by introducing <format>.
+  // We do not consider this an issue as <format> improves the code and we have seen no negative effect in release mode.
+  // For TSAN, we reduce ITEM_COUNT, as the test gets very slow otherwise.
   constexpr auto ITEM_COUNT = HYRISE_DEBUG ? size_t{500} : (HYRISE_WITH_TSAN ? size_t{100} : size_t{20'000});
   Assert(ITEM_COUNT % 5 == 0, "Must be dividable by 5.");
 

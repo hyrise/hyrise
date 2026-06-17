@@ -153,15 +153,6 @@ class NodeQueueScheduler final : public AbstractScheduler {
   std::vector<std::shared_ptr<Worker>> _workers;
   std::vector<NodeID> _active_nodes;
 
-  size_t _min_task_count_for_regrouping{8};
-  size_t _worker_count{8};
-  size_t _regrouping_upper_limit{32};
-
-  double _max_group_count{0};
-
-  double _max_considered_queue_load{8};
-  double _step_size{0};
-
   std::atomic_bool _active{false};
   std::atomic_int64_t _active_worker_count{0};
 
@@ -169,6 +160,15 @@ class NodeQueueScheduler final : public AbstractScheduler {
   std::vector<size_t> _workers_per_node;
 
   std::mutex _finish_mutex;
+
+  // The following variables are used for task grouping. We use defaults to be safe here, but the values are determined
+  // in begin() depending on the system's topology.
+  size_t _min_task_count_for_regrouping{8};
+  size_t _worker_count{8};
+  size_t _regrouping_upper_limit{32};
+  double _max_group_count{0};
+  double _max_considered_queue_load{8};
+  double _step_size{0};
 };
 
 }  // namespace hyrise
