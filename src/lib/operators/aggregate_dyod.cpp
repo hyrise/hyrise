@@ -121,6 +121,16 @@ struct GroupKeyEqual {
   }
 };
 
+// The shared skeleton for the group-by path. All output columns (the group-by columns and every aggregate) are
+// indexed by a group's position in `keys`, so they line up row-for-row regardless of hash-map iteration order.
+using GroupKey = std::vector<AllTypeVariant>;
+
+struct GroupKeyData {
+  std::vector<GroupKey> keys;  // distinct group keys, first-encounter order
+  std::unordered_map<GroupKey, size_t, GroupKeyHash, GroupKeyEqual> index;  // group key -> its position in `keys`
+  std::vector<size_t> row_counts;                                           // number of rows per group (for COUNT(*))
+};
+
 // STDDEV_SAMP needs a richer accumulator than the other aggregates (Welford's running mean/variance, see
 // `WindowFunctionBuilder<..., WindowFunction::StandardDeviationSample>`), so it gets its own scan helpers instead of
 // reusing `_aggregate_all_values`. The result is NULL whenever fewer than two values contribute, which
@@ -171,16 +181,6 @@ int64_t _count_distinct_all_values(const std::shared_ptr<const Table>& input_tab
   return static_cast<int64_t>(distinct_values.size());
 }
 
-// The shared skeleton for the group-by path. All output columns (the group-by columns and every aggregate) are
-// indexed by a group's position in `keys`, so they line up row-for-row regardless of hash-map iteration order.
-using GroupKey = std::vector<AllTypeVariant>;
-
-struct GroupKeyData {
-  std::vector<GroupKey> keys;  // distinct group keys, first-encounter order
-  std::unordered_map<GroupKey, size_t, GroupKeyHash, GroupKeyEqual> index;  // group key -> its position in `keys`
-  std::vector<size_t> row_counts;                                           // number of rows per group (for COUNT(*))
-};
-
 // Reads the group-by column values of `chunk_offset` into `key`.
 inline void _read_group_key(const std::shared_ptr<const Chunk>& chunk, const std::vector<ColumnID>& groupby_column_ids,
                             const ChunkOffset chunk_offset, GroupKey& key) {
@@ -192,9 +192,9 @@ inline void _read_group_key(const std::shared_ptr<const Chunk>& chunk, const std
 
 // Determines the distinct groups. A group exists if any row maps to it, even if its aggregated values are all NULL or
 // its group-by key contains NULL (NULL forms its own group).
-GroupKeyData _compute_group_keys(const std::vector<ColumnID>& groupby_column_ids,
-                                 const std::shared_ptr<const Table>& input_table) {
-  auto data = GroupKeyData{};
+std::shared_ptr<GroupKeyData> _compute_group_keys(const std::vector<ColumnID>& groupby_column_ids,
+                                                  const std::shared_ptr<const Table>& input_table) {
+  const auto group_key_data = std::make_shared<GroupKeyData>();
   const auto group_by_column_count = groupby_column_ids.size();
   const auto chunk_count = input_table->chunk_count();
   auto key = GroupKey(group_by_column_count);
@@ -203,33 +203,34 @@ GroupKeyData _compute_group_keys(const std::vector<ColumnID>& groupby_column_ids
     const auto chunk_size = chunk->size();
     for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
       _read_group_key(chunk, groupby_column_ids, chunk_offset, key);
-      const auto [iter, inserted] = data.index.try_emplace(key, data.keys.size());
+      const auto [iter, inserted] = group_key_data->index.try_emplace(key, group_key_data->keys.size());
       if (inserted) {
-        data.keys.push_back(key);
-        data.row_counts.push_back(0);
+        group_key_data->keys.push_back(key);
+        group_key_data->row_counts.push_back(0);
       }
-      ++data.row_counts[iter->second];
+      ++group_key_data->row_counts[iter->second];
     }
   }
-  return data;
+  return group_key_data;
 }
 
-// Builds the group-by output segments (one per group-by column) from the precomputed group keys, preserving the source
-// column's nullability (a NULL group-by key value is emitted as NULL).
-void _build_groupby_segments(const GroupKeyData& groups, const std::vector<ColumnID>& groupby_column_ids,
+// Build output ValueSegments for group-by columns.
+void _build_groupby_segments(const std::shared_ptr<GroupKeyData>& groups,
+                             const std::vector<ColumnID>& groupby_column_ids,
                              const std::shared_ptr<const Table>& input_table,
                              pmr_vector<std::shared_ptr<AbstractSegment>>& output_segments) {
-  const auto group_count = groups.keys.size();
+  const auto group_count = groups->keys.size();
   const auto group_by_column_count = groupby_column_ids.size();
   for (auto group_index = size_t{0}; group_index < group_by_column_count; ++group_index) {
     const auto column_id = groupby_column_ids[group_index];
     const auto is_nullable = input_table->column_is_nullable(column_id);
+
     resolve_data_type(input_table->column_data_type(column_id), [&](const auto column_data_type_t) {
       using GroupKeyDataType = typename decltype(column_data_type_t)::type;
       auto values = pmr_vector<GroupKeyDataType>(group_count);
       auto nulls = pmr_vector<bool>(group_count, false);
       for (auto i = size_t{0}; i < group_count; ++i) {
-        const auto& key_value = groups.keys[i][group_index];
+        const auto& key_value = groups->keys[i][group_index];
         if (variant_is_null(key_value)) {
           nulls[i] = true;
         } else {
@@ -250,11 +251,11 @@ void _build_groupby_segments(const GroupKeyData& groups, const std::vector<Colum
 // (non-NULL) value yields NULL, except COUNT which yields 0.
 template <typename ColumnDataType, typename AggregateType, WindowFunction window_function>
 std::pair<pmr_vector<AggregateType>, pmr_vector<bool>> _aggregate_grouped(
-    const GroupKeyData& groups, const std::vector<ColumnID>& groupby_column_ids,
+    const std::shared_ptr<GroupKeyData>& groups, const std::vector<ColumnID>& groupby_column_ids,
     const std::shared_ptr<const Table>& input_table, const ColumnID input_column_id) {
   const auto aggregate_function =
       WindowFunctionBuilder<ColumnDataType, AggregateType, window_function>().get_aggregate_function();
-  const auto group_count = groups.keys.size();
+  const auto group_count = groups->keys.size();
   auto accumulators = std::vector<AggregateType>(group_count);
   auto value_counts = std::vector<size_t>(group_count, 0);
 
@@ -271,12 +272,13 @@ std::pair<pmr_vector<AggregateType>, pmr_vector<bool>> _aggregate_grouped(
         continue;
       }
       _read_group_key(chunk, groupby_column_ids, chunk_offset, key);
-      const auto index = groups.index.at(key);
+      const auto index = groups->index.at(key);
       aggregate_function(boost::get<ColumnDataType>(value), value_counts[index], accumulators[index]);
       ++value_counts[index];
     }
   }
 
+  // We have aggregated all values per group, but need to apply some 'post-processing' to finalize the results.
   auto values = pmr_vector<AggregateType>(group_count);
   auto nulls = pmr_vector<bool>(group_count, false);
   for (auto i = size_t{0}; i < group_count; ++i) {
@@ -300,12 +302,13 @@ std::pair<pmr_vector<AggregateType>, pmr_vector<bool>> _aggregate_grouped(
   return {std::move(values), std::move(nulls)};
 }
 
-// COUNT(DISTINCT), indexed per group: number of distinct non-NULL values. Never NULL (0 for an all-NULL group).
+// COUNT(DISTINCT): number of distinct non-NULL values. Never NULL (0 for an all-NULL group).
 template <typename ColumnDataType>
-pmr_vector<int64_t> _count_distinct_grouped(const GroupKeyData& groups, const std::vector<ColumnID>& groupby_column_ids,
+pmr_vector<int64_t> _count_distinct_grouped(const std::shared_ptr<GroupKeyData>& groups,
+                                            const std::vector<ColumnID>& groupby_column_ids,
                                             const std::shared_ptr<const Table>& input_table,
                                             const ColumnID input_column_id) {
-  const auto group_count = groups.keys.size();
+  const auto group_count = groups->keys.size();
   auto distinct_values = std::vector<std::unordered_set<ColumnDataType>>(group_count);
 
   const auto group_by_column_count = groupby_column_ids.size();
@@ -321,7 +324,7 @@ pmr_vector<int64_t> _count_distinct_grouped(const GroupKeyData& groups, const st
         continue;
       }
       _read_group_key(chunk, groupby_column_ids, chunk_offset, key);
-      distinct_values[groups.index.at(key)].insert(boost::get<ColumnDataType>(value));
+      distinct_values[groups->index.at(key)].insert(boost::get<ColumnDataType>(value));
     }
   }
 
@@ -332,14 +335,13 @@ pmr_vector<int64_t> _count_distinct_grouped(const GroupKeyData& groups, const st
   return values;
 }
 
-// ANY(), indexed per group: the first value seen per group, NULL included (the value is passed through, not
-// aggregated, so all-NULL groups stay).
+// ANY: the first value seen per group, NULL included (The value is passed through. All-NULL groups stay).
 template <typename ColumnDataType>
-std::pair<pmr_vector<ColumnDataType>, pmr_vector<bool>> _any_grouped(const GroupKeyData& groups,
+std::pair<pmr_vector<ColumnDataType>, pmr_vector<bool>> _any_grouped(const std::shared_ptr<GroupKeyData>& groups,
                                                                      const std::vector<ColumnID>& groupby_column_ids,
                                                                      const std::shared_ptr<const Table>& input_table,
                                                                      const ColumnID input_column_id) {
-  const auto group_count = groups.keys.size();
+  const auto group_count = groups->keys.size();
   auto seen = std::vector<bool>(group_count, false);
   auto values = pmr_vector<ColumnDataType>(group_count);
   auto nulls = pmr_vector<bool>(group_count, false);
@@ -353,7 +355,7 @@ std::pair<pmr_vector<ColumnDataType>, pmr_vector<bool>> _any_grouped(const Group
     const auto segment_size = aggregate_segment->size();
     for (auto chunk_offset = ChunkOffset{0}; chunk_offset < segment_size; ++chunk_offset) {
       _read_group_key(chunk, groupby_column_ids, chunk_offset, key);
-      const auto index = groups.index.at(key);
+      const auto index = groups->index.at(key);
       if (seen[index]) {
         continue;
       }
@@ -369,15 +371,15 @@ std::pair<pmr_vector<ColumnDataType>, pmr_vector<bool>> _any_grouped(const Group
   return {std::move(values), std::move(nulls)};
 }
 
-// STDDEV_SAMP, indexed per group: NULL for groups with fewer than two contributing values.
+// STDDEV: NULL for groups with fewer than two contributing values.
 template <typename ColumnDataType>
 std::pair<pmr_vector<double>, pmr_vector<bool>> _standard_deviation_sample_grouped(
-    const GroupKeyData& groups, const std::vector<ColumnID>& groupby_column_ids,
+    const std::shared_ptr<GroupKeyData>& groups, const std::vector<ColumnID>& groupby_column_ids,
     const std::shared_ptr<const Table>& input_table, const ColumnID input_column_id) {
   static_assert(std::is_arithmetic_v<ColumnDataType>, "StandardDeviationSample is only defined on arithmetic types.");
   const auto aggregate_function =
       WindowFunctionBuilder<ColumnDataType, double, WindowFunction::StandardDeviationSample>().get_aggregate_function();
-  const auto group_count = groups.keys.size();
+  const auto group_count = groups->keys.size();
   auto accumulators = std::vector<StandardDeviationSampleData>(group_count);
 
   const auto group_by_column_count = groupby_column_ids.size();
@@ -394,7 +396,7 @@ std::pair<pmr_vector<double>, pmr_vector<bool>> _standard_deviation_sample_group
       }
       _read_group_key(chunk, groupby_column_ids, chunk_offset, key);
       // Welford's algorithm tracks its own count in `accumulator[0]`, so the `aggregate_count` argument is unused.
-      aggregate_function(boost::get<ColumnDataType>(value), size_t{0}, accumulators[groups.index.at(key)]);
+      aggregate_function(boost::get<ColumnDataType>(value), size_t{0}, accumulators[groups->index.at(key)]);
     }
   }
 
@@ -536,7 +538,7 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
   const auto groupby_column_count = _groupby_column_ids.size();
 
   const auto groups = _compute_group_keys(_groupby_column_ids, input_table);
-  const auto group_count = groups.keys.size();
+  const auto group_count = groups->keys.size();
 
   auto column_definitions = TableColumnDefinitions{};
   column_definitions.reserve(groupby_column_count + aggregate_count);
@@ -564,18 +566,20 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
       column_definitions.emplace_back(input_table->column_name(input_column_id),
                                       input_table->column_data_type(input_column_id),
                                       input_table->column_is_nullable(input_column_id));
+    } else if (window_function == WindowFunction::Count || window_function == WindowFunction::CountDistinct) {
+      // COUNT and COUNT DISTINCT never produce NULL.
+      column_definitions.emplace_back(aggregate->as_column_name(), aggregate->data_type(), false);
     } else {
-      // COUNT and COUNT DISTINCT never produce NULL; all other aggregates can.
-      const auto is_count =
-          window_function == WindowFunction::Count || window_function == WindowFunction::CountDistinct;
-      column_definitions.emplace_back(aggregate->as_column_name(), aggregate->data_type(), !is_count);
+      // All other aggregates can produce NULL.
+      column_definitions.emplace_back(aggregate->as_column_name(), aggregate->data_type(), true);
     }
 
-    // COUNT(*) does not reference an input column; it counts all rows per group (NULLs included).
+    // COUNT(*) does not reference an input column. It counts all rows per group (NULLs included).
+    // Therefore, we can just emit the `row_counts` from our GroupKeyData.
     if (window_function == WindowFunction::Count && input_column_id == INVALID_COLUMN_ID) {
       auto values = pmr_vector<int64_t>(group_count);
       for (auto i = size_t{0}; i < group_count; ++i) {
-        values[i] = static_cast<int64_t>(groups.row_counts[i]);
+        values[i] = static_cast<int64_t>(groups->row_counts[i]);
       }
       output_segments.emplace_back(std::make_shared<ValueSegment<int64_t>>(std::move(values)));
       continue;
