@@ -177,26 +177,27 @@ TEST_F(SchedulerTest, LinearDependenciesWithScheduler) {
 }
 
 // Test that task grouping works, i.e., no more tasks than the requested group count are processed at the same time.
-TEST_F(SchedulerTest, ConcurrentlyProcessedTaskGroups) {
+TEST_F(SchedulerTest, CheckScheduledTasksAreGrouped) {
   const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
   Hyrise::get().set_scheduler(node_queue_scheduler);
 
   const auto worker_count = node_queue_scheduler->workers().size();
-  if (worker_count < 2) {
-    GTEST_SKIP();
-  }
 
-  constexpr auto multiplier = (HYRISE_DEBUG || HYRISE_WITH_TSAN) ? size_t{50} : size_t{200};
+  constexpr auto multiplier = (HYRISE_DEBUG || HYRISE_WITH_TSAN) ? size_t{50} : size_t{5'000};
   const auto task_count = multiplier * worker_count;
 
   for (const auto group_count : std::vector<size_t>{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15}) {
+    // If the tested system does not have enough hardware threads, skip.
+    if (worker_count < group_count) {
+      continue;
+    }
+
     auto output_counter = std::atomic<size_t>{0};
     auto concurrently_processed_groups = std::atomic<int64_t>{0};
-
     auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
 
     for (auto task_id = size_t{0}; task_id < task_count; ++task_id) {
-      tasks.emplace_back(std::make_shared<JobTask>([&] {
+      tasks.emplace_back(std::make_shared<JobTask>([&] () {
         ++output_counter;
         const auto active_groups = ++concurrently_processed_groups;
         ASSERT_LE(active_groups, group_count);
