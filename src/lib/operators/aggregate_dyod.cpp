@@ -42,6 +42,9 @@ const std::string& AggregateDYOD::name() const {
 }
 
 std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
+  // Check for invalid aggregates
+  _validate_aggregates();
+
   return _create_output_table();
 }
 
