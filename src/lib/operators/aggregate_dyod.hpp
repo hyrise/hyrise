@@ -37,6 +37,12 @@ class AggregateDYOD : public AbstractAggregateOperator {
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
   void _on_cleanup() override;
+
+  std::shared_ptr<Table> _create_output_table();
+
+  template <typename ColumnDataType, WindowFunction aggregate_function>
+  void _append_aggregate_column_definition(TableColumnDefinitions& column_definitions,
+                                           const WindowFunctionExpression& aggregate);
 };
 
 }  // namespace hyrise
