@@ -47,44 +47,6 @@ const std::string& AggregateDYOD::name() const {
   return name;
 }
 
-// Computes a single aggregate over the whole table (no group-by). Returns the value and whether it is NULL: an
-// aggregate over zero contributing (non-NULL) values is NULL, except COUNT which is 0.
-template <typename ColumnDataType, typename AggregateType, WindowFunction window_function>
-std::pair<AggregateType, bool> _aggregate_all_values(const std::shared_ptr<const Table>& input_table,
-                                                     const ColumnID input_column_id) {
-  const auto aggregate_function =
-      WindowFunctionBuilder<ColumnDataType, AggregateType, window_function>().get_aggregate_function();
-  auto accumulator = AggregateType{};
-  auto value_count = size_t{0};
-  const auto chunk_count = input_table->chunk_count();
-
-  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-    const auto& segment = input_table->get_chunk(chunk_id)->get_segment(input_column_id);
-    segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
-      if (position.is_null()) {
-        return;
-      }
-      aggregate_function(position.value(), value_count, accumulator);
-      ++value_count;
-    });
-  }
-
-  // Finalize aggregates that cannot be computed incrementally per row.
-  if constexpr (window_function == WindowFunction::Count) {
-    // The COUNT lambda is a no-op; the actual count is the number of non-NULL values seen.
-    return {static_cast<AggregateType>(value_count), false};
-  } else if constexpr (window_function == WindowFunction::Avg && std::is_arithmetic_v<AggregateType>) {
-    // AVG reuses the SUM accumulator and must be divided by the number of contributing values.
-    if (value_count == 0) {
-      return {AggregateType{}, true};
-    }
-    return {accumulator / static_cast<AggregateType>(value_count), false};
-  } else {
-    // MIN/MAX/SUM/ANY: NULL when no non-NULL value contributed.
-    return {accumulator, value_count == 0};
-  }
-}
-
 // Hash for a group key (the concatenated group-by column values of a row). There is no std::hash for
 // std::vector<AllTypeVariant>, so we combine the per-value hashes ourselves.
 struct GroupKeyHash {
@@ -130,55 +92,6 @@ struct GroupKeyData {
   std::vector<uint32_t>
       tickets;  // PER ROW: ticket for this specific group key (index into `keys` and the output vectors)
 };
-
-// STDDEV_SAMP needs a used a different accumulator than the other aggregates (Welford's thingy...),
-// so it gets its own scan helpers instead of reusing `_aggregate_all_values`.
-// The result is NULL whenever fewer than two values contribute.
-template <typename ColumnDataType>
-std::optional<double> _standard_deviation_sample_all_values(const std::shared_ptr<const Table>& input_table,
-                                                            const ColumnID input_column_id) {
-  static_assert(std::is_arithmetic_v<ColumnDataType>, "StandardDeviationSample is only defined on arithmetic types.");
-  const auto aggregate_function =
-      WindowFunctionBuilder<ColumnDataType, double, WindowFunction::StandardDeviationSample>().get_aggregate_function();
-  auto accumulator = StandardDeviationSampleData{};
-  auto value_count = size_t{0};
-  const auto chunk_count = input_table->chunk_count();
-
-  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-    const auto& segment = input_table->get_chunk(chunk_id)->get_segment(input_column_id);
-    segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
-      if (position.is_null()) {
-        return;
-      }
-      aggregate_function(position.value(), value_count, accumulator);
-      ++value_count;
-    });
-  }
-
-  // STDDEV_SAMP is undefined (NULL) for fewer than two contributing values.
-  if (value_count < 2) {
-    return std::nullopt;
-  }
-  return accumulator[3];
-}
-
-// COUNT(DISTINCT) needs to know how many distinct non-NULL values each group has, which the incremental
-// `WindowFunctionBuilder` accumulator cannot track. We therefore collect the distinct values per group in a set.
-template <typename ColumnDataType>
-int64_t _count_distinct_all_values(const std::shared_ptr<const Table>& input_table, const ColumnID input_column_id) {
-  auto distinct_values = std::unordered_set<ColumnDataType>{};
-  const auto chunk_count = input_table->chunk_count();
-  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-    const auto& segment = input_table->get_chunk(chunk_id)->get_segment(input_column_id);
-    segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
-      if (position.is_null()) {
-        return;
-      }
-      distinct_values.insert(position.value());
-    });
-  }
-  return static_cast<int64_t>(distinct_values.size());
-}
 
 // Reads the group-by column values of `chunk_offset` into `key`.
 inline void _read_group_key(const std::shared_ptr<const Chunk>& chunk, const std::vector<ColumnID>& groupby_column_ids,
@@ -250,6 +163,93 @@ void _build_groupby_segments(const std::shared_ptr<GroupKeyData>& groups,
       }
     });
   }
+}
+
+// Computes a single aggregate over the whole table (no group-by). Returns the value and whether it is NULL: an
+// aggregate over zero contributing (non-NULL) values is NULL, except COUNT which is 0.
+template <typename ColumnDataType, typename AggregateType, WindowFunction window_function>
+std::pair<AggregateType, bool> _aggregate_all_values(const std::shared_ptr<const Table>& input_table,
+                                                     const ColumnID input_column_id) {
+  const auto aggregate_function =
+      WindowFunctionBuilder<ColumnDataType, AggregateType, window_function>().get_aggregate_function();
+  auto accumulator = AggregateType{};
+  auto value_count = size_t{0};
+  const auto chunk_count = input_table->chunk_count();
+
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+    const auto& segment = input_table->get_chunk(chunk_id)->get_segment(input_column_id);
+    segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
+      if (position.is_null()) {
+        return;
+      }
+      aggregate_function(position.value(), value_count, accumulator);
+      ++value_count;
+    });
+  }
+
+  // Finalize aggregates that cannot be computed incrementally per row.
+  if constexpr (window_function == WindowFunction::Count) {
+    // The COUNT lambda is a no-op; the actual count is the number of non-NULL values seen.
+    return {static_cast<AggregateType>(value_count), false};
+  } else if constexpr (window_function == WindowFunction::Avg && std::is_arithmetic_v<AggregateType>) {
+    // AVG reuses the SUM accumulator and must be divided by the number of contributing values.
+    if (value_count == 0) {
+      return {AggregateType{}, true};
+    }
+    return {accumulator / static_cast<AggregateType>(value_count), false};
+  } else {
+    // MIN/MAX/SUM/ANY: NULL when no non-NULL value contributed.
+    return {accumulator, value_count == 0};
+  }
+}
+
+// STDDEV_SAMP needs a used a different accumulator than the other aggregates (Welford's thingy...),
+// so it gets its own scan helpers instead of reusing `_aggregate_all_values`.
+// The result is NULL whenever fewer than two values contribute.
+template <typename ColumnDataType>
+std::optional<double> _standard_deviation_sample_all_values(const std::shared_ptr<const Table>& input_table,
+                                                            const ColumnID input_column_id) {
+  static_assert(std::is_arithmetic_v<ColumnDataType>, "StandardDeviationSample is only defined on arithmetic types.");
+  const auto aggregate_function =
+      WindowFunctionBuilder<ColumnDataType, double, WindowFunction::StandardDeviationSample>().get_aggregate_function();
+  auto accumulator = StandardDeviationSampleData{};
+  auto value_count = size_t{0};
+  const auto chunk_count = input_table->chunk_count();
+
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+    const auto& segment = input_table->get_chunk(chunk_id)->get_segment(input_column_id);
+    segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
+      if (position.is_null()) {
+        return;
+      }
+      aggregate_function(position.value(), value_count, accumulator);
+      ++value_count;
+    });
+  }
+
+  // STDDEV_SAMP is undefined (NULL) for fewer than two contributing values.
+  if (value_count < 2) {
+    return std::nullopt;
+  }
+  return accumulator[3];
+}
+
+// COUNT(DISTINCT) needs to know how many distinct non-NULL values each group has, which the incremental
+// `WindowFunctionBuilder` accumulator cannot track. We therefore collect the distinct values per group in a set.
+template <typename ColumnDataType>
+int64_t _count_distinct_all_values(const std::shared_ptr<const Table>& input_table, const ColumnID input_column_id) {
+  auto distinct_values = std::unordered_set<ColumnDataType>{};
+  const auto chunk_count = input_table->chunk_count();
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+    const auto& segment = input_table->get_chunk(chunk_id)->get_segment(input_column_id);
+    segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
+      if (position.is_null()) {
+        return;
+      }
+      distinct_values.insert(position.value());
+    });
+  }
+  return static_cast<int64_t>(distinct_values.size());
 }
 
 // Incrementally computable aggregates (MIN/MAX/SUM/AVG/COUNT), indexed per group. A group with no contributing
