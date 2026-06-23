@@ -21,6 +21,7 @@
 #include <utility>
 #include <vector>
 
+#include "aggregate_dyod_utils/ticketing.hpp"
 #include "all_type_variant.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
@@ -47,120 +48,48 @@ const std::string& AggregateDYOD::name() const {
   return name;
 }
 
-// Hash for a group key (the concatenated group-by column values of a row). There is no std::hash for
-// std::vector<AllTypeVariant>, so we combine the per-value hashes ourselves.
-struct GroupKeyHash {
-  size_t operator()(const std::vector<AllTypeVariant>& key) const {
-    auto seed = size_t{0};
-    for (const auto& value : key) {
-      boost::hash_combine(seed, std::hash<AllTypeVariant>{}(value));
-    }
-    return seed;
-  }
-};
-
-// Equality for group keys. `AllTypeVariant`'s own `==` follows SQL ternary logic (NULL compares unequal to everything,
-// including NULL), but for grouping all NULLs must fall into a single group. We therefore treat two NULLs as equal.
-struct GroupKeyEqual {
-  bool operator()(const std::vector<AllTypeVariant>& lhs, const std::vector<AllTypeVariant>& rhs) const {
-    const auto size = lhs.size();
-    if (size != rhs.size()) {
-      return false;
-    }
-    for (auto i = size_t{0}; i < size; ++i) {
-      const auto lhs_null = variant_is_null(lhs[i]);
-      const auto rhs_null = variant_is_null(rhs[i]);
-      if (lhs_null || rhs_null) {
-        if (lhs_null != rhs_null) {
-          return false;
-        }
-        // Both NULL: equal, keep comparing the remaining columns.
-      } else if (!(lhs[i] == rhs[i])) {
-        return false;
-      }
-    }
-    return true;
-  }
-};
-
-// Our hacky solution for hashing right now.
-using GroupKey = std::vector<AllTypeVariant>;
-
-struct GroupKeyData {
-  std::vector<GroupKey> keys;      // distinct group keys, first-encounter order
-  std::vector<size_t> row_counts;  // number of rows per group (for COUNT(*))
-  std::vector<uint32_t>
-      tickets;  // PER ROW: ticket for this specific group key (index into `keys` and the output vectors)
-};
-
-// Reads the group-by column values of `chunk_offset` into `key`.
-inline void _read_group_key(const std::shared_ptr<const Chunk>& chunk, const std::vector<ColumnID>& groupby_column_ids,
-                            const ChunkOffset chunk_offset, GroupKey& key) {
-  const auto group_by_column_count = groupby_column_ids.size();
-  for (auto group_index = size_t{0}; group_index < group_by_column_count; ++group_index) {
-    key[group_index] = chunk->get_segment(groupby_column_ids[group_index])->operator[](chunk_offset);
-  }
-}
-
-// Determines the distinct groups. A group exists if any row maps to it, even if its aggregated values are all NULL or
-// its group-by key contains NULL (NULL forms its own group).
-std::shared_ptr<GroupKeyData> _compute_group_keys(const std::vector<ColumnID>& groupby_column_ids,
-                                                  const std::shared_ptr<const Table>& input_table) {
-  const auto group_key_data = std::make_shared<GroupKeyData>();
-  const auto group_by_column_count = groupby_column_ids.size();
-  const auto chunk_count = input_table->chunk_count();
-
-  // Map the group key to a ticket, a row index into the output vectors.
-  auto global_hash_table = std::unordered_map<GroupKey, uint32_t, GroupKeyHash, GroupKeyEqual>{};
-  // Temporary buffer to write the GroupKey into.
-  auto key = GroupKey(group_by_column_count);
-  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-    const auto& chunk = input_table->get_chunk(chunk_id);
-    const auto chunk_size = chunk->size();
-    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
-      // TODO(@forunity): we do not need to resolve the segments in here on every iteration.
-      _read_group_key(chunk, groupby_column_ids, chunk_offset, key);
-      const auto [iter, inserted] = global_hash_table.try_emplace(key, global_hash_table.size());
-      if (inserted) {
-        group_key_data->keys.push_back(key);
-        group_key_data->row_counts.push_back(0);
-      }
-      ++group_key_data->row_counts[iter->second];
-      group_key_data->tickets.push_back(iter->second);
-    }
-  }
-  return group_key_data;
-}
-
 // Build output ValueSegments for group-by columns.
 void _build_groupby_segments(const std::shared_ptr<GroupKeyData>& groups,
                              const std::vector<ColumnID>& groupby_column_ids,
                              const std::shared_ptr<const Table>& input_table,
                              pmr_vector<std::shared_ptr<AbstractSegment>>& output_segments) {
-  const auto group_count = groups->keys.size();
+  const auto group_count = groups->global_hash_table.size();
   const auto group_by_column_count = groupby_column_ids.size();
-  for (auto group_index = size_t{0}; group_index < group_by_column_count; ++group_index) {
-    const auto column_id = groupby_column_ids[group_index];
-    const auto is_nullable = input_table->column_is_nullable(column_id);
 
-    resolve_data_type(input_table->column_data_type(column_id), [&](const auto column_data_type_t) {
-      using GroupKeyDataType = typename decltype(column_data_type_t)::type;
-      auto values = pmr_vector<GroupKeyDataType>(group_count);
+  auto string_col_count = size_t{0};
+  for (auto group_by_column_index = size_t{0}; group_by_column_index < group_by_column_count; ++group_by_column_index) {
+    const auto column_id = groupby_column_ids[group_by_column_index];
+    const auto data_type = input_table->column_data_type(column_id);
+    resolve_data_type(data_type, [&](const auto data_type_t) {
+      using ColumnDataType = typename decltype(data_type_t)::type;
+      auto values = pmr_vector<ColumnDataType>(group_count);
       auto nulls = pmr_vector<bool>(group_count, false);
-      for (auto i = size_t{0}; i < group_count; ++i) {
-        const auto& key_value = groups->keys[i][group_index];
-        if (variant_is_null(key_value)) {
-          nulls[i] = true;
+
+      for (const auto& [group_key, ticket] : groups->global_hash_table) {
+        const auto row_ptr = group_key.row;
+
+        const auto null_bitmap = *reinterpret_cast<const uint64_t*>(row_ptr + group_key.format.null_bitmap_offset);
+        nulls[ticket] = (null_bitmap & (uint64_t{1} << group_by_column_index)) != 0;
+        if (nulls[ticket]) {
+          continue;
+        }
+
+        if constexpr (std::is_same_v<ColumnDataType, std::string>) {
+          const auto str_ptr_slot_offset = string_col_count * sizeof(const char*);
+          const auto str_ptr_slot =
+              reinterpret_cast<const char* const*>(row_ptr + group_key.format.string_ptr_offset + str_ptr_slot_offset);
+          // Construct a string from the null-terminated C-string pointer.
+          // NOTE: `std::string` copies the data so we are fine.
+          values[ticket] = *str_ptr_slot;
+          ++string_col_count;
         } else {
-          values[i] = boost::get<GroupKeyDataType>(key_value);
+          const auto col_offset = group_key.format.col_offsets[group_by_column_index];
+          const auto value =
+              *reinterpret_cast<const ColumnDataType*>(row_ptr + group_key.format.data_offset + col_offset);
+          values[ticket] = value;
         }
       }
-      if (is_nullable) {
-        output_segments.emplace_back(
-            std::make_shared<ValueSegment<GroupKeyDataType>>(std::move(values), std::move(nulls)));
-      } else {
-        output_segments.emplace_back(std::make_shared<ValueSegment<GroupKeyDataType>>(std::move(values)));
-      }
+      output_segments.push_back(std::make_shared<ValueSegment<ColumnDataType>>(std::move(values), std::move(nulls)));
     });
   }
 }
@@ -260,7 +189,7 @@ std::pair<pmr_vector<AggregateType>, pmr_vector<bool>> _aggregate_grouped(
     const std::shared_ptr<const Table>& input_table, const ColumnID input_column_id) {
   const auto aggregate_function =
       WindowFunctionBuilder<ColumnDataType, AggregateType, window_function>().get_aggregate_function();
-  const auto group_count = groups->keys.size();
+  const auto group_count = groups->global_hash_table.size();
   auto values = pmr_vector<AggregateType>(group_count);
 
   auto value_counts = std::vector<size_t>(group_count, 0);
@@ -268,7 +197,6 @@ std::pair<pmr_vector<AggregateType>, pmr_vector<bool>> _aggregate_grouped(
 
   const auto group_by_column_count = groupby_column_ids.size();
   const auto chunk_count = input_table->chunk_count();
-  auto key = GroupKey(group_by_column_count);
   auto row_index =
       uint32_t{0};  // global row index across chunks, used to look up the group ticket in `groups->tickets`
 
@@ -316,12 +244,11 @@ pmr_vector<int64_t> _count_distinct_grouped(const std::shared_ptr<GroupKeyData>&
                                             const std::vector<ColumnID>& groupby_column_ids,
                                             const std::shared_ptr<const Table>& input_table,
                                             const ColumnID input_column_id) {
-  const auto group_count = groups->keys.size();
+  const auto group_count = groups->global_hash_table.size();
   auto distinct_values = std::vector<std::unordered_set<ColumnDataType>>(group_count);
 
   const auto group_by_column_count = groupby_column_ids.size();
   const auto chunk_count = input_table->chunk_count();
-  auto key = GroupKey(group_by_column_count);
   auto row_index =
       uint32_t{0};  // global row index across chunks, used to look up the group ticket in `groups->tickets`
 
@@ -353,14 +280,13 @@ std::pair<pmr_vector<ColumnDataType>, pmr_vector<bool>> _any_grouped(const std::
                                                                      const std::vector<ColumnID>& groupby_column_ids,
                                                                      const std::shared_ptr<const Table>& input_table,
                                                                      const ColumnID input_column_id) {
-  const auto group_count = groups->keys.size();
+  const auto group_count = groups->global_hash_table.size();
   auto seen = std::vector<bool>(group_count, false);
   auto values = pmr_vector<ColumnDataType>(group_count);
   auto nulls = pmr_vector<bool>(group_count, false);
 
   const auto group_by_column_count = groupby_column_ids.size();
   const auto chunk_count = input_table->chunk_count();
-  auto key = GroupKey(group_by_column_count);
   auto row_index =
       uint32_t{0};  // global row index across chunks, used to look up the group ticket in `groups->tickets`
 
@@ -392,12 +318,11 @@ std::pair<pmr_vector<double>, pmr_vector<bool>> _standard_deviation_sample_group
   static_assert(std::is_arithmetic_v<ColumnDataType>, "StandardDeviationSample is only defined on arithmetic types.");
   const auto aggregate_function =
       WindowFunctionBuilder<ColumnDataType, double, WindowFunction::StandardDeviationSample>().get_aggregate_function();
-  const auto group_count = groups->keys.size();
+  const auto group_count = groups->global_hash_table.size();
   auto accumulators = std::vector<StandardDeviationSampleData>(group_count);
 
   const auto group_by_column_count = groupby_column_ids.size();
   const auto chunk_count = input_table->chunk_count();
-  auto key = GroupKey(group_by_column_count);
   auto row_index =
       uint32_t{0};  // global row index across chunks, used to look up the group ticket in `groups->tickets`
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
@@ -552,7 +477,7 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
   const auto groupby_column_count = _groupby_column_ids.size();
 
   const auto groups = _compute_group_keys(_groupby_column_ids, input_table);
-  const auto group_count = groups->keys.size();
+  const auto group_count = groups->global_hash_table.size();
 
   auto column_definitions = TableColumnDefinitions{};
   column_definitions.reserve(groupby_column_count + aggregate_count);
