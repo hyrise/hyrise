@@ -19,6 +19,8 @@ class OperatorSharedStateTest : public BaseTest {
   constexpr static auto JOB_COUNT = size_t{100};
 };
 
+namespace {
+
 class TestWorkerState : public WorkerLocalState<TestWorkerState> {
  public:
   virtual void merge(TestWorkerState& other) final {
@@ -27,6 +29,8 @@ class TestWorkerState : public WorkerLocalState<TestWorkerState> {
 
   size_t task_count{0};
 };
+
+}  // namespace
 
 TEST_F(OperatorSharedStateTest, ExecuteSingleThreaded) {
   EXPECT_FALSE(Hyrise::get().is_multi_threaded());
@@ -135,6 +139,26 @@ TEST_F(OperatorSharedStateTest, NoWorkDone) {
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
   EXPECT_THROW(operator_state.worker_states(), std::logic_error);
   EXPECT_THROW(operator_state.merge_worker_states(), std::logic_error);
+}
+
+TEST_F(OperatorSharedStateTest, AccessWithoutWorker) {
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+  auto operator_state = OperatorSharedState<TestWorkerState>{};
+
+  for (auto job_id = size_t{0}; job_id < JOB_COUNT; ++job_id) {
+    ++operator_state.current_worker_state().task_count;
+  }
+
+  auto worker_states = operator_state.worker_states();
+  EXPECT_EQ(worker_states.size(), 1);
+  EXPECT_EQ(worker_states.front().get().task_count, JOB_COUNT);
+
+  const auto& merged_state = operator_state.merge_worker_states();
+  EXPECT_EQ(merged_state.task_count, JOB_COUNT);
+
+  worker_states = operator_state.worker_states();
+  EXPECT_EQ(worker_states.size(), 1);
+  EXPECT_EQ(worker_states.front().get().task_count, JOB_COUNT);
 }
 
 }  // namespace hyrise

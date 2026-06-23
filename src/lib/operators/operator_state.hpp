@@ -47,8 +47,8 @@ namespace hyrise {
  *     });
  *   }
  *
+ *   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
  *   const auto min_value = operator_state.merge_worker_states().value;
- *
  */
 
 template <typename Derived>
@@ -60,17 +60,24 @@ class WorkerLocalState : public Noncopyable {
 template <typename WorkerState>
 class OperatorSharedState : public Noncopyable {
  public:
+  // Initializes the wrapper being able to hold state for earch worker.
   OperatorSharedState() {
     const auto node_queue_scheduler = std::dynamic_pointer_cast<NodeQueueScheduler>(Hyrise::get().scheduler());
-    const auto worker_count = node_queue_scheduler ? node_queue_scheduler->workers().size() : size_t{1};
-    _worker_states.resize(worker_count);
+
+    // Reserve one slot for the main thread if the scheduler is used.
+    _main_thread_worker_id =
+        node_queue_scheduler ? static_cast<WorkerID>(node_queue_scheduler->workers().size()) : WorkerID{0};
+    _worker_states.resize(_main_thread_worker_id + 1);
   }
 
+  // Returns the state exclusive to the current worker. Initializes it if necessary.
   WorkerState& current_worker_state() {
+    // There is no worker when ImmediateExecutionScheduler is used. Still make sure not to interfere with the main
+    // thread by using the reseved slot in this case.
     const auto worker = Worker::get_this_thread_worker();
-    const auto worker_id = worker ? worker->id() : WorkerID{0};
-    Assert(worker_id < _worker_states.size(),
-           std::format("Invalid worker ID #{}, has only {}.", WorkerID::base_type{worker_id}, _worker_states.size()));
+    const auto worker_id = worker ? worker->id() : _main_thread_worker_id;
+    Assert(worker_id < _worker_states.size(), std::format("Invalid worker ID #{}. There are only {} worker states.",
+                                                          WorkerID::base_type{worker_id}, _worker_states.size()));
 
     // Create local states only lazily because they could be large and we do not want to waste memory if we only have a
     // few jobs that are not distributed across all workers.
@@ -81,6 +88,7 @@ class OperatorSharedState : public Noncopyable {
     return *local_state;
   }
 
+  // Combines all states into a single object, discards the intermediate results, and returns the combined result.
   WorkerState& merge_worker_states() {
     const auto merged_state_it = std::ranges::find_if(_worker_states, [](const auto& state) {
       return state != nullptr;
@@ -101,6 +109,7 @@ class OperatorSharedState : public Noncopyable {
     return *_worker_states[0];
   }
 
+  // Returns all individual state objects, e.g., for manual merge.
   std::vector<std::reference_wrapper<WorkerState>> worker_states() const {
     auto worker_states = std::vector<std::reference_wrapper<WorkerState>>{};
     worker_states.reserve(_worker_states.size());
@@ -112,12 +121,12 @@ class OperatorSharedState : public Noncopyable {
     }
 
     Assert(!worker_states.empty(), "Could not find a single initialized worker state.");
-
     return worker_states;
   }
 
  protected:
   std::vector<std::unique_ptr<WorkerState>> _worker_states;
+  WorkerID _main_thread_worker_id;
 };
 
 }  // namespace hyrise
