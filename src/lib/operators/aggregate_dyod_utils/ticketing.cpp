@@ -1,7 +1,9 @@
 #include "ticketing.hpp"
 
+#include <algorithm>
 #include <cstring>
 #include <memory>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -92,7 +94,8 @@ std::shared_ptr<MaterializedRows> _materialize_rows(const RowFormat format, cons
             if (str_length > PREFIX_LENGTH) {
               // TODO(@forUnity): Do not write the first 8 bytes here again.
               // TODO(@forUnity): maybe try malloc here??
-              // TODO(@forUnity): we null terminate here. This way we do not have to resolve the length of the strings everytime.
+              // TODO(@forUnity): we null terminate here.
+              // This way we do not have to resolve the length of the strings everytime.
               const auto str_ptr = new char[str_length + 1];
               std::memcpy(str_ptr, str_value.c_str(), str_length);
               str_ptr[str_length] = '\0';  // Null terminate the string
@@ -131,7 +134,8 @@ std::shared_ptr<MaterializedRows> _materialize_rows(const RowFormat format, cons
   return std::make_shared<MaterializedRows>(chunk_size, rows.release(), format);
 }
 
-// CAVEAT: This destroys all non-short strings, therefore we need to set to nullptr when inserting into the Global Hash Table.
+// CAVEAT: This destroys all non-short strings.
+// Therefore we need to set to nullptr when inserting into the Global Hash Table.
 MaterializedRows::~MaterializedRows() {
   const auto group_by_column_count = format.col_offsets.size();
 

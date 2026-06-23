@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <unordered_map>
+#include <vector>
 
 #include "storage/chunk.hpp"
 
@@ -48,9 +49,9 @@ struct GroupKey {
   // Rule of three :(
   GroupKey(const uint8_t* row, const RowFormat& format) : row(row), format(format) {}
 
+  // Delete the row copy when the GroupKey is destroyed. The delete[] manages the size of the array automatically.
   ~GroupKey() {
-    delete
-        [] row;  // Delete the row copy when the GroupKey is destroyed. The delete[] manages the size of the array automatically.
+    delete[] row;
   }
 
   GroupKey(const GroupKey&) = delete;
@@ -61,7 +62,7 @@ struct GroupKeyHash {
   constexpr static const auto hash_function = std::hash<std::string_view>{};
 
   size_t operator()(const GroupKey& key) const {
-    // TODO: we should return the hash here actually
+    // TODO(@forUnity): we should return the hash here actually
     // TODO(@forUnity): implement a real hash function here.
     return hash_function(std::string_view{reinterpret_cast<const char*>(key.row),
                                           key.format.string_ptr_offset - key.format.null_bitmap_offset});
@@ -109,5 +110,4 @@ inline void _read_group_key(const std::shared_ptr<const Chunk>& chunk, const std
 // its group-by key contains NULL (NULL forms its own group).
 std::shared_ptr<GroupKeyData> _compute_group_keys(const std::vector<ColumnID>& groupby_column_ids,
                                                   const std::shared_ptr<const Table>& input_table);
-
 }  // namespace hyrise
