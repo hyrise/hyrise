@@ -891,7 +891,7 @@ TEST_F(StressTest, AddModifyTableKeyConstraintsConcurrently) {
 }
 
 TEST_F(StressTest, SharedOperatorState) {
-  class TestWorkerState : public WorkerLocalState<TestWorkerState> {
+  class TestWorkerState : public AbstractWorkerState<TestWorkerState> {
    public:
     virtual void merge(TestWorkerState& other) final {
       task_count += other.task_count;
@@ -901,25 +901,30 @@ TEST_F(StressTest, SharedOperatorState) {
   };
 
   // Push some work to task queues and execute some directly from the main thread.
-  constexpr auto TASK_COUNT = 20'000;
+  constexpr auto SCHEDULED_TASK_COUNT = 20'000;
+  constexpr auto DIRECTLY_EXECUTED_TASK_COUNT = SCHEDULED_TASK_COUNT / 10;
   auto operator_state = OperatorSharedState<TestWorkerState>{};
+  auto start_flag = std::atomic_flag{};
 
   const auto execute_work = [&]() {
+    start_flag.wait(false);
     ++operator_state.current_worker_state().task_count;
   };
 
-  for (auto task_id = 0; task_id < TASK_COUNT; ++task_id) {
-    if (task_id % 10 == 0) {
-      execute_work();
-    } else {
-      std::make_shared<JobTask>(execute_work)->schedule();
-    }
+  for (auto task_id = 0; task_id < SCHEDULED_TASK_COUNT; ++task_id) {
+    std::make_shared<JobTask>(execute_work)->schedule();
+  }
+
+  start_flag.test_and_set();
+  start_flag.notify_all();
+
+  for (auto task_id = 0; task_id < DIRECTLY_EXECUTED_TASK_COUNT; ++task_id) {
+    execute_work();
   }
 
   Hyrise::get().scheduler()->wait_for_all_tasks();
   const auto executed_job_count = operator_state.merge_worker_states().task_count;
-
-  EXPECT_EQ(executed_job_count, TASK_COUNT);
+  EXPECT_EQ(executed_job_count, SCHEDULED_TASK_COUNT + DIRECTLY_EXECUTED_TASK_COUNT);
 }
 
 }  // namespace hyrise

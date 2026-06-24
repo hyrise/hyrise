@@ -4,6 +4,7 @@
 #include <memory>
 #include <utility>
 #include <vector>
+#include <concepts>
 
 #include "hyrise.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
@@ -21,7 +22,7 @@ namespace hyrise {
  * Usage example:
  *
  *   template<typename DataType>
- *   class MinValue<DataType> : public WorkerLocalState<MinValue<DataType>> {
+ *   class MinValue<DataType> : public AbstractWorkerState<MinValue<DataType>> {
  *    public:
  *     virtual void merge(MinValue<DataType>& other) final {
  *       value = std::min(value, other.value);
@@ -52,15 +53,16 @@ namespace hyrise {
  */
 
 template <typename Derived>
-class WorkerLocalState : public Noncopyable {
+class AbstractWorkerState : public Noncopyable {
  public:
   virtual void merge(Derived& other) = 0;
 };
 
 template <typename WorkerState>
+requires(std::derived_from<WorkerState, AbstractWorkerState<WorkerState>>)
 class OperatorSharedState : public Noncopyable {
  public:
-  // Initializes the wrapper being able to hold state for earch worker.
+  // Initializes a wrapper that is able to hold state for each worker.
   OperatorSharedState() {
     const auto node_queue_scheduler = std::dynamic_pointer_cast<NodeQueueScheduler>(Hyrise::get().scheduler());
 
@@ -72,20 +74,20 @@ class OperatorSharedState : public Noncopyable {
 
   // Returns the state exclusive to the current worker. Initializes it if necessary.
   WorkerState& current_worker_state() {
-    // There is no worker when ImmediateExecutionScheduler is used. Still make sure not to interfere with the main
-    // thread by using the reseved slot in this case.
+    // There is no worker when ImmediateExecutionScheduler is used or when we run from the main thread. Make sure not to
+    // interfere with the main thread by using the reseved slot in this case.
     const auto worker = Worker::get_this_thread_worker();
     const auto worker_id = worker ? worker->id() : _main_thread_worker_id;
+    // The follwoing assertion can only be violated if the topology changed between initialization and now.
     Assert(worker_id < _worker_states.size(), std::format("Invalid worker ID #{}. There are only {} worker states.",
                                                           WorkerID::base_type{worker_id}, _worker_states.size()));
 
     // Create local states only lazily because they could be large and we do not want to waste memory if we only have a
-    // few jobs that are not distributed across all workers.
-    auto& local_state = _worker_states[worker_id];
-    if (!local_state) {
-      local_state = std::make_unique<WorkerState>();
+    // few jobs, but many workers.
+    if (!_worker_states[worker_id]) {
+      _worker_states[worker_id] = std::make_unique<WorkerState>();
     }
-    return *local_state;
+    return *_worker_states[worker_id];
   }
 
   // Combines all states into a single object, discards the intermediate results, and returns the combined result.
