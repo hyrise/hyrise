@@ -39,10 +39,10 @@ namespace hyrise {
  *
  *   for (...) {
  *     jobs.emplace_back(std::make_shared<JobTask>([&](){
- *       auto& local_state = operator_state.current_worker_state();
+ *       auto& worker_state = operator_state.current_worker_state();
  *       segment_iterate(..., [&](const auto& position){
  *         if (!position->is_null()) {
- *           local_state.value = std::min(local_state.value, position->value());
+ *           worker_state.value = std::min(worker_state.value, position->value());
  *         }
  *       });
  *     });
@@ -78,11 +78,11 @@ class OperatorSharedState : public Noncopyable {
     // interfere with the main thread by using the reseved slot in this case.
     const auto worker = Worker::get_this_thread_worker();
     const auto worker_id = worker ? worker->id() : _main_thread_worker_id;
-    // The follwoing assertion can only be violated if the topology changed between initialization and now.
+    // The following assertion can only be violated if the topology/scheduler changed between initialization and now.
     Assert(worker_id < _worker_states.size(), std::format("Invalid worker ID #{}. There are only {} worker states.",
                                                           WorkerID::base_type{worker_id}, _worker_states.size()));
 
-    // Create local states only lazily because they could be large and we do not want to waste memory if we only have a
+    // Create worker states only lazily because they could be large and we do not want to waste memory if we only have a
     // few jobs, but many workers.
     if (!_worker_states[worker_id]) {
       _worker_states[worker_id] = std::make_unique<WorkerState>();
@@ -107,7 +107,6 @@ class OperatorSharedState : public Noncopyable {
 
     _worker_states[0] = std::move(merged_state);
     _worker_states.resize(1);
-
     return *_worker_states[0];
   }
 
