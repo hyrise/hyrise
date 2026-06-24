@@ -891,9 +891,9 @@ TEST_F(StressTest, AddModifyTableKeyConstraintsConcurrently) {
 }
 
 TEST_F(StressTest, SharedOperatorState) {
-  class TestWorkerState : public AbstractWorkerState<TestWorkerState> {
+  class TestWorkerState {
    public:
-    virtual void merge(TestWorkerState& other) final {
+    void merge(TestWorkerState& other) {
       task_count += other.task_count;
     }
 

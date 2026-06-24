@@ -1,10 +1,10 @@
+#include <concepts>
 #include <cstddef>
 #include <format>
 #include <functional>
 #include <memory>
 #include <utility>
 #include <vector>
-#include <concepts>
 
 #include "hyrise.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
@@ -22,9 +22,9 @@ namespace hyrise {
  * Usage example:
  *
  *   template<typename DataType>
- *   class MinValue<DataType> : public AbstractWorkerState<MinValue<DataType>> {
+ *   class MinValue<DataType> {
  *    public:
- *     virtual void merge(MinValue<DataType>& other) final {
+ *     void merge(MinValue<DataType>& other) {
  *       value = std::min(value, other.value);
  *     }
  *
@@ -52,14 +52,13 @@ namespace hyrise {
  *   const auto min_value = operator_state.merge_worker_states().value;
  */
 
-template <typename Derived>
-class AbstractWorkerState : public Noncopyable {
- public:
-  virtual void merge(Derived& other) = 0;
+template <typename WorkerState>
+concept HasMergeMethod = requires(WorkerState state) {
+  WorkerState();                                 // WorkerState has default constructor for use with `std::make_unique`.
+  { state.merge(state) } -> std::same_as<void>;  // WorkerState has `merge` method that takes same type, returns void.
 };
 
-template <typename WorkerState>
-requires(std::derived_from<WorkerState, AbstractWorkerState<WorkerState>>)
+template <HasMergeMethod WorkerState>
 class OperatorSharedState : public Noncopyable {
  public:
   // Initializes a wrapper that is able to hold state for each worker.
