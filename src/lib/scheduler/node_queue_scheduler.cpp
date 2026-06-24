@@ -1,11 +1,13 @@
 #include "node_queue_scheduler.hpp"
 
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <cstdint>
 #include <cstdlib>
 #include <format>
 #include <iostream>
+#include <limits>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -23,6 +25,8 @@
 
 namespace hyrise {
 
+using namespace node_queue_scheduler::detail;
+
 NodeQueueScheduler::NodeQueueScheduler() {
   _worker_id_allocator = std::make_shared<UidAllocator>();
 }
@@ -36,12 +40,37 @@ NodeQueueScheduler::~NodeQueueScheduler() {
 }
 
 void NodeQueueScheduler::begin() {
-  DebugAssert(!_active, "Scheduler is already active.");
+  Assert(!_active, "Scheduler is already active.");
 
-  _workers.reserve(Hyrise::get().topology.num_cpus());
+  _worker_count = Hyrise::get().topology.num_cpus();
+  _workers.reserve(_worker_count);
   _node_count = Hyrise::get().topology.nodes().size();
   _queues.resize(_node_count);
   _workers_per_node.reserve(_node_count);
+
+  // For task lists with few tasks, we do not determine the number of groups to avoid grouping overheads. Assuming
+  // NUM_GROUPS_MIN_FACTOR=0.1 and 128 workers, we would not group task lists with less than 25 tasks (2 * 128 * 0.1).
+  _min_task_count_for_regrouping =
+      std::max(size_t{2 * MIN_GROUP_COUNT},
+               static_cast<size_t>(2.0 * static_cast<double>(_worker_count) * NUM_GROUPS_MIN_FACTOR));
+
+  // Starting from a queue load of _max_considered_queue_load or higher, we use the minimal group count.
+  _max_considered_queue_load = static_cast<double>(std::max(size_t{8}, UPPER_LIMIT_QUEUE_SIZE_FACTOR * _worker_count));
+
+  const auto min_group_count =
+      std::max(static_cast<double>(MIN_GROUP_COUNT), NUM_GROUPS_MIN_FACTOR * static_cast<float>(_worker_count));
+  _max_group_count = NUM_GROUPS_MAX_FACTOR * static_cast<double>(_worker_count);
+
+  // We precalculate the "step size" as we know potential queue loads. The load can be between 0 (no load) up to
+  // _max_considered_queue_load. This way, we can avoid a few floating point calculations every time we schedule tasks
+  // and simply use like: _max_group_count - (_step_size * $queue_load).
+  _step_size = (_max_group_count - min_group_count) / _max_considered_queue_load;
+  Assert((_step_size * _max_considered_queue_load) == (_max_group_count - min_group_count),
+         "The calculated step size does not add up to expected range of task grouping values.");
+
+  // For every task list of size >= _regrouping_upper_limit, we use the minimal value for grouping. For 64 workers, a
+  // queue load of 640 (i.e., ~640 normal priority tasks) is enough to use the minimum number of groups.
+  _regrouping_upper_limit = _worker_count * UPPER_LIMIT_QUEUE_SIZE_FACTOR;
 
   for (auto node_id = NodeID{0}; node_id < _node_count; ++node_id) {
     const auto& topology_node = Hyrise::get().topology.nodes()[node_id];
@@ -200,8 +229,9 @@ const std::vector<std::shared_ptr<Worker>>& NodeQueueScheduler::workers() const 
 NodeID NodeQueueScheduler::determine_queue_id(const NodeID preferred_node_id) const {
   const auto active_node_count = _active_nodes.size();
 
-  // Early out: no need to check for preferred node or other queues, if there is only a single node queue.
-  if (active_node_count == 1) {
+  // Early out: no need to check for preferred node or other queues if there is only a single node queue or an invalid
+  // NodeID (the initial value for tasks without an explicit placement) is passed.
+  if (preferred_node_id == INVALID_NODE_ID || active_node_count == 1) {
     return _active_nodes[0];
   }
 
@@ -236,6 +266,38 @@ NodeID NodeQueueScheduler::determine_queue_id(const NodeID preferred_node_id) co
   return min_load_node_id;
 }
 
+std::optional<size_t> NodeQueueScheduler::determine_group_count(
+    const std::vector<std::shared_ptr<AbstractTask>>& tasks) const {
+  const auto task_count = tasks.size();
+  if (task_count < _min_task_count_for_regrouping) {
+    // Early out for small task lists that do not need to group.
+    return std::nullopt;
+  }
+
+  // We check the first task for a node assignment. We assume that the passed tasks are not assigned to different nodes.
+  // If this assumption becomes invalid (e.g., due to work on NUMA optimizations), the current code should be revisited
+  // (see check for common NodeID in _group_tasks()).
+  const auto first_task_node_id = tasks[0]->node_id();
+
+  // Ensure check below (first_task_node_id >= CURRENT_NODE_ID) is valid.
+  static_assert(INVALID_NODE_ID == std::numeric_limits<NodeID::base_type>::max(),
+                "Unexpected value for INVALID_NODE_ID.");
+  static_assert(CURRENT_NODE_ID == INVALID_NODE_ID - 1, "Unexpected value for CURRENT_NODE_ID.");
+
+  const auto node_id_for_queue_check = determine_queue_id(first_task_node_id);
+  const auto queue_load = static_cast<double>(_queues[node_id_for_queue_check]->estimate_load());
+
+  const auto group_count =
+      static_cast<size_t>(_max_group_count - (std::min(_max_considered_queue_load, queue_load) * _step_size));
+
+  // If the resulting groups are smaller than two tasks, skip grouping.
+  if ((task_count / group_count) < 2) {
+    return std::nullopt;
+  }
+
+  return group_count;
+}
+
 void NodeQueueScheduler::_schedule(std::shared_ptr<AbstractTask> task, NodeID preferred_node_id,
                                    SchedulePriority priority) {
   /**
@@ -258,16 +320,25 @@ void NodeQueueScheduler::_schedule(std::shared_ptr<AbstractTask> task, NodeID pr
 }
 
 void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const {
+  const auto group_count = determine_group_count(tasks);
+  if (!group_count) {  // Skip grouping when not beneficial.
+    return;
+  }
+
+  _group_tasks(tasks, *group_count);
+}
+
+void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks,
+                                      const size_t group_count) {
   // Adds predecessor/successor relationships between tasks so that only NUM_GROUPS tasks can be executed in parallel.
   // The optimal value of NUM_GROUPS depends on the number of cores and the number of queries being executed
   // concurrently. The current value has been found with a divining rod.
 
   const auto task_count = tasks.size();
 
-  // For each group, this list stores the task that will be successor of the current task. Tasks are identified by their
-  // offset in the task list. Initialize with -1 to denote an invalid offset.
-  auto grouped_task_offsets = std::vector(NUM_GROUPS, -1);
-
+  // For each group, this vector stores the offset of the task that will be successor of the current task. Tasks are
+  // identified by their offset in the task list. Initialize with -1 to denote an invalid offset.
+  auto grouped_task_offsets = std::vector<int32_t>(group_count, -1);
   auto common_node_id = std::optional<NodeID>{};
 
   /**
@@ -299,7 +370,7 @@ void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<Abstract
       }
     }
 
-    const auto group_id = task_offset % NUM_GROUPS;
+    const auto group_id = task_offset % group_count;
     const auto previous_task_offset_in_group = grouped_task_offsets[group_id];
     if (previous_task_offset_in_group > -1) {
       task->set_as_predecessor_of(tasks[previous_task_offset_in_group]);
