@@ -63,11 +63,9 @@ class OperatorSharedState : public Noncopyable {
  public:
   // Initializes a wrapper that is able to hold state for each worker.
   OperatorSharedState() {
-    const auto node_queue_scheduler = std::dynamic_pointer_cast<NodeQueueScheduler>(Hyrise::get().scheduler());
-
     // Reserve one slot for the main thread if the scheduler is used.
-    _main_thread_worker_id =
-        node_queue_scheduler ? static_cast<WorkerID>(node_queue_scheduler->workers().size()) : WorkerID{0};
+    const auto scheduler = std::dynamic_pointer_cast<NodeQueueScheduler>(Hyrise::get().scheduler());
+    _main_thread_worker_id = scheduler ? static_cast<WorkerID>(scheduler->workers().size()) : WorkerID{0};
     _worker_states.resize(_main_thread_worker_id + 1);
   }
 
