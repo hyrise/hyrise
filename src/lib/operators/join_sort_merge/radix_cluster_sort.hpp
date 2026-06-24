@@ -29,9 +29,9 @@ struct RadixClusterOutput {
 // Performs radix clustering for the sort merge join. The radix clustering algorithm clusters on the basis of the least
 // significant bits of the values because the values there are much more evenly distributed than for the most
 // significant bits. As a result, equal values always get moved to the same cluster and the clusters are sorted in
-// themselves but not in between the clusters. This approach works for equi-joins, because we are only interested in
-// equality. In the case of a non-equi-joins however, complete sortedness is required, because join matches exist beyond
-// cluster borders. Therefore, the clustering defaults to a range clustering algorithm for the non-equi-join.
+// themselves but not in between the clusters. This approach works for equi joins, because we are only interested in
+// equality. In the case of a non-equi joins however, complete sortedness is required, because join matches exist beyond
+// cluster borders. Therefore, the clustering defaults to a range clustering algorithm for the non-equi join.
 // General clustering process:
 //  -> Input chunks are materialized and sorted. Every value is stored together with its row id.
 //  -> Then, either radix clustering or range clustering is performed.
@@ -47,7 +47,7 @@ struct RadixClusterOutput {
 template <typename T>
 class RadixClusterSort {
  public:
-  RadixClusterSort(const std::shared_ptr<const Table> left, const std::shared_ptr<const Table> right,
+  RadixClusterSort(const std::shared_ptr<const Table>& left, const std::shared_ptr<const Table>& right,
                    const ColumnIDPair& column_ids, bool equi_case, const bool materialize_null_left,
                    const bool materialize_null_right, size_t cluster_count,
                    OperatorPerformanceData<JoinSortMerge::OperatorSteps>& performance_data)
@@ -66,15 +66,15 @@ class RadixClusterSort {
     DebugAssert(right, "right input operator is null.");
   }
 
-  virtual ~RadixClusterSort() = default;
-
   template <typename T2>
-  static std::enable_if_t<std::is_integral_v<T2>, size_t> get_radix(T2 value, size_t radix_bitmask) {
-    return static_cast<int64_t>(value) & radix_bitmask;
+    requires(std::is_integral_v<T2>)
+  static size_t get_radix(T2 value, size_t radix_bitmask) {
+    return static_cast<uint64_t>(value) & radix_bitmask;
   }
 
   template <typename T2>
-  static std::enable_if_t<!std::is_integral_v<T2>, size_t> get_radix(T2 value, size_t radix_bitmask) {
+    requires(!std::is_integral_v<T2>)
+  static size_t get_radix(const T2& value, size_t radix_bitmask) {
     PerformanceWarning("Using hash to perform bit_cast/radix partitioning of floating point number and strings");
     return std::hash<T2>{}(value)&radix_bitmask;
   }
@@ -244,7 +244,7 @@ class RadixClusterSort {
   // distances. Repeated values are not removed. Thereby, they have a higher chance of being picked which should
   // cover skewed inputs. However, the final split values
   // are unique. As a consequence, the split value vector might contain less values than `_cluster_count - 1`.
-  const std::vector<T> _pick_split_values(std::vector<T>&& sample_values) const {
+  std::vector<T> _pick_split_values(std::vector<T>&& sample_values) const {
     boost::sort::pdqsort(sample_values.begin(), sample_values.end());
 
     if (sample_values.size() <= _cluster_count - 1) {

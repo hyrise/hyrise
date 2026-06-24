@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <filesystem>
+#include <format>
 #include <fstream>
 #include <iterator>
 #include <memory>
@@ -37,10 +38,10 @@ FileBasedBenchmarkItemRunner::FileBasedBenchmarkItemRunner(
   };
 
   const auto path = std::filesystem::path{query_path};
-  Assert(std::filesystem::exists(path), "No such file or directory '" + query_path + "'");
+  Assert(std::filesystem::exists(path), std::format("No such file or directory '{}'.", query_path));
 
   if (std::filesystem::is_regular_file(path)) {
-    Assert(is_sql_file(query_path), "Specified file '" + query_path + "' is not a .sql file.");
+    Assert(is_sql_file(query_path), std::format("Specified file '{}' is not a .sql file.", query_path));
     _parse_query_file(query_path, query_subset);
   } else {
     // Recursively walk through the specified directory and add all files on the way.
@@ -104,7 +105,7 @@ void FileBasedBenchmarkItemRunner::_parse_query_file(
 
   auto sql_string_offset = size_t{0};
   for (auto statement_idx = size_t{0}; statement_idx < parse_result.size(); ++statement_idx) {
-    const auto item_name = item_name_prefix + '.' + std::to_string(statement_idx);
+    const auto item_name = std::format("{}.{}", item_name_prefix, statement_idx);
     const auto statement_string_length = parse_result.getStatement(statement_idx)->stringLength;
     const auto statement_string = boost::trim_copy(content.substr(sql_string_offset, statement_string_length));
     sql_string_offset += statement_string_length;

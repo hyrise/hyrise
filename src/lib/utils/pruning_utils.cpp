@@ -19,28 +19,25 @@
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "hyrise.hpp"
-#include "logical_query_plan/predicate_node.hpp"  // IWYU pragma: keep
 #include "logical_query_plan/stored_table_node.hpp"
 #include "lossless_cast.hpp"
 #include "operators/operator_scan_predicate.hpp"
 #include "resolve_type.hpp"
 #include "statistics/attribute_statistics.hpp"
-#include "statistics/statistics_objects/min_max_filter.hpp"  // IWYU pragma: keep
-#include "statistics/statistics_objects/range_filter.hpp"    // IWYU pragma: keep
 #include "statistics/table_statistics.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace {
 
-using namespace hyrise;  // NOLINT(build/namespaces)
+using namespace hyrise;
 
 // Check whether any of the statistics objects available for this Segment identify the predicate as prunable.
 bool can_prune(const BaseAttributeStatistics& base_segment_statistics, const PredicateCondition predicate_condition,
                const AllTypeVariant& variant_value, const std::optional<AllTypeVariant>& variant_value2) {
   auto can_prune = false;
 
-  resolve_data_type(base_segment_statistics.data_type, [&](const auto data_type_t) {
+  resolve_data_type(base_segment_statistics.data_type(), [&](const auto data_type_t) {
     using ColumnDataType = typename decltype(data_type_t)::type;
 
     const auto& segment_statistics = static_cast<const AttributeStatistics<ColumnDataType>&>(base_segment_statistics);
@@ -106,7 +103,7 @@ std::vector<T> pruned_items_mapping(const size_t initial_item_count, const std::
 
 namespace hyrise {
 
-using namespace expression_functional;  // NOLINT(build/namespaces)
+using namespace expression_functional;
 
 std::set<ChunkID> compute_chunk_exclude_list(const PredicatePruningChain& predicate_pruning_chain,
                                              const std::shared_ptr<StoredTableNode>& stored_table_node) {

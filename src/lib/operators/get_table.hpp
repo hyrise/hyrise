@@ -62,8 +62,8 @@ class GetTable : public AbstractReadOnlyOperator {
   const std::vector<ChunkID> _pruned_chunk_ids;
   const std::vector<ColumnID> _pruned_column_ids;
 
-  mutable std::vector<std::shared_ptr<AbstractExpression>> _prunable_subquery_predicates{};
-  std::set<ChunkID> _dynamically_pruned_chunk_ids{};
+  mutable std::vector<std::shared_ptr<AbstractExpression>> _prunable_subquery_predicates;
+  std::set<ChunkID> _dynamically_pruned_chunk_ids;
 };
 
 }  // namespace hyrise

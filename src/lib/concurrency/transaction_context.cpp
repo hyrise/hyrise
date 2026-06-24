@@ -6,7 +6,6 @@
 #include <mutex>
 #include <ostream>
 
-#include "commit_context.hpp"  // IWYU pragma: keep
 #include "hyrise.hpp"
 #include "operators/abstract_read_write_operator.hpp"
 #include "types.hpp"

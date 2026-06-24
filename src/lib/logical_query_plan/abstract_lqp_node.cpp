@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <format>
 #include <memory>
 #include <numeric>
 #include <optional>
@@ -29,7 +30,7 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT(build/namespaces)
+using namespace hyrise;
 
 void collect_lqps_in_plan(const AbstractLQPNode& lqp, std::unordered_set<std::shared_ptr<AbstractLQPNode>>& lqps);
 
@@ -263,7 +264,7 @@ std::optional<ColumnID> AbstractLQPNode::find_column_id(const AbstractExpression
 
 ColumnID AbstractLQPNode::get_column_id(const AbstractExpression& expression) const {
   const auto column_id = find_column_id(expression);
-  Assert(column_id, "This node has no column '" + expression.as_column_name() + "'.");
+  Assert(column_id, std::format("This node has no column '{}'.", expression.as_column_name()));
   return *column_id;
 }
 
@@ -536,7 +537,7 @@ std::ostream& operator<<(std::ostream& stream, const AbstractLQPNode& node) {
   stream << "-------- Subqueries ---------\n";
 
   for (const auto& lqp : lqps) {
-    stream << lqp.get() << ": \n";
+    stream << lqp.get() << ":\n";
     output_lqp_to_stream(*lqp);
     stream << '\n';
   }

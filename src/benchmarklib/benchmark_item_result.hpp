@@ -13,7 +13,7 @@ struct BenchmarkItemResult {
 
   // Stores the detailed information about the runs executed. As we first write all values before we read any value, we
   // will not see uninitialized values as described here:
-  // https://software.intel.com/en-us/blogs/2009/04/09/delusion-of-tbbconcurrent_vectors-size-or-3-ways-to-traverse-in-parallel-correctly  // NOLINT
+  // https://software.intel.com/en-us/blogs/2009/04/09/delusion-of-tbbconcurrent_vectors-size-or-3-ways-to-traverse-in-parallel-correctly
   tbb::concurrent_vector<BenchmarkItemRunResult> successful_runs;
   tbb::concurrent_vector<BenchmarkItemRunResult> unsuccessful_runs;
 

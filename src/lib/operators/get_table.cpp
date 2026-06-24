@@ -34,7 +34,7 @@
 
 namespace hyrise {
 
-using namespace expression_functional;  // NOLINT(build/namespaces)
+using namespace expression_functional;
 
 GetTable::GetTable(const std::string& name) : GetTable{name, {}, {}} {}
 

@@ -60,7 +60,7 @@ template <typename ColumnDataType, typename AggregateType>
 class WindowFunctionBuilder<ColumnDataType, AggregateType, WindowFunction::Sum> {
  public:
   auto get_aggregate_function() {
-    return [](const ColumnDataType& new_value, const size_t aggregate_count, AggregateType& accumulator) {
+    return [](const ColumnDataType& new_value, const size_t /*aggregate_count*/, AggregateType& accumulator) {
       // Add new value to sum - no need to check if this is the first value as `sum` is only defined on numerical values
       // and the accumulator is initialized with 0.
       accumulator += static_cast<AggregateType>(new_value);
@@ -83,7 +83,8 @@ template <typename ColumnDataType, typename AggregateType>
 class WindowFunctionBuilder<ColumnDataType, AggregateType, WindowFunction::StandardDeviationSample> {
  public:
   auto get_aggregate_function() {
-    return [](const ColumnDataType& new_value, const size_t aggregate_count, StandardDeviationSampleData& accumulator) {
+    return [](const ColumnDataType& new_value, const size_t /*aggregate_count*/,
+              StandardDeviationSampleData& accumulator) {
       if constexpr (std::is_arithmetic_v<ColumnDataType>) {
         // Welford's online algorithm
         // https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Welford's_online_algorithm

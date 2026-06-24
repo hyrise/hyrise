@@ -19,12 +19,14 @@ class BenchmarkRunner;
 
 // This should be the only singleton in the src/lib world. It provides a unified way of accessing components like the
 // storage manager, the transaction manager, and more. Encapsulating this in one class avoids the static initialization
-// order fiasco, which would otherwise make the initialization/destruction order hard to control.
+// order fiasco, which would otherwise make the initialization/destruction order hard to control. One should never
+// store references to the fields of this singleton, as these might be invalidated if `reset()` is called. Instead,
+// always call `Hyrise::get()` to access fields in this singleton.
 class Hyrise : public Singleton<Hyrise> {
  public:
-  // Resets the Hyrise state by deleting its members (e.g., StorageManager) and
-  // creating new ones. This is used especially in tests and can lead to a lot of
-  // issues if there are still running tasks / threads that want to access a resource.
+  // Resets the Hyrise state by deleting its members (e.g., StorageManager) and creating new ones. This is used
+  // especially in tests and can lead to a lot of issues if there are still running tasks / threads that want to access
+  // a resource.
   // You should be very sure that this is what you want.
   static void reset();
 
@@ -47,13 +49,22 @@ class Hyrise : public Singleton<Hyrise> {
   LogManager log_manager;
   Topology topology;
 
+  // We need to implement the move assignment operator so that the storage manager and plugin manager are destructed
+  // in the correct order. This is because the plugin manager might have plugins that need to delete tables, which
+  // fails if the storage manager is already destructed.
+  Hyrise(const Hyrise&) = delete;
+  Hyrise(Hyrise&&) noexcept = default;
+  ~Hyrise() override = default;
+  Hyrise& operator=(const Hyrise&) = delete;
+  Hyrise& operator=(Hyrise&& other) noexcept;
+
   // Plan caches used by the SQLPipelineBuilder if `with_{l/p}qp_cache()` are not used. Both default caches can be
   // nullptr themselves. If both default_{l/p}qp_cache and _{l/p}qp_cache are nullptr, no plan caching is used.
   std::shared_ptr<SQLPhysicalPlanCache> default_pqp_cache;
   std::shared_ptr<SQLLogicalPlanCache> default_lqp_cache;
 
-  // The BenchmarkRunner is available here so that non-benchmark components can add information to the benchmark
-  // result JSON.
+  // The BenchmarkRunner is available here so that non-benchmark components can add information to the benchmark result
+  // JSON.
   std::weak_ptr<BenchmarkRunner> benchmark_runner;
 
  private:

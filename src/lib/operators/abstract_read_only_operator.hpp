@@ -27,7 +27,7 @@ class AbstractReadOnlyOperator : public AbstractOperator {
   class AbstractReadOnlyOperatorImpl {
    public:
     virtual ~AbstractReadOnlyOperatorImpl() = default;
-    virtual std::shared_ptr<const Table> _on_execute() = 0;
+    virtual std::shared_ptr<const Table> _on_execute() = 0;  // NOLINT(readability-identifier-naming)
   };
 };
 

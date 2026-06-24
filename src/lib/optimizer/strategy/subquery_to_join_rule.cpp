@@ -38,8 +38,8 @@
 
 namespace {
 
-using namespace hyrise;                         // NOLINT(build/namespaces)
-using namespace hyrise::expression_functional;  // NOLINT(build/namespaces)
+using namespace hyrise;
+using namespace hyrise::expression_functional;
 
 using NodeExpressionsDifferenceType =
     typename std::iterator_traits<decltype(AggregateNode::node_expressions)::iterator>::difference_type;
@@ -647,7 +647,7 @@ void SubqueryToJoinRule::_apply_to_plan_without_subqueries(const std::shared_ptr
         join_predicates.emplace_back(join_predicate);
       }
 
-      // Semi and anti joins are currently only implemented by hash joins. These need an equals comparison as the
+      // Semi-/anti-joins are currently only implemented by hash joins. These need an equals comparison as the
       // primary join predicate.
       // Check that one exists, but rely on join predicate ordering rule to move it to the front.
       if (std::none_of(

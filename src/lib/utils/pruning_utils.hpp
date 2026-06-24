@@ -8,6 +8,7 @@
 
 #include <boost/container_hash/hash.hpp>
 
+#include "logical_query_plan/predicate_node.hpp"
 #include "types.hpp"
 
 namespace hyrise {
@@ -15,7 +16,6 @@ namespace hyrise {
 class StoredTableNode;
 class TableStatistics;
 struct OperatorScanPredicate;
-class PredicateNode;
 
 using PredicatePruningChain = std::vector<std::shared_ptr<PredicateNode>>;
 using StoredTableNodePredicateNodePair = std::pair<std::shared_ptr<StoredTableNode>, std::shared_ptr<PredicateNode>>;

@@ -1,13 +1,13 @@
-#include <limits>
 #include <memory>
 #include <string>
-#include <vector>
 
 #include "../../plugins/mvcc_delete_plugin.hpp"
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
+#include "concurrency/transaction_context.hpp"
 #include "concurrency/transaction_manager.hpp"
+#include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
-#include "expression/pqp_column_expression.hpp"
 #include "lib/utils/plugin_test_utils.hpp"
 #include "operators/get_table.hpp"
 #include "operators/projection.hpp"
@@ -16,6 +16,7 @@
 #include "operators/validate.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
+#include "types.hpp"
 #include "utils/load_table.hpp"
 #include "utils/plugin_manager.hpp"
 

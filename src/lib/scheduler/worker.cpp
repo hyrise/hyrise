@@ -5,10 +5,10 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <format>
 #include <memory>
 #include <numeric>
 #include <random>
-#include <string>
 #include <thread>
 #include <utility>
 #include <vector>
@@ -23,7 +23,7 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT(build/namespaces)
+using namespace hyrise;
 
 /**
  * On worker threads, this references the worker running on this thread, on all other threads, this is empty.
@@ -237,7 +237,7 @@ void Worker::_set_affinity() {
   CPU_ZERO(&cpuset);
   CPU_SET(_cpu_id, &cpuset);
   const auto return_code = pthread_setaffinity_np(pthread_self(), sizeof(cpuset), &cpuset);
-  Assert(return_code == 0, "Error calling pthread_setaffinity_np (return code: " + std::to_string(return_code) + ").");
+  Assert(return_code == 0, std::format("Error calling pthread_setaffinity_np (return code: {}).", return_code));
 #endif
 }
 
