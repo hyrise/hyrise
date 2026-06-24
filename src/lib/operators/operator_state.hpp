@@ -31,8 +31,7 @@ namespace hyrise {
  *     DataType value{std::numeric_limits<DataType>::max()};
  *   };
  *
- *
- * Calling code:
+ *   ...
  *
  *   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
  *   auto operator_state = OperatorSharedState<MinValue<DataType>>{};
@@ -89,20 +88,20 @@ class OperatorSharedState : public Noncopyable {
 
   // Combines all states into a single object, discards the intermediate results, and returns the combined result.
   WorkerState& merge_worker_states() {
-    const auto merged_state_it = std::ranges::find_if(_worker_states, [](const auto& state) {
+    const auto result_state_it = std::ranges::find_if(_worker_states, [](const auto& state) {
       return state != nullptr;
     });
-    Assert(merged_state_it != _worker_states.end(), "Could not find a single initialized worker state.");
+    Assert(result_state_it != _worker_states.end(), "Could not find a single initialized worker state.");
 
     // For now, just a simple linear merge. If merging is expensive, consider using a merge tree.
-    auto& merged_state = *merged_state_it;
-    for (auto it = std::next(merged_state_it); it != _worker_states.end(); ++it) {
+    auto& result_state = *result_state_it;
+    for (auto it = std::next(result_state_it); it != _worker_states.end(); ++it) {
       if (*it) {
-        merged_state->merge(**it);
+        result_state->merge(**it);
       }
     }
 
-    _worker_states[0] = std::move(merged_state);
+    _worker_states[0] = std::move(result_state);
     _worker_states.resize(1);
     return *_worker_states[0];
   }
