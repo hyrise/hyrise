@@ -22,7 +22,7 @@ namespace {
 constexpr static auto TASK_COUNT_HIGH = size_t{100};
 constexpr static auto TASK_COUNT_LOW = size_t{4};
 
-class TestWorkerState {
+class TestWorkerState : public Noncopyable {
  public:
   void merge(TestWorkerState& other) {
     task_count += other.task_count;

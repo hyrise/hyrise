@@ -22,7 +22,7 @@ namespace hyrise {
  * Usage example:
  *
  *   template<typename DataType>
- *   class MinValue<DataType> {
+ *   class MinValue<DataType> : public Noncopyable {
  *    public:
  *     void merge(MinValue<DataType>& other) {
  *       value = std::min(value, other.value);
@@ -52,12 +52,12 @@ namespace hyrise {
  */
 
 template <typename WorkerState>
-concept HasMergeMethod = requires(WorkerState state) {
+concept ValidWorkerState = std::derived_from<WorkerState, Noncopyable> && requires(WorkerState state) {
   WorkerState();                                 // WorkerState has default constructor for use with `std::make_unique`.
   { state.merge(state) } -> std::same_as<void>;  // WorkerState has `merge` method that takes same type, returns void.
 };
 
-template <HasMergeMethod WorkerState>
+template <ValidWorkerState WorkerState>
 class OperatorSharedState : public Noncopyable {
  public:
   // Initializes a wrapper that is able to hold state for each worker.
