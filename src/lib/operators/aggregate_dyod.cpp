@@ -56,10 +56,13 @@ void _build_groupby_segments(const std::shared_ptr<GroupKeyData>& groups,
   const auto group_count = groups->global_hash_table.size();
   const auto group_by_column_count = groupby_column_ids.size();
 
-  auto string_col_count = size_t{0};
+  // Index of the current string column among the group-by columns. Advanced once per string column (not per row),
+  // because it selects which string-pointer slot at the end of the row to read.
+  auto string_col_index = size_t{0};
   for (auto group_by_column_index = size_t{0}; group_by_column_index < group_by_column_count; ++group_by_column_index) {
     const auto column_id = groupby_column_ids[group_by_column_index];
     const auto data_type = input_table->column_data_type(column_id);
+    const auto column_is_nullable = input_table->column_is_nullable(column_id);
     resolve_data_type(data_type, [&](const auto data_type_t) {
       using ColumnDataType = typename decltype(data_type_t)::type;
       auto values = pmr_vector<ColumnDataType>(group_count);
@@ -68,28 +71,45 @@ void _build_groupby_segments(const std::shared_ptr<GroupKeyData>& groups,
       for (const auto& [group_key, ticket] : groups->global_hash_table) {
         const auto row_ptr = group_key.row;
 
-        const auto null_bitmap = *reinterpret_cast<const uint64_t*>(row_ptr + group_key.format.null_bitmap_offset);
+        const auto null_bitmap = *reinterpret_cast<const uint64_t*>(row_ptr + groups->row_format.null_bitmap_offset);
         nulls[ticket] = (null_bitmap & (uint64_t{1} << group_by_column_index)) != 0;
         if (nulls[ticket]) {
           continue;
         }
 
-        if constexpr (std::is_same_v<ColumnDataType, std::string>) {
-          const auto str_ptr_slot_offset = string_col_count * sizeof(const char*);
-          const auto str_ptr_slot =
-              reinterpret_cast<const char* const*>(row_ptr + group_key.format.string_ptr_offset + str_ptr_slot_offset);
-          // Construct a string from the null-terminated C-string pointer.
-          // NOTE: `std::string` copies the data so we are fine.
-          values[ticket] = *str_ptr_slot;
-          ++string_col_count;
+        if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
+          // The string column is materialized as [length, prefix] inline. Strings up to PREFIX_LENGTH bytes live
+          // entirely in the inline prefix; longer strings additionally store a heap pointer to the full value.
+          const auto col_offset = groups->row_format.col_offsets[group_by_column_index];
+          const auto* const str_data = row_ptr + groups->row_format.data_offset + col_offset;
+          const auto str_length = *reinterpret_cast<const size_t*>(str_data);
+          if (str_length <= PREFIX_LENGTH) {
+            values[ticket] = pmr_string{reinterpret_cast<const char*>(str_data + sizeof(size_t)), str_length};
+          } else {
+            const auto str_ptr_slot = reinterpret_cast<const char* const*>(
+                row_ptr + groups->row_format.string_ptr_offset + string_col_index * sizeof(const char*));
+            // The string is copied into the segment, so the row owning the pointer can be freed afterwards.
+            values[ticket] = pmr_string{*str_ptr_slot};
+          }
         } else {
-          const auto col_offset = group_key.format.col_offsets[group_by_column_index];
+          const auto col_offset = groups->row_format.col_offsets[group_by_column_index];
           const auto value =
-              *reinterpret_cast<const ColumnDataType*>(row_ptr + group_key.format.data_offset + col_offset);
+              *reinterpret_cast<const ColumnDataType*>(row_ptr + groups->row_format.data_offset + col_offset);
           values[ticket] = value;
         }
       }
-      output_segments.push_back(std::make_shared<ValueSegment<ColumnDataType>>(std::move(values), std::move(nulls)));
+
+      if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
+        ++string_col_index;
+      }
+
+      // Match the output column's nullability: a ValueSegment carrying a null vector is itself nullable, which would
+      // violate the (non-nullable) column definition for a non-nullable group-by column.
+      if (column_is_nullable) {
+        output_segments.push_back(std::make_shared<ValueSegment<ColumnDataType>>(std::move(values), std::move(nulls)));
+      } else {
+        output_segments.push_back(std::make_shared<ValueSegment<ColumnDataType>>(std::move(values)));
+      }
     });
   }
 }

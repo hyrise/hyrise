@@ -7,9 +7,9 @@
 #include <utility>
 #include <vector>
 
-namespace hyrise {
+#include "storage/segment_iterate.hpp"
 
-constexpr uint64_t PREFIX_LENGTH = 8;
+namespace hyrise {
 
 RowFormat _create_row_format(const TableColumnDefinitions& column_definitions,
                              const std::vector<ColumnID>& groupby_column_ids) {
@@ -81,7 +81,7 @@ std::shared_ptr<MaterializedRows> _materialize_rows(const RowFormat format, cons
           std::memcpy(null_bitmap_ptr, &new_mask_value, sizeof(uint64_t));
         } else {
           // Write the value to the appropriate offset in the row
-          if constexpr (std::is_same_v<ColumnDataType, std::string>) {
+          if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
             const auto str_value = position.value();
             const auto str_length = str_value.size();
 
@@ -106,14 +106,13 @@ std::shared_ptr<MaterializedRows> _materialize_rows(const RowFormat format, cons
           } else {
             std::memcpy(row_col_ptr, &position.value(), sizeof(ColumnDataType));
           }
-
-          // Move the pointers to the slots of the next row for this column.
-          row_col_ptr += format.row_size;
-          null_bitmap_ptr += format.row_size;
         }
+        // Move the pointers to the slots of the next row for this column.
+        row_col_ptr += format.row_size;
+        null_bitmap_ptr += format.row_size;
       });
       // If this was a string column, we should move the string column pointer for the following columns.
-      if (std::is_same_v<ColumnDataType, std::string>) {
+      if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
         string_col_index++;
       }
     });
@@ -128,6 +127,7 @@ std::shared_ptr<MaterializedRows> _materialize_rows(const RowFormat format, cons
     const auto hash =
         hash_function(std::string_view{null_bitmap_ptr, format.string_ptr_offset - format.null_bitmap_offset});
     std::memcpy(row_ptr, &hash, sizeof(uint64_t));
+    row_ptr += format.row_size;          // Move to the hash field of the next row
     null_bitmap_ptr += format.row_size;  // Move to the null bitmap of the next row
   }
 
@@ -142,8 +142,9 @@ MaterializedRows::~MaterializedRows() {
   // Delete the string pointers at the end of each row if they exist.
   auto string_col_count = (format.row_size - format.string_ptr_offset) / sizeof(const char*);
   if (string_col_count > 0) {
-    auto* str_ptr_ptr = rows + format.string_ptr_offset;
+    auto* row_string_ptrs = rows + format.string_ptr_offset;
     for (auto row_index = size_t{0}; row_index < row_count; ++row_index) {
+      auto* str_ptr_ptr = row_string_ptrs;
       for (auto string_col_index = size_t{0}; string_col_index < string_col_count; ++string_col_index) {
         const auto* str_ptr = *reinterpret_cast<const char* const*>(str_ptr_ptr);
         if (str_ptr != nullptr) {
@@ -151,7 +152,7 @@ MaterializedRows::~MaterializedRows() {
         }
         str_ptr_ptr += sizeof(const char*);
       }
-      str_ptr_ptr += format.row_size;
+      row_string_ptrs += format.row_size;
     }
   }
 
@@ -159,14 +160,12 @@ MaterializedRows::~MaterializedRows() {
   delete[] rows;
 }
 
-std::shared_ptr<GroupKeyData> _compute_group_keys_materialized(const std::vector<ColumnID>& groupby_column_ids,
+std::shared_ptr<GroupKeyData> _compute_group_keys(const std::vector<ColumnID>& groupby_column_ids,
                                                                const std::shared_ptr<const Table>& input_table) {
-  const auto group_key_data = std::make_shared<GroupKeyData>();
+  const auto row_format = _create_row_format(input_table->column_definitions(), groupby_column_ids);
+  const auto group_key_data = std::make_shared<GroupKeyData>(row_format);
   const auto group_by_column_count = groupby_column_ids.size();
   const auto chunk_count = input_table->chunk_count();
-
-  // Single shared row format for all chunks and threads later on.
-  const auto row_format = _create_row_format(input_table->column_definitions(), groupby_column_ids);
 
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto& chunk = input_table->get_chunk(chunk_id);
@@ -174,30 +173,31 @@ std::shared_ptr<GroupKeyData> _compute_group_keys_materialized(const std::vector
     const auto materialized_rows = _materialize_rows(row_format, chunk, groupby_column_ids);
 
     auto row_ptr = materialized_rows->rows;
-    auto buffer_group_key = GroupKey{nullptr, materialized_rows->format};
+    auto buffer_group_key = GroupKey{nullptr, row_format};
     for (auto row_index = size_t{0}; row_index < materialized_rows->row_count; ++row_index) {
       buffer_group_key.row = row_ptr;
 
       auto iter = group_key_data->global_hash_table.find(buffer_group_key);
       if (iter == group_key_data->global_hash_table.end()) {
         // Copy row into new memory so that it is not destroyed along the entire materialized rows buffer.
-        const auto row_copy = new uint8_t[materialized_rows->format.row_size];
-        std::memcpy(row_copy, row_ptr, materialized_rows->format.row_size);
+        const auto row_copy = new uint8_t[row_format.row_size];
+        std::memcpy(row_copy, row_ptr, row_format.row_size);
 
         // Set string pointers to nullptr so we do not delete them when the row is destroyed.
-        const auto str_ptr_slot = reinterpret_cast<char*>(row_ptr + materialized_rows->format.string_ptr_offset);
+        const auto str_ptr_slot = reinterpret_cast<char*>(row_ptr + row_format.string_ptr_offset);
         std::memset(str_ptr_slot, 0,
-                    (materialized_rows->format.row_size - materialized_rows->format.string_ptr_offset));
+                    (row_format.row_size - row_format.string_ptr_offset));
 
-        const auto group_key = GroupKey{row_copy, materialized_rows->format};
+        auto group_key = GroupKey{row_copy, row_format};
         group_key_data->row_counts.push_back(0);
-        iter = group_key_data->global_hash_table.emplace(group_key, group_key_data->global_hash_table.size()).first;
+        iter = group_key_data->global_hash_table.emplace(std::move(group_key), static_cast<uint64_t>(group_key_data->global_hash_table.size())).first;
       }
       ++group_key_data->row_counts[iter->second];
       group_key_data->tickets.push_back(iter->second);
 
-      row_ptr += materialized_rows->format.row_size;
+      row_ptr += row_format.row_size;
     }
+    buffer_group_key.row = nullptr;  // Do not delete the row when the buffer group key is destroyed!
   }
   return group_key_data;
 }
