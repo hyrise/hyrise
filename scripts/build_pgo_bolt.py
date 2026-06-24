@@ -82,7 +82,7 @@ parser.add_argument(
     "--import-profile",
     action=BooleanOptionalAction,
     default=False,
-    help="Do not run benchmarks, just import the profile data from the resources folder and build an optimized library.",
+    help="Do not run benchmarks, just import profile data from the resources folder and build an optimized library.",
 )
 parser.add_argument(
     "-p", "--pgo", action=BooleanOptionalAction, default=True, help="Use PGO for profiling / optimization."
