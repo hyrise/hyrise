@@ -157,4 +157,47 @@ TEST_F(OperatorSharedStateTest, AccessWithoutWorker) {
   EXPECT_EQ(worker_states.front().get().task_count, TASK_COUNT_HIGH);
 }
 
+TEST_F(OperatorSharedStateTest, NestedTasks) {
+  const auto core_count = std::min(Hyrise::get().topology.num_cpus(), TASK_COUNT_HIGH / 10);
+
+  if (core_count < 2) {
+    GTEST_SKIP();
+  }
+
+  Hyrise::get().topology.use_default_topology(core_count);
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+
+  auto operator_state = OperatorSharedState<TestWorkerState>{};
+  std::make_shared<JobTask>([&]() {
+    auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+    jobs.reserve(TASK_COUNT_HIGH);
+    for (auto job_id = size_t{0}; job_id < TASK_COUNT_HIGH; ++job_id) {
+      const auto job = [&] {
+        ++operator_state.current_worker_state().task_count;
+      };
+
+      if (job_id % 10 == 0) {
+        job();
+      } else {
+        jobs.push_back(std::make_shared<JobTask>(job));
+      }
+    }
+
+    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+  })->schedule();
+
+  Hyrise::get().scheduler()->wait_for_all_tasks();
+
+  auto worker_states = operator_state.worker_states();
+  EXPECT_LE(worker_states.size(), core_count);
+  EXPECT_LE(worker_states.front().get().task_count, TASK_COUNT_HIGH);
+
+  const auto& merged_state = operator_state.merge_worker_states();
+  EXPECT_EQ(merged_state.task_count, TASK_COUNT_HIGH);
+
+  worker_states = operator_state.worker_states();
+  EXPECT_EQ(worker_states.size(), 1);
+  EXPECT_EQ(worker_states.front().get().task_count, TASK_COUNT_HIGH);
+}
+
 }  // namespace hyrise
