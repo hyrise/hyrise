@@ -119,7 +119,8 @@ class OperatorSharedState : public Noncopyable {
       }
     }
 
-    Assert(!worker_states.empty(), "Could not find a single initialized worker state.");
+    Assert(!worker_states.empty(),
+           std::format("Could not find a single initialized worker state {}.", _worker_states.size()));
     return worker_states;
   }
 

@@ -27,10 +27,6 @@ namespace hyrise {
 
 using namespace node_queue_scheduler::detail;
 
-NodeQueueScheduler::NodeQueueScheduler() {
-  _worker_id_allocator = std::make_shared<UidAllocator>();
-}
-
 NodeQueueScheduler::~NodeQueueScheduler() {
   if (_active) {
     // We cannot throw an exception because destructors are noexcept by default.
@@ -89,8 +85,7 @@ void NodeQueueScheduler::begin() {
 
       for (const auto& topology_cpu : topology_node.cpus) {
         // TODO(anybody): Place queues on the actual NUMA node once we have NUMA-aware allocators.
-        _workers.emplace_back(
-            std::make_shared<Worker>(queue, worker_id, topology_cpu.cpu_id));
+        _workers.emplace_back(std::make_shared<Worker>(queue, worker_id, topology_cpu.cpu_id));
         ++worker_id;
       }
     }
@@ -267,7 +262,6 @@ NodeID NodeQueueScheduler::determine_queue_id(const NodeID preferred_node_id) co
 
   return min_load_node_id;
 }
-
 
 size_t NodeQueueScheduler::worker_count() const {
   return _workers.size();

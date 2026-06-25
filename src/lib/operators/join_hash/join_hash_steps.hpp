@@ -19,6 +19,7 @@
 #include "hyrise.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/multi_predicate_join/multi_predicate_join_evaluator.hpp"
+#include "operators/operator_state.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
@@ -26,7 +27,6 @@
 #include "storage/segment_iterate.hpp"
 #include "type_comparison.hpp"
 #include "types.hpp"
-#include "operators/operator_state.hpp"
 
 /*
   This file includes the functions that cover the main steps of our hash join implementation
@@ -265,8 +265,8 @@ static const auto all_true_bloom_filter = ~BloomFilter(BLOOM_FILTER_SIZE);
 
 template <typename T>
 class MaterializeState : public Noncopyable {
-public:
-  void merge (MaterializeState& /*unused*/) {}
+ public:
+  void merge(MaterializeState& /*unused*/) {}
 
   BloomFilter bloom_filter{BLOOM_FILTER_SIZE, false};
   Partition<T> partition;
@@ -291,24 +291,28 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
   const auto chunk_count = in_table->chunk_count();
   const auto row_count = in_table->row_count();
 
+  Assert(output_bloom_filter.empty(), "Unexpected non-empty output_bloom_filter.");
+  output_bloom_filter.resize(BLOOM_FILTER_SIZE);
+  Assert(input_bloom_filter.size() == BLOOM_FILTER_SIZE, "Invalid input_bloom_filter.");
+
+  // List of all elements that will be partitioned.
+  auto radix_container = RadixContainer<T>{};
+  if (chunk_count == 0) {
+    return radix_container;
+  }
+
   const auto hash_function = std::hash<HashedType>{};
 
   // Determine fan-out (i.e., number of radix partitions to create).
   const auto num_radix_partitions = size_t{1} << radix_bits;
   const auto radix_mask = static_cast<size_t>(std::pow(2, radix_bits) - 1);
-
-
   const auto worker_count = Hyrise::get().scheduler()->worker_count();
-  Assert(output_bloom_filter.empty(), "Unexpected non-empty output_bloom_filter.");
-  if (worker_count == 1) {
-    output_bloom_filter.resize(BLOOM_FILTER_SIZE);
-  }
-
-  Assert(input_bloom_filter.size() == BLOOM_FILTER_SIZE, "Invalid input_bloom_filter.");
+  const auto tuples_per_worker =
+      worker_count == 1
+          ? row_count
+          : static_cast<uint64_t>(static_cast<double>(row_count) / static_cast<double>(worker_count) * 1.5);
 
   auto materialize_state = OperatorSharedState<MaterializeState<T>>{};
-  const auto tuples_per_worker = worker_count == 1 ? row_count : static_cast<uint64_t>(static_cast<double>(row_count) / static_cast<double>(worker_count) * 1.5);
-
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   jobs.reserve(chunk_count);
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
@@ -319,7 +323,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
 
     const auto materialize = [&, chunk_in, chunk_id, num_rows]() {
       auto& worker_state = materialize_state.current_worker_state();
-      auto& used_output_bloom_filter = worker_count == 1 ? output_bloom_filter : worker_state.bloom_filter;
+      auto& used_output_bloom_filter = worker_state.bloom_filter;
       auto& elements = worker_state.partition.elements;
       auto& null_values = worker_state.partition.null_values;
 
@@ -404,12 +408,8 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
   }
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 
-  auto worker_states = materialize_state.worker_states();
+  const auto worker_states = materialize_state.worker_states();
   const auto state_count = worker_states.size();
-  auto& first_worker_state = worker_states.front().get();
-
-  // List of all elements that will be partitioned.
-  auto radix_container = RadixContainer<T>{};
   radix_container.resize(state_count);
   histograms.resize(state_count);
 
@@ -417,14 +417,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
     auto& state = worker_states[state_id].get();
     histograms[state_id] = std::move(state.histogram);
     radix_container[state_id] = std::move(state.partition);
-
-    if (state_id > 1) {
-      first_worker_state.bloom_filter |= state.bloom_filter;
-    }
-  }
-
-  if (worker_count > 1) {
-    output_bloom_filter = std::move(first_worker_state.bloom_filter);
+    output_bloom_filter |= state.bloom_filter;
   }
 
   return radix_container;
