@@ -94,6 +94,8 @@ class AbstractScheduler : public Noncopyable {
    */
   void schedule_and_wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks);
 
+  virtual size_t worker_count() const = 0;
+
  protected:
   friend class AbstractTask;
   /**

@@ -43,6 +43,8 @@ void NodeQueueScheduler::begin() {
   _queues.resize(_node_count);
   _workers_per_node.reserve(_node_count);
 
+  auto worker_id = WorkerID{0};
+
   for (auto node_id = NodeID{0}; node_id < _node_count; ++node_id) {
     const auto& topology_node = Hyrise::get().topology.nodes()[node_id];
 
@@ -60,7 +62,8 @@ void NodeQueueScheduler::begin() {
       for (const auto& topology_cpu : topology_node.cpus) {
         // TODO(anybody): Place queues on the actual NUMA node once we have NUMA-aware allocators.
         _workers.emplace_back(
-            std::make_shared<Worker>(queue, WorkerID{_worker_id_allocator->allocate()}, topology_cpu.cpu_id));
+            std::make_shared<Worker>(queue, worker_id, topology_cpu.cpu_id));
+        ++worker_id;
       }
     }
   }
@@ -234,6 +237,10 @@ NodeID NodeQueueScheduler::determine_queue_id(const NodeID preferred_node_id) co
   }
 
   return min_load_node_id;
+}
+
+size_t NodeQueueScheduler::worker_count() const {
+  return _workers.size();
 }
 
 void NodeQueueScheduler::_schedule(std::shared_ptr<AbstractTask> task, NodeID preferred_node_id,

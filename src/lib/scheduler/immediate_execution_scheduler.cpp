@@ -24,6 +24,10 @@ const std::vector<std::shared_ptr<TaskQueue>>& ImmediateExecutionScheduler::queu
   return _queues;
 }
 
+size_t ImmediateExecutionScheduler::worker_count() const {
+  return 1;
+}
+
 void ImmediateExecutionScheduler::_schedule(std::shared_ptr<AbstractTask> task, NodeID /*preferred_node_id*/,
                                             SchedulePriority /*priority*/) {
   DebugAssert(task->is_scheduled(),
