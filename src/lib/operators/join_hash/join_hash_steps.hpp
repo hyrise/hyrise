@@ -293,12 +293,10 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
 
   const auto hash_function = std::hash<HashedType>{};
 
-  // Fan-out.
+  // Determine fan-out (i.e., number of radix partitions to create).
   const auto num_radix_partitions = size_t{1} << radix_bits;
+  const auto radix_mask = static_cast<size_t>(std::pow(2, radix_bits) - 1);
 
-  // Currently, we just do one pass.
-  const auto pass = size_t{0};
-  const auto radix_mask = static_cast<size_t>(std::pow(2, radix_bits * (pass + 1)) - 1);
 
   const auto worker_count = Hyrise::get().scheduler()->worker_count();
   Assert(output_bloom_filter.empty(), "Unexpected non-empty output_bloom_filter.");
@@ -315,7 +313,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
   jobs.reserve(chunk_count);
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk_in = in_table->get_chunk(chunk_id);
-    Assert(chunk_in, "Physically deleted chunks should not reach this point.");
+    Assert(chunk_in, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
     const auto num_rows = chunk_in->size();
 
@@ -332,6 +330,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
         }
         worker_state.histogram.resize(num_radix_partitions);
       }
+
       auto reference_chunk_offset = ChunkOffset{0};
 
       const auto segment = chunk_in->get_segment(column_id);
@@ -364,14 +363,12 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
             }
 
             if (!skip) {
-              // Fill the corresponding slot in the bloom filter
+              // Fill the corresponding slot in the bloom filter.
               used_output_bloom_filter[hashed_value & BLOOM_FILTER_MASK] = true;
 
-              /*
-              For ReferenceSegments we do not use the RowIDs from the referenced tables.
-              Instead, we use the index in the ReferenceSegment itself. This way we can later correctly dereference
-              values from different inputs (important for Multi Joins).
-              */
+              // For ReferenceSegments, we do not use the RowIDs from the referenced tables. Instead, we use the index
+              // in the ReferenceSegment itself. This way we can later correctly dereference values from different
+              // inputs (important for Multi Joins).
               if constexpr (is_reference_segment_iterable_v<IterableType>) {
                 elements.emplace_back(RowID{chunk_id, reference_chunk_offset}, value.value());
               } else {
@@ -390,7 +387,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
             }
           }
 
-          // reference_chunk_offset is only used for ReferenceSegments
+          // `reference_chunk_offset` is only used for ReferenceSegments.
           if constexpr (is_reference_segment_iterable_v<IterableType>) {
             ++reference_chunk_offset;
           }
@@ -534,14 +531,12 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
            "value information");
   }
 
-  const std::hash<HashedType> hash_function;
+  const auto hash_function = std::hash<HashedType>{};
 
   const auto input_partition_count = radix_container.size();
   const auto output_partition_count = size_t{1} << radix_bits;
 
-  // currently, we just do one pass
-  const size_t pass = 0;
-  const size_t radix_mask = static_cast<uint32_t>(std::pow(2, radix_bits * (pass + 1)) - 1);
+  const size_t radix_mask = static_cast<uint32_t>(std::pow(2, radix_bits) - 1);
 
   // allocate new (shared) output
   auto output = RadixContainer<T>(output_partition_count);
@@ -571,7 +566,7 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
     }
   }
 
-  std::vector<std::shared_ptr<AbstractTask>> jobs;
+  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   jobs.reserve(input_partition_count);
 
   for (auto input_partition_idx = ChunkID{0}; input_partition_idx < input_partition_count; ++input_partition_idx) {
