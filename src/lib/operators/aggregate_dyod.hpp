@@ -18,6 +18,21 @@
 
 namespace hyrise {
 
+using GroupKeyEntry = std::vector<std::byte>;
+using GroupKey = std::vector<GroupKeyEntry>;
+
+template <typename T>
+  requires std::is_trivially_copyable_v<T>
+std::vector<std::byte> serialize_value(T value);
+
+std::vector<std::byte> serialize_value(const pmr_string& value);
+
+template <typename T>
+  requires std::is_trivially_copyable_v<T>
+std::vector<std::byte> serialize_value(T value, bool is_null);
+
+std::vector<std::byte> serialize_value(const pmr_string& value, bool is_null);
+
 class AggregateDYOD : public AbstractAggregateOperator {
  public:
   AggregateDYOD(const std::shared_ptr<AbstractOperator>& input_operator,
@@ -43,6 +58,8 @@ class AggregateDYOD : public AbstractAggregateOperator {
   template <typename ColumnDataType, WindowFunction aggregate_function>
   void _append_aggregate_column_definition(TableColumnDefinitions& column_definitions,
                                            const WindowFunctionExpression& aggregate);
+
+  void _aggregate_chunk(std::shared_ptr<Chunk> chunk);
 };
 
 }  // namespace hyrise
