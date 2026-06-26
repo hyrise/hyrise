@@ -32,6 +32,24 @@ class TestWorkerState : public Noncopyable {
   size_t task_count{0};
 };
 
+void test_state_output(OperatorSharedState<TestWorkerState>& operator_state, size_t task_count, size_t core_count) {
+  // Before merging, there should be at most as many states as cores. All of them have a fraction of the result.
+  auto worker_states = operator_state.worker_states();
+  EXPECT_LE(worker_states.size(), core_count);
+  for (const auto& state : worker_states) {
+    EXPECT_LE(state.get().task_count, task_count);
+  }
+
+  const auto& merged_state = operator_state.merge_worker_states();
+
+  // Merged state has the entire result.
+  EXPECT_EQ(merged_state.task_count, task_count);
+
+  worker_states = operator_state.worker_states();
+  EXPECT_EQ(worker_states.size(), 1);
+  EXPECT_EQ(worker_states.front().get().task_count, task_count);
+}
+
 }  // namespace
 
 TEST_F(OperatorSharedStateTest, ExecuteSingleThreaded) {
@@ -47,16 +65,7 @@ TEST_F(OperatorSharedStateTest, ExecuteSingleThreaded) {
 
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 
-  auto worker_states = operator_state.worker_states();
-  EXPECT_EQ(worker_states.size(), 1);
-  EXPECT_EQ(worker_states.front().get().task_count, TASK_COUNT_HIGH);
-
-  const auto& merged_state = operator_state.merge_worker_states();
-  EXPECT_EQ(merged_state.task_count, TASK_COUNT_HIGH);
-
-  worker_states = operator_state.worker_states();
-  EXPECT_EQ(worker_states.size(), 1);
-  EXPECT_EQ(worker_states.front().get().task_count, TASK_COUNT_HIGH);
+  test_state_output(operator_state, TASK_COUNT_HIGH, 1);
 }
 
 TEST_F(OperatorSharedStateTest, MoreTasksThanWorkers) {
@@ -82,16 +91,7 @@ TEST_F(OperatorSharedStateTest, MoreTasksThanWorkers) {
   start_flag.notify_all();
   Hyrise::get().scheduler()->wait_for_all_tasks();
 
-  auto worker_states = operator_state.worker_states();
-  EXPECT_LE(worker_states.size(), core_count);
-  EXPECT_LE(worker_states.front().get().task_count, TASK_COUNT_HIGH);
-
-  const auto& merged_state = operator_state.merge_worker_states();
-  EXPECT_EQ(merged_state.task_count, TASK_COUNT_HIGH);
-
-  worker_states = operator_state.worker_states();
-  EXPECT_EQ(worker_states.size(), 1);
-  EXPECT_EQ(worker_states.front().get().task_count, TASK_COUNT_HIGH);
+  test_state_output(operator_state, TASK_COUNT_HIGH, core_count);
 }
 
 TEST_F(OperatorSharedStateTest, MoreWorkersThanTasks) {
@@ -113,28 +113,7 @@ TEST_F(OperatorSharedStateTest, MoreWorkersThanTasks) {
   start_flag.notify_all();
   Hyrise::get().scheduler()->wait_for_all_tasks();
 
-  auto worker_states = operator_state.worker_states();
-  EXPECT_LE(worker_states.size(), TASK_COUNT_LOW);
-  EXPECT_LE(worker_states.front().get().task_count, TASK_COUNT_LOW);
-
-  const auto& merged_state = operator_state.merge_worker_states();
-  EXPECT_EQ(merged_state.task_count, TASK_COUNT_LOW);
-
-  worker_states = operator_state.worker_states();
-  EXPECT_EQ(worker_states.size(), 1);
-  EXPECT_EQ(worker_states.front().get().task_count, TASK_COUNT_LOW);
-}
-
-TEST_F(OperatorSharedStateTest, NoWorkDone) {
-  auto operator_state = OperatorSharedState<TestWorkerState>{};
-
-  EXPECT_THROW(operator_state.worker_states(), std::logic_error);
-  EXPECT_THROW(operator_state.merge_worker_states(), std::logic_error);
-
-  auto jobs = std::vector<std::shared_ptr<AbstractTask>>();
-  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
-  EXPECT_THROW(operator_state.worker_states(), std::logic_error);
-  EXPECT_THROW(operator_state.merge_worker_states(), std::logic_error);
+  test_state_output(operator_state, TASK_COUNT_LOW, TASK_COUNT_LOW);
 }
 
 TEST_F(OperatorSharedStateTest, AccessWithoutWorker) {
@@ -145,16 +124,7 @@ TEST_F(OperatorSharedStateTest, AccessWithoutWorker) {
     ++operator_state.current_worker_state().task_count;
   }
 
-  auto worker_states = operator_state.worker_states();
-  EXPECT_EQ(worker_states.size(), 1);
-  EXPECT_EQ(worker_states.front().get().task_count, TASK_COUNT_HIGH);
-
-  const auto& merged_state = operator_state.merge_worker_states();
-  EXPECT_EQ(merged_state.task_count, TASK_COUNT_HIGH);
-
-  worker_states = operator_state.worker_states();
-  EXPECT_EQ(worker_states.size(), 1);
-  EXPECT_EQ(worker_states.front().get().task_count, TASK_COUNT_HIGH);
+  test_state_output(operator_state, TASK_COUNT_HIGH, 1);
 }
 
 TEST_F(OperatorSharedStateTest, NestedTasks) {
@@ -188,16 +158,19 @@ TEST_F(OperatorSharedStateTest, NestedTasks) {
 
   Hyrise::get().scheduler()->wait_for_all_tasks();
 
-  auto worker_states = operator_state.worker_states();
-  EXPECT_LE(worker_states.size(), core_count);
-  EXPECT_LE(worker_states.front().get().task_count, TASK_COUNT_HIGH);
+  test_state_output(operator_state, TASK_COUNT_HIGH, core_count);
+}
 
-  const auto& merged_state = operator_state.merge_worker_states();
-  EXPECT_EQ(merged_state.task_count, TASK_COUNT_HIGH);
+TEST_F(OperatorSharedStateTest, NoWorkDone) {
+  auto operator_state = OperatorSharedState<TestWorkerState>{};
 
-  worker_states = operator_state.worker_states();
-  EXPECT_EQ(worker_states.size(), 1);
-  EXPECT_EQ(worker_states.front().get().task_count, TASK_COUNT_HIGH);
+  EXPECT_THROW(operator_state.worker_states(), std::logic_error);
+  EXPECT_THROW(operator_state.merge_worker_states(), std::logic_error);
+
+  auto jobs = std::vector<std::shared_ptr<AbstractTask>>();
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+  EXPECT_THROW(operator_state.worker_states(), std::logic_error);
+  EXPECT_THROW(operator_state.merge_worker_states(), std::logic_error);
 }
 
 }  // namespace hyrise
