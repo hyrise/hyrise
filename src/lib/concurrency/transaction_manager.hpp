@@ -52,6 +52,8 @@ class TransactionManager : public Noncopyable {
   friend class TransactionManagerTest;
 
  public:
+  TransactionManager(const TransactionManager&) = delete;
+  TransactionManager& operator=(const TransactionManager&) = delete;
   CommitID last_commit_id() const;
 
   /**
@@ -67,13 +69,15 @@ class TransactionManager : public Noncopyable {
    */
   std::optional<CommitID> get_lowest_active_snapshot_commit_id() const;
 
+  ~TransactionManager() override;
+
  private:
   TransactionManager();
-  ~TransactionManager();
 
   friend class Hyrise;
   friend class TransactionContext;
 
+  TransactionManager(TransactionManager&& transaction_manager) noexcept;
   TransactionManager& operator=(TransactionManager&& transaction_manager) noexcept;
 
   std::shared_ptr<CommitContext> _new_commit_context();

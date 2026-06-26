@@ -29,7 +29,7 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT(build/namespaces)
+using namespace hyrise;
 
 template <typename ColumnIDs>
 bool contains_any_column_id(const ColumnIDs& search_columns, const std::vector<ColumnID>& columns) {
@@ -152,7 +152,7 @@ UniqueColumnCombinations StoredTableNode::unique_column_combinations() const {
                 "Unexpected count of column expressions.");
 
     // Create UniqueColumnCombination.
-    unique_column_combinations.emplace(std::move(column_expressions));
+    unique_column_combinations.emplace(std::move(column_expressions), !table_key_constraint.can_become_invalid());
   }
 
   return unique_column_combinations;

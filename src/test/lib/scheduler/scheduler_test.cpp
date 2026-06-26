@@ -1,11 +1,15 @@
-#include <chrono>
+#include <algorithm>
+#include <atomic>
+#include <cstddef>
+#include <cstdint>
 #include <memory>
-#include <utility>
+#include <stdexcept>
+#include <thread>
 #include <vector>
 
 #include "base_test.hpp"
-#include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_functional.hpp"
+#include "expression/pqp_column_expression.hpp"
 #include "hyrise.hpp"
 #include "operators/get_table.hpp"
 #include "operators/table_scan.hpp"
@@ -14,10 +18,14 @@
 #include "scheduler/operator_task.hpp"
 #include "scheduler/shutdown_task.hpp"
 #include "scheduler/task_queue.hpp"
+#include "testing_assert.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
+#include "utils/load_table.hpp"
 
 namespace hyrise {
 
-using namespace expression_functional;  // NOLINT(build/namespaces)
+using namespace expression_functional;
 
 class SchedulerTest : public BaseTest {
  protected:
@@ -122,6 +130,19 @@ class SchedulerTest : public BaseTest {
       tasks.emplace_back(task);
     }
   }
+
+  // Used to access protected friend members of scheduler.
+  static void group_and_schedule_tasks(const std::shared_ptr<NodeQueueScheduler>& node_queue_scheduler,
+                                       const std::vector<std::shared_ptr<AbstractTask>>& tasks,
+                                       const size_t group_count) {
+    node_queue_scheduler->_group_tasks(tasks, group_count);
+    node_queue_scheduler->_schedule_tasks(tasks);
+  }
+
+  // Used to access protected friend members of abstract task.
+  static bool try_transition_to_scheduled(std::shared_ptr<ShutdownTask>& task) {
+    return task->_try_transition_to(TaskState::Scheduled);
+  }
 };
 
 /**
@@ -151,36 +172,72 @@ TEST_F(SchedulerTest, LinearDependenciesWithScheduler) {
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 
   auto counter = std::atomic_uint32_t{0};
-
   stress_linear_dependencies(counter);
-
   EXPECT_EQ(counter, 3);
 }
 
-TEST_F(SchedulerTest, Grouping) {
-  // Tests the grouping described in AbstractScheduler::schedule_and_wait_for_tasks and
-  // NodeQueueScheduler::_group_tasks. We check that tasks of each group are executed in order. Note that the execution
-  // of groups might happen interleaved as workers use randomness (see worker.cpp).
-  Hyrise::get().topology.use_fake_numa_topology(1, 1);
-  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+// Test that task grouping works, i.e., no more tasks than the requested group count are processed at the same time.
+TEST_F(SchedulerTest, CheckScheduledTasksAreGrouped) {
+  const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
+  Hyrise::get().set_scheduler(node_queue_scheduler);
 
-  const auto task_count = 5'000;
+  const auto worker_count = node_queue_scheduler->workers().size();
 
-  auto previous_task_id_per_group = std::vector<size_t>(NodeQueueScheduler::NUM_GROUPS, 0);
-  auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
+  constexpr auto multiplier = (HYRISE_DEBUG || HYRISE_WITH_TSAN) ? size_t{50} : size_t{5'000};
+  const auto task_count = multiplier * worker_count;
 
-  for (auto task_id = size_t{0}; task_id < task_count; ++task_id) {
-    tasks.emplace_back(std::make_shared<JobTask>([&, task_id] {
-      const auto group_id = task_id % NodeQueueScheduler::NUM_GROUPS;
-      const auto prev_task_id = previous_task_id_per_group[group_id];
-      if (prev_task_id > 0) {
-        EXPECT_EQ(prev_task_id + NodeQueueScheduler::NUM_GROUPS, task_id);
+  for (const auto group_count : std::vector<size_t>{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15}) {
+    // If the tested system does not have enough hardware threads, skip.
+    if (worker_count < group_count) {
+      continue;
+    }
+
+    auto output_counter = std::atomic<size_t>{0};
+    auto concurrently_processed_groups = std::atomic<int64_t>{0};
+    auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
+
+    for (auto task_id = size_t{0}; task_id < task_count; ++task_id) {
+      tasks.emplace_back(std::make_shared<JobTask>([&] () {
+        ++output_counter;
+        const auto active_groups = ++concurrently_processed_groups;
+        ASSERT_LE(active_groups, group_count);
+        --concurrently_processed_groups;
+      }));
+    }
+
+    group_and_schedule_tasks(node_queue_scheduler, tasks, group_count);
+    node_queue_scheduler->wait_for_tasks(tasks);
+
+    EXPECT_EQ(output_counter, task_count);
+  }
+}
+
+// Test that tasks are assigned to groups in a round-robin manner.
+TEST_F(SchedulerTest, GroupingOrderOfTasks) {
+  auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
+  Hyrise::get().set_scheduler(node_queue_scheduler);
+
+  for (const auto task_count : std::vector<size_t>{1, 2, 3, 4, 5, 17, 500, 1'024}) {
+    for (const auto group_count : std::vector<size_t>{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15}) {
+      auto previous_task_id_per_group = std::vector<size_t>(group_count, 0);
+      auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
+
+      for (auto task_id = size_t{0}; task_id < task_count; ++task_id) {
+        tasks.emplace_back(std::make_shared<JobTask>([&, task_id] {
+          const auto group_id = task_id % group_count;
+          const auto prev_task_id = previous_task_id_per_group[group_id];
+          if (prev_task_id > 0) {
+            EXPECT_EQ(prev_task_id + group_count, task_id);
+          }
+          previous_task_id_per_group[group_id] = task_id;
+        }));
       }
-      previous_task_id_per_group[group_id] = task_id;
-    }));
+
+      group_and_schedule_tasks(node_queue_scheduler, tasks, group_count);
+      node_queue_scheduler->wait_for_tasks(tasks);
+    }
   }
 
-  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
   Hyrise::get().scheduler()->finish();
 }
 
@@ -189,9 +246,7 @@ TEST_F(SchedulerTest, MultipleDependenciesWithScheduler) {
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 
   auto counter = std::atomic_uint32_t{0};
-
   stress_multiple_dependencies(counter);
-
   EXPECT_EQ(counter, 4);
 }
 
@@ -200,9 +255,7 @@ TEST_F(SchedulerTest, DiamondDependenciesWithScheduler) {
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 
   auto counter = std::atomic_uint32_t{0};
-
   stress_diamond_dependencies(counter);
-
   EXPECT_EQ(counter, 7);
 }
 
@@ -272,7 +325,7 @@ TEST_F(SchedulerTest, MultipleOperators) {
   gt_task->schedule();
   ts_task->schedule();
 
-  Hyrise::get().scheduler()->finish();
+  Hyrise::get().scheduler()->wait_for_all_tasks();
 
   const auto expected_result = load_table("resources/test_data/tbl/int_float_filtered2.tbl", ChunkOffset{1});
   EXPECT_TABLE_EQ_UNORDERED(ts->get_output(), expected_result);
@@ -352,10 +405,6 @@ TEST_F(SchedulerTest, SingleWorkerGuaranteeProgress) {
 }
 
 TEST_F(SchedulerTest, DetermineQueueIDForTask) {
-  if (std::thread::hardware_concurrency() < 2) {
-    GTEST_SKIP();
-  }
-
   Hyrise::get().topology.use_fake_numa_topology(2, 1);
   const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
   Hyrise::get().set_scheduler(node_queue_scheduler);
@@ -366,6 +415,90 @@ TEST_F(SchedulerTest, DetermineQueueIDForTask) {
   EXPECT_EQ(node_queue_scheduler->determine_queue_id(CURRENT_NODE_ID), NodeID{0});
 
   // The distribution of tasks under high load is tested in the concurrency stress tests.
+}
+
+TEST_F(SchedulerTest, NumGroupDetermination) {
+  // Test early out for very small number of tasks.
+  {
+    constexpr auto WORKER_COUNT = size_t{2};
+    Hyrise::get().topology.use_fake_numa_topology(WORKER_COUNT, WORKER_COUNT);
+    const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
+    Hyrise::get().set_scheduler(node_queue_scheduler);
+
+    const auto tasks = std::vector<std::shared_ptr<AbstractTask>>{std::make_shared<JobTask>([&]() {}),
+                                                                  std::make_shared<JobTask>([&]() {}),
+                                                                  std::make_shared<JobTask>([&]() {}),
+                                                                  std::make_shared<JobTask>([&]() {})};
+    EXPECT_FALSE(node_queue_scheduler->determine_group_count(tasks));
+  }
+
+  // Test that minimally sized topology yields valid group counts.
+  {
+    constexpr auto WORKER_COUNT = size_t{1};
+    Hyrise::get().topology.use_fake_numa_topology(WORKER_COUNT, WORKER_COUNT);
+    const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
+    Hyrise::get().set_scheduler(node_queue_scheduler);
+
+    // Create a large number of tasks to avoid early out (factor must be adapted when the max. number of groups is
+    // changed, see NodeQueueScheduler::NUM_GROUPS_MAX_FACTOR).
+    const auto task_count = WORKER_COUNT * 20;
+    auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
+    tasks.reserve(task_count);
+    for (auto task_id = TaskID{0}; task_id < task_count; ++task_id) {
+      tasks.push_back(std::make_shared<JobTask>([&]() {}));
+    }
+    EXPECT_LT(1, node_queue_scheduler->determine_group_count(tasks));
+  }
+}
+
+TEST_F(SchedulerTest, NumGroupDeterminationDifferentLoads) {
+  if constexpr (HYRISE_WITH_TSAN) {
+    Hyrise::get().topology.use_non_numa_topology(8);
+  }
+  const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
+  Hyrise::get().set_scheduler(node_queue_scheduler);
+  const auto worker_count = node_queue_scheduler->workers().size();
+
+  // Create a large number of tasks to avoid early out.
+  constexpr auto TASK_FACTOR = HYRISE_WITH_TSAN ? size_t{10} : size_t{100};
+  const auto task_count = TASK_FACTOR * worker_count;
+  auto tasks_1 = std::vector<std::shared_ptr<AbstractTask>>{};
+  tasks_1.reserve(task_count);
+  for (auto task_id = TaskID{0}; task_id < task_count; ++task_id) {
+    tasks_1.push_back(std::make_shared<JobTask>([&]() {}));
+  }
+
+  // For a large number of tasks and no load on the scheduler, grouping should happen.
+  const auto num_groups_without_load = node_queue_scheduler->determine_group_count(tasks_1);
+  ASSERT_TRUE(num_groups_without_load);
+  // We should receive a large group count when the queue load is low (here, no load at time of grouping).
+  EXPECT_EQ(*num_groups_without_load, static_cast<size_t>(node_queue_scheduler::detail::NUM_GROUPS_MAX_FACTOR *
+                                                          static_cast<double>(worker_count)));
+
+  // Create load on queue. Schedule jobs that are blocked on the atomic_flag.
+  auto block_flag = std::atomic_flag{};
+  auto tasks_2 = std::vector<std::shared_ptr<AbstractTask>>{};
+  tasks_2.reserve(task_count);
+  for (auto task_id = TaskID{0}; task_id < task_count; ++task_id) {
+    tasks_2.push_back(std::make_shared<JobTask>([&]() {
+      block_flag.wait(false);
+    }));
+    tasks_2.back()->schedule();
+  }
+
+  const auto num_groups_with_load = node_queue_scheduler->determine_group_count(tasks_2);
+  ASSERT_TRUE(num_groups_with_load);
+
+  // We should receive the minimum group count when the queue load is high.
+  EXPECT_EQ(*num_groups_with_load, std::max(node_queue_scheduler::detail::MIN_GROUP_COUNT,
+                                            static_cast<size_t>(node_queue_scheduler::detail::NUM_GROUPS_MIN_FACTOR *
+                                                                static_cast<double>(worker_count))));
+
+  // Shutdown. Unblock scheduled jobs.
+  block_flag.test_and_set();
+  block_flag.notify_all();
+  node_queue_scheduler->schedule_and_wait_for_tasks(tasks_1);
+  node_queue_scheduler->wait_for_tasks(tasks_2);
 }
 
 template <typename Iterator>
@@ -391,9 +524,13 @@ void merge_sort(Iterator first, Iterator last) {
 // Recursive merge sort. Creates a typical divide-and-conquer fan out pattern of tasks. We use the text book
 // implementation that recurses until the vector length is 1 to increase the depth of the fan out.
 TEST_F(SchedulerTest, MergeSort) {
-  // Sizes up to 20'000 works for MacOS (debug mode, more for release) with its comparatively small stack size. If this
-  // test fails on a new platform, check the system's stack size and if ITEM_COUNT needs to be reduced.
-  constexpr auto ITEM_COUNT = size_t{5'000};
+  // This test aims to penetrate the scheduler more (here via recursion) than typical operators should.
+  // If this test fails, check the system's stack size and if ITEM_COUNT needs to be adapted.
+  // With #2697, we needed to limit the ITEM_COUNT (for Debug builds) as we otherwise got a "bus error" on the Mac ARM
+  // machine. Running the address sanitizers showed that it is caused by stack overflow, caused by introducing <format>.
+  // We do not consider this an issue as <format> improves the code and we have seen no negative effect in release mode.
+  // For TSAN, we reduce ITEM_COUNT, as the test gets very slow otherwise.
+  constexpr auto ITEM_COUNT = HYRISE_DEBUG ? size_t{500} : (HYRISE_WITH_TSAN ? size_t{100} : size_t{20'000});
   Assert(ITEM_COUNT % 5 == 0, "Must be dividable by 5.");
 
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
@@ -412,20 +549,22 @@ TEST_F(SchedulerTest, MergeSort) {
 
 TEST_F(SchedulerTest, ShutdownTaskDecrement) {
   auto counter_1 = std::atomic_int64_t{1};
-  auto shutdown_task_1 = ShutdownTask{counter_1};
-  // Prepare job for execution (usually done when scheduled and obtained by workers)
-  EXPECT_TRUE(shutdown_task_1.try_mark_as_enqueued());
-  EXPECT_TRUE(shutdown_task_1.try_mark_as_assigned_to_worker());
+  auto shutdown_task_1 = std::make_shared<ShutdownTask>(counter_1);
+  // Manually prepare job for execution (usually done when scheduled and obtained by workers).
+  EXPECT_TRUE(try_transition_to_scheduled(shutdown_task_1));
+  EXPECT_TRUE(shutdown_task_1->try_mark_as_enqueued());
+  EXPECT_TRUE(shutdown_task_1->try_mark_as_assigned_to_worker());
   EXPECT_EQ(counter_1.load(), 1);
-  shutdown_task_1.execute();
+  shutdown_task_1->execute();
   EXPECT_EQ(counter_1.load(), 0);
 
   auto counter_2 = std::atomic_int64_t{0};
-  auto shutdown_task_2 = ShutdownTask{counter_2};
-  EXPECT_TRUE(shutdown_task_2.try_mark_as_enqueued());
-  EXPECT_TRUE(shutdown_task_2.try_mark_as_assigned_to_worker());
+  auto shutdown_task_2 = std::make_shared<ShutdownTask>(counter_2);
+  EXPECT_TRUE(try_transition_to_scheduled(shutdown_task_2));
+  EXPECT_TRUE(shutdown_task_2->try_mark_as_enqueued());
+  EXPECT_TRUE(shutdown_task_2->try_mark_as_assigned_to_worker());
   EXPECT_EQ(counter_2.load(), 0);
-  EXPECT_THROW(shutdown_task_2.execute(), std::logic_error);
+  EXPECT_THROW(shutdown_task_2->execute(), std::logic_error);
 }
 
 TEST_F(SchedulerTest, GetThisThreadWorker) {

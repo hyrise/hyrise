@@ -34,11 +34,37 @@ namespace hyrise {
  * TaskQueue.
  *
  * Note: currently, TaskQueues are not explicitly allocated on a NUMA node. This means most workers will frequently
- * access distant TaskQueues, which is ~1.6 times slower than accessing a local node [1]. 
+ * access distant TaskQueues, which is ~1.6 times slower than accessing a local node [1].
  *
  *  [1] http://frankdenneman.nl/2016/07/13/numa-deep-dive-4-local-memory-optimization/
  *
  */
+
+namespace node_queue_scheduler::detail {
+/**
+ * Hyrise groups tasks to reduce pressure on the scheduler and the tasks queues. Grouping happens by dividing a large
+ * set of tasks into groups and only scheduling one task of each group. All other tasks are chained as dependencies.
+ * When a worker pulls the first task and executes it, it will then process the entire chain without any further
+ * communication with the scheduler.
+ * The number of groups to use is hard to determine and depends on the current load. In case of a single user, we can
+ * use a high group count (to allow parallelism and balance load evenly even when some tasks straggle) as the task queue
+ * is usually not congested. In case of multiple clients, we decrease the number of groups to take pressure off the
+ * scheduler and the tasks queues (see discussion in #2243).
+ *
+ * We scale number of groups linearly between (NUM_GROUPS_MIN_FACTOR * _workers_per_node) and (NUM_GROUPS_MAX_FACTOR *
+ * _workers_per_node).
+ */
+constexpr auto NUM_GROUPS_MIN_FACTOR = 0.1;
+constexpr auto NUM_GROUPS_MAX_FACTOR = 2.0;
+
+// For small machines, where NUM_GROUPS_MIN_FACTOR * cores can yield small group_counts, we cut of at MIN_GROUP_COUNT.
+// We found for "small" machines (e.g., 12 core MacBooks but also 32-thread servers), the calculated minimal group
+// counts perform worse than ensuring at least a group count of eight.
+constexpr auto MIN_GROUP_COUNT = size_t{8};
+
+// This factor is used to determine at which queue load we use the maximum number of groups.
+constexpr auto UPPER_LIMIT_QUEUE_SIZE_FACTOR = size_t{4};
+}  // namespace node_queue_scheduler::detail
 
 class Worker;
 class TaskQueue;
@@ -48,49 +74,77 @@ class UidAllocator;
  * Schedules Tasks
  */
 class NodeQueueScheduler final : public AbstractScheduler {
+  friend class SchedulerTest;
+  friend class StressTest;
+
  public:
   NodeQueueScheduler();
-  ~NodeQueueScheduler() override final;
+  NodeQueueScheduler(const NodeQueueScheduler&) = delete;
+  NodeQueueScheduler& operator=(const NodeQueueScheduler&) = delete;
+  // These two need not be deleted, but they are for the same reason that std::atomic has them deleted
+  // You can implement them, but you should think about the implications for this class.
+  NodeQueueScheduler(NodeQueueScheduler&&) = delete;
+  NodeQueueScheduler& operator=(NodeQueueScheduler&&) = delete;
+  ~NodeQueueScheduler() final;
 
   /**
    * Create a TaskQueue on every node and a worker for every core.
    */
-  void begin() override final;
+  void begin() final;
 
-  void finish() override final;
+  void finish() final;
 
-  bool active() const override final;
+  bool active() const final;
 
-  const std::vector<std::shared_ptr<TaskQueue>>& queues() const override final;
+  const std::vector<std::shared_ptr<TaskQueue>>& queues() const final;
 
   const std::vector<std::shared_ptr<Worker>>& workers() const;
 
   /**
-   * @param preferred_node_id
-   * @return `preferred_node_id` if a non-default preferred node ID is passed. When the node is the default of
+   * @param  preferred_node_id
+   * @return preferred_node_id if a non-default preferred node ID is passed. When the node is the default of
    *         CURRENT_NODE_ID but no current node (where the task is executed) can be obtained, the node ID of the node
    *         with the lowest queue pressure is returned.
    */
   NodeID determine_queue_id(const NodeID preferred_node_id) const;
 
-  void wait_for_all_tasks() override final;
+  /**
+   * @brief   Determines the group count which is used by _group_tasks(). Considers the current load on the system.
+   *
+   * @param   tasks: task list for which the function determines a group count
+   * @return  Either std::nullopt signaling that grouping is not advantageous (e.g., very short list of tasks) or the
+   *          determined number of groups.
+   */
+  std::optional<size_t> determine_group_count(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const;
+
+  void wait_for_all_tasks() final;
 
   const std::atomic_int64_t& active_worker_count() const;
 
-  // Number of groups for _group_tasks
-  static constexpr auto NUM_GROUPS = 10;
-
  protected:
   /**
+   * @brief Adds predecessor/successor relationships between tasks so that only group_count tasks can be executed in
+   *        parallel (tasks with predecessors/successors are not scheduled). Grouping thus reduces load on the task
+   *        queues and allows workers to process multiple tasks without coordinating with task queues. On the other
+   *        hand, it can reduce potential parallelism if too few groups are formed. We use a round robin assignment due
+   *        to the assumption that chunk characteristics change for older data (e.g., old and infrequently accessed data
+   *        might be tiered or heavily compressed). A simpler grouping (e.g., forming the first chain with the first
+   *        group_count tasks) could cause chain processing to be imbalanced (chains processing frequently accessed
+   *        data might be less expensive than ones processing tiered data).
+   *
+   * @param tasks: list of tasks to group
+   */
+  static void _group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks, const size_t group_count);
+  void _group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const final;
+
+  /**
    * @param task
-   * @param preferred_node_id determines to which queue tasks are added. Note, the task might still be stolen by other nodes due
-   *                          to task stealing in NUMA environments.
+   * @param preferred_node_id determines to which queue tasks are added. Note, the task might still be stolen by other
+   *                          nodes due to task stealing in NUMA environments.
    * @param priority
    */
   void _schedule(std::shared_ptr<AbstractTask> task, NodeID preferred_node_id = CURRENT_NODE_ID,
-                 SchedulePriority priority = SchedulePriority::Default) override final;
-
-  void _group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const override final;
+                 SchedulePriority priority = SchedulePriority::Default) final;
 
  private:
   std::atomic<TaskID::base_type> _task_counter{0};
@@ -105,7 +159,16 @@ class NodeQueueScheduler final : public AbstractScheduler {
   size_t _node_count{1};
   std::vector<size_t> _workers_per_node;
 
-  std::mutex _finish_mutex{};
+  std::mutex _finish_mutex;
+
+  // The following variables are used for task grouping. We use defaults to be safe here, but the values are determined
+  // in begin() depending on the system's topology.
+  size_t _min_task_count_for_regrouping{8};
+  size_t _worker_count{8};
+  size_t _regrouping_upper_limit{32};
+  double _max_group_count{0};
+  double _max_considered_queue_load{8};
+  double _step_size{0};
 };
 
 }  // namespace hyrise

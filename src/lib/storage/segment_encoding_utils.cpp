@@ -7,6 +7,8 @@
 
 #include "all_type_variant.hpp"
 #include "storage/abstract_segment.hpp"
+#include "storage/chunk.hpp"
+#include "storage/chunk_encoder.hpp"
 #include "storage/dictionary_segment/dictionary_encoder.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/frame_of_reference_segment/frame_of_reference_encoder.hpp"
@@ -18,9 +20,9 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-namespace hyrise {
-
 namespace {
+
+using namespace hyrise;
 
 /**
  * @brief Mapping of encoding types to encoders
@@ -35,6 +37,8 @@ const auto encoder_for_type = std::map<EncodingType, std::shared_ptr<BaseSegment
     {EncodingType::LZ4, std::make_shared<LZ4Encoder>()}};
 
 }  // namespace
+
+namespace hyrise {
 
 std::unique_ptr<BaseSegmentEncoder> create_encoder(EncodingType encoding_type) {
   Assert(encoding_type != EncodingType::Unencoded, "Encoding type must not be Unencoded`.");

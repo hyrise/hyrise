@@ -16,8 +16,6 @@
 
 #include <boost/container_hash/hash.hpp>
 
-// NOLINTNEXTLINE(misc-include-cleaner): We access methods of AbstractBenchmarkItemRunner in `pre_benchmark_hook()`.
-#include "../benchmarklib/abstract_benchmark_item_runner.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"
@@ -152,7 +150,7 @@ void UccDiscoveryPlugin::_validate_ucc_candidates(const UccCandidates& ucc_candi
 
       // Check if MVCC data tells us that the existing UCC is guaranteed to be valid or invalid. If it is, we can
       // skip the expensive revalidation attempt of the UCC. This also covers the case where the existing UCC is
-      // schema-given.
+      // genuine.
       // We do not update the CommitID of the existing UCC. This could lead to currently running transactions not being
       // able to see the updated UCC anymore. Even though the UCC was guaranteed to be valid, the new CommitID is
       // larger so we lose the knowledge about this previous guarantee.

@@ -19,13 +19,14 @@
 #include "statistics/table_statistics.hpp"
 #include "storage/chunk.hpp"
 #include "storage/create_iterable_from_segment.hpp"
+#include "storage/dictionary_segment.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace {
 
-using namespace hyrise;  // NOLINT (build/namespaces)
+using namespace hyrise;
 
 template <typename T>
 void create_pruning_statistics_for_segment(AttributeStatistics<T>& segment_statistics,
@@ -56,7 +57,7 @@ void generate_chunk_pruning_statistics(const std::shared_ptr<Chunk>& chunk) {
   DebugAssert(is_immutable_chunk_without_pruning_statistics(chunk),
               "Method should only be called for qualifying chunks.");
 
-  auto chunk_statistics = ChunkPruningStatistics{chunk->column_count()};
+  auto chunk_statistics = std::make_shared<ChunkPruningStatistics>(chunk->column_count());
 
   for (auto column_id = ColumnID{0}; column_id < chunk->column_count(); ++column_id) {
     const auto segment = chunk->get_segment(column_id);
@@ -87,7 +88,7 @@ void generate_chunk_pruning_statistics(const std::shared_ptr<Chunk>& chunk) {
         create_pruning_statistics_for_segment(*segment_statistics, dictionary);
       }
 
-      chunk_statistics[column_id] = segment_statistics;
+      (*chunk_statistics)[column_id] = segment_statistics;
     });
   }
 

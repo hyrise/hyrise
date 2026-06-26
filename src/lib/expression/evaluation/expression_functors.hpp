@@ -12,25 +12,26 @@ namespace hyrise {
  * Indicates whether T is a valid argument type to a logical expression
  */
 template <typename T>
+// NOLINTNEXTLINE(readability-identifier-naming)
 constexpr bool is_logical_operand = std::is_same_v<int32_t, T> || std::is_same_v<NullValue, T>;
 
 // Turn a bool into itself and a NULL into false
-bool to_bool(const bool value) {
+inline bool to_bool(const bool value) {
   return value;
 }
 
-bool to_bool(const NullValue& value) {
+inline bool to_bool(const NullValue& /*value*/) {
   return false;
 }
 
 // Cast a value/NULL into another type
 template <typename T, typename V>
-T to_value(const V& v) {
-  return static_cast<T>(v);
+T to_value(const V& value) {
+  return static_cast<T>(value);
 }
 
 template <typename T>
-T to_value(const NullValue& v) {
+T to_value(const NullValue& /*value*/) {
   return T{};
 }
 
@@ -39,7 +40,8 @@ T to_value(const NullValue& v) {
  */
 struct TernaryOrEvaluator {
   template <typename Result, typename ArgA, typename ArgB>
-  struct supports {
+  struct Supports {
+    // NOLINTNEXTLINE(readability-identifier-naming)
     static constexpr bool value = is_logical_operand<Result> && is_logical_operand<ArgA> && is_logical_operand<ArgB>;
   };
 
@@ -58,7 +60,8 @@ struct TernaryOrEvaluator {
  */
 struct TernaryAndEvaluator {
   template <typename Result, typename ArgA, typename ArgB>
-  struct supports {
+  struct Supports {
+    // NOLINTNEXTLINE(readability-identifier-naming)
     static constexpr bool value = is_logical_operand<Result> && is_logical_operand<ArgA> && is_logical_operand<ArgB>;
   };
 
@@ -87,7 +90,8 @@ struct TernaryAndEvaluator {
 template <template <typename T> typename Functor>
 struct STLComparisonFunctorWrapper {
   template <typename Result, typename ArgA, typename ArgB>
-  struct supports {
+  struct Supports {
+    // NOLINTNEXTLINE(readability-identifier-naming)
     static constexpr bool value =
         std::is_same_v<int32_t, Result> &&
         // LeftIsString -> RightIsNullOrString
@@ -97,15 +101,16 @@ struct STLComparisonFunctorWrapper {
   };
 
   template <typename Result, typename ArgA, typename ArgB>
-  inline static constexpr bool supports_v = supports<Result, ArgA, ArgB>::value;
+  // NOLINTNEXTLINE(readability-identifier-naming)
+  static constexpr bool supports_v = Supports<Result, ArgA, ArgB>::value;
 
   template <typename Result, typename ArgA, typename ArgB>
-  void operator()(Result& result, const ArgA& a, const ArgB& b) {
+  void operator()(Result& result, const ArgA& left, const ArgB& right) {
     if constexpr (std::is_same_v<NullValue, ArgA> || std::is_same_v<NullValue, ArgB>) {
       result = Result{};
     } else {
       result = static_cast<Result>(Functor<std::common_type_t<ArgA, ArgB>>{}(
-          static_cast<std::common_type_t<ArgA, ArgB>>(a), static_cast<std::common_type_t<ArgA, ArgB>>(b)));
+          static_cast<std::common_type_t<ArgA, ArgB>>(left), static_cast<std::common_type_t<ArgA, ArgB>>(right)));
     }
   }
 };
@@ -122,19 +127,20 @@ using LessThanEqualsEvaluator = STLComparisonFunctorWrapper<std::less_equal>;
 template <template <typename T> typename Functor>
 struct STLArithmeticFunctorWrapper {
   template <typename Result, typename ArgA, typename ArgB>
-  struct supports {
+  struct Supports {
+    // NOLINTNEXTLINE(readability-identifier-naming)
     static constexpr bool value =
         !std::is_same_v<pmr_string, Result> && !std::is_same_v<pmr_string, ArgA> && !std::is_same_v<pmr_string, ArgB>;
   };
 
   template <typename Result, typename ArgA, typename ArgB>
-  void operator()(Result& result, const ArgA& a, const ArgB& b) {
+  void operator()(Result& result, const ArgA& arg_a, const ArgB& arg_b) {
     if constexpr (std::is_same_v<NullValue, Result> || std::is_same_v<NullValue, ArgA> ||
                   std::is_same_v<NullValue, ArgB>) {
       result = Result{};
     } else {
       result = static_cast<Result>(Functor<std::common_type_t<ArgA, ArgB>>{}(
-          static_cast<std::common_type_t<ArgA, ArgB>>(a), static_cast<std::common_type_t<ArgA, ArgB>>(b)));
+          static_cast<std::common_type_t<ArgA, ArgB>>(arg_a), static_cast<std::common_type_t<ArgA, ArgB>>(arg_b)));
     }
   }
 };
@@ -147,7 +153,8 @@ using MultiplicationEvaluator = STLArithmeticFunctorWrapper<std::multiplies>;
 // the divisor is NULL.
 struct ModuloEvaluator {
   template <typename Result, typename ArgA, typename ArgB>
-  struct supports {
+  struct Supports {
+    // NOLINTNEXTLINE(readability-identifier-naming)
     static constexpr bool value =
         !std::is_same_v<pmr_string, Result> && !std::is_same_v<pmr_string, ArgA> && !std::is_same_v<pmr_string, ArgB>;
   };
@@ -180,7 +187,8 @@ struct ModuloEvaluator {
 // Custom NULL logic returns NULL if the divisor is NULL
 struct DivisionEvaluator {
   template <typename Result, typename ArgA, typename ArgB>
-  struct supports {
+  struct Supports {
+    // NOLINTNEXTLINE(readability-identifier-naming)
     static constexpr bool value =
         !std::is_same_v<pmr_string, Result> && !std::is_same_v<pmr_string, ArgA> && !std::is_same_v<pmr_string, ArgB>;
   };
@@ -205,13 +213,15 @@ struct DivisionEvaluator {
 
 struct CaseEvaluator {
   template <typename Result, typename ArgA, typename ArgB>
-  struct supports {
-    static constexpr bool value = (std::is_same_v<pmr_string, ArgA> == std::is_same_v<pmr_string, ArgB>)&&(
-        std::is_same_v<pmr_string, ArgA> == std::is_same_v<pmr_string, Result>);
+  struct Supports {
+    // NOLINTNEXTLINE(readability-identifier-naming)
+    static constexpr bool value = (std::is_same_v<pmr_string, ArgA> == std::is_same_v<pmr_string, ArgB>) &&
+                                  (std::is_same_v<pmr_string, ArgA> == std::is_same_v<pmr_string, Result>);
   };
 
   template <typename Result, typename ArgA, typename ArgB>
-  inline static constexpr bool supports_v = supports<Result, ArgA, ArgB>::value;
+  // NOLINTNEXTLINE(readability-identifier-naming)
+  static constexpr bool supports_v = Supports<Result, ArgA, ArgB>::value;
 
   // Implementation is in ExpressionEvaluator::_evaluate_case_expression
 };

@@ -3,10 +3,10 @@
 #include <algorithm>
 #include <atomic>
 #include <cstddef>
+#include <format>
 #include <iterator>
 #include <memory>
 #include <optional>
-#include <string>
 #include <utility>
 #include <vector>
 
@@ -14,9 +14,9 @@
 #include "all_type_variant.hpp"
 #include "base_value_segment.hpp"
 #include "index/abstract_chunk_index.hpp"
-#include "reference_segment.hpp"
 #include "storage/index/chunk_index_type.hpp"
 #include "storage/mvcc_data.hpp"
+#include "storage/reference_segment.hpp"
 #include "storage/segment_iterate.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -49,8 +49,9 @@ bool Chunk::is_mutable() const {
   return _is_mutable.load();
 }
 
-void Chunk::replace_segment(size_t column_id, const std::shared_ptr<AbstractSegment>& segment) {
-  std::atomic_store(&_segments.at(column_id), segment);
+void Chunk::replace_segment(const ColumnID column_id, const std::shared_ptr<AbstractSegment>& segment) {
+  Assert(column_id < _segments.size(), "ColumnID out of range.");
+  std::atomic_store(&_segments[column_id], segment);
 }
 
 void Chunk::append(const std::vector<AllTypeVariant>& values) {
@@ -62,9 +63,9 @@ void Chunk::append(const std::vector<AllTypeVariant>& values) {
   }
 
   // The added values, i.e., a new row, must have the same number of attributes as the table.
-  DebugAssert((_segments.size() == values.size()),
-              ("append: number of segments (" + std::to_string(_segments.size()) + ") does not match value list (" +
-               std::to_string(values.size()) + ")."));
+  DebugAssert(
+      (_segments.size() == values.size()),
+      std::format("Number of segments ({}) does not match size of value list ({}).", _segments.size(), values.size()));
 
   auto segment_it = _segments.cbegin();
   auto value_it = values.begin();
@@ -76,7 +77,8 @@ void Chunk::append(const std::vector<AllTypeVariant>& values) {
 }
 
 std::shared_ptr<AbstractSegment> Chunk::get_segment(ColumnID column_id) const {
-  return std::atomic_load(&_segments.at(column_id));
+  Assert(column_id < _segments.size(), "ColumnID out of range.");
+  return std::atomic_load(&_segments[column_id]);
 }
 
 const Segments& Chunk::segments() const {
@@ -158,7 +160,7 @@ void Chunk::remove_index(const std::shared_ptr<AbstractChunkIndex>& index) {
   _indexes.erase(it);
 }
 
-bool Chunk::references_exactly_one_table() const {
+bool Chunk::segments_share_table_and_positions() const {
   if (column_count() == 0) {
     return false;
   }
@@ -181,6 +183,15 @@ bool Chunk::references_exactly_one_table() const {
     }
 
     if (first_pos_list != segment->pos_list()) {
+      if constexpr (HYRISE_DEBUG) {
+        const auto segment_pos_list = segment->pos_list();
+        auto position_lists_are_equal = true;
+        for (auto offset = ChunkOffset{0}; offset < first_pos_list->size(); ++offset) {
+          position_lists_are_equal =
+              position_lists_are_equal && (*first_pos_list)[offset] == (*segment_pos_list)[offset];
+        }
+        DebugAssert(!position_lists_are_equal, "Expected two different position lists.");
+      }
       return false;
     }
   }
@@ -226,9 +237,8 @@ std::vector<std::shared_ptr<const AbstractSegment>> Chunk::_get_segments_for_ids
   if constexpr (HYRISE_DEBUG) {
     const auto number_of_columns = static_cast<ColumnID>(column_count());
     for (const auto& column_id : column_ids) {
-      Assert(column_id < number_of_columns, "ColumnID " + std::to_string(column_id) +
-                                                " exceeds the maximum column index which is " +
-                                                std::to_string(column_count() - 1) + ".");
+      Assert(column_id < number_of_columns, std::format("ColumnID {} exceeds the maximum column index, which is {}.",
+                                                        column_id.t, column_count() - 1));
     }
   }
 
@@ -240,16 +250,15 @@ std::vector<std::shared_ptr<const AbstractSegment>> Chunk::_get_segments_for_ids
   return segments;
 }
 
-const std::optional<ChunkPruningStatistics>& Chunk::pruning_statistics() const {
-  return _pruning_statistics;
+std::shared_ptr<const ChunkPruningStatistics> Chunk::pruning_statistics() const {
+  return std::atomic_load(&_pruning_statistics);
 }
 
-void Chunk::set_pruning_statistics(const std::optional<ChunkPruningStatistics>& pruning_statistics) {
+void Chunk::set_pruning_statistics(const std::shared_ptr<ChunkPruningStatistics>& pruning_statistics) {
   Assert(!is_mutable(), "Cannot set pruning statistics on mutable chunks.");
   Assert(!pruning_statistics || pruning_statistics->size() == static_cast<size_t>(column_count()),
          "Pruning statistics must have same number of segments as chunk.");
-
-  _pruning_statistics = pruning_statistics;
+  std::atomic_store(&_pruning_statistics, pruning_statistics);
 }
 
 void Chunk::increase_invalid_row_count(const ChunkOffset count, const std::memory_order memory_order) const {
@@ -310,42 +319,43 @@ void Chunk::set_individually_sorted_by(const std::vector<SortColumnDefinition>& 
 }
 
 std::optional<CommitID> Chunk::get_cleanup_commit_id() const {
-  if (_cleanup_commit_id.load() == UNSET_COMMIT_ID) {
-    // Cleanup-Commit-ID is not yet set
+  const auto cleanup_commit_id = _cleanup_commit_id.load();
+  if (cleanup_commit_id == UNSET_COMMIT_ID) {
+    // Cleanup CommitID is not yet set.
     return std::nullopt;
   }
-  return std::optional<CommitID>{_cleanup_commit_id.load()};
+  return cleanup_commit_id;
 }
 
 void Chunk::set_cleanup_commit_id(const CommitID cleanup_commit_id) {
-  Assert(!get_cleanup_commit_id(), "Cleanup-commit-ID can only be set once.");
-  _cleanup_commit_id.store(cleanup_commit_id);
+  const auto previous_cleanup_commit_id = _cleanup_commit_id.exchange(cleanup_commit_id);
+  Assert(previous_cleanup_commit_id == UNSET_COMMIT_ID, "Cleanup CommitID can only be set once.");
 }
 
 void Chunk::mark_as_full() {
-  Assert(!_reached_target_size, "Chunk should not be marked as full multiple times.");
-  _reached_target_size = true;
+  Assert(!_reached_target_size.exchange(true), "Chunk should not be marked as full multiple times.");
 }
 
-void Chunk::try_set_immutable() {
+bool Chunk::try_set_immutable() {
   DebugAssert(_mvcc_data, "Expected to be executed with MVCC enabled.");
   // Mark the chunk as immutable if (i) it reached the target size and a new chunk was added to the table, (ii) it is
   // still mutable, and (iii) all pending Insert operators are either committed or rolled back. We do not have to set
   // the `max_begin_cid` here because committed Insert operators already set it.
   if (!_reached_target_size || !is_mutable() || _mvcc_data->pending_inserts() != 0) {
-    return;
+    return false;
   }
 
   // Mark chunk as immutable. `fetch_and() is only defined for integral types, so we use `compare_exchange_strong()`.
   auto success = true;
-  if (_is_mutable.compare_exchange_strong(success, false)) {
-    // We were the first ones to mark the chunk as immutable. Thus, we have to take care of anything else that needs to
-    // be done. In the future, this can mean to start background statistics generation, encoding, etc.
+  const auto set_immutable = _is_mutable.compare_exchange_strong(success, false);
+  if (set_immutable) {
+    // We are the first ones to mark this chunk as immutable.
     Assert(success, "Value exchanged but value was actually false.");
   } else {
-    // Another thread is about to mark this chunk as immutable. Do nothing.
+    // Another thread is about to mark this chunk as immutable.
     Assert(!success, "Value not exchanged but value was actually true.");
   }
+  return set_immutable;
 }
 
 }  // namespace hyrise

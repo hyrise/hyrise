@@ -108,7 +108,7 @@ uint64_t MetaSystemUtilizationTable::_get_total_time() {
 
 /**
  * Returns the time in ns that ALL processes have spent on the CPU since an arbitrary point in the past. This might be
- *  used to differentiate between CPU time consumed by this process and by other processes on the same machine.
+ * used to differentiate between CPU time consumed by this process and by other processes on the same machine.
  */
 uint64_t MetaSystemUtilizationTable::_get_system_cpu_time() {
 #ifdef __linux__
@@ -120,42 +120,39 @@ uint64_t MetaSystemUtilizationTable::_get_system_cpu_time() {
     std::getline(stat_file, cpu_line);
     stat_file.close();
   } catch (std::ios_base::failure& fail) {
-    Fail("Failed to read /proc/stat (" + fail.what() + ").");
+    Fail(std::format("Failed to read /proc/stat: {}", fail.what()));
   }
 
   const auto cpu_ticks = _parse_value_string(cpu_line);
+  Assert(cpu_ticks.size() > 2, "Unexpected number of values.");
 
-  const auto user_ticks = cpu_ticks.at(0);
-  const auto user_nice_ticks = cpu_ticks.at(1);
-  const auto kernel_ticks = cpu_ticks.at(2);
+  const auto user_ticks = cpu_ticks[0];
+  const auto user_nice_ticks = cpu_ticks[1];
+  const auto kernel_ticks = cpu_ticks[2];
 
-  const auto active_ticks = user_ticks + user_nice_ticks + kernel_ticks;
+  const auto active_ticks = static_cast<double>(user_ticks + user_nice_ticks + kernel_ticks);
 
-  // The amount of time in /proc/stat is measured in units of clock ticks. sysconf(_SC_CLK_TCK) can be used to convert
-  // it to ns.
-  const auto active_ns = (active_ticks * std::nano::den) / sysconf(_SC_CLK_TCK);
-
-  return active_ns;
-#endif
+#else
 
 #ifdef __APPLE__
   auto cpu_info = host_cpu_load_info_data_t{};
-  mach_msg_type_number_t count = HOST_CPU_LOAD_INFO_COUNT;
+  auto count = HOST_CPU_LOAD_INFO_COUNT;
   const auto ret =
       host_statistics(mach_host_self(), HOST_CPU_LOAD_INFO, reinterpret_cast<host_info_t>(&cpu_info), &count);
   Assert(ret == KERN_SUCCESS, "Failed to get host_statistics.");
 
-  const auto active_ticks =
-      cpu_info.cpu_ticks[CPU_STATE_SYSTEM] + cpu_info.cpu_ticks[CPU_STATE_USER] + cpu_info.cpu_ticks[CPU_STATE_NICE];
-
-  // The amount of time from HOST_CPU_LOAD_INFO is measured in units of clock ticks.
-  // sysconf(_SC_CLK_TCK) can be used to convert it to ns.
-  const auto active_ns = active_ticks * std::nano::den / sysconf(_SC_CLK_TCK);
-
-  return active_ns;
-#endif
-
+  const auto active_ticks = static_cast<double>(
+      cpu_info.cpu_ticks[CPU_STATE_SYSTEM] + cpu_info.cpu_ticks[CPU_STATE_USER] + cpu_info.cpu_ticks[CPU_STATE_NICE]);
+#else
   Fail("Method not implemented for this platform.");
+
+#endif  // __APPLE__
+#endif  // __linux__
+
+  // The amount of time from HOST_CPU_LOAD_INFO is measured in units of clock ticks. `sysconf(_SC_CLK_TCK)` can be used
+  // to convert it to seconds, which we further convert to nanoseconds.
+  const auto ticks_per_second = static_cast<double>(sysconf(_SC_CLK_TCK));  // NOLINT(misc-include-cleaner)
+  return static_cast<uint64_t>((active_ticks / ticks_per_second) * static_cast<double>(std::nano::den));
 }
 
 /**
@@ -208,7 +205,7 @@ MetaSystemUtilizationTable::SystemMemoryUsage MetaSystemUtilizationTable::_get_s
     }
     meminfo_file.close();
   } catch (std::ios_base::failure& fail) {
-    Fail("Failed to read /proc/meminfo (" + fail.what() + ").");
+    Fail(std::format("Failed to read /proc/meminfo: {}", fail.what()));
   }
 
   return memory_usage;
@@ -223,7 +220,7 @@ MetaSystemUtilizationTable::SystemMemoryUsage MetaSystemUtilizationTable::_get_s
   // see reference: https://stackoverflow.com/a/1911863
   auto page_size = vm_size_t{};
   auto vm_statistics = vm_statistics64_data_t{};
-  mach_msg_type_number_t count = sizeof(vm_statistics) / sizeof(natural_t);
+  auto count = mach_msg_type_number_t{sizeof(vm_statistics) / sizeof(natural_t)};
   ret = host_page_size(mach_host_self(), &page_size);
   Assert(ret == KERN_SUCCESS, "Failed to get page size.");
   ret = host_statistics64(mach_host_self(), HOST_VM_INFO, reinterpret_cast<host_info64_t>(&vm_statistics), &count);
@@ -262,7 +259,7 @@ MetaSystemUtilizationTable::ProcessMemoryUsage MetaSystemUtilizationTable::_get_
 
     self_status_file.close();
   } catch (std::ios_base::failure& fail) {
-    Fail("Failed to read /proc/self/status (" + fail.what() + ").");
+    Fail(std::format("Failed to read /proc/self/status: {}", fail.what()));
   }
 
   return memory_usage;
@@ -271,7 +268,7 @@ MetaSystemUtilizationTable::ProcessMemoryUsage MetaSystemUtilizationTable::_get_
 #ifdef __APPLE__
   struct task_basic_info info{};
 
-  mach_msg_type_number_t count = TASK_BASIC_INFO_COUNT;
+  auto count = mach_msg_type_number_t{TASK_BASIC_INFO_COUNT};
   const auto ret = task_info(mach_task_self(), TASK_BASIC_INFO, reinterpret_cast<task_info_t>(&info), &count);
   Assert(ret == KERN_SUCCESS, "Failed to get task_info.");
 
@@ -331,7 +328,7 @@ std::optional<size_t> MetaSystemUtilizationTable::_get_allocated_memory() {
   auto allocated_size = sizeof(allocated);
 
   const auto error_code = mallctl("stats.allocated", &allocated, &allocated_size, nullptr, 0);
-  Assert(!error_code, std::string{"mallctl failed with error code '"} + std::to_string(error_code) + "'.");
+  Assert(!error_code, std::format("mallctl failed with error code: {}.", error_code));
 
   return allocated;
 #else

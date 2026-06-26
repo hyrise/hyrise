@@ -1,7 +1,15 @@
 #include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 
-#include "expression/abstract_expression.hpp"
+#include "magic_enum/magic_enum.hpp"
+
+#include "all_type_variant.hpp"
 #include "expression/expression_functional.hpp"
+#include "expression/window_expression.hpp"
+#include "import_export/file_type.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/change_meta_table_node.hpp"
 #include "logical_query_plan/delete_node.hpp"
@@ -18,10 +26,12 @@
 #include "logical_query_plan/window_node.hpp"
 #include "optimizer/strategy/column_pruning_rule.hpp"
 #include "strategy_base_test.hpp"
+#include "testing_assert.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
-using namespace expression_functional;  // NOLINT(build/namespaces)
+using namespace expression_functional;
 
 class ColumnPruningRuleTest : public StrategyBaseTest {
  public:
@@ -446,8 +456,7 @@ TEST_F(ColumnPruningRuleTest, PruneInputsNotNeededByWindowNode) {
 
 TEST_F(ColumnPruningRuleTest, AnnotatePrunableJoinInput) {
   // Join inputs where no expressions are used later in the query plan should be marked as prunable to enable further
-  // optimization, such as Join to Semi-Join rewrite. We skip Semi- and Anti-Joins since their right input is always
-  // prunable.
+  // optimization, such as join to semi-join rewrite. Skip semi-/anti-joins since their right input is always prunable.
   for (const auto join_mode :
        {JoinMode::Inner, JoinMode::Left, JoinMode::Right, JoinMode::FullOuter, JoinMode::Cross}) {
     for (const auto prunable_input_side : {LQPInputSide::Left, LQPInputSide::Right}) {

@@ -3,6 +3,7 @@
 #include <chrono>
 #include <cstdint>
 #include <filesystem>
+#include <format>
 #include <fstream>
 #include <iostream>
 #include <memory>
@@ -42,9 +43,8 @@ std::shared_ptr<BenchmarkConfig> CLIConfigParser::parse_cli_options(const cxxopt
   const auto enable_scheduler = parse_result["scheduler"].as<bool>();
   const auto cores = parse_result["cores"].as<uint32_t>();
   const auto number_of_cores_str = (cores == 0) ? "all available" : std::to_string(cores);
-  const auto core_info = enable_scheduler ? " using " + number_of_cores_str + " cores" : "";
-  std::cout << "- Running in " + std::string(enable_scheduler ? "multi" : "single") + "-threaded mode" << core_info
-            << '\n';
+  const auto core_info = enable_scheduler ? std::format(" using {} cores", number_of_cores_str) : "";
+  std::cout << std::format("- Running in {}-threaded mode{}\n", (enable_scheduler ? "multi" : "single"), core_info);
   const auto data_preparation_cores = parse_result["data_preparation_cores"].as<uint32_t>();
   const auto number_of_data_preparation_cores_str =
       (data_preparation_cores == 0) ? "all available" : std::to_string(data_preparation_cores);
@@ -52,7 +52,7 @@ std::shared_ptr<BenchmarkConfig> CLIConfigParser::parse_cli_options(const cxxopt
             << (data_preparation_cores == 1 ? " core" : " cores") << '\n';
 
   const auto clients = parse_result["clients"].as<uint32_t>();
-  std::cout << "- " + std::to_string(clients) + " simulated ";
+  std::cout << std::format("- {} simulated ", clients);
   std::cout << (clients == 1 ? "client is " : "clients are ") << "scheduling items";
   std::cout << (clients > 1 ? " in parallel" : "") << '\n';
 
@@ -77,7 +77,7 @@ std::shared_ptr<BenchmarkConfig> CLIConfigParser::parse_cli_options(const cxxopt
   } else if (benchmark_mode_str == "Shuffled") {
     benchmark_mode = BenchmarkMode::Shuffled;
   } else {
-    throw std::runtime_error("Invalid benchmark mode: '" + benchmark_mode_str + "'");
+    throw std::runtime_error(std::format("Invalid benchmark mode: '{}'.", benchmark_mode_str));
   }
   std::cout << "- Running benchmark in '" << benchmark_mode_str << "' mode\n";
 
@@ -182,7 +182,7 @@ std::shared_ptr<BenchmarkConfig> CLIConfigParser::parse_cli_options(const cxxopt
 }
 
 EncodingConfig CLIConfigParser::parse_encoding_config(const std::string& encoding_file_str) {
-  Assert(std::filesystem::is_regular_file(encoding_file_str), "No such file: " + encoding_file_str);
+  Assert(std::filesystem::is_regular_file(encoding_file_str), std::format("No such file: '{}'.", encoding_file_str));
 
   auto encoding_config_json = nlohmann::json{};
   auto json_file = std::ifstream{encoding_file_str};
@@ -207,7 +207,8 @@ EncodingConfig CLIConfigParser::parse_encoding_config(const std::string& encodin
     for (const auto& type : type_encoding.items()) {
       const auto type_str = boost::to_lower_copy(type.key());
       const auto data_type_it = data_type_to_string.right.find(type_str);
-      Assert(data_type_it != data_type_to_string.right.end(), "Unknown data type for encoding: " + type_str);
+      Assert(data_type_it != data_type_to_string.right.end(),
+             std::format("Unknown data type for encoding: '{}'.", type_str));
 
       const auto& encoding_info = type.value();
       Assert(encoding_info.is_object(), "The type encoding info needs to be specified as a json object.");

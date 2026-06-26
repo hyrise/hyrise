@@ -9,6 +9,8 @@
 #include <iterator>
 #include <string>
 #include <string_view>
+// cpplint wants utility when we overwrite std::swap
+#include <utility>  // IWYU pragma: keep
 
 #include "utils/assert.hpp"
 
@@ -18,8 +20,22 @@ FixedString::FixedString(char* mem, size_t string_length)
     : _mem(mem), _maximum_length(string_length), _owns_memory(false) {}
 
 FixedString::FixedString(const FixedString& other)
-    : _mem(new char[other._maximum_length]{}), _maximum_length(other._maximum_length) {
+    : _mem(new char[other._maximum_length]{}), _maximum_length(other._maximum_length), _owns_memory(true) {
   std::memcpy(_mem, other._mem, _maximum_length);
+}
+
+// NOLINTNEXTLINE(cppcoreguidelines-noexcept-move-operations,hicpp-noexcept-move,performance-noexcept-move-constructor)
+FixedString::FixedString(FixedString&& other) : _maximum_length(other._maximum_length), _owns_memory(true) {
+  if (other._owns_memory) {
+    _mem = other._mem;
+    other._mem = nullptr;
+  } else {
+    // We have to allocate memory here is due to the definition of FixedString.
+    // We can't move shared memory, so we have to copy it to a new location.
+    // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
+    _mem = new char[other._maximum_length]{};
+    std::memcpy(_mem, other._mem, _maximum_length);
+  }
 }
 
 FixedString::~FixedString() {
@@ -28,8 +44,10 @@ FixedString::~FixedString() {
   }
 }
 
-// NOLINTNEXTLINE(bugprone-unhandled-self-assignment,cert-oop54-cpp): Tested by FixedStringTest.Assign
 FixedString& FixedString::operator=(const FixedString& other) {
+  if (this == &other) {
+    return *this;
+  }
   DebugAssert(other.maximum_length() <= _maximum_length,
               "Other FixedString is longer than current maximum string length");
 
@@ -41,6 +59,26 @@ FixedString& FixedString::operator=(const FixedString& other) {
   if (copied_length < _maximum_length) {
     memset(_mem + copied_length, '\0', _maximum_length - copied_length);
   }
+  return *this;
+}
+
+// NOLINTNEXTLINE(cppcoreguidelines-noexcept-move-operations,hicpp-noexcept-move,performance-noexcept-move-constructor)
+FixedString& FixedString::operator=(FixedString&& other) {
+  if (this == &other) {
+    return *this;
+  }
+
+  if (!_owns_memory || !other._owns_memory) {
+    // In this case, it would be confusing to just move the pointer, as one would expect movement of the underlying
+    // memory. So we just call the copy assignment operator instead.
+    return *this = const_cast<const FixedString&>(other);
+  }
+
+  _mem = other._mem;
+  _maximum_length = other._maximum_length;
+  other._mem = nullptr;
+  // Keep _owns_memory as true
+
   return *this;
 }
 

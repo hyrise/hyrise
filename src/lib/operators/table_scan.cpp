@@ -2,11 +2,11 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <format>
 #include <map>
 #include <memory>
 #include <mutex>
 #include <optional>
-#include <sstream>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -47,7 +47,7 @@
 
 namespace hyrise {
 
-using namespace expression_functional;  // NOLINT(build/namespaces)
+using namespace expression_functional;
 
 TableScan::TableScan(const std::shared_ptr<const AbstractOperator>& input_operator,
                      const std::shared_ptr<AbstractExpression>& predicate)
@@ -69,13 +69,8 @@ const std::string& TableScan::name() const {
 std::string TableScan::description(DescriptionMode description_mode) const {
   const auto separator = (description_mode == DescriptionMode::SingleLine ? ' ' : '\n');
 
-  auto stream = std::stringstream{};
-
-  stream << AbstractOperator::description(description_mode) << separator;
-  stream << "Impl: " << _impl_description;
-  stream << separator << _predicate->as_column_name();
-
-  return stream.str();
+  return std::format("{1}{0}Impl: {2}{0}{3}", separator, AbstractOperator::description(description_mode),
+                     _impl_description, _predicate->as_column_name());
 }
 
 void TableScan::_on_set_transaction_context(const std::weak_ptr<TransactionContext>& transaction_context) {
@@ -370,8 +365,10 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() {
       }
     }
 
-    const auto is_like_predicate =
-        predicate_condition == PredicateCondition::Like || predicate_condition == PredicateCondition::NotLike;
+    const auto is_like_predicate = predicate_condition == PredicateCondition::Like ||
+                                   predicate_condition == PredicateCondition::NotLike ||
+                                   predicate_condition == PredicateCondition::LikeInsensitive ||
+                                   predicate_condition == PredicateCondition::NotLikeInsensitive;
 
     // Predicate pattern: <column of type string> LIKE <value of type string>
     if (left_column_expression && left_column_expression->data_type() == DataType::String && is_like_predicate &&

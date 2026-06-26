@@ -24,12 +24,13 @@ template <typename T>
 struct MaterializedValue {
   MaterializedValue() = default;
 
-  MaterializedValue(RowID row, T v) : row_id{row}, value{v} {}
+  MaterializedValue(RowID row, T init_value) : row_id{row}, value{init_value} {}
 
-  MaterializedValue(ChunkID chunk_id, ChunkOffset chunk_offset, T v) : row_id{chunk_id, chunk_offset}, value{v} {}
+  MaterializedValue(ChunkID chunk_id, ChunkOffset chunk_offset, T init_value)
+      : row_id{chunk_id, chunk_offset}, value{std::move(init_value)} {}
 
   RowID row_id;
-  T value;
+  T value{};
 };
 
 template <typename T>
@@ -55,7 +56,6 @@ class ColumnMaterializer {
  public:
   explicit ColumnMaterializer(bool sort, bool materialize_null) : _sort{sort}, _materialize_null{materialize_null} {}
 
- public:
   // For sufficiently large chunks (number of rows > JOB_SPAWN_THRESHOLD), the materialization is parallelized. Returns
   // the materialized segments and a list of null row ids if _materialize_null is true.
   std::tuple<MaterializedSegmentList<T>, RowIDPosList, std::vector<T>> materialize(
@@ -143,7 +143,7 @@ class ColumnMaterializer {
   }
 
   MaterializedSegment<T> _materialize_segment(const std::shared_ptr<AbstractSegment>& segment, const ChunkID chunk_id,
-                                              RowIDPosList& null_rows_output, Subsample<T>& subsample) {
+                                              RowIDPosList& null_rows_output, Subsample<T>& /*subsample*/) {
     auto output = MaterializedSegment<T>{};
     output.reserve(segment->size());
 
@@ -166,7 +166,6 @@ class ColumnMaterializer {
     return output;
   }
 
- private:
   bool _sort;
   bool _materialize_null;
 };

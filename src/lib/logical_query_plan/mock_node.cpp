@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <format>
 #include <memory>
 #include <optional>
 #include <ostream>
@@ -26,7 +27,7 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT(build/namespaces)
+using namespace hyrise;
 
 bool contains_column(const std::vector<ColumnID>& column_ids, const ColumnID search_column_id) {
   return std::ranges::find(column_ids, search_column_id) != column_ids.cend();
@@ -55,7 +56,7 @@ std::shared_ptr<LQPColumnExpression> MockNode::get_column(const std::string& col
     }
   }
 
-  Fail("Could not find column named '" + column_name + "' in MockNode.");
+  Fail(std::format("Could not find column named '{}' in MockNode.", column_name));
 }
 
 const MockNode::ColumnDefinitions& MockNode::column_definitions() const {
@@ -144,7 +145,7 @@ UniqueColumnCombinations MockNode::unique_column_combinations() const {
                 "Unexpected count of column expressions.");
 
     // Create UniqueColumnCombination.
-    unique_column_combinations.emplace(std::move(column_expressions));
+    unique_column_combinations.emplace(std::move(column_expressions), !table_key_constraint.can_become_invalid());
   }
 
   return unique_column_combinations;

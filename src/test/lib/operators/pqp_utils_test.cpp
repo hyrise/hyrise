@@ -1,3 +1,8 @@
+#include <memory>
+#include <stdexcept>
+#include <vector>
+
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "expression/expression_functional.hpp"
 #include "operators/get_table.hpp"
@@ -6,10 +11,12 @@
 #include "operators/pqp_utils.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_wrapper.hpp"
+#include "storage/table.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
-using namespace expression_functional;  // NOLINT(build/namespaces)
+using namespace expression_functional;
 
 class PQPUtilsTest : public BaseTest {
  public:

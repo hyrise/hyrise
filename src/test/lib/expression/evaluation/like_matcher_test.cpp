@@ -8,10 +8,10 @@ namespace hyrise {
 
 class LikeMatcherTest : public BaseTest {
  public:
-  bool match(const std::string& value, const std::string& pattern) const {
+  bool match(const pmr_string& value, const pmr_string& pattern, const PredicateCondition condition) const {
     auto result = false;
-    LikeMatcher{pmr_string{pattern}}.resolve(false, [&](const auto& matcher) {
-      result = matcher(pmr_string{value});
+    LikeMatcher{pattern, condition}.resolve([&](const auto& matcher) {
+      result = matcher(value);
     });
     return result;
   }
@@ -21,9 +21,9 @@ TEST_F(LikeMatcherTest, PatternToTokens) {
   const auto tokens_a = LikeMatcher::pattern_string_to_tokens("");
   const auto tokens_b = LikeMatcher::pattern_string_to_tokens("%abc%_def__Hello%");
 
-  ASSERT_EQ(tokens_a.size(), 0u);
+  EXPECT_EQ(tokens_a.size(), 0);
 
-  ASSERT_EQ(tokens_b.size(), 9u);
+  ASSERT_EQ(tokens_b.size(), 9);
   EXPECT_EQ(tokens_b.at(0), LikeMatcher::PatternToken(LikeMatcher::Wildcard::AnyChars));
   EXPECT_EQ(tokens_b.at(1), LikeMatcher::PatternToken(pmr_string{"abc"}));
   EXPECT_EQ(tokens_b.at(2), LikeMatcher::PatternToken(LikeMatcher::Wildcard::AnyChars));
@@ -35,23 +35,84 @@ TEST_F(LikeMatcherTest, PatternToTokens) {
   EXPECT_EQ(tokens_b.at(8), LikeMatcher::PatternToken(LikeMatcher::Wildcard::AnyChars));
 }
 
-TEST_F(LikeMatcherTest, Matching) {
-  EXPECT_TRUE(match("Hello", "Hello"));
-  EXPECT_TRUE(match("Hello", "Hello%"));
-  EXPECT_TRUE(match("Hello", "%H%%"));
-  EXPECT_TRUE(match("Hello", "%H%ello%"));
-  EXPECT_TRUE(match("Hello", "%H%ello%"));
-  EXPECT_TRUE(match("Hello World", "%_%"));
-  EXPECT_TRUE(match("Hello World", "%_World"));
-  EXPECT_TRUE(match("Hello World!! (Nice day)", "H%(%day)"));
-  EXPECT_TRUE(match("Smiley: ^-^", "%^_^%"));
-  EXPECT_TRUE(match("Questionmark: ?", "%_?%"));
+TEST_F(LikeMatcherTest, Like) {
+  EXPECT_TRUE(match("Hello", "Hello", PredicateCondition::Like));
+  EXPECT_TRUE(match("Hello", "Hello%", PredicateCondition::Like));
+  EXPECT_TRUE(match("Hello", "%Hello%", PredicateCondition::Like));
+  EXPECT_TRUE(match("Hello", "%H%%", PredicateCondition::Like));
+  EXPECT_TRUE(match("Hello", "H%ello%", PredicateCondition::Like));
+  EXPECT_TRUE(match("Hello", "%H%ello%", PredicateCondition::Like));
+  EXPECT_TRUE(match("Hello", "H%el%l%o%", PredicateCondition::Like));
+  EXPECT_TRUE(match("Hello", "%H%el%l%o%", PredicateCondition::Like));
+  EXPECT_TRUE(match("Hello World", "%_%", PredicateCondition::Like));
+  EXPECT_TRUE(match("Hello World", "%_World", PredicateCondition::Like));
+  EXPECT_TRUE(match("Hello World!! (Nice day)", "H%(%day)", PredicateCondition::Like));
+  EXPECT_TRUE(match("Smiley: ^-^", "%^_^%", PredicateCondition::Like));
+  EXPECT_TRUE(match("Questionmark: ?", "%_?%", PredicateCondition::Like));
+
+  EXPECT_FALSE(match("hello", "Hello", PredicateCondition::Like));
+  EXPECT_FALSE(match("Hello", "Hello_", PredicateCondition::Like));
+  EXPECT_FALSE(match("Hello", "He_o", PredicateCondition::Like));
 }
 
-TEST_F(LikeMatcherTest, NotMatching) {
-  EXPECT_FALSE(match("hello", "Hello"));
-  EXPECT_FALSE(match("Hello", "Hello_"));
-  EXPECT_FALSE(match("Hello", "He_o"));
+TEST_F(LikeMatcherTest, NotLike) {
+  EXPECT_FALSE(match("Hello", "Hello", PredicateCondition::NotLike));
+  EXPECT_FALSE(match("Hello", "Hello%", PredicateCondition::NotLike));
+  EXPECT_FALSE(match("Hello", "%Hello%", PredicateCondition::NotLike));
+  EXPECT_FALSE(match("Hello", "%H%%", PredicateCondition::NotLike));
+  EXPECT_FALSE(match("Hello", "H%ello%", PredicateCondition::NotLike));
+  EXPECT_FALSE(match("Hello", "%H%ello%", PredicateCondition::NotLike));
+  EXPECT_FALSE(match("Hello", "H%el%l%o%", PredicateCondition::NotLike));
+  EXPECT_FALSE(match("Hello", "%H%el%l%o%", PredicateCondition::NotLike));
+  EXPECT_FALSE(match("Hello World", "%_%", PredicateCondition::NotLike));
+  EXPECT_FALSE(match("Hello World", "%_World", PredicateCondition::NotLike));
+  EXPECT_FALSE(match("Hello World!! (Nice day)", "H%(%day)", PredicateCondition::NotLike));
+  EXPECT_FALSE(match("Smiley: ^-^", "%^_^%", PredicateCondition::NotLike));
+  EXPECT_FALSE(match("Questionmark: ?", "%_?%", PredicateCondition::NotLike));
+
+  EXPECT_TRUE(match("hello", "Hello", PredicateCondition::NotLike));
+  EXPECT_TRUE(match("Hello", "Hello_", PredicateCondition::NotLike));
+  EXPECT_TRUE(match("Hello", "He_o", PredicateCondition::NotLike));
+}
+
+TEST_F(LikeMatcherTest, LikeInsensitive) {
+  EXPECT_TRUE(match("heLlo", "Hello", PredicateCondition::LikeInsensitive));
+  EXPECT_TRUE(match("heLlo", "Hello%", PredicateCondition::LikeInsensitive));
+  EXPECT_TRUE(match("heLlo", "%Hello%", PredicateCondition::LikeInsensitive));
+  EXPECT_TRUE(match("heLlo", "%H%%", PredicateCondition::LikeInsensitive));
+  EXPECT_TRUE(match("heLlo", "H%ello%", PredicateCondition::LikeInsensitive));
+  EXPECT_TRUE(match("heLlo", "%H%ello%", PredicateCondition::LikeInsensitive));
+  EXPECT_TRUE(match("heLlo", "H%el%l%o%", PredicateCondition::LikeInsensitive));
+  EXPECT_TRUE(match("heLlo", "%H%el%l%o%", PredicateCondition::LikeInsensitive));
+  EXPECT_TRUE(match("heLlo World", "%_%", PredicateCondition::LikeInsensitive));
+  EXPECT_TRUE(match("heLlo World", "%_World", PredicateCondition::LikeInsensitive));
+  EXPECT_TRUE(match("heLlo World!! (Nice day)", "H%(%day)", PredicateCondition::LikeInsensitive));
+  EXPECT_TRUE(match("Smiley: ^-^", "%^_^%", PredicateCondition::LikeInsensitive));
+  EXPECT_TRUE(match("Questionmark: ?", "%_?%", PredicateCondition::LikeInsensitive));
+
+  EXPECT_TRUE(match("hello", "Hello", PredicateCondition::LikeInsensitive));
+  EXPECT_FALSE(match("Hello", "Hello_", PredicateCondition::LikeInsensitive));
+  EXPECT_FALSE(match("Hello", "He_o", PredicateCondition::LikeInsensitive));
+}
+
+TEST_F(LikeMatcherTest, NotLikeInsensitive) {
+  EXPECT_FALSE(match("heLlo", "Hello", PredicateCondition::NotLikeInsensitive));
+  EXPECT_FALSE(match("heLlo", "Hello%", PredicateCondition::NotLikeInsensitive));
+  EXPECT_FALSE(match("heLlo", "%Hello%", PredicateCondition::NotLikeInsensitive));
+  EXPECT_FALSE(match("heLlo", "%H%%", PredicateCondition::NotLikeInsensitive));
+  EXPECT_FALSE(match("heLlo", "H%ello%", PredicateCondition::NotLikeInsensitive));
+  EXPECT_FALSE(match("heLlo", "%H%ello%", PredicateCondition::NotLikeInsensitive));
+  EXPECT_FALSE(match("heLlo", "H%el%l%o%", PredicateCondition::NotLikeInsensitive));
+  EXPECT_FALSE(match("heLlo", "%H%el%l%o%", PredicateCondition::NotLikeInsensitive));
+  EXPECT_FALSE(match("heLlo World", "%_%", PredicateCondition::NotLikeInsensitive));
+  EXPECT_FALSE(match("heLlo World", "%_World", PredicateCondition::NotLikeInsensitive));
+  EXPECT_FALSE(match("heLlo World!! (Nice day)", "H%(%day)", PredicateCondition::NotLikeInsensitive));
+  EXPECT_FALSE(match("Smiley: ^-^", "%^_^%", PredicateCondition::NotLikeInsensitive));
+  EXPECT_FALSE(match("Questionmark: ?", "%_?%", PredicateCondition::NotLikeInsensitive));
+
+  EXPECT_FALSE(match("hello", "Hello", PredicateCondition::NotLikeInsensitive));
+  EXPECT_TRUE(match("Hello", "Hello_", PredicateCondition::NotLikeInsensitive));
+  EXPECT_TRUE(match("Hello", "He_o", PredicateCondition::NotLikeInsensitive));
 }
 
 TEST_F(LikeMatcherTest, LowerUpperBound) {

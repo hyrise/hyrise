@@ -26,7 +26,7 @@
 
 namespace hyrise {
 
-using namespace expression_functional;  // NOLINT(build/namespaces)
+using namespace expression_functional;
 
 JoinNode::JoinNode(const JoinMode init_join_mode) : AbstractLQPNode(LQPNodeType::Join), join_mode(init_join_mode) {
   Assert(join_mode == JoinMode::Cross, "Only Cross Joins can be constructed without predicate");
@@ -81,12 +81,12 @@ std::vector<std::shared_ptr<AbstractExpression>> JoinNode::output_expressions() 
 }
 
 UniqueColumnCombinations JoinNode::unique_column_combinations() const {
-  // We cannot guarantee any UCCs for Cross-Joins.
+  // We cannot guarantee any UCCs for cross joins.
   if (join_mode == JoinMode::Cross) {
     return UniqueColumnCombinations{};
   }
 
-  // Semi- and Anti-Joins act as mere filters for input_left(). Thus, existing unique column combinations remain valid.
+  // Semi-/anti-joins act as mere filters for input_left(). Thus, existing unique column combinations remain valid.
   if (is_semi_or_anti_join(join_mode)) {
     return _forward_left_unique_column_combinations();
   }
@@ -122,12 +122,12 @@ UniqueColumnCombinations JoinNode::_output_unique_column_combinations(
   }
 
   // Check uniqueness of join columns.
-  const auto left_operand_is_unique =
-      !left_unique_column_combinations.empty() &&
-      contains_matching_unique_column_combination(left_unique_column_combinations, {join_predicate->left_operand()});
-  const auto right_operand_is_unique =
-      !right_unique_column_combinations.empty() &&
-      contains_matching_unique_column_combination(right_unique_column_combinations, {join_predicate->right_operand()});
+  const auto left_operand_is_unique = !left_unique_column_combinations.empty() &&
+                                      find_ucc(left_unique_column_combinations, {join_predicate->left_operand()}) !=
+                                          left_unique_column_combinations.end();
+  const auto right_operand_is_unique = !right_unique_column_combinations.empty() &&
+                                       find_ucc(right_unique_column_combinations, {join_predicate->right_operand()}) !=
+                                           right_unique_column_combinations.end();
 
   if (left_operand_is_unique && right_operand_is_unique) {
     // Due to the one-to-one relationship, the UCCs of both sides remain valid.
@@ -206,7 +206,7 @@ OrderDependencies JoinNode::order_dependencies() const {
 
 FunctionalDependencies JoinNode::non_trivial_functional_dependencies() const {
   /**
-   * In the case of Semi- & Anti-Joins, this node acts as a filter for the left input node. The number of output
+   * In the case of semi-/anti-joins, this node acts as a filter for the left input node. The number of output
    * expressions does not change and therefore we should forward non-trivial FDs as follows:
    */
   if (is_semi_or_anti_join(join_mode)) {
@@ -304,14 +304,14 @@ const std::vector<std::shared_ptr<AbstractExpression>>& JoinNode::join_predicate
 void JoinNode::mark_as_semi_reduction(const std::shared_ptr<JoinNode>& reduced_join_node) {
   Assert(!_is_semi_reduction, "The semi reduction status should be set once only.");
   Assert(reduced_join_node, "Reduced JoinNode must be provided.");
-  Assert(join_mode == JoinMode::Semi, "Semi join reductions require JoinMode::Semi.");
+  Assert(join_mode == JoinMode::Semi, "Semi-join reductions require JoinMode::Semi.");
   DebugAssert(join_predicates().size() == 1,
-              "Currently, semi join reductions are expected to have a single join predicate.");
+              "Currently, semi-join reductions are expected to have a single join predicate.");
   DebugAssert(std::any_of(reduced_join_node->join_predicates().cbegin(), reduced_join_node->join_predicates().cend(),
                           [&](const auto& predicate) {
                             return *predicate == *join_predicates()[0];
                           }),
-              "Both semi join reduction node and the reduced join should have a common join predicate.");
+              "Both semi-join reduction node and the reduced join should have a common join predicate.");
   _is_semi_reduction = true;
   _reduced_join_node = std::weak_ptr<JoinNode>(reduced_join_node);
 }
@@ -321,7 +321,7 @@ void JoinNode::mark_input_side_as_prunable(LQPInputSide input_side) {
 }
 
 bool JoinNode::is_semi_reduction() const {
-  DebugAssert(!_is_semi_reduction || join_mode == JoinMode::Semi, "Non-semi join is marked as a semi reduction.");
+  DebugAssert(!_is_semi_reduction || join_mode == JoinMode::Semi, "Non-semi-join is marked as a semi reduction.");
   return _is_semi_reduction;
 }
 
@@ -333,7 +333,7 @@ std::optional<LQPInputSide> JoinNode::prunable_input_side() const {
 }
 
 std::shared_ptr<JoinNode> JoinNode::get_or_find_reduced_join_node() const {
-  Assert(_is_semi_reduction, "Expected semi join reduction node.");
+  Assert(_is_semi_reduction, "Expected semi-join reduction node.");
 
   if (_reduced_join_node.expired()) {
     // In deep copies of the LQP, the weak pointer to the reduced join is unset (lazy discovery). In such cases,
@@ -355,7 +355,7 @@ std::shared_ptr<JoinNode> JoinNode::get_or_find_reduced_join_node() const {
       return LQPUpwardVisitation::DoNotVisitOutputs;
     });
 
-    Assert(!_reduced_join_node.expired(), "Could not find JoinNode that gets reduced by this semi join reduction.");
+    Assert(!_reduced_join_node.expired(), "Could not find JoinNode that gets reduced by this semi-join reduction.");
   }
 
   return _reduced_join_node.lock();

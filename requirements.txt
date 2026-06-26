@@ -4,6 +4,7 @@ matplotlib>=3.3.4
 numpy>=1.20.1
 pandas>=1.2.3
 pexpect>=4.8.0
+psutil>=7.2.2  # Used in PGO/BOLT script to obtain CPU count in NUMA-bound environment.
 PyDriller>=1.15.5
 scipy>=1.6.1
 seaborn>=0.11.1

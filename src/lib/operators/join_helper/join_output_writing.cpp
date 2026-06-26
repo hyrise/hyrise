@@ -25,7 +25,7 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT(build/namespaces)
+using namespace hyrise;
 
 using PosLists = std::vector<std::shared_ptr<const AbstractPosList>>;
 using PosListsByColumn = std::vector<std::shared_ptr<PosLists>>;
@@ -150,8 +150,8 @@ void write_output_segments(Segments& output_segments, const std::shared_ptr<cons
         if (common_chunk_id && *common_chunk_id != INVALID_CHUNK_ID) {
           // Track the occuring chunk ids and set the single chunk guarantee if possible. Generally, this is the case
           // if both of the following are true: (1) The probe side input already had this guarantee and (2) no radix
-          // partitioning was used. If multiple small PosLists were merged (see MIN_SIZE in join_hash.cpp), this
-          // guarantee cannot be given.
+          // partitioning was used. If multiple small PosLists were merged (see MIN_SIZE), this guarantee cannot be
+          // given.
           new_pos_list->guarantee_single_chunk();
         }
 
@@ -168,7 +168,7 @@ void write_output_segments(Segments& output_segments, const std::shared_ptr<cons
 
     /**
      * Handling of data tables.
-     * 
+     *
      * Check if the PosList references a single chunk. This is easier than tracking the flag through materialization,
      * radix partitioning, and so on. Also, actually checking for this property instead of simply forwarding it may
      * allow us to set guarantee_single_chunk in more cases. In cases where more than one chunk is referenced, this
@@ -228,10 +228,12 @@ std::vector<std::shared_ptr<Chunk>> write_output_chunks(
     right_side_pos_lists_by_column = setup_pos_list_mapping(right_input_table);
   }
 
-  const auto pos_lists_left_size = pos_lists_left.size();
+  const auto pos_lists_right_size = pos_lists_right.size();
   auto expected_output_chunk_count = size_t{0};
-  for (auto partition_id = size_t{0}; partition_id < pos_lists_left_size; ++partition_id) {
-    if (!pos_lists_left[partition_id].empty() || !pos_lists_right[partition_id].empty()) {
+  for (auto partition_id = size_t{0}; partition_id < pos_lists_right_size; ++partition_id) {
+    // `pos_lists_left` may be empty when `output_column_order` is `RightOnly`.
+    if ((output_column_order != OutputColumnOrder::RightOnly && !pos_lists_left[partition_id].empty()) ||
+        !pos_lists_right[partition_id].empty()) {
       ++expected_output_chunk_count;
     }
   }
@@ -243,38 +245,47 @@ std::vector<std::shared_ptr<Chunk>> write_output_chunks(
   auto partition_id = size_t{0};
   auto chunk_input_position = size_t{0};
 
-  while (partition_id < pos_lists_left_size) {
-    // Moving the values into a shared PosList saves us some work in write_output_segments. We know that
-    // left_side_pos_list and right_side_pos_list will not be used again.
-    auto left_side_pos_list = std::make_shared<RowIDPosList>(std::move(pos_lists_left[partition_id]));
-    auto right_side_pos_list = std::make_shared<RowIDPosList>(std::move(pos_lists_right[partition_id]));
-
-    if (left_side_pos_list->empty() && right_side_pos_list->empty()) {
-      ++partition_id;
-      continue;
-    }
-
+  while (partition_id < pos_lists_right_size) {
     // If the input is heavily pre-filtered or the join results in very few matches, we might end up with a high
     // number of chunks that contain only few rows. If a PosList is smaller than MIN_SIZE, we merge it with the
     // following PosList(s) until a size between MIN_SIZE and MAX_SIZE is reached. This involves a trade-off:
     // A lower number of output chunks reduces the overhead, especially when multi-threading is used. However,
     // merging chunks destroys a potential references_single_chunk property of the PosList that would have been
     // emitted otherwise. Search for guarantee_single_chunk in join_hash_steps.hpp for details.
-    constexpr auto MIN_SIZE = 500;
-    constexpr auto MAX_SIZE = MIN_SIZE * 2;
-    left_side_pos_list->reserve(MAX_SIZE);
+    constexpr auto MIN_SIZE = 1000;
+    constexpr auto MAX_SIZE = MIN_SIZE * 4;
+
+    // Moving the values into a shared PosList saves us some work in write_output_segments. We know that
+    // left_side_pos_list and right_side_pos_list will not be used again.
+    auto right_side_pos_list = std::make_shared<RowIDPosList>(std::move(pos_lists_right[partition_id]));
     right_side_pos_list->reserve(MAX_SIZE);
+
+    // Again, `pos_lists_left` may be empty when `output_column_order` is `RightOnly`.
+    auto left_side_pos_list = std::make_shared<RowIDPosList>();
+    if (output_column_order != OutputColumnOrder::RightOnly) {
+      left_side_pos_list = std::make_shared<RowIDPosList>(std::move(pos_lists_left[partition_id]));
+      left_side_pos_list->reserve(MAX_SIZE);
+    }
+
+    if (left_side_pos_list->empty() && right_side_pos_list->empty()) {
+      ++partition_id;
+      continue;
+    }
 
     if (allow_partition_merge) {
       // Checking the probe side's PosLists is sufficient. The PosLists from the build side have either the same size
-      // or are empty (in case of semi/anti joins).
+      // or are empty (in case of semi-/anti-joins).
       while (partition_id + 1 < pos_lists_right.size() && right_side_pos_list->size() < MIN_SIZE &&
              right_side_pos_list->size() + pos_lists_right[partition_id + 1].size() < MAX_SIZE) {
         // Copy entries from following PosList into the current working set (left_side_pos_list) and free the memory
         // used for the merged PosList.
-        std::copy(pos_lists_left[partition_id + 1].begin(), pos_lists_left[partition_id + 1].end(),
-                  std::back_inserter(*left_side_pos_list));
-        pos_lists_left[partition_id + 1] = {};
+        //
+        // `pos_lists_left` may be empty when `output_column_order` is `RightOnly`.
+        if (output_column_order != OutputColumnOrder::RightOnly) {
+          std::copy(pos_lists_left[partition_id + 1].begin(), pos_lists_left[partition_id + 1].end(),
+                    std::back_inserter(*left_side_pos_list));
+          pos_lists_left[partition_id + 1] = {};
+        }
 
         std::copy(pos_lists_right[partition_id + 1].begin(), pos_lists_right[partition_id + 1].end(),
                   std::back_inserter(*right_side_pos_list));

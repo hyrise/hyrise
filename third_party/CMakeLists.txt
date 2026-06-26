@@ -90,7 +90,7 @@ target_include_directories(
     PUBLIC
     ${LZ4_LIBRARY_DIR}
 )
-target_compile_options(lz4 PRIVATE -fPIC)
+target_compile_options(lz4 PRIVATE -fPIC INTERFACE -Wno-documentation-unknown-command)
 
 # Build compact_vector library
 add_library(compact_vector INTERFACE)

@@ -3,10 +3,10 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <format>
 #include <iterator>
 #include <limits>
 #include <memory>
-#include <sstream>
 #include <string>
 #include <type_traits>
 #include <unordered_map>
@@ -28,6 +28,7 @@
 #include "expression/cast_expression.hpp"
 #include "expression/correlated_parameter_expression.hpp"
 #include "expression/evaluation/expression_result.hpp"
+#include "expression/evaluation/like_matcher.hpp"
 #include "expression/exists_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
@@ -40,7 +41,6 @@
 #include "expression/pqp_subquery_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "expression_functors.hpp"
-#include "like_matcher.hpp"
 #include "lossless_cast.hpp"
 #include "lossy_cast.hpp"
 #include "null_value.hpp"
@@ -60,8 +60,8 @@
 
 namespace {
 
-using namespace hyrise;                         // NOLINT(build/namespaces)
-using namespace hyrise::expression_functional;  // NOLINT(build/namespaces)
+using namespace hyrise;
+using namespace hyrise::expression_functional;
 
 template <typename Functor>
 void resolve_binary_predicate_evaluator(const PredicateCondition predicate_condition, const Functor functor) {
@@ -330,15 +330,13 @@ std::shared_ptr<ExpressionResult<ExpressionEvaluator::Bool>> ExpressionEvaluator
    * NOTE: This code path is NOT taken for LIKEs in predicates. That is `SELECT * FROM t WHERE a LIKE '%Hello%'` is
    *       handled in the TableScan. This code path is for `SELECT a LIKE 'bla' FROM ...` and alike.
    */
-
-  Assert(expression.predicate_condition == PredicateCondition::Like ||
-             expression.predicate_condition == PredicateCondition::NotLike,
-         "Expected PredicateCondition Like or NotLike.");
+  const auto condition = expression.predicate_condition;
+  Assert(condition == PredicateCondition::Like || condition == PredicateCondition::NotLike ||
+             condition == PredicateCondition::LikeInsensitive || condition == PredicateCondition::NotLikeInsensitive,
+         "Expected PredicateCondition (Not)Like or (Not)LikeInsensitive.");
 
   const auto left_results = evaluate_expression_to_result<pmr_string>(*expression.left_operand());
   const auto right_results = evaluate_expression_to_result<pmr_string>(*expression.right_operand());
-
-  const auto invert_results = expression.predicate_condition == PredicateCondition::NotLike;
 
   const auto result_size = _result_size(left_results->size(), right_results->size());
   auto result_values = pmr_vector<ExpressionEvaluator::Bool>(result_size, 0);
@@ -353,25 +351,23 @@ std::shared_ptr<ExpressionResult<ExpressionEvaluator::Bool>> ExpressionEvaluator
   const auto both_are_literals = left_results->is_literal() && right_results->is_literal();
   const auto both_are_series = !left_results->is_literal() && !right_results->is_literal();
   if (both_are_literals || both_are_series) {
-    // E.g., `a LIKE b` - A new matcher for each row and a different value as well
+    // E.g., `a LIKE b` - A new matcher for each row and a different value as well.
     for (auto row_idx = ChunkOffset{0}; row_idx < result_size; ++row_idx) {
-      LikeMatcher{right_results->values[row_idx]}.resolve(invert_results, [&](const auto& matcher) {
+      LikeMatcher{right_results->values[row_idx], condition}.resolve([&](const auto& matcher) {
         result_values[row_idx] = matcher(left_results->values[row_idx]);
       });
     }
   } else if (!left_results->is_literal() && right_results->is_literal()) {
-    // E.g., `a LIKE '%hello%'` -- A single matcher for all rows
-    const auto like_matcher = LikeMatcher{right_results->values.front()};
-
-    for (auto row_idx = ChunkOffset{0}; row_idx < result_size; ++row_idx) {
-      like_matcher.resolve(invert_results, [&](const auto& matcher) {
+    // E.g., `a LIKE '%hello%'` - A single matcher for all rows.
+    LikeMatcher{right_results->values.front(), condition}.resolve([&](const auto& matcher) {
+      for (auto row_idx = ChunkOffset{0}; row_idx < result_size; ++row_idx) {
         result_values[row_idx] = matcher(left_results->values[row_idx]);
-      });
-    }
+      }
+    });
   } else {
-    // E.g., `'hello' LIKE b` -- A new matcher for each row but the value to check is constant
+    // E.g., `'hello' LIKE b` - A new matcher for each row but the value to check is constant.
     for (auto row_idx = ChunkOffset{0}; row_idx < result_size; ++row_idx) {
-      LikeMatcher{right_results->values[row_idx]}.resolve(invert_results, [&](const auto& matcher) {
+      LikeMatcher{right_results->values[row_idx], condition}.resolve([&](const auto& matcher) {
         result_values[row_idx] = matcher(left_results->values.front());
       });
     }
@@ -697,6 +693,8 @@ ExpressionEvaluator::_evaluate_predicate_expression<ExpressionEvaluator::Bool>(
 
     case PredicateCondition::Like:
     case PredicateCondition::NotLike:
+    case PredicateCondition::LikeInsensitive:
+    case PredicateCondition::NotLikeInsensitive:
       return _evaluate_like_expression(static_cast<const BinaryPredicateExpression&>(predicate_expression));
 
     case PredicateCondition::IsNull:
@@ -952,9 +950,9 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_extract
         // do lazy checks only whenever required. Though parsing the string values leads to degraded performance
         // compared to, e.g., accessing substrings or accessing member variables, we ensure correct results.
         // TODO(anyone): Revisit for performance if we use this in actual benchmarks.
-        Assert(value.size() >= 10, "Invalid ISO 8601 extended timestamp '" + value + "'.");
+        Assert(value.size() >= 10, std::format("Invalid ISO 8601 extended timestamp '{}'.", value));
         const auto& timestamp = string_to_timestamp(value);
-        Assert(timestamp, "Invalid ISO 8601 extended timestamp '" + value + "'.");
+        Assert(timestamp, std::format("Invalid ISO 8601 extended timestamp '{}'.", value));
         values[chunk_offset] = extract_component(*timestamp);
       }
     }
@@ -1171,7 +1169,7 @@ RowIDPosList ExpressionEvaluator::evaluate_expression_to_pos_list(const Abstract
             resolve_binary_predicate_evaluator(predicate_condition, [&](const auto functor) {
               using ExpressionFunctorType = typename decltype(functor)::type;
 
-              if constexpr (ExpressionFunctorType::template supports<ExpressionEvaluator::Bool, LeftDataType,
+              if constexpr (ExpressionFunctorType::template Supports<ExpressionEvaluator::Bool, LeftDataType,
                                                                      RightDataType>::value) {
                 for (auto chunk_offset = ChunkOffset{0}; chunk_offset < row_count; ++chunk_offset) {
                   if (left_result.is_null(chunk_offset) || right_result.is_null(chunk_offset)) {
@@ -1227,7 +1225,9 @@ RowIDPosList ExpressionEvaluator::evaluate_expression_to_pos_list(const Abstract
         case PredicateCondition::In:
         case PredicateCondition::NotIn:
         case PredicateCondition::Like:
-        case PredicateCondition::NotLike: {
+        case PredicateCondition::NotLike:
+        case PredicateCondition::LikeInsensitive:
+        case PredicateCondition::NotLikeInsensitive: {
           // Evaluating (Not)In and (Not)Like to PosLists uses evaluate_expression_to_result() and scans the Series
           // it returns for matches. This is probably slower than a dedicated evaluate-to-PosList implementation
           // for these ExpressionTypes could be. But
@@ -1343,7 +1343,7 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_binary_
     using LeftDataType = typename std::decay_t<decltype(left)>::Type;
     using RightDataType = typename std::decay_t<decltype(right)>::Type;
 
-    if constexpr (Functor::template supports<Result, LeftDataType, RightDataType>::value) {
+    if constexpr (Functor::template Supports<Result, LeftDataType, RightDataType>::value) {
       const auto result_size = _result_size(left.size(), right.size());
       values.resize(result_size);
       nulls = _evaluate_default_null_logic(left.nulls, right.nulls);
@@ -1379,7 +1379,7 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_binary_
     using LeftDataType = typename std::decay_t<decltype(left)>::Type;
     using RightDataType = typename std::decay_t<decltype(right)>::Type;
 
-    if constexpr (Functor::template supports<Result, LeftDataType, RightDataType>::value) {
+    if constexpr (Functor::template Supports<Result, LeftDataType, RightDataType>::value) {
       const auto result_row_count = _result_size(left.size(), right.size());
 
       auto nulls = pmr_vector<bool>(result_row_count);

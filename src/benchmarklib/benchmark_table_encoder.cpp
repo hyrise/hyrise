@@ -22,7 +22,7 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT
+using namespace hyrise;
 
 ChunkEncodingSpec get_chunk_encoding_spec(const Chunk& chunk) {
   auto chunk_encoding_spec = ChunkEncodingSpec{};
@@ -93,7 +93,7 @@ bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
     }
 
     // Check if a type specific encoding was specified
-    const auto& column_data_type = table->column_data_type(column_id);
+    const auto column_data_type = table->column_data_type(column_id);
     const auto& encoding_by_data_type = type_mapping.find(column_data_type);
     if (encoding_by_data_type != type_mapping.end()) {
       // The column type has a specific encoding

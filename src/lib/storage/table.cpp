@@ -4,6 +4,7 @@
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
+#include <format>
 #include <iterator>
 #include <memory>
 #include <mutex>
@@ -25,11 +26,9 @@
 #include "storage/constraints/foreign_key_constraint.hpp"
 #include "storage/constraints/table_key_constraint.hpp"
 #include "storage/constraints/table_order_constraint.hpp"
-#include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"  // IWYU pragma: keep
+#include "storage/index/chunk_index_map.hpp"
 #include "storage/index/chunk_index_statistics.hpp"
-#include "storage/index/group_key/composite_group_key_index.hpp"  // IWYU pragma: keep
-#include "storage/index/group_key/group_key_index.hpp"            // IWYU pragma: keep
-#include "storage/index/partial_hash/partial_hash_index.hpp"      // IWYU pragma: keep
+#include "storage/index/partial_hash/partial_hash_index.hpp"
 #include "storage/index/table_index_statistics.hpp"
 #include "storage/mvcc_data.hpp"
 #include "storage/reference_segment.hpp"
@@ -42,7 +41,7 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT(build/namespaces)
+using namespace hyrise;
 
 // Checks if the two vectors have common elements, e.g., lhs = [0, 2] and rhs = [2, 1, 3]. We expect very short
 // vectors, so we use a simple but quadratic solution. For larger vectors, we could create sets and check set
@@ -189,7 +188,7 @@ ColumnID Table::column_id_by_name(const std::string& column_name) const {
   const auto iter = std::ranges::find_if(_column_definitions, [&](const auto& column_definition) {
     return column_definition.name == column_name;
   });
-  Assert(iter != _column_definitions.end(), "Could not find column '" + column_name + "'.");
+  Assert(iter != _column_definitions.end(), std::format("Could not find column '{}'.", column_name));
   return ColumnID{static_cast<ColumnID::base_type>(std::distance(_column_definitions.begin(), iter))};
 }
 
@@ -266,7 +265,7 @@ ChunkOffset Table::target_chunk_size() const {
 }
 
 std::shared_ptr<Chunk> Table::get_chunk(ChunkID chunk_id) {
-  DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range.");
+  DebugAssert(chunk_id < _chunks.size(), std::format("ChunkID {} out of range.", chunk_id.t));
   if (_type == TableType::References) {
     // Not written concurrently, since reference tables are not modified anymore once they are written.
     return _chunks[chunk_id];
@@ -276,7 +275,7 @@ std::shared_ptr<Chunk> Table::get_chunk(ChunkID chunk_id) {
 }
 
 std::shared_ptr<const Chunk> Table::get_chunk(ChunkID chunk_id) const {
-  DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range.");
+  DebugAssert(chunk_id < _chunks.size(), std::format("ChunkID {} out of range.", chunk_id.t));
   if (_type == TableType::References) {
     // see comment in non-const function
     return _chunks[chunk_id];
@@ -296,17 +295,18 @@ std::shared_ptr<Chunk> Table::last_chunk() const {
 }
 
 void Table::remove_chunk(ChunkID chunk_id) {
-  DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range.");
-  DebugAssert(([this, chunk_id]() {  // NOLINT
-                const auto chunk = get_chunk(chunk_id);
-                return (chunk->invalid_row_count() == chunk->size());
-              }()),
-              "Physical delete of chunk prevented: Chunk needs to be fully invalidated before.");
   Assert(_type == TableType::Data, "Removing chunks from other tables than data tables is not intended yet.");
-  std::atomic_store(&_chunks[chunk_id], std::shared_ptr<Chunk>(nullptr));
+  if constexpr (HYRISE_DEBUG) {
+    Assert(chunk_id < _chunks.size(), std::format("ChunkID {} out of range.", chunk_id.t));
+    const auto chunk = get_chunk(chunk_id);
+    Assert(chunk && chunk->invalid_row_count() == chunk->size(),
+           "Physical delete of chunk prevented: Chunk needs to be fully invalidated before.");
+  }
+
+  std::atomic_store(&_chunks[chunk_id], std::shared_ptr<Chunk>{});
 }
 
-void Table::append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvcc_data,  // NOLINT
+void Table::append_chunk(const Segments& segments, const std::shared_ptr<MvccData>& mvcc_data,
                          PolymorphicAllocator<Chunk> alloc) {
   Assert(_type != TableType::Data || static_cast<bool>(mvcc_data) == (_use_mvcc == UseMvcc::Yes),
          "Supply MvccData to data Tables if MVCC is enabled.");

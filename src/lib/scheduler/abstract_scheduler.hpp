@@ -54,9 +54,9 @@ class TaskQueue;
  */
 
 class AbstractScheduler : public Noncopyable {
- public:
-  virtual ~AbstractScheduler() = default;
+  friend class SchedulerTest;
 
+ public:
   /**
    * Begin the scheduler's lifecycle as the global Scheduler instance.
    */

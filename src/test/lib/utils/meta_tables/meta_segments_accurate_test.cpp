@@ -1,5 +1,15 @@
+#include <cstdint>
+#include <memory>
+
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
-#include "utils/meta_tables/meta_segments_accurate_table.hpp"
+#include "resolve_type.hpp"
+#include "statistics/attribute_statistics.hpp"
+#include "statistics/statistics_objects/distinct_value_count.hpp"
+#include "storage/chunk.hpp"
+#include "storage/table.hpp"
+#include "testing_assert.hpp"
+#include "utils/load_table.hpp"
 
 namespace hyrise {
 
@@ -19,7 +29,9 @@ TEST_F(MetaSegmentsAccurateTest, UsesDistinctCountStatistics) {
     using ColumnDataType = typename decltype(type)::type;
     const auto attribute_statistics = std::make_shared<AttributeStatistics<ColumnDataType>>();
     attribute_statistics->set_statistics_object(std::make_shared<DistinctValueCount>(1234));
-    auto mock_pruning_statistics = ChunkPruningStatistics{attribute_statistics, attribute_statistics};
+    auto mock_pruning_statistics = std::make_shared<ChunkPruningStatistics>();
+    mock_pruning_statistics->push_back(attribute_statistics);
+    mock_pruning_statistics->push_back(attribute_statistics);
 
     int_int->get_chunk(ChunkID{0})->set_pruning_statistics(mock_pruning_statistics);
     int_int->get_chunk(ChunkID{1})->set_pruning_statistics(mock_pruning_statistics);
@@ -66,8 +78,8 @@ TEST_F(MetaSegmentsAccurateTest, FallBackValueAccess) {
 
   {
     // Case 2: Pruning statistics without distinct value count.
-    int_int->get_chunk(ChunkID{0})->set_pruning_statistics(ChunkPruningStatistics{2});
-    int_int->get_chunk(ChunkID{1})->set_pruning_statistics(ChunkPruningStatistics{2});
+    int_int->get_chunk(ChunkID{0})->set_pruning_statistics(std::make_shared<ChunkPruningStatistics>(2));
+    int_int->get_chunk(ChunkID{1})->set_pruning_statistics(std::make_shared<ChunkPruningStatistics>(2));
 
     const auto& result_table =
         SQLPipelineBuilder{"SELECT table_name, column_name, chunk_id, distinct_value_count FROM meta_segments_accurate"}

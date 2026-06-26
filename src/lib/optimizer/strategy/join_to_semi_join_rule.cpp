@@ -9,6 +9,7 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
+#include "optimizer/optimization_context.hpp"
 #include "optimizer/strategy/abstract_rule.hpp"
 #include "types.hpp"
 
@@ -20,30 +21,30 @@ std::string JoinToSemiJoinRule::name() const {
 }
 
 void JoinToSemiJoinRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root,
-                                                           OptimizationContext& /*optimization_context*/) const {
+                                                           OptimizationContext& optimization_context) const {
   visit_lqp(lqp_root, [&](const auto& node) {
     // Sometimes, joins are not actually used to combine tables but only to check the existence of a tuple in a second
     // table. Example: SELECT c_name FROM customer, nation WHERE c_nationkey = n_nationkey AND n_name = 'GERMANY'
-    // If the join is on a unique/primary key column, we can rewrite these joins into semi joins. If, however, the
+    // If the join is on a unique/primary key column, we can rewrite these joins into semi-joins. If, however, the
     // uniqueness is not guaranteed, we cannot perform the rewrite as non-unique joins could possibly emit a matching
     // line more than once.
 
     if (node->type == LQPNodeType::Join) {
       const auto join_node = std::static_pointer_cast<JoinNode>(node);
 
-      // We don't rewrite semi- and anti-joins.
+      // We don't rewrite semi-/anti-joins.
       if (join_node->join_mode != JoinMode::Inner) {
         return LQPVisitation::VisitInputs;
       }
 
       /**
-       * We can only rewrite an inner join to a semi join when it has a join cardinality of 1:1 or n:1, which we check
+       * We can only rewrite an inner join to a semi-join when it has a join cardinality of 1:1 or n:1, which we check
        * as follows:
        * (1) From all predicates of type Equals, we collect the operand expressions by input node.
        * (2) We determine the input node that should be used for filtering.
        * (3) We check the input node from (2) for a matching single- or multi-expression unique column combination.
-       *     a) Found match -> Rewrite to semi join
-       *     b) No match    -> Do no rewrite to semi join because we might end up with duplicated input records.
+       *     a) Found match -> Rewrite to semi-join
+       *     b) No match    -> Do no rewrite to semi-join because we might end up with duplicated input records.
        */
       const auto& join_predicates = join_node->join_predicates();
       auto equals_predicate_expressions_left = ExpressionUnorderedSet{};
@@ -76,15 +77,29 @@ void JoinToSemiJoinRule::_apply_to_plan_without_subqueries(const std::shared_ptr
       }
 
       // Determine which node to use for Semi-Join-filtering and check for the required uniqueness guarantees.
-      if (*join_node->prunable_input_side() == LQPInputSide::Left &&
-          join_node->left_input()->has_matching_ucc(equals_predicate_expressions_left)) {
-        join_node->join_mode = JoinMode::Semi;
-        const auto temp = join_node->left_input();
-        join_node->set_left_input(join_node->right_input());
-        join_node->set_right_input(temp);
-      } else if (*join_node->prunable_input_side() == LQPInputSide::Right &&
-                 join_node->right_input()->has_matching_ucc(equals_predicate_expressions_right)) {
-        join_node->join_mode = JoinMode::Semi;
+      if (*join_node->prunable_input_side() == LQPInputSide::Left) {
+        const auto [has_matching_ucc, ucc_cacheable] =
+            join_node->left_input()->has_matching_ucc(equals_predicate_expressions_left);
+        if (has_matching_ucc) {
+          if (!ucc_cacheable) {
+            optimization_context.set_not_cacheable();
+          }
+
+          join_node->join_mode = JoinMode::Semi;
+          const auto temp = join_node->left_input();
+          join_node->set_left_input(join_node->right_input());
+          join_node->set_right_input(temp);
+        }
+      } else if (*join_node->prunable_input_side() == LQPInputSide::Right) {
+        const auto [has_matching_ucc, ucc_cacheable] =
+            join_node->right_input()->has_matching_ucc(equals_predicate_expressions_right);
+        if (has_matching_ucc) {
+          if (!ucc_cacheable) {
+            optimization_context.set_not_cacheable();
+          }
+
+          join_node->join_mode = JoinMode::Semi;
+        }
       }
     }
 

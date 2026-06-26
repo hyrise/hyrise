@@ -1,11 +1,9 @@
 #pragma once
 
 #include <atomic>
-#include <condition_variable>
 #include <functional>
 #include <memory>
 #include <mutex>
-#include <shared_mutex>
 #include <string>
 #include <vector>
 
@@ -68,7 +66,7 @@ class Worker;
  */
 
 // The state enum values are declared in progressive order to allow for comparisons involving the >, >= operators.
-enum class TaskState { Created, Scheduled, Enqueued, AssignedToWorker, Started, Done };
+enum class TaskState : uint8_t { Created, Scheduled, Enqueued, AssignedToWorker, Started, Done };
 static_assert(static_cast<std::underlying_type_t<TaskState>>(TaskState::Created) == 0,
               "TaskState::Created is not equal to 0. TaskState enum values are expected to be ordered.");
 
@@ -84,9 +82,9 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
   friend class AbstractScheduler;
 
   // In the test cases, we create a cyclic task graph to ensure we fail in this case (cyclic tasks lead to deadlocks).
-  // However, cyclic tasks also leak memory since tasks hold shared pointers to their successors. Thus, the test must
-  // clear the successor pointers.
   friend class OperatorTaskTest;
+  friend class SchedulerTest;
+  friend class TaskQueueTest;
 
  public:
   explicit AbstractTask(SchedulePriority priority = SchedulePriority::Default, bool stealable = true);

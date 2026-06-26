@@ -1,6 +1,6 @@
+#include <exception>
 #include <memory>
 #include <string>
-#include <utility>
 #include <vector>
 
 #include "base_test.hpp"
@@ -11,11 +11,13 @@
 #include "operators/sort.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/table.hpp"
+#include "testing_assert.hpp"
 #include "types.hpp"
+#include "utils/load_table.hpp"
 
 namespace hyrise {
 
-using namespace expression_functional;  // NOLINT(build/namespaces)
+using namespace expression_functional;
 
 class OperatorsDifferenceTest : public BaseTest {
  protected:

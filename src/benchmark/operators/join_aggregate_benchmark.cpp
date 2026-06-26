@@ -1,11 +1,16 @@
+#include <algorithm>
+#include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <random>
+#include <utility>
 #include <vector>
 
 #include "benchmark/benchmark.h"
 
+#include "all_type_variant.hpp"
 #include "expression/expression_functional.hpp"
-#include "micro_benchmark_basic_fixture.hpp"
+#include "expression/window_function_expression.hpp"
 #include "operators/aggregate_hash.hpp"
 #include "operators/aggregate_sort.hpp"
 #include "operators/join_hash.hpp"
@@ -16,6 +21,8 @@
 #include "types.hpp"
 
 namespace {
+using namespace hyrise;
+using namespace hyrise::expression_functional;
 
 constexpr auto SEED = size_t{17};
 constexpr auto TABLE_SIZE = size_t{1'000};
@@ -24,12 +31,6 @@ constexpr auto NUMBER_OF_CHUNKS_JOIN_AGGREGATE = size_t{1};
 // The lower the selectivity, the higher the collision rate is and the more
 // values are equal in the join columns
 constexpr auto SELECTIVITY = 0.2;
-
-}  // namespace
-
-namespace hyrise {
-
-using namespace expression_functional;  // NOLINT(build/namespaces)
 
 pmr_vector<int32_t> generate_ids(const size_t table_size) {
   auto values = pmr_vector<int32_t>(table_size);
@@ -44,7 +45,7 @@ pmr_vector<int32_t> generate_ids(const size_t table_size) {
     values[row_index] = dist(random_engine);
   }
 
-  std::sort(values.begin(), values.end());
+  std::ranges::sort(values);
 
   return values;
 }
@@ -85,7 +86,7 @@ pmr_vector<int32_t> generate_ages(const size_t table_size) {
     values[row_index] = dist(random_engine);
   }
 
-  std::sort(values.begin(), values.end());
+  std::ranges::sort(values);
 
   return values;
 }
@@ -160,7 +161,7 @@ void BM_Join_Aggregate(benchmark::State& state) {
       OperatorJoinPredicate(std::make_pair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals);
 
   auto aggregates = std::vector<std::shared_ptr<WindowFunctionExpression>>{
-      std::static_pointer_cast<WindowFunctionExpression>(avg_(pqp_column_(ColumnID{0}, DataType::Int, false, "b")))};
+      std::static_pointer_cast<WindowFunctionExpression>(avg_(pqp_column_(ColumnID{0}, DataType::Int, "b")))};
 
   const auto groupby = std::vector<ColumnID>{ColumnID{0}, ColumnID{2}};
 
@@ -179,6 +180,10 @@ void BM_Join_Aggregate(benchmark::State& state) {
     aggregate->execute();
   }
 }
+
+}  // namespace
+
+namespace hyrise {
 
 BENCHMARK_TEMPLATE(BM_Join_Aggregate, AggregateSort, JoinSortMerge);
 BENCHMARK_TEMPLATE(BM_Join_Aggregate, AggregateSort, JoinHash);

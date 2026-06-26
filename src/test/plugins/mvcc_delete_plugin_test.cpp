@@ -1,13 +1,13 @@
-#include <limits>
 #include <memory>
 #include <string>
-#include <vector>
 
 #include "../../plugins/mvcc_delete_plugin.hpp"
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
+#include "concurrency/transaction_context.hpp"
 #include "concurrency/transaction_manager.hpp"
+#include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
-#include "expression/pqp_column_expression.hpp"
 #include "lib/utils/plugin_test_utils.hpp"
 #include "operators/get_table.hpp"
 #include "operators/projection.hpp"
@@ -16,6 +16,7 @@
 #include "operators/validate.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
+#include "types.hpp"
 #include "utils/load_table.hpp"
 #include "utils/plugin_manager.hpp"
 
@@ -24,7 +25,7 @@ namespace hyrise {
 class MvccDeletePluginTest : public BaseTest {
  public:
   static void SetUpTestCase() {
-    _column_a = pqp_column_(ColumnID{0}, DataType::Int, false, "a");
+    _column_a = pqp_column_(ColumnID{0}, DataType::Int, "a");
   }
 
   void SetUp() override {
@@ -71,11 +72,11 @@ class MvccDeletePluginTest : public BaseTest {
     MvccDeletePlugin::_delete_chunk_physically(Hyrise::get().storage_manager.get_table(table_name), chunk_id);
   }
 
-  static int _get_int_value_from_table(const std::shared_ptr<const Table>& table, const ChunkID chunk_id,
-                                       const ColumnID column_id, const ChunkOffset chunk_offset) {
+  static int32_t _get_int_value_from_table(const std::shared_ptr<const Table>& table, const ChunkID chunk_id,
+                                           const ColumnID column_id, const ChunkOffset chunk_offset) {
     const auto& segment = table->get_chunk(chunk_id)->get_segment(column_id);
     const auto& value_alltype = static_cast<const AllTypeVariant&>((*segment)[chunk_offset]);
-    return boost::lexical_cast<int>(value_alltype);
+    return boost::lexical_cast<int32_t>(value_alltype);
   }
 
   const std::string _table_name{"mvccTestTable"};
@@ -196,7 +197,7 @@ TEST_F(MvccDeletePluginTest, PhysicalDelete) {
   const auto table = Hyrise::get().storage_manager.get_table(_table_name);
 
   // Prepare the test
-  ChunkID chunk_to_delete_id{0};
+  const auto chunk_to_delete_id = ChunkID{0};
   const auto& chunk = table->get_chunk(chunk_to_delete_id);
   // --- invalidate records
   _increment_all_values_by_one();
@@ -212,7 +213,7 @@ TEST_F(MvccDeletePluginTest, PhysicalDelete) {
   _delete_chunk_physically(_table_name, chunk_to_delete_id);
 
   // --- check post-conditions
-  EXPECT_TRUE(table->get_chunk(chunk_to_delete_id) == nullptr);
+  EXPECT_FALSE(table->get_chunk(chunk_to_delete_id));
 }
 
 }  // namespace hyrise
