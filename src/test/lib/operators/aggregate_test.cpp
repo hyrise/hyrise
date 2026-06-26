@@ -215,6 +215,8 @@ TYPED_TEST(OperatorsAggregateTest, OperatorName) {
     EXPECT_EQ(aggregate->name(), "AggregateHash");
   } else if constexpr (std::is_same_v<TypeParam, AggregateSort>) {
     EXPECT_EQ(aggregate->name(), "AggregateSort");
+  } else if constexpr (std::is_same_v<TypeParam, AggregateDYOD>) {
+    EXPECT_EQ(aggregate->name(), "AggregateDYOD");
   } else {
     Fail("Unknown aggregate type");
   }
