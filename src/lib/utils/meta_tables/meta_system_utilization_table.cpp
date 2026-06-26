@@ -108,7 +108,7 @@ uint64_t MetaSystemUtilizationTable::_get_total_time() {
 
 /**
  * Returns the time in ns that ALL processes have spent on the CPU since an arbitrary point in the past. This might be
- *  used to differentiate between CPU time consumed by this process and by other processes on the same machine.
+ * used to differentiate between CPU time consumed by this process and by other processes on the same machine.
  */
 uint64_t MetaSystemUtilizationTable::_get_system_cpu_time() {
 #ifdef __linux__
