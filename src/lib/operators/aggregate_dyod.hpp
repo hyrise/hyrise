@@ -158,7 +158,11 @@ class AggregateDYOD : public AbstractAggregateOperator {
   KeysPerChunk<AggregateKey> _partition_by_groupby_keys();
 
   template <typename AggregateKey>
-  void _aggregate();
+  void _aggregate(std::vector<std::shared_ptr<DYODSegmentVisitorContext>>& contexts_per_column,
+                  std::shared_ptr<const Table> input_table);
+
+  template <typename AggregateKey>
+  void _partition_and_aggregate();
 
   std::shared_ptr<AbstractOperator> _on_deep_copy(
       const std::shared_ptr<AbstractOperator>& copied_left_input,

@@ -954,9 +954,8 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys() {
 }
 
 template <typename AggregateKey>
-void AggregateDYOD::_aggregate() {
+void AggregateDYOD::_partition_and_aggregate() {
   const auto& input_table = left_input_table();
-
   if constexpr (HYRISE_DEBUG) {
     for (const auto& groupby_column_id : _groupby_column_ids) {
       Assert(groupby_column_id < input_table->column_count(), "GroupBy column index out of bounds.");
@@ -965,7 +964,13 @@ void AggregateDYOD::_aggregate() {
 
   // Check for invalid aggregates
   _validate_aggregates();
+  _contexts_per_column = std::vector<std::shared_ptr<DYODSegmentVisitorContext>>(_aggregates.size());
+  _aggregate<AggregateKey>(_contexts_per_column, input_table);
+}
 
+template <typename AggregateKey>
+void AggregateDYOD::_aggregate(std::vector<std::shared_ptr<DYODSegmentVisitorContext>>& contexts_per_column,
+                               std::shared_ptr<const Table> input_table) {
   auto& step_performance_data = dynamic_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
   auto timer = Timer{};
 
@@ -978,7 +983,6 @@ void AggregateDYOD::_aggregate() {
   /**
    * AGGREGATION STEP
    */
-  _contexts_per_column = std::vector<std::shared_ptr<DYODSegmentVisitorContext>>(_aggregates.size());
 
   if (!_has_aggregate_functions) {
     /*
@@ -1187,19 +1191,20 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
   // We do not want the overhead of a vector with heap storage when we have a limited number of aggregate columns.
   // However, more specializations mean more compile time. We now have specializations for 0, 1, 2, and >2 GROUP BY
   // columns.
+
   switch (_groupby_column_ids.size()) {
     case 0:
-      _aggregate<DYODEmptyAggregateKey>();
+      _partition_and_aggregate<DYODEmptyAggregateKey>();
       break;
     case 1:
       // No need for a complex data structure if we only have one entry.
-      _aggregate<DYODAggregateKeyEntry>();
+      _partition_and_aggregate<DYODAggregateKeyEntry>();
       break;
     case 2:
-      _aggregate<std::array<DYODAggregateKeyEntry, 2>>();
+      _partition_and_aggregate<std::array<DYODAggregateKeyEntry, 2>>();
       break;
     default:
-      _aggregate<DYODAggregateKeySmallVector>();
+      _partition_and_aggregate<DYODAggregateKeySmallVector>();
       break;
   }
 
