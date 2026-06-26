@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -32,7 +33,7 @@ struct AbstractAggregateVector {
 
 template <typename AggregateDataType>
 struct TypedAggregateVector : AbstractAggregateVector {
-  std::vector<AggregateDataType> results;
+  pmr_vector<AggregateDataType> results;
 
   void push_back_default() override {
     results.emplace_back();
@@ -51,6 +52,22 @@ std::vector<std::byte> serialize_value(T value, bool is_null);
 
 std::vector<std::byte> serialize_value(const pmr_string& value, bool is_null);
 
+template <typename T, bool Nullable>
+  requires std::is_trivially_copyable_v<T> && (!Nullable)
+T deserialize_value(const std::vector<std::byte>& bytes);
+
+template <typename T, bool Nullable>
+  requires std::is_trivially_copyable_v<T> && Nullable
+std::optional<T> deserialize_value(const std::vector<std::byte>& bytes);
+
+template <typename T, bool Nullable>
+  requires std::is_same_v<T, pmr_string> && (!Nullable)
+pmr_string deserialize_value(const std::vector<std::byte>& bytes);
+
+template <typename T, bool Nullable>
+  requires std::is_same_v<T, pmr_string> && Nullable
+std::optional<pmr_string> deserialize_value(const std::vector<std::byte>& bytes);
+
 class AggregateDYOD : public AbstractAggregateOperator {
  public:
   AggregateDYOD(const std::shared_ptr<AbstractOperator>& input_operator,
@@ -62,6 +79,7 @@ class AggregateDYOD : public AbstractAggregateOperator {
  protected:
   std::vector<DataType> _aggregate_data_types;
   TicketTable _ticket_table = std::unordered_map<GroupKey, Ticket, boost::hash<GroupKey>>{};
+  std::vector<GroupKey> _group_keys = std::vector<GroupKey>{};
   std::vector<std::unique_ptr<AbstractAggregateVector>> _aggregate_results;
   std::vector<size_t> _aggregate_counts;
 

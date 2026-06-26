@@ -13,6 +13,7 @@
 #include <memory>
 #include <memory_resource>
 #include <numeric>
+#include <optional>
 #include <string>
 #include <type_traits>
 #include <unordered_map>
@@ -60,6 +61,40 @@ std::vector<std::byte> serialize_value(const pmr_string& value, bool is_null) {
   bytes[0] = is_null ? std::byte{0x01} : std::byte{0x00};
   std::memcpy(bytes.data() + 1, value.data(), value.size());
   return bytes;
+}
+
+template <typename T, bool Nullable>
+  requires std::is_trivially_copyable_v<T> && (!Nullable)
+T deserialize_value(const std::vector<std::byte>& bytes) {
+  T value;
+  std::memcpy(&value, bytes.data(), sizeof(T));
+  return value;
+}
+
+template <typename T, bool Nullable>
+  requires std::is_trivially_copyable_v<T> && Nullable
+std::optional<T> deserialize_value(const std::vector<std::byte>& bytes) {
+  if (bytes[0] == std::byte{0x01}) {
+    return std::nullopt;
+  }
+  T value;
+  std::memcpy(&value, bytes.data() + 1, sizeof(T));
+  return value;
+}
+
+template <typename T, bool Nullable>
+  requires std::is_same_v<T, pmr_string> && (!Nullable)
+pmr_string deserialize_value(const std::vector<std::byte>& bytes) {
+  return pmr_string(reinterpret_cast<const char*>(bytes.data()), bytes.size());
+}
+
+template <typename T, bool Nullable>
+  requires std::is_same_v<T, pmr_string> && Nullable
+std::optional<pmr_string> deserialize_value(const std::vector<std::byte>& bytes) {
+  if (bytes[0] == std::byte{0x01}) {
+    return std::nullopt;
+  }
+  return pmr_string(reinterpret_cast<const char*>(bytes.data() + 1), bytes.size() - 1);
 }
 
 AggregateDYOD::AggregateDYOD(const std::shared_ptr<AbstractOperator>& input_operator,
@@ -126,12 +161,14 @@ std::shared_ptr<Table> AggregateDYOD::_create_output_table() {
   const auto input_table = left_input_table();
   auto column_definitions = TableColumnDefinitions();
 
+  const auto aggregate_count = _aggregates.size();
+  const auto groupby_column_count = _groupby_column_ids.size();
+
   for (const auto column_id : groupby_column_ids()) {
     column_definitions.emplace_back(input_table->column_name(column_id), input_table->column_data_type(column_id),
                                     input_table->column_is_nullable(column_id));
   }
 
-  const auto aggregate_count = _aggregates.size();
   for (auto aggregate_index = size_t{0}; aggregate_index < aggregate_count; ++aggregate_index) {
     const auto& aggregate = _aggregates[aggregate_index];
     const auto aggregate_function = aggregate->window_function;
@@ -140,7 +177,51 @@ std::shared_ptr<Table> AggregateDYOD::_create_output_table() {
     column_definitions.emplace_back(aggregate->as_column_name(), _aggregate_data_types[aggregate_index], needs_null);
   }
 
-  return std::make_shared<Table>(column_definitions, TableType::Data);
+  const auto group_count = _ticket_table.size();
+  auto segments = Segments{};
+  segments.reserve(groupby_column_count + aggregate_count);
+
+  // Create one ValueSegment per grouping column
+  // TODO(anyone): Open new chunk when max number of rows is reached
+  for (auto groupby_column_index = size_t{0}; groupby_column_index < groupby_column_count; ++groupby_column_index) {
+    const auto column_id = _groupby_column_ids[groupby_column_index];
+    const auto data_type = input_table->column_data_type(column_id);
+    const auto nullable = input_table->column_is_nullable(column_id);
+
+    resolve_data_type(data_type, [&](auto type) {
+      using ColumnDataType = typename decltype(type)::type;
+      auto values = pmr_vector<ColumnDataType>(group_count);
+
+      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < group_count; ++chunk_offset) {
+        const auto group_key_entry = _group_keys[chunk_offset][groupby_column_index];
+        if (nullable) {
+          // TODO(anyone): Sett null values
+          values[chunk_offset] = deserialize_value<ColumnDataType, true>(group_key_entry).value_or(ColumnDataType{});
+        } else {
+          values[chunk_offset] = deserialize_value<ColumnDataType, false>(group_key_entry);
+        }
+      }
+
+      const auto segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(values));
+      segments.push_back(std::move(segment));
+    });
+  }
+
+  // Create one ValueSegment per aggregate
+  for (auto aggregate_index = size_t{0}; aggregate_index < aggregate_count; ++aggregate_index) {
+    resolve_data_type(_aggregate_data_types[aggregate_index], [&](auto type) {
+      using AggregateDataType = typename decltype(type)::type;
+      auto& aggregate_vector =
+          static_cast<TypedAggregateVector<AggregateDataType>&>(*_aggregate_results[aggregate_index]);
+      const auto segment = std::make_shared<ValueSegment<AggregateDataType>>(std::move(aggregate_vector.results));
+      segments.push_back(std::move(segment));
+    });
+  }
+
+  const auto output_table = std::make_shared<Table>(column_definitions, TableType::Data);
+  output_table->append_chunk(segments);
+
+  return output_table;
 }
 
 size_t AggregateDYOD::_get_ticket(const GroupKey& group_key) {
@@ -149,9 +230,12 @@ size_t AggregateDYOD::_get_ticket(const GroupKey& group_key) {
     return it->second;
   }
 
-  _ticket_table.emplace(group_key, _ticket_table.size());
+  const auto ticket = _ticket_table.size();
+  _ticket_table.emplace(group_key, ticket);
+  // TODO(anyone): Consider storing group key entries by column, not by row
+  _group_keys.push_back(group_key);
   _aggregate_counts.push_back(0);
-  
+
   for (auto& aggregate_result : _aggregate_results) {
     aggregate_result->push_back_default();
   }
