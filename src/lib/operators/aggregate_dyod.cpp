@@ -73,8 +73,27 @@ const std::string& AggregateDYOD::name() const {
 }
 
 std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
+  const auto input_table = left_input_table();
+
   _validate_aggregates();
   _resolve_aggregate_data_types();
+
+  // Prepare aggregate vectors
+  const auto aggregate_count = _aggregates.size();
+  _aggregate_results.resize(aggregate_count);
+  for (auto aggregate_index = size_t{0}; aggregate_index < aggregate_count; ++aggregate_index) {
+    resolve_data_type(_aggregate_data_types[aggregate_index], [&](auto type) {
+      using AggregateDataType = typename decltype(type)::type;
+      _aggregate_results[aggregate_index] = std::make_unique<TypedAggregateVector<AggregateDataType>>();
+    });
+  }
+
+  // Aggregate chunk by chunk
+  const auto chunk_count = input_table->chunk_count();
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+    const auto chunk = input_table->get_chunk(chunk_id);
+    _aggregate_chunk(chunk);
+  }
 
   return _create_output_table();
 }
@@ -124,7 +143,23 @@ std::shared_ptr<Table> AggregateDYOD::_create_output_table() {
   return std::make_shared<Table>(column_definitions, TableType::Data);
 }
 
-void AggregateDYOD::_aggregate_chunk(std::shared_ptr<Chunk> chunk) {
+size_t AggregateDYOD::_get_ticket(const GroupKey& group_key) {
+  const auto it = _ticket_table.find(group_key);
+  if (it != _ticket_table.end()) {
+    return it->second;
+  }
+
+  _ticket_table.emplace(group_key, _ticket_table.size());
+  _aggregate_counts.push_back(0);
+  
+  for (auto& aggregate_result : _aggregate_results) {
+    aggregate_result->push_back_default();
+  }
+
+  return ticket;
+}
+
+void AggregateDYOD::_aggregate_chunk(const std::shared_ptr<const Chunk> chunk) {
   const auto input_table = left_input_table();
 
   // This is a two-dimensional vector, with the first dimension being the index of the grouping column, and the second
@@ -161,6 +196,50 @@ void AggregateDYOD::_aggregate_chunk(std::shared_ptr<Chunk> chunk) {
       group_keys_by_row[offset][groupby_column_index] = group_keys_by_column[groupby_column_index][offset];
     }
   }
+
+  // Compute aggregates
+  const auto aggregate_count = _aggregates.size();
+  for (auto aggregate_index = size_t{0}; aggregate_index < aggregate_count; ++aggregate_index) {
+    const auto& aggregate = _aggregates[aggregate_index];
+
+    // TODO(anyone): Same as above
+    const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
+
+    const auto segment = chunk->get_segment(pqp_column.column_id);
+
+    resolve_data_type(pqp_column.data_type(), [&](auto type) {
+      using ColumnDataType = typename decltype(type)::type;
+
+      switch (aggregate->window_function) {
+        // TODO(anyone): Add missing cases
+        case WindowFunction::Min:
+          _aggregate_segment<ColumnDataType, WindowFunction::Min>(aggregate_index, *segment, group_keys_by_row);
+          break;
+        case WindowFunction::Max:
+          _aggregate_segment<ColumnDataType, WindowFunction::Max>(aggregate_index, *segment, group_keys_by_row);
+          break;
+        default:
+          Fail("Unsupported aggregate function.");
+      }
+    });
+  }
+}
+
+template <typename ColumnDataType, WindowFunction aggregate_function>
+void AggregateDYOD::_aggregate_segment(size_t aggregate_index, const AbstractSegment& segment,
+                                       const std::vector<GroupKey>& group_keys) {
+  using AggregateDataType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
+  auto aggregator =
+      WindowFunctionBuilder<ColumnDataType, AggregateDataType, aggregate_function>().get_aggregate_function();
+  auto& aggregate_vector = static_cast<TypedAggregateVector<AggregateDataType>&>(*_aggregate_results[aggregate_index]);
+
+  segment_iterate<ColumnDataType>(segment, [&](const auto& position) {
+    const auto& group_key = group_keys[position.chunk_offset()];
+    const auto ticket = _get_ticket(group_key);
+    aggregator(position.value(), _aggregate_counts[ticket], aggregate_vector.results[ticket]);
+    // TODO(anyone): Set counts once when computing group keys
+    _aggregate_counts[ticket]++;
+  });
 }
 
 std::shared_ptr<AbstractOperator> AggregateDYOD::_on_deep_copy(
