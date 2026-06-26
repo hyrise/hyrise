@@ -42,6 +42,8 @@ class AggregateDYOD : public AbstractAggregateOperator {
   const std::string& name() const override;
 
  protected:
+  std::vector<DataType> _aggregate_data_types;
+
   std::shared_ptr<const Table> _on_execute() override;
 
   std::shared_ptr<AbstractOperator> _on_deep_copy(
@@ -53,11 +55,9 @@ class AggregateDYOD : public AbstractAggregateOperator {
 
   void _on_cleanup() override;
 
-  std::shared_ptr<Table> _create_output_table();
+  void _resolve_aggregate_data_types();
 
-  template <typename ColumnDataType, WindowFunction aggregate_function>
-  void _append_aggregate_column_definition(TableColumnDefinitions& column_definitions,
-                                           const WindowFunctionExpression& aggregate);
+  std::shared_ptr<Table> _create_output_table();
 
   void _aggregate_chunk(std::shared_ptr<Chunk> chunk);
 };

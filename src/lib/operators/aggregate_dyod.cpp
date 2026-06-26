@@ -73,21 +73,13 @@ const std::string& AggregateDYOD::name() const {
 }
 
 std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
-  // Check for invalid aggregates
   _validate_aggregates();
+  _resolve_aggregate_data_types();
 
   return _create_output_table();
 }
 
-std::shared_ptr<Table> AggregateDYOD::_create_output_table() {
-  const auto input_table = left_input_table();
-  auto column_definitions = TableColumnDefinitions();
-
-  for (const auto column_id : groupby_column_ids()) {
-    column_definitions.emplace_back(input_table->column_name(column_id), input_table->column_data_type(column_id),
-                                    input_table->column_is_nullable(column_id));
-  }
-
+void AggregateDYOD::_resolve_aggregate_data_types() {
   for (const auto& aggregate : _aggregates) {
     // TODO(anyone): Is this cast guaranteed to work? Or are there cases where there is no argument or the
     // argument is not a PQPColumnExpression?
@@ -99,15 +91,34 @@ std::shared_ptr<Table> AggregateDYOD::_create_output_table() {
       switch (aggregate->window_function) {
         // TODO(anyone): Add missing cases
         case WindowFunction::Min:
-          _append_aggregate_column_definition<ColumnDataType, WindowFunction::Min>(column_definitions, *aggregate);
+          _aggregate_data_types.emplace_back(WindowFunctionTraits<ColumnDataType, WindowFunction::Min>::RESULT_TYPE);
           break;
         case WindowFunction::Max:
-          _append_aggregate_column_definition<ColumnDataType, WindowFunction::Max>(column_definitions, *aggregate);
+          _aggregate_data_types.emplace_back(WindowFunctionTraits<ColumnDataType, WindowFunction::Max>::RESULT_TYPE);
           break;
         default:
           Fail("Unsupported aggregate function.");
       }
     });
+  }
+}
+
+std::shared_ptr<Table> AggregateDYOD::_create_output_table() {
+  const auto input_table = left_input_table();
+  auto column_definitions = TableColumnDefinitions();
+
+  for (const auto column_id : groupby_column_ids()) {
+    column_definitions.emplace_back(input_table->column_name(column_id), input_table->column_data_type(column_id),
+                                    input_table->column_is_nullable(column_id));
+  }
+
+  const auto aggregate_count = _aggregates.size();
+  for (auto aggregate_index = size_t{0}; aggregate_index < aggregate_count; ++aggregate_index) {
+    const auto& aggregate = _aggregates[aggregate_index];
+    const auto aggregate_function = aggregate->window_function;
+    const auto needs_null =
+        (aggregate_function != WindowFunction::Count && aggregate_function != WindowFunction::CountDistinct);
+    column_definitions.emplace_back(aggregate->as_column_name(), _aggregate_data_types[aggregate_index], needs_null);
   }
 
   return std::make_shared<Table>(column_definitions, TableType::Data);
@@ -150,18 +161,6 @@ void AggregateDYOD::_aggregate_chunk(std::shared_ptr<Chunk> chunk) {
       group_keys_by_row[offset][groupby_column_index] = group_keys_by_column[groupby_column_index][offset];
     }
   }
-}
-
-template <typename ColumnDataType, WindowFunction aggregate_function>
-void AggregateDYOD::_append_aggregate_column_definition(TableColumnDefinitions& column_definitions,
-                                                        const WindowFunctionExpression& aggregate) {
-  // Retrieve type information from the aggregation traits.
-  auto result_type = WindowFunctionTraits<ColumnDataType, aggregate_function>::RESULT_TYPE;
-
-  constexpr auto NEEDS_NULL =
-      (aggregate_function != WindowFunction::Count && aggregate_function != WindowFunction::CountDistinct);
-
-  column_definitions.emplace_back(aggregate.as_column_name(), result_type, NEEDS_NULL);
 }
 
 std::shared_ptr<AbstractOperator> AggregateDYOD::_on_deep_copy(
