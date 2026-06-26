@@ -986,14 +986,14 @@ void AggregateDYOD::_aggregate(std::vector<std::shared_ptr<DYODSegmentVisitorCon
 
   if (!_has_aggregate_functions) {
     /*
-    Insert a dummy context for the DISTINCT implementation. That way, `_contexts_per_column` will always have at least
+    Insert a dummy context for the DISTINCT implementation. That way, `contexts_per_column` will always have at least
     one context with results. This is important later on when we write the group keys into the table. The template
     parameters (int32_t, WindowFunction::Min) do not matter, as we do not calculate an aggregate anyway.
     */
     auto context =
         std::make_shared<AggregateContext<int32_t, WindowFunction::Min, AggregateKey>>(_expected_result_size);
 
-    _contexts_per_column.push_back(context);
+    contexts_per_column.push_back(context);
   }
 
   /**
@@ -1014,12 +1014,11 @@ void AggregateDYOD::_aggregate(std::vector<std::shared_ptr<DYODSegmentVisitorCon
       auto context = std::make_shared<AggregateContext<CountColumnType, WindowFunction::Count, AggregateKey>>(
           _expected_result_size);
 
-      _contexts_per_column[aggregate_idx] = context;
+      contexts_per_column[aggregate_idx] = context;
       continue;
     }
     const auto data_type = input_table->column_data_type(input_column_id);
-    _contexts_per_column[aggregate_idx] =
-        _create_aggregate_context<AggregateKey>(data_type, aggregate->window_function);
+    contexts_per_column[aggregate_idx] = _create_aggregate_context<AggregateKey>(data_type, aggregate->window_function);
   }
 
   // Process chunks and perform aggregations.
@@ -1045,7 +1044,7 @@ void AggregateDYOD::_aggregate(std::vector<std::shared_ptr<DYODSegmentVisitorCon
        */
 
       auto context = std::static_pointer_cast<AggregateContext<DistinctColumnType, WindowFunction::Min, AggregateKey>>(
-          _contexts_per_column[0]);
+          contexts_per_column[0]);
 
       auto& result_ids = *context->result_ids;
       auto& results = context->results;
@@ -1086,7 +1085,7 @@ void AggregateDYOD::_aggregate(std::vector<std::shared_ptr<DYODSegmentVisitorCon
           Assert(aggregate->window_function == WindowFunction::Count, "Only COUNT may have an invalid ColumnID.");
           auto context =
               std::static_pointer_cast<AggregateContext<CountColumnType, WindowFunction::Count, AggregateKey>>(
-                  _contexts_per_column[aggregate_idx]);
+                  contexts_per_column[aggregate_idx]);
 
           auto& result_ids = *context->result_ids;
           auto& results = context->results;
@@ -1103,7 +1102,7 @@ void AggregateDYOD::_aggregate(std::vector<std::shared_ptr<DYODSegmentVisitorCon
           } else {
             // Count occurrences for each group key -  If we have more than one aggregate function (and thus more than
             // one context), it makes sense to cache the results indexes, see get_or_add_result for details.
-            if (_contexts_per_column.size() > 1 || _use_immediate_key_shortcut) {
+            if (contexts_per_column.size() > 1 || _use_immediate_key_shortcut) {
               for (auto chunk_offset = ChunkOffset{0}; chunk_offset < input_chunk_size; ++chunk_offset) {
                 // Use CacheResultIds==true_type if we have more than one group by column or if the cached result ids
                 // have been written by the immediate key shortcut
