@@ -341,11 +341,12 @@ typename Results::reference get_or_add_result(CacheResultIds /*cache_result_ids*
 
     // Explanation for CACHE_MASK (placed here because it has to be defined outside but the explanation makes more sense
     // at this place):
-    // If we store the result of the hashmap lookup (i.e., the index into results) in the DYODAggregateKeyEntry, we do this
-    // by storing the index in the lower 63 bits of first_key_entry and setting the most significant bit to 1 as a
-    // marker that the DYODAggregateKeyEntry now contains a cached result. We can do this because DYODAggregateKeyEntry can not
-    // become larger than the maximum size of a table (i.e., the maximum representable RowID), which is 2^31 * 2^31 ==
-    // 2^62. This avoids making the AggregateKey bigger: Adding another 64-bit value (for an index of 2^62 values) for
+    // If we store the result of the hashmap lookup (i.e., the index into results) in the DYODAggregateKeyEntry, we do
+    // this by storing the index in the lower 63 bits of first_key_entry and setting the most significant bit to 1 as a
+    // marker that the DYODAggregateKeyEntry now contains a cached result. We can do this because DYODAggregateKeyEntry
+    // can not become larger than the maximum size of a table (i.e., the maximum representable RowID), which is
+    // 2^31 * 2^31 == 2^62.
+    // This avoids making the AggregateKey bigger: Adding another 64-bit value (for an index of 2^62 values) for
     // the cached value would double the size of the AggregateKey in the case of a single GROUP BY column, thus halving
     // the utilization of the CPU cache. Same for a discriminating union, where the data structure alignment would also
     // result in another 8 bytes being used.
@@ -413,8 +414,8 @@ AggregateKey& get_aggregate_key([[maybe_unused]] KeysPerChunk<AggregateKey>& key
 
     return hash_keys[chunk_offset];
   } else {
-    // We have to return a reference to something, so we create a static DYODEmptyAggregateKey here which is used by every
-    // call.
+    // We have to return a reference to something, so we create a static DYODEmptyAggregateKey here which is used by
+    // every call.
     static DYODEmptyAggregateKey empty_aggregate_key;
     return empty_aggregate_key;
   }
@@ -574,8 +575,8 @@ void AggregateDYOD::_on_cleanup() {
 }
 
 /*
-Visitor context for the AggregateVisitor. The DYODAggregateResultContext can be used without knowing the AggregateKey, the
-AggregateContext is the "full" version.
+Visitor context for the AggregateVisitor. The DYODAggregateResultContext can be used without knowing the AggregateKey, 
+the AggregateContext is the "full" version.
 */
 template <typename ColumnDataType, WindowFunction aggregate_function>
 struct DYODAggregateResultContext : DYODSegmentVisitorContext {
@@ -596,8 +597,8 @@ struct AggregateContext : public DYODAggregateResultContext<ColumnDataType, aggr
       : DYODAggregateResultContext<ColumnDataType, aggregate_function>(preallocated_size) {
     auto allocator = DYODAggregateResultIdMapAllocator<AggregateKey>{&this->buffer};
 
-    // Unused if AggregateKey == DYODEmptyAggregateKey, but we initialize it anyway to reduce the number of diverging code
-    // paths.
+    // Unused if AggregateKey == DYODEmptyAggregateKey, but we initialize it anyway to reduce the number of diverging
+    // code paths.
     result_ids = std::make_unique<DYODAggregateResultIdMap<AggregateKey>>(allocator);
   }
 
@@ -701,8 +702,8 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys() {
     // cases in which we can avoid this. These make use of the fact that we can only have 2^64 - 2*2^32 values in a
     // table (due to INVALID_VALUE_ID and INVALID_CHUNK_OFFSET limiting the range of RowIDs).
     //
-    // (1) For types smaller than DYODAggregateKeyEntry, such as int32_t, their value range can be immediately mapped into
-    //     uint64_t. We cannot do the same for int64_t because we need to account for NULL values.
+    // (1) For types smaller than DYODAggregateKeyEntry, such as int32_t, their value range can be immediately mapped
+    //     into uint64_t. We cannot do the same for int64_t because we need to account for NULL values.
     // (2) For strings not longer than five characters, there are 1+2^(1*8)+2^(2*8)+2^(3*8)+2^(4*8) potential values.
     //     We can immediately map these into a numerical representation by reinterpreting their byte storage as an
     //     integer. The calculation is described below. Note that this is done on a per-string basis and does not
@@ -722,8 +723,9 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys() {
 
           if constexpr (std::is_same_v<ColumnDataType, int32_t>) {
             // For values with a smaller type than DYODAggregateKeyEntry, we can use the value itself as an
-            // DYODAggregateKeyEntry. We cannot do this for types with the same size as DYODAggregateKeyEntry as we need to have
-            // a special NULL value. By using the value itself, we can save us the effort of building the id_map.
+            // DYODAggregateKeyEntry. We cannot do this for types with the same size as DYODAggregateKeyEntry as we need
+            // to have a special NULL value. By using the value itself, we can save us the effort of building the
+            // id_map.
 
             // Track the minimum and maximum key for the immediate key optimization. Search this cpp file for the last
             // use of `min_key` for a longer explanation.
@@ -778,7 +780,8 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys() {
               // hash-based approach. Both min_key and max_key do not correspond to the original int32_t value, but are
               // the result of the int_to_uint transformation. As such, they are guaranteed to be positive. This
               // shortcut only works if we are aggregating with a single GROUP BY column (i.e., when we use
-              // DYODAggregateKeyEntry) - otherwise, we cannot establish a 1:1 mapping from keys_per_chunk to the result id.
+              // DYODAggregateKeyEntry) - otherwise, we cannot establish a 1:1 mapping from keys_per_chunk to the result
+              // id.
               // TODO(anyone): Find a reasonable threshold.
               if (max_key > 0 &&
                   static_cast<double>(max_key - min_key) < static_cast<double>(input_table->row_count()) * 1.2) {
