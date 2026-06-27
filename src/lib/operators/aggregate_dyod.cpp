@@ -999,8 +999,8 @@ void AggregateDYOD::_partition_and_aggregate() {
   const auto right_table_scan = std::make_shared<TableScan>(table_wrapper2, less_than_predicate);
   right_table_scan->execute();
 
-  // TODO(anyone): Make this run in threads. I think we will need to adapt both _expected_result_size; and _use_immediate_key_shortcut{};
-  // , as those are probably currently not thread-compatible
+  // TODO(anyone): Make this run in threads. I think we will need to adapt both _expected_result_size; and
+  // _use_immediate_key_shortcut{};, as those are probably currently not thread-compatible
   auto left_contexts_per_column = std::vector<std::shared_ptr<DYODSegmentVisitorContext>>(_aggregates.size());
   _aggregate<AggregateKey>(left_contexts_per_column, left_table_scan->get_output());
   auto right_contexts_per_column = std::vector<std::shared_ptr<DYODSegmentVisitorContext>>(_aggregates.size());
@@ -1419,7 +1419,8 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
   // step_performance_data.set_step_runtime(OperatorSteps::OutputWriting, timer.lap());
 
   // step_performance_data.set_step_runtime(OperatorSteps::GroupByColumnsWriting, _groupby_columns_writing_duration);
-  // step_performance_data.set_step_runtime(OperatorSteps::AggregateColumnsWriting, _aggregate_columns_writing_duration);
+  // step_performance_data.set_step_runtime(OperatorSteps::AggregateColumnsWriting,
+  //_aggregate_columns_writing_duration);
 
   return operator_output;
 }
