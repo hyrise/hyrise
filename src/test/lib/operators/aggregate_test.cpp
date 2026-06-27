@@ -914,4 +914,83 @@ TYPED_TEST(OperatorsAggregateTest, StringVariations) {
   EXPECT_EQ(values_sorted, result_values_sorted);
 }
 
+TYPED_TEST(OperatorsAggregateTest, DYODStringGroupByWithNullsAndLongStrings) {
+  // Regression test: a NULL in a string GROUP BY column must not desync the materialized string pointers of the
+  // long (> PREFIX_LENGTH) strings that follow it. The long strings additionally share their inline length and
+  // prefix, so distinguishing them also exercises the full-string equality path. NULL forms its own group.
+  const auto values = pmr_vector<pmr_string>{
+      "longstringprefix_a", "", "longstringprefix_b", "", "longstringprefix_a", "short", "", "longstringprefix_c"};
+  const auto nulls = pmr_vector<bool>{false, true, false, true, false, false, true, false};
+
+  auto values_copy = values;
+  auto nulls_copy = nulls;
+  const auto value_segment = std::make_shared<ValueSegment<pmr_string>>(std::move(values_copy), std::move(nulls_copy));
+
+  const auto table_definitions = TableColumnDefinitions{{"a", DataType::String, true}};
+  const auto table = std::make_shared<Table>(table_definitions, TableType::Data);
+  table->append_chunk({value_segment});
+
+  const auto table_wrapper = std::make_shared<TableWrapper>(table);
+  table_wrapper->execute();
+
+  // No aggregate expressions, i.e., aggregate acts as DISTINCT.
+  const auto aggregate_expressions = std::vector<std::shared_ptr<WindowFunctionExpression>>{};
+  const auto aggregate =
+      std::make_shared<TypeParam>(table_wrapper, aggregate_expressions, std::vector<ColumnID>{ColumnID{0}});
+  aggregate->execute();
+
+  const auto& result = aggregate->get_output();
+
+  auto distinct_non_null = std::set<pmr_string>{};
+  auto null_group_count = size_t{0};
+  for (auto row_number = size_t{0}; row_number < result->row_count(); ++row_number) {
+    const auto value = result->template get_value<pmr_string>(ColumnID{0}, row_number);
+    if (value) {
+      distinct_non_null.insert(*value);
+    } else {
+      ++null_group_count;
+    }
+  }
+
+  const auto expected = std::set<pmr_string>{"longstringprefix_a", "longstringprefix_b", "longstringprefix_c", "short"};
+  EXPECT_EQ(distinct_non_null, expected);
+  EXPECT_EQ(null_group_count, size_t{1});
+}
+
+TYPED_TEST(OperatorsAggregateTest, DYODNonNullableGroupByDropsNullBitmap) {
+  // When no GROUP BY column is nullable, the materialized rows omit the null bitmap entirely. Verify that grouping,
+  // hashing, and equality still work across the shorter row layout, including long (> PREFIX_LENGTH) strings that
+  // share their inline length and prefix (forcing the full-string equality path).
+  const auto int_values = pmr_vector<int32_t>{1, 2, 1, 2, 1, 3};
+  const auto str_values = pmr_vector<pmr_string>{"longstringprefix_a", "longstringprefix_b", "longstringprefix_a",
+                                                 "longstringprefix_b", "longstringprefix_a", "short"};
+  const auto int_segment = std::make_shared<ValueSegment<int32_t>>(pmr_vector<int32_t>{int_values});
+  const auto str_segment = std::make_shared<ValueSegment<pmr_string>>(pmr_vector<pmr_string>{str_values});
+
+  const auto table_definitions = TableColumnDefinitions{{"i", DataType::Int, false}, {"s", DataType::String, false}};
+  const auto table = std::make_shared<Table>(table_definitions, TableType::Data);
+  table->append_chunk({int_segment, str_segment});
+
+  const auto table_wrapper = std::make_shared<TableWrapper>(table);
+  table_wrapper->execute();
+
+  // No aggregate expressions, i.e., aggregate acts as DISTINCT.
+  const auto aggregate_expressions = std::vector<std::shared_ptr<WindowFunctionExpression>>{};
+  const auto aggregate = std::make_shared<TypeParam>(table_wrapper, aggregate_expressions,
+                                                     std::vector<ColumnID>{ColumnID{0}, ColumnID{1}});
+  aggregate->execute();
+
+  const auto& result = aggregate->get_output();
+
+  auto groups = std::set<std::pair<int32_t, pmr_string>>{};
+  for (auto row_number = size_t{0}; row_number < result->row_count(); ++row_number) {
+    groups.emplace(*result->template get_value<int32_t>(ColumnID{0}, row_number),
+                   *result->template get_value<pmr_string>(ColumnID{1}, row_number));
+  }
+
+  const auto expected =
+      std::set<std::pair<int32_t, pmr_string>>{{1, "longstringprefix_a"}, {2, "longstringprefix_b"}, {3, "short"}};
+  EXPECT_EQ(groups, expected);
+}
+
 }  // namespace hyrise
