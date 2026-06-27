@@ -81,7 +81,8 @@ class AggregateDYOD : public AbstractAggregateOperator {
   TicketTable _ticket_table = std::unordered_map<GroupKey, Ticket, boost::hash<GroupKey>>{};
   std::vector<GroupKey> _group_keys = std::vector<GroupKey>{};
   std::vector<std::unique_ptr<AbstractAggregateVector>> _aggregate_results;
-  std::vector<size_t> _aggregate_counts;
+  // TODO(anyone): Consider making the counts part of the aggregate vectors
+  std::vector<std::vector<size_t>> _aggregate_counts;
 
   std::shared_ptr<const Table> _on_execute() override;
 

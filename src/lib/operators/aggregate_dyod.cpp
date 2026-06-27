@@ -116,6 +116,7 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
   // Prepare aggregate vectors
   const auto aggregate_count = _aggregates.size();
   _aggregate_results.resize(aggregate_count);
+  _aggregate_counts.resize(aggregate_count);
   for (auto aggregate_index = size_t{0}; aggregate_index < aggregate_count; ++aggregate_index) {
     resolve_data_type(_aggregate_data_types[aggregate_index], [&](auto type) {
       using AggregateDataType = typename decltype(type)::type;
@@ -249,7 +250,11 @@ size_t AggregateDYOD::_get_ticket(const GroupKey& group_key) {
   _ticket_table.emplace(group_key, ticket);
   // TODO(anyone): Consider storing group key entries by column, not by row
   _group_keys.push_back(group_key);
-  _aggregate_counts.push_back(0);
+
+  const auto aggregate_count = _aggregates.size();
+  for (auto aggregate_index = size_t{0}; aggregate_index < aggregate_count; ++aggregate_index) {
+    _aggregate_counts[aggregate_index].push_back(0);
+  }
 
   for (auto& aggregate_result : _aggregate_results) {
     aggregate_result->push_back_default();
@@ -334,9 +339,8 @@ void AggregateDYOD::_aggregate_segment(size_t aggregate_index, const AbstractSeg
 
   segment_iterate<ColumnDataType>(segment, [&](const auto& position) {
     const auto ticket = tickets[position.chunk_offset()];
-    aggregator(position.value(), _aggregate_counts[ticket], aggregate_vector.results[ticket]);
-    // TODO(anyone): Set counts once when computing group keys
-    _aggregate_counts[ticket]++;
+    aggregator(position.value(), _aggregate_counts[aggregate_index][ticket], aggregate_vector.results[ticket]);
+    _aggregate_counts[aggregate_index][ticket]++;
   });
 }
 
