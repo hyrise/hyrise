@@ -284,16 +284,16 @@ void AggregateDYOD::_aggregate_chunk(const std::shared_ptr<const Chunk> chunk) {
     });
   }
 
-  // Then assemble the group keys per row. Now, the first dimension is the chunk offset of the row, and the second
-  // dimension is the index of the grouping column.
-  auto group_keys_by_row = std::vector<GroupKey>(chunk->size(), std::vector<GroupKeyEntry>(_groupby_column_ids.size()));
+  // Then assemble the group keys per row and get a ticket for each group key.
+  auto tickets = std::vector<Ticket>(chunk->size());
 
   const auto row_count = chunk->size();
-  for (auto groupby_column_index = size_t{0}; groupby_column_index < groupby_column_count; ++groupby_column_index) {
-    for (auto offset = ChunkOffset{0}; offset < row_count; ++offset) {
-      // TODO(anyone): Can we move instead of copying?
-      group_keys_by_row[offset][groupby_column_index] = group_keys_by_column[groupby_column_index][offset];
+  for (auto offset = ChunkOffset{0}; offset < row_count; ++offset) {
+    auto group_key = GroupKey(groupby_column_count);
+    for (auto groupby_column_index = size_t{0}; groupby_column_index < groupby_column_count; ++groupby_column_index) {
+      group_key[groupby_column_index] = std::move(group_keys_by_column[groupby_column_index][offset]);
     }
+    tickets[offset] = _get_ticket(group_key);
   }
 
   // Compute aggregates
@@ -312,10 +312,10 @@ void AggregateDYOD::_aggregate_chunk(const std::shared_ptr<const Chunk> chunk) {
       switch (aggregate->window_function) {
         // TODO(anyone): Add missing cases
         case WindowFunction::Min:
-          _aggregate_segment<ColumnDataType, WindowFunction::Min>(aggregate_index, *segment, group_keys_by_row);
+          _aggregate_segment<ColumnDataType, WindowFunction::Min>(aggregate_index, *segment, tickets);
           break;
         case WindowFunction::Max:
-          _aggregate_segment<ColumnDataType, WindowFunction::Max>(aggregate_index, *segment, group_keys_by_row);
+          _aggregate_segment<ColumnDataType, WindowFunction::Max>(aggregate_index, *segment, tickets);
           break;
         default:
           Fail("Unsupported aggregate function.");
@@ -326,15 +326,14 @@ void AggregateDYOD::_aggregate_chunk(const std::shared_ptr<const Chunk> chunk) {
 
 template <typename ColumnDataType, WindowFunction aggregate_function>
 void AggregateDYOD::_aggregate_segment(size_t aggregate_index, const AbstractSegment& segment,
-                                       const std::vector<GroupKey>& group_keys) {
+                                       const std::vector<Ticket>& tickets) {
   using AggregateDataType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
   auto aggregator =
       WindowFunctionBuilder<ColumnDataType, AggregateDataType, aggregate_function>().get_aggregate_function();
   auto& aggregate_vector = static_cast<TypedAggregateVector<AggregateDataType>&>(*_aggregate_results[aggregate_index]);
 
   segment_iterate<ColumnDataType>(segment, [&](const auto& position) {
-    const auto& group_key = group_keys[position.chunk_offset()];
-    const auto ticket = _get_ticket(group_key);
+    const auto ticket = tickets[position.chunk_offset()];
     aggregator(position.value(), _aggregate_counts[ticket], aggregate_vector.results[ticket]);
     // TODO(anyone): Set counts once when computing group keys
     _aggregate_counts[ticket]++;

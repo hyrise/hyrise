@@ -103,8 +103,7 @@ class AggregateDYOD : public AbstractAggregateOperator {
   void _aggregate_chunk(const std::shared_ptr<const Chunk> chunk);
 
   template <typename ColumnDataType, WindowFunction aggregate_function>
-  void _aggregate_segment(size_t aggregate_index, const AbstractSegment& segment,
-                          const std::vector<GroupKey>& group_keys);
+  void _aggregate_segment(size_t aggregate_index, const AbstractSegment& segment, const std::vector<Ticket>& tickets);
 };
 
 }  // namespace hyrise
