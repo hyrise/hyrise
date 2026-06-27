@@ -50,15 +50,21 @@ std::vector<std::byte> serialize_value(const pmr_string& value) {
 template <typename T>
   requires std::is_trivially_copyable_v<T>
 std::vector<std::byte> serialize_value(T value, bool is_null) {
+  if (is_null) {
+    return std::vector<std::byte>{std::byte{0x01}};
+  }
   auto bytes = std::vector<std::byte>(1 + sizeof(T));
-  bytes[0] = is_null ? std::byte{0x01} : std::byte{0x00};
+  bytes[0] = std::byte{0x00};
   std::memcpy(bytes.data() + 1, &value, sizeof(T));
   return bytes;
 }
 
 std::vector<std::byte> serialize_value(const pmr_string& value, bool is_null) {
+  if (is_null) {
+    return std::vector<std::byte>{std::byte{0x01}};
+  }
   auto bytes = std::vector<std::byte>(1 + value.size());
-  bytes[0] = is_null ? std::byte{0x01} : std::byte{0x00};
+  bytes[0] = std::byte{0x00};
   std::memcpy(bytes.data() + 1, value.data(), value.size());
   return bytes;
 }
