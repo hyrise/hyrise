@@ -59,12 +59,12 @@ jobs:
       - name: Run Non-Grouping Tests
         run: |
           ${BUILD_DIR_DEBUG}/hyriseTest --gtest_filter="*NoGroupbySingleAggregate*:-*StandardDeviationSample*"
-          $CURL_CMD $LEADERBOARD/deliver_basic
+          $CURL_CMD $LEADERBOARD/deliver_basic -F hostname=$(hostname)
 
       - name: Run Aggregate Tests
         run: |
           ${BUILD_DIR_DEBUG}/hyriseTest --gtest_filter="*OperatorsAggregateTest*:-*StandardDeviationSample*"
-          $CURL_CMD $LEADERBOARD/deliver_advanced
+          $CURL_CMD $LEADERBOARD/deliver_advanced -F hostname=$(hostname)
 
       - name: Setup CMake (Release)
         run: cmake -B ${BUILD_DIR_RELEASE} -DCMAKE_BUILD_TYPE=Release -DNO_LTO=TRUE -G Ninja
@@ -75,19 +75,19 @@ jobs:
       - name: Run Synthetic Benchmarks
         run: |
           numactl -m 1 -N 1 ./${BUILD_DIR_RELEASE}/hyriseDYODEvaluation
-          $CURL_CMD -F "file=@$BM_RESULT_FILE" -F benchmark_name=BasicSynthetic $LEADERBOARD/deliver_benchmark
+          $CURL_CMD -F "file=@$BM_RESULT_FILE" -F benchmark_name=BasicSynthetic $LEADERBOARD/deliver_benchmark -F hostname=$(hostname)
           exit $EXIT_CODE
 
       - name: Run TPC-H/DS Benchmarks (SF 1)
         run: |
           numactl -m 1 -N 1 ./${BUILD_DIR_RELEASE}/hyriseDYODEvaluation 1
-          $CURL_CMD -F "file=@$BM_RESULT_FILE" -F benchmark_name=BasicTPC_SF1 $LEADERBOARD/deliver_benchmark
+          $CURL_CMD -F "file=@$BM_RESULT_FILE" -F benchmark_name=BasicTPC_SF1 $LEADERBOARD/deliver_benchmark -F hostname=$(hostname)
           exit $EXIT_CODE
 
       - name: Run TPC-H/DS Benchmarks (SF 10)
         run: |
           numactl -m 1 -N 1 ./${BUILD_DIR_RELEASE}/hyriseDYODEvaluation 10
-          $CURL_CMD -F "file=@$BM_RESULT_FILE" -F benchmark_name=BasicTPC_SF10 $LEADERBOARD/deliver_benchmark
+          $CURL_CMD -F "file=@$BM_RESULT_FILE" -F benchmark_name=BasicTPC_SF10 $LEADERBOARD/deliver_benchmark -F hostname=$(hostname)
           exit $EXIT_CODE
 
       - name: Prepare Hidden Benchmarks
@@ -103,7 +103,7 @@ jobs:
       - name: Run Hidden Benchmarks
         run: |
           numactl -m 1 -N 1 ./${BUILD_DIR_RELEASE}/hyriseDYODEvaluation hidden &> /dev/null
-          $CURL_CMD -F "file=@$BM_RESULT_FILE" -F benchmark_name=Hidden $LEADERBOARD/deliver_benchmark
+          $CURL_CMD -F "file=@$BM_RESULT_FILE" -F benchmark_name=Hidden $LEADERBOARD/deliver_benchmark -F hostname=$(hostname)
           exit $EXIT_CODE
 
       - name: Clean Up
