@@ -53,6 +53,7 @@ void _build_groupby_segments(const std::shared_ptr<GroupKeyData>& groups,
                              const std::vector<ColumnID>& groupby_column_ids,
                              const std::shared_ptr<const Table>& input_table,
                              pmr_vector<std::shared_ptr<AbstractSegment>>& output_segments) {
+  const auto& row_format = groups->row_format;
   const auto group_count = groups->global_hash_table.size();
   const auto group_by_column_count = groupby_column_ids.size();
 
@@ -68,34 +69,27 @@ void _build_groupby_segments(const std::shared_ptr<GroupKeyData>& groups,
       auto values = pmr_vector<ColumnDataType>(group_count);
       auto nulls = pmr_vector<bool>(group_count, false);
 
+      const auto null_mask_bit = uint64_t{1} << group_by_column_index;
       for (const auto& [group_key, ticket] : groups->global_hash_table) {
-        const auto row_ptr = group_key.row;
+        const auto row = RowView{group_key.row, row_format};
 
-        const auto null_bitmap = *reinterpret_cast<const uint64_t*>(row_ptr + groups->row_format.null_bitmap_offset);
-        nulls[ticket] = (null_bitmap & (uint64_t{1} << group_by_column_index)) != 0;
+        nulls[ticket] = (row.null_bitmap() & null_mask_bit) != 0;
         if (nulls[ticket]) {
           continue;
         }
 
         if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
           // The string column is materialized as [length, prefix] inline. Strings up to PREFIX_LENGTH bytes live
-          // entirely in the inline prefix; longer strings additionally store a heap pointer to the full value.
-          const auto col_offset = groups->row_format.col_offsets[group_by_column_index];
-          const auto* const str_data = row_ptr + groups->row_format.data_offset + col_offset;
-          const auto str_length = *reinterpret_cast<const size_t*>(str_data);
+          // entirely in the inline prefix. Longer strings additionally store a heap pointer to the full value.
+          const auto str_length = row.string_length(group_by_column_index);
           if (str_length <= PREFIX_LENGTH) {
-            values[ticket] = pmr_string{reinterpret_cast<const char*>(str_data + sizeof(size_t)), str_length};
+            values[ticket] = pmr_string{row.string_prefix(group_by_column_index), str_length};
           } else {
-            const auto str_ptr_slot = reinterpret_cast<const char* const*>(
-                row_ptr + groups->row_format.string_ptr_offset + string_col_index * sizeof(const char*));
             // The string is copied into the segment, so the row owning the pointer can be freed afterwards.
-            values[ticket] = pmr_string{*str_ptr_slot};
+            values[ticket] = pmr_string{row.string_ptr(string_col_index)};
           }
         } else {
-          const auto col_offset = groups->row_format.col_offsets[group_by_column_index];
-          const auto value =
-              *reinterpret_cast<const ColumnDataType*>(row_ptr + groups->row_format.data_offset + col_offset);
-          values[ticket] = value;
+          values[ticket] = row.read_value<ColumnDataType>(group_by_column_index);
         }
       }
 
@@ -213,9 +207,8 @@ std::pair<pmr_vector<AggregateType>, pmr_vector<bool>> _aggregate_grouped(
   auto values = pmr_vector<AggregateType>(group_count);
 
   auto value_counts = std::vector<size_t>(group_count, 0);
-  auto nulls = pmr_vector<bool>(group_count, true && window_function != WindowFunction::Count);
+  auto nulls = pmr_vector<bool>(group_count, window_function != WindowFunction::Count);
 
-  const auto group_by_column_count = groupby_column_ids.size();
   const auto chunk_count = input_table->chunk_count();
   auto row_index =
       uint32_t{0};  // global row index across chunks, used to look up the group ticket in `groups->tickets`
@@ -267,7 +260,6 @@ pmr_vector<int64_t> _count_distinct_grouped(const std::shared_ptr<GroupKeyData>&
   const auto group_count = groups->global_hash_table.size();
   auto distinct_values = std::vector<std::unordered_set<ColumnDataType>>(group_count);
 
-  const auto group_by_column_count = groupby_column_ids.size();
   const auto chunk_count = input_table->chunk_count();
   auto row_index =
       uint32_t{0};  // global row index across chunks, used to look up the group ticket in `groups->tickets`
@@ -305,7 +297,6 @@ std::pair<pmr_vector<ColumnDataType>, pmr_vector<bool>> _any_grouped(const std::
   auto values = pmr_vector<ColumnDataType>(group_count);
   auto nulls = pmr_vector<bool>(group_count, false);
 
-  const auto group_by_column_count = groupby_column_ids.size();
   const auto chunk_count = input_table->chunk_count();
   auto row_index =
       uint32_t{0};  // global row index across chunks, used to look up the group ticket in `groups->tickets`
@@ -341,7 +332,6 @@ std::pair<pmr_vector<double>, pmr_vector<bool>> _standard_deviation_sample_group
   const auto group_count = groups->global_hash_table.size();
   auto accumulators = std::vector<StandardDeviationSampleData>(group_count);
 
-  const auto group_by_column_count = groupby_column_ids.size();
   const auto chunk_count = input_table->chunk_count();
   auto row_index =
       uint32_t{0};  // global row index across chunks, used to look up the group ticket in `groups->tickets`
