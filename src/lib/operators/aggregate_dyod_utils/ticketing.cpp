@@ -76,7 +76,6 @@ std::shared_ptr<MaterializedRows> _materialize_rows(const RowFormat& format, con
     const auto column_id = groupby_column_ids[group_by_column_index];
     const auto& segment = chunk->get_segment(column_id);
     const auto null_mask_bit = uint64_t{1} << group_by_column_index;
-    const auto column_is_nullable = format.column_is_nullable[group_by_column_index] != 0;
 
     resolve_data_type(segment->data_type(), [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
