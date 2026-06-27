@@ -1420,7 +1420,7 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
 
   // step_performance_data.set_step_runtime(OperatorSteps::GroupByColumnsWriting, _groupby_columns_writing_duration);
   // step_performance_data.set_step_runtime(OperatorSteps::AggregateColumnsWriting,
-  //_aggregate_columns_writing_duration);
+  // _aggregate_columns_writing_duration);
 
   return operator_output;
 }
