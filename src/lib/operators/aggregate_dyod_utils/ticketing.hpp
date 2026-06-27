@@ -38,7 +38,7 @@ struct RowFormat {
 RowFormat _create_row_format(const TableColumnDefinitions& column_definitions,
                              const std::vector<ColumnID>& groupby_column_ids);
 
-// Non-owning view on a single materialized row. It helps interpreting the byte layout. 
+// Non-owning view on a single materialized row. It helps interpreting the byte layout.
 // Copying a `RowView` is cheap because it never owns the underlying bytes.
 struct RowView {
   uint8_t* base;
@@ -124,7 +124,7 @@ std::shared_ptr<MaterializedRows> _materialize_rows(const RowFormat& format, con
 
 // Non-owning key into the global hash table. `row` points into the arena owned by `GroupKeyData`. `hash` is the
 // precomputed row hash, reused on every probe instead of recomputing it.
- struct GroupKey {
+struct GroupKey {
   uint8_t* row;
   uint64_t hash;
 };
@@ -169,11 +169,11 @@ struct GroupKeyData {
   RowFormat row_format;
   // Owns the copied distinct key rows and their long strings. Is freed when this object is destroyed.
   std::pmr::monotonic_buffer_resource key_arena;
-  
+
   // Maps a group key to its index in the output vectors
   std::unordered_map<GroupKey, uint64_t, GroupKeyHash, GroupKeyEqual> global_hash_table;
   std::vector<size_t> row_counts;
-  
+
   // PER ROW: ticket for this specific group key (index into `keys` and the output vectors)
   std::vector<uint64_t> tickets;
 

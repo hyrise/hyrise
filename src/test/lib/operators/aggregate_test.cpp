@@ -918,8 +918,8 @@ TYPED_TEST(OperatorsAggregateTest, DYODStringGroupByWithNullsAndLongStrings) {
   // Regression test: a NULL in a string GROUP BY column must not desync the materialized string pointers of the
   // long (> PREFIX_LENGTH) strings that follow it. The long strings additionally share their inline length and
   // prefix, so distinguishing them also exercises the full-string equality path. NULL forms its own group.
-  const auto values = pmr_vector<pmr_string>{"longstringprefix_a", "",      "longstringprefix_b", "",
-                                             "longstringprefix_a", "short", "",                   "longstringprefix_c"};
+  const auto values = pmr_vector<pmr_string>{
+      "longstringprefix_a", "", "longstringprefix_b", "", "longstringprefix_a", "short", "", "longstringprefix_c"};
   const auto nulls = pmr_vector<bool>{false, true, false, true, false, false, true, false};
 
   auto values_copy = values;
@@ -952,8 +952,7 @@ TYPED_TEST(OperatorsAggregateTest, DYODStringGroupByWithNullsAndLongStrings) {
     }
   }
 
-  const auto expected =
-      std::set<pmr_string>{"longstringprefix_a", "longstringprefix_b", "longstringprefix_c", "short"};
+  const auto expected = std::set<pmr_string>{"longstringprefix_a", "longstringprefix_b", "longstringprefix_c", "short"};
   EXPECT_EQ(distinct_non_null, expected);
   EXPECT_EQ(null_group_count, size_t{1});
 }
@@ -989,8 +988,8 @@ TYPED_TEST(OperatorsAggregateTest, DYODNonNullableGroupByDropsNullBitmap) {
                    *result->template get_value<pmr_string>(ColumnID{1}, row_number));
   }
 
-  const auto expected = std::set<std::pair<int32_t, pmr_string>>{
-      {1, "longstringprefix_a"}, {2, "longstringprefix_b"}, {3, "short"}};
+  const auto expected =
+      std::set<std::pair<int32_t, pmr_string>>{{1, "longstringprefix_a"}, {2, "longstringprefix_b"}, {3, "short"}};
   EXPECT_EQ(groups, expected);
 }
 
