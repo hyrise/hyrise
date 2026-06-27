@@ -229,8 +229,24 @@ std::shared_ptr<Table> AggregateDYOD::_create_output_table() {
       using AggregateDataType = typename decltype(type)::type;
       auto& aggregate_vector =
           static_cast<TypedAggregateVector<AggregateDataType>&>(*_aggregate_results[aggregate_index]);
-      const auto segment = std::make_shared<ValueSegment<AggregateDataType>>(std::move(aggregate_vector.results));
-      segments.push_back(std::move(segment));
+      const auto& aggregate = _aggregates[aggregate_index];
+      const auto aggregate_function = aggregate->window_function;
+      const auto needs_null =
+          (aggregate_function != WindowFunction::Count && aggregate_function != WindowFunction::CountDistinct);
+      if (needs_null) {
+        auto null_values = pmr_vector<bool>(group_count);
+        for (auto chunk_offset = ChunkOffset{0}; chunk_offset < group_count; ++chunk_offset) {
+          if (_aggregate_counts[aggregate_index][chunk_offset] == 0) {
+            null_values[chunk_offset] = true;
+          }
+        }
+        const auto segment = std::make_shared<ValueSegment<AggregateDataType>>(std::move(aggregate_vector.results),
+                                                                               std::move(null_values));
+        segments.push_back(std::move(segment));
+      } else {
+        const auto segment = std::make_shared<ValueSegment<AggregateDataType>>(std::move(aggregate_vector.results));
+        segments.push_back(std::move(segment));
+      }
     });
   }
 
@@ -338,9 +354,11 @@ void AggregateDYOD::_aggregate_segment(size_t aggregate_index, const AbstractSeg
   auto& aggregate_vector = static_cast<TypedAggregateVector<AggregateDataType>&>(*_aggregate_results[aggregate_index]);
 
   segment_iterate<ColumnDataType>(segment, [&](const auto& position) {
-    const auto ticket = tickets[position.chunk_offset()];
-    aggregator(position.value(), _aggregate_counts[aggregate_index][ticket], aggregate_vector.results[ticket]);
-    _aggregate_counts[aggregate_index][ticket]++;
+    if (!position.is_null()) {
+      const auto ticket = tickets[position.chunk_offset()];
+      aggregator(position.value(), _aggregate_counts[aggregate_index][ticket], aggregate_vector.results[ticket]);
+      _aggregate_counts[aggregate_index][ticket]++;
+    }
   });
 }
 
