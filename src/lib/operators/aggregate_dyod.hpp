@@ -30,9 +30,6 @@
 
 namespace hyrise {
 
-// empty base class for DYODAggregateResultContext
-class DYODSegmentVisitorContext {};
-
 template <typename AggregateKey>
 struct GroupByContext;
 
@@ -127,6 +124,9 @@ using AggregateKeys =
 template <typename AggregateKey>
 using KeysPerChunk = pmr_vector<AggregateKeys<AggregateKey>>;
 
+// empty base class for DYODAggregateResultContext
+class DYODSegmentVisitorContext {};
+
 /**
  * Types that are used for the special COUNT(*) and DISTINCT implementations
  */
@@ -180,7 +180,8 @@ class AggregateDYOD : public AbstractAggregateOperator {
 
   template <typename ColumnDataType, WindowFunction aggregate_function, typename AggregateKey>
   void _aggregate_segment(ChunkID chunk_id, ColumnID column_index, const AbstractSegment& abstract_segment,
-                          KeysPerChunk<AggregateKey>& keys_per_chunk);
+                          KeysPerChunk<AggregateKey>& keys_per_chunk,
+                          std::vector<std::shared_ptr<DYODSegmentVisitorContext>>& contexts_per_column);
 
   template <typename AggregateKey>
   std::shared_ptr<DYODSegmentVisitorContext> _create_aggregate_context(const DataType data_type,
@@ -198,8 +199,8 @@ class AggregateDYOD : public AbstractAggregateOperator {
   std::atomic_size_t _expected_result_size;
   bool _use_immediate_key_shortcut{};
 
-  std::chrono::nanoseconds _groupby_columns_writing_duration{};
-  std::chrono::nanoseconds _aggregate_columns_writing_duration{};
+  // std::chrono::nanoseconds _groupby_columns_writing_duration{};
+  // std::chrono::nanoseconds _aggregate_columns_writing_duration{};
 };
 
 }  // namespace hyrise

@@ -23,6 +23,7 @@
 #include "aggregate_hash.hpp"
 #include "all_type_variant.hpp"
 #include "expression/abstract_expression.hpp"
+#include "expression/expression_functional.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "expression/window_function_expression.hpp"
 #include "hyrise.hpp"
@@ -42,6 +43,8 @@
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
 #include "storage/value_segment.hpp"
+#include "table_scan.hpp"
+#include "table_wrapper.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/timer.hpp"
@@ -607,13 +610,14 @@ struct AggregateContext : public DYODAggregateResultContext<ColumnDataType, aggr
 
 template <typename ColumnDataType, WindowFunction aggregate_function, typename AggregateKey>
 void AggregateDYOD::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, const AbstractSegment& abstract_segment,
-                                       KeysPerChunk<AggregateKey>& keys_per_chunk) {
+                                       KeysPerChunk<AggregateKey>& keys_per_chunk,
+                                       std::vector<std::shared_ptr<DYODSegmentVisitorContext>>& contexts_per_column) {
   using AggregateType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
 
   auto aggregator = WindowFunctionBuilder<ColumnDataType, AggregateType, aggregate_function>().get_aggregate_function();
 
   auto& context = *std::static_pointer_cast<AggregateContext<ColumnDataType, aggregate_function, AggregateKey>>(
-      _contexts_per_column[column_index]);
+      contexts_per_column[column_index]);
 
   auto& result_ids = *context.result_ids;
   auto& results = context.results;
@@ -964,21 +968,60 @@ void AggregateDYOD::_partition_and_aggregate() {
 
   // Check for invalid aggregates
   _validate_aggregates();
+
+  if (_groupby_column_ids.size() == 0 || input_table->row_count() == 0) {
+    _contexts_per_column = std::vector<std::shared_ptr<DYODSegmentVisitorContext>>(_aggregates.size());
+    _aggregate<AggregateKey>(_contexts_per_column, input_table);
+    return;
+  }
+  const auto table_wrapper = std::make_shared<TableWrapper>(input_table);
+  table_wrapper->execute();
+  auto column_id = _groupby_column_ids.at(0);
+  auto row = input_table->get_row(size_t{0});
+
+  // Assert(column_id < input_table->column_count(), "Damnit");
+
+  auto operand = hyrise::expression_functional::pqp_column_(column_id, input_table->column_data_type(column_id), "");
+  // Assert(!variant_is_null(row.at(column_id)), "Whelp");
+  auto greater_equal_predicate = std::make_shared<BinaryPredicateExpression>(
+      PredicateCondition::GreaterThanEquals, operand, hyrise::expression_functional::value_(row.at(column_id)));
+
+  const auto left_table_scan = std::make_shared<TableScan>(table_wrapper, greater_equal_predicate);
+  left_table_scan->execute();
+
+  auto operand2 = hyrise::expression_functional::pqp_column_(column_id, input_table->column_data_type(column_id), "");
+
+  auto less_than_predicate = std::make_shared<BinaryPredicateExpression>(
+      PredicateCondition::LessThan, operand2, hyrise::expression_functional::value_(row.at(column_id)));
+
+  const auto table_wrapper2 = std::make_shared<TableWrapper>(input_table);
+  table_wrapper2->execute();
+  const auto right_table_scan = std::make_shared<TableScan>(table_wrapper2, less_than_predicate);
+  right_table_scan->execute();
+
+  // TODO(anyone): Make this run in threads. I think we will need to adapt both _expected_result_size; and _use_immediate_key_shortcut{};
+  // , as those are probably currently not thread-compatible
+  auto left_contexts_per_column = std::vector<std::shared_ptr<DYODSegmentVisitorContext>>(_aggregates.size());
+  _aggregate<AggregateKey>(left_contexts_per_column, left_table_scan->get_output());
+  auto right_contexts_per_column = std::vector<std::shared_ptr<DYODSegmentVisitorContext>>(_aggregates.size());
+  _aggregate<AggregateKey>(right_contexts_per_column, right_table_scan->get_output());
+
   _contexts_per_column = std::vector<std::shared_ptr<DYODSegmentVisitorContext>>(_aggregates.size());
+  // TODO(anyone): Join the two other contexts into _contexts_per_column (horrible, horrible templates)
   _aggregate<AggregateKey>(_contexts_per_column, input_table);
 }
 
 template <typename AggregateKey>
 void AggregateDYOD::_aggregate(std::vector<std::shared_ptr<DYODSegmentVisitorContext>>& contexts_per_column,
                                std::shared_ptr<const Table> input_table) {
-  auto& step_performance_data = dynamic_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
-  auto timer = Timer{};
+  // auto& step_performance_data = dynamic_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
+  // auto timer = Timer{};
 
   /**
    * PARTITIONING STEP
    */
   auto keys_per_chunk = _partition_by_groupby_keys<AggregateKey>();
-  step_performance_data.set_step_runtime(OperatorSteps::GroupByKeyPartitioning, timer.lap());
+  // step_performance_data.set_step_runtime(OperatorSteps::GroupByKeyPartitioning, timer.lap());
 
   /**
    * AGGREGATION STEP
@@ -1139,32 +1182,32 @@ void AggregateDYOD::_aggregate(std::vector<std::shared_ptr<DYODSegmentVisitorCon
 
           switch (aggregate->window_function) {
             case WindowFunction::Min:
-              _aggregate_segment<ColumnDataType, WindowFunction::Min, AggregateKey>(chunk_id, aggregate_idx,
-                                                                                    *abstract_segment, keys_per_chunk);
+              _aggregate_segment<ColumnDataType, WindowFunction::Min, AggregateKey>(
+                  chunk_id, aggregate_idx, *abstract_segment, keys_per_chunk, contexts_per_column);
               break;
             case WindowFunction::Max:
-              _aggregate_segment<ColumnDataType, WindowFunction::Max, AggregateKey>(chunk_id, aggregate_idx,
-                                                                                    *abstract_segment, keys_per_chunk);
+              _aggregate_segment<ColumnDataType, WindowFunction::Max, AggregateKey>(
+                  chunk_id, aggregate_idx, *abstract_segment, keys_per_chunk, contexts_per_column);
               break;
             case WindowFunction::Sum:
-              _aggregate_segment<ColumnDataType, WindowFunction::Sum, AggregateKey>(chunk_id, aggregate_idx,
-                                                                                    *abstract_segment, keys_per_chunk);
+              _aggregate_segment<ColumnDataType, WindowFunction::Sum, AggregateKey>(
+                  chunk_id, aggregate_idx, *abstract_segment, keys_per_chunk, contexts_per_column);
               break;
             case WindowFunction::Avg:
-              _aggregate_segment<ColumnDataType, WindowFunction::Avg, AggregateKey>(chunk_id, aggregate_idx,
-                                                                                    *abstract_segment, keys_per_chunk);
+              _aggregate_segment<ColumnDataType, WindowFunction::Avg, AggregateKey>(
+                  chunk_id, aggregate_idx, *abstract_segment, keys_per_chunk, contexts_per_column);
               break;
             case WindowFunction::Count:
               _aggregate_segment<ColumnDataType, WindowFunction::Count, AggregateKey>(
-                  chunk_id, aggregate_idx, *abstract_segment, keys_per_chunk);
+                  chunk_id, aggregate_idx, *abstract_segment, keys_per_chunk, contexts_per_column);
               break;
             case WindowFunction::CountDistinct:
               _aggregate_segment<ColumnDataType, WindowFunction::CountDistinct, AggregateKey>(
-                  chunk_id, aggregate_idx, *abstract_segment, keys_per_chunk);
+                  chunk_id, aggregate_idx, *abstract_segment, keys_per_chunk, contexts_per_column);
               break;
             case WindowFunction::StandardDeviationSample:
               _aggregate_segment<ColumnDataType, WindowFunction::StandardDeviationSample, AggregateKey>(
-                  chunk_id, aggregate_idx, *abstract_segment, keys_per_chunk);
+                  chunk_id, aggregate_idx, *abstract_segment, keys_per_chunk, contexts_per_column);
               break;
             case WindowFunction::Any:
               // ANY is a pseudo-function and is handled by `write_groupby_output`.
@@ -1183,7 +1226,7 @@ void AggregateDYOD::_aggregate(std::vector<std::shared_ptr<DYODSegmentVisitorCon
       }
     }
   }
-  step_performance_data.set_step_runtime(OperatorSteps::Aggregating, timer.lap());
+  // step_performance_data.set_step_runtime(OperatorSteps::Aggregating, timer.lap());
 }  // NOLINT(readability/fn_size)
 
 std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
@@ -1219,12 +1262,12 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
   if (!_has_aggregate_functions) {
     auto context = std::static_pointer_cast<DYODAggregateResultContext<DistinctColumnType, WindowFunction::Min>>(
         _contexts_per_column[0]);
-    auto groupby_columns_writing_timer = Timer{};
+    // auto groupby_columns_writing_timer = Timer{};
     write_groupby_output(left_input_table(), _aggregates, _groupby_column_ids, context->results,
                          _output_column_definitions, _intermediate_result);
-    DebugAssert(_groupby_columns_writing_duration == std::chrono::nanoseconds{0},
-                "_groupby_columns_writing_duration() was apparently called more than once.");
-    _groupby_columns_writing_duration = groupby_columns_writing_timer.lap();
+    // DebugAssert(_groupby_columns_writing_duration == std::chrono::nanoseconds{0},
+    // "_groupby_columns_writing_duration() was apparently called more than once.");
+    // _groupby_columns_writing_duration = groupby_columns_writing_timer.lap();
   }
 
   /*
@@ -1290,7 +1333,7 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
    * reference segments to materialized columns (of the temporary table, using `EntireChunkPosList`) for the aggregate
    * columns.
   */
-  auto timer = Timer{};
+  // auto timer = Timer{};
 
   auto reference_segment_indexes = std::vector<ColumnID>(_groupby_column_ids.size());
   auto entireposlist_indexes = std::vector<ColumnID>{};
@@ -1372,11 +1415,11 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
 
   // _aggregate has its own internal timer. As groupby/aggregate column writing can be interleaved, the runtime is
   // stored in members and later written to the operator performance data struct.
-  auto& step_performance_data = dynamic_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
-  step_performance_data.set_step_runtime(OperatorSteps::OutputWriting, timer.lap());
+  // auto& step_performance_data = dynamic_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
+  // step_performance_data.set_step_runtime(OperatorSteps::OutputWriting, timer.lap());
 
-  step_performance_data.set_step_runtime(OperatorSteps::GroupByColumnsWriting, _groupby_columns_writing_duration);
-  step_performance_data.set_step_runtime(OperatorSteps::AggregateColumnsWriting, _aggregate_columns_writing_duration);
+  // step_performance_data.set_step_runtime(OperatorSteps::GroupByColumnsWriting, _groupby_columns_writing_duration);
+  // step_performance_data.set_step_runtime(OperatorSteps::AggregateColumnsWriting, _aggregate_columns_writing_duration);
 
   return operator_output;
 }
@@ -1386,8 +1429,8 @@ void AggregateDYOD::_write_aggregate_output(ColumnID aggregate_index) {
   // Used to track the duration of groupby columns writing, which is done for the first aggregate column only. Value is
   // subtracted from the runtime of this method (thus, it is either non-zero for the first aggregate column or zero for
   // the remaining columns).
-  auto excluded_time = std::chrono::nanoseconds{};
-  auto timer = Timer{};
+  // auto excluded_time = std::chrono::nanoseconds{};
+  // auto timer = Timer{};
 
   // Retrieve type information from the aggregation traits.
   using aggregate_type = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
@@ -1410,14 +1453,14 @@ void AggregateDYOD::_write_aggregate_output(ColumnID aggregate_index) {
 
   // Before writing the first aggregate column, write all group keys into the respective columns.
   if (aggregate_index == 0) {
-    auto groupby_columns_writing_timer = Timer{};
+    // auto groupby_columns_writing_timer = Timer{};
     write_groupby_output(left_input_table(), _aggregates, _groupby_column_ids, results, _output_column_definitions,
                          _intermediate_result);
-    const auto groupby_columns_writing_runtime = groupby_columns_writing_timer.lap();
-    DebugAssert(_groupby_columns_writing_duration == std::chrono::nanoseconds{0},
-                "_groupby_columns_writing_duration() was apparently called more than once.");
-    _groupby_columns_writing_duration = groupby_columns_writing_runtime;
-    excluded_time = groupby_columns_writing_runtime;
+    // const auto groupby_columns_writing_runtime = groupby_columns_writing_timer.lap();
+    // DebugAssert(_groupby_columns_writing_duration == std::chrono::nanoseconds{0},
+    //             "_groupby_columns_writing_duration() was apparently called more than once.");
+    // _groupby_columns_writing_duration = groupby_columns_writing_runtime;
+    // excluded_time = groupby_columns_writing_runtime;
   }
 
   constexpr auto NEEDS_NULL =
@@ -1462,7 +1505,7 @@ void AggregateDYOD::_write_aggregate_output(ColumnID aggregate_index) {
     _intermediate_result[segment_id][output_column_id] = output_segment;
   }
 
-  _aggregate_columns_writing_duration += timer.lap() - excluded_time;
+  // _aggregate_columns_writing_duration += timer.lap() - excluded_time;
 }
 
 template <typename AggregateKey>
