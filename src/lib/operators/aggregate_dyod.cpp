@@ -157,6 +157,9 @@ void AggregateDYOD::_resolve_aggregate_data_types() {
         case WindowFunction::Max:
           _aggregate_data_types.emplace_back(WindowFunctionTraits<ColumnDataType, WindowFunction::Max>::RESULT_TYPE);
           break;
+        case WindowFunction::Sum:
+          _aggregate_data_types.emplace_back(WindowFunctionTraits<ColumnDataType, WindowFunction::Sum>::RESULT_TYPE);
+          break;
         default:
           Fail("Unsupported aggregate function.");
       }
@@ -343,6 +346,9 @@ void AggregateDYOD::_aggregate_chunk(const std::shared_ptr<const Chunk> chunk) {
           break;
         case WindowFunction::Max:
           _aggregate_segment<ColumnDataType, WindowFunction::Max>(aggregate_index, *segment, tickets);
+          break;
+        case WindowFunction::Sum:
+          _aggregate_segment<ColumnDataType, WindowFunction::Sum>(aggregate_index, *segment, tickets);
           break;
         default:
           Fail("Unsupported aggregate function.");
