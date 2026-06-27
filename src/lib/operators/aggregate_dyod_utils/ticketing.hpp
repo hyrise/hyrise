@@ -10,6 +10,7 @@
 
 #include "storage/chunk.hpp"
 #include "storage/table_column_definition.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
@@ -18,16 +19,20 @@ namespace hyrise {
 constexpr uint64_t PREFIX_LENGTH = 8;
 
 // Byte layout of a single materialized group-by row:
-//   [hash | null bitmap | inline column data ... | string pointers ...]
+//   [hash | null bitmap? | inline column data ... | string pointers ...]
 // `col_offsets` are relative to `data_offset`. String columns store `[length, prefix]` inline. Longer strings
-// additionally store a heap pointer in the string-pointer area at the end of the row.
+// additionally store a heap pointer in the string-pointer area at the end of the row. The null bitmap is only present
+// when at least one group-by column is nullable (`stores_nulls`); otherwise it is omitted and the rows are 8 bytes
+// shorter. When it is absent, `null_bitmap_offset == data_offset`, so `key_bytes()` naturally starts at the data.
 struct RowFormat {
   uint64_t row_size;                                             // Size of a single row in bytes
   uint64_t hash_offset = 0;                                      // Offset of the hash in a single row
   uint64_t null_bitmap_offset = hash_offset + sizeof(uint64_t);  // Skip the hash
   uint64_t data_offset = null_bitmap_offset + sizeof(uint64_t);  // Skip the hash and the null bitmap
   uint64_t string_ptr_offset = data_offset;                      // Offsets of the string pointers at the end of the row
+  bool stores_nulls = true;                                      // Whether a null bitmap is present in each row
   std::vector<uint64_t> col_offsets;                             // Offsets of the columns relative to `data_offset`
+  std::vector<uint8_t> column_is_nullable;                       // Per group-by column: 1 if nullable, else 0
 };
 
 RowFormat _create_row_format(const TableColumnDefinitions& column_definitions,
@@ -48,10 +53,12 @@ struct RowView {
   }
 
   uint64_t null_bitmap() const {
+    DebugAssert(format.stores_nulls, "Row has no null bitmap (no group-by column is nullable).");
     return *reinterpret_cast<const uint64_t*>(base + format.null_bitmap_offset);
   }
 
   void set_null_bitmap(const uint64_t value) const {
+    DebugAssert(format.stores_nulls, "Row has no null bitmap (no group-by column is nullable).");
     *reinterpret_cast<uint64_t*>(base + format.null_bitmap_offset) = value;
   }
 

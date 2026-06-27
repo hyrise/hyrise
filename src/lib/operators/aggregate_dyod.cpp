@@ -73,9 +73,13 @@ void _build_groupby_segments(const std::shared_ptr<GroupKeyData>& groups,
       for (const auto& [group_key, ticket] : groups->global_hash_table) {
         const auto row = RowView{group_key.row, row_format};
 
-        nulls[ticket] = (row.null_bitmap() & null_mask_bit) != 0;
-        if (nulls[ticket]) {
-          continue;
+        // Only nullable columns carry a null bitmap; for non-nullable ones (and when the bitmap is omitted entirely)
+        // there is nothing to read and the value is always present.
+        if (column_is_nullable) {
+          nulls[ticket] = (row.null_bitmap() & null_mask_bit) != 0;
+          if (nulls[ticket]) {
+            continue;
+          }
         }
 
         if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
