@@ -380,7 +380,6 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
     // Produces only a single per aggregate.
 
     const auto aggregate_count = _aggregates.size();
-    const auto chunk_count = input_table->chunk_count();
 
     auto column_definitions = TableColumnDefinitions{};
     auto result_values = std::vector<AllTypeVariant>{};
