@@ -190,20 +190,35 @@ std::shared_ptr<Table> AggregateDYOD::_create_output_table() {
 
     resolve_data_type(data_type, [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
-      auto values = pmr_vector<ColumnDataType>(group_count);
 
-      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < group_count; ++chunk_offset) {
-        const auto group_key_entry = _group_keys[chunk_offset][groupby_column_index];
-        if (nullable) {
-          // TODO(anyone): Sett null values
-          values[chunk_offset] = deserialize_value<ColumnDataType, true>(group_key_entry).value_or(ColumnDataType{});
-        } else {
-          values[chunk_offset] = deserialize_value<ColumnDataType, false>(group_key_entry);
+      if (nullable) {
+        auto values = pmr_vector<ColumnDataType>(group_count);
+        auto null_values = pmr_vector<bool>(group_count);
+
+        for (auto group_index = size_t{0}; group_index < group_count; ++group_index) {
+          const auto group_key_entry = _group_keys[group_index][groupby_column_index];
+          const auto deserialized = deserialize_value<ColumnDataType, true>(group_key_entry);
+
+          if (deserialized.has_value()) {
+            values[group_index] = deserialized.value();
+          } else {
+            null_values[group_index] = true;
+          }
         }
-      }
 
-      const auto segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(values));
-      segments.push_back(std::move(segment));
+        const auto segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(values), std::move(null_values));
+        segments.push_back(std::move(segment));
+      } else {
+        auto values = pmr_vector<ColumnDataType>(group_count);
+
+        for (auto group_index = ChunkOffset{0}; group_index < group_count; ++group_index) {
+          const auto group_key_entry = _group_keys[group_index][groupby_column_index];
+          values[group_index] = deserialize_value<ColumnDataType, false>(group_key_entry);
+        }
+
+        const auto segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(values));
+        segments.push_back(std::move(segment));
+      }
     });
   }
 
