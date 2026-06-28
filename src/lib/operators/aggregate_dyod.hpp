@@ -26,18 +26,49 @@ using GroupKey = std::vector<GroupKeyEntry>;
 using Ticket = size_t;
 using TicketTable = std::unordered_map<GroupKey, Ticket, boost::hash<GroupKey>>;
 
-struct AbstractAggregateVector {
+class AbstractAggregateVector {
+ public:
   virtual ~AbstractAggregateVector() = default;
   virtual void push_back_default() = 0;
+
+  size_t count(size_t index) const {
+    return _counts[index];
+  }
+
+  void increment_count(size_t index) {
+    _counts[index]++;
+  }
+
+ protected:
+  pmr_vector<size_t> _counts;
 };
 
 template <typename AggregateDataType>
 struct TypedAggregateVector : AbstractAggregateVector {
-  pmr_vector<AggregateDataType> results;
+ public:
+  AggregateDataType& operator[](size_t index) {
+    return _aggregates[index];
+  }
+
+  const AggregateDataType& operator[](size_t index) const {
+    return _aggregates[index];
+  }
+
+  pmr_vector<AggregateDataType>& values() {
+    return _aggregates;
+  }
+
+  const pmr_vector<AggregateDataType>& values() const {
+    return _aggregates;
+  }
 
   void push_back_default() override {
-    results.emplace_back();
+    _aggregates.emplace_back();
+    _counts.emplace_back();
   }
+
+ protected:
+  pmr_vector<AggregateDataType> _aggregates;
 };
 
 template <typename T>
@@ -80,9 +111,7 @@ class AggregateDYOD : public AbstractAggregateOperator {
   std::vector<DataType> _aggregate_data_types;
   TicketTable _ticket_table = std::unordered_map<GroupKey, Ticket, boost::hash<GroupKey>>{};
   std::vector<GroupKey> _group_keys = std::vector<GroupKey>{};
-  std::vector<std::unique_ptr<AbstractAggregateVector>> _aggregate_results;
-  // TODO(anyone): Consider making the counts part of the aggregate vectors
-  std::vector<std::vector<size_t>> _aggregate_counts;
+  std::vector<std::unique_ptr<AbstractAggregateVector>> _aggregate_vectors;
 
   std::shared_ptr<const Table> _on_execute() override;
 

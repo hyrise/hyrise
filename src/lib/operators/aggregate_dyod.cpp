@@ -121,12 +121,11 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
 
   // Prepare aggregate vectors
   const auto aggregate_count = _aggregates.size();
-  _aggregate_results.resize(aggregate_count);
-  _aggregate_counts.resize(aggregate_count);
+  _aggregate_vectors.resize(aggregate_count);
   for (auto aggregate_index = size_t{0}; aggregate_index < aggregate_count; ++aggregate_index) {
     resolve_data_type(_aggregate_data_types[aggregate_index], [&](auto type) {
       using AggregateDataType = typename decltype(type)::type;
-      _aggregate_results[aggregate_index] = std::make_unique<TypedAggregateVector<AggregateDataType>>();
+      _aggregate_vectors[aggregate_index] = std::make_unique<TypedAggregateVector<AggregateDataType>>();
     });
   }
 
@@ -237,7 +236,7 @@ std::shared_ptr<Table> AggregateDYOD::_create_output_table() {
     resolve_data_type(_aggregate_data_types[aggregate_index], [&](auto type) {
       using AggregateDataType = typename decltype(type)::type;
       auto& aggregate_vector =
-          static_cast<TypedAggregateVector<AggregateDataType>&>(*_aggregate_results[aggregate_index]);
+          static_cast<TypedAggregateVector<AggregateDataType>&>(*_aggregate_vectors[aggregate_index]);
       const auto& aggregate = _aggregates[aggregate_index];
       const auto aggregate_function = aggregate->window_function;
       const auto needs_null =
@@ -245,15 +244,15 @@ std::shared_ptr<Table> AggregateDYOD::_create_output_table() {
       if (needs_null) {
         auto null_values = pmr_vector<bool>(group_count);
         for (auto chunk_offset = ChunkOffset{0}; chunk_offset < group_count; ++chunk_offset) {
-          if (_aggregate_counts[aggregate_index][chunk_offset] == 0) {
+          if (aggregate_vector.count(chunk_offset) == 0) {
             null_values[chunk_offset] = true;
           }
         }
-        const auto segment = std::make_shared<ValueSegment<AggregateDataType>>(std::move(aggregate_vector.results),
+        const auto segment = std::make_shared<ValueSegment<AggregateDataType>>(std::move(aggregate_vector.values()),
                                                                                std::move(null_values));
         segments.push_back(std::move(segment));
       } else {
-        const auto segment = std::make_shared<ValueSegment<AggregateDataType>>(std::move(aggregate_vector.results));
+        const auto segment = std::make_shared<ValueSegment<AggregateDataType>>(std::move(aggregate_vector.values()));
         segments.push_back(std::move(segment));
       }
     });
@@ -276,13 +275,8 @@ size_t AggregateDYOD::_get_ticket(const GroupKey& group_key) {
   // TODO(anyone): Consider storing group key entries by column, not by row
   _group_keys.push_back(group_key);
 
-  const auto aggregate_count = _aggregates.size();
-  for (auto aggregate_index = size_t{0}; aggregate_index < aggregate_count; ++aggregate_index) {
-    _aggregate_counts[aggregate_index].push_back(0);
-  }
-
-  for (auto& aggregate_result : _aggregate_results) {
-    aggregate_result->push_back_default();
+  for (auto& aggregate_vector : _aggregate_vectors) {
+    aggregate_vector->push_back_default();
   }
 
   return ticket;
@@ -363,13 +357,13 @@ void AggregateDYOD::_aggregate_segment(size_t aggregate_index, const AbstractSeg
   using AggregateDataType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
   auto aggregator =
       WindowFunctionBuilder<ColumnDataType, AggregateDataType, aggregate_function>().get_aggregate_function();
-  auto& aggregate_vector = static_cast<TypedAggregateVector<AggregateDataType>&>(*_aggregate_results[aggregate_index]);
+  auto& aggregate_vector = static_cast<TypedAggregateVector<AggregateDataType>&>(*_aggregate_vectors[aggregate_index]);
 
   segment_iterate<ColumnDataType>(segment, [&](const auto& position) {
     if (!position.is_null()) {
       const auto ticket = tickets[position.chunk_offset()];
-      aggregator(position.value(), _aggregate_counts[aggregate_index][ticket], aggregate_vector.results[ticket]);
-      _aggregate_counts[aggregate_index][ticket]++;
+      aggregator(position.value(), aggregate_vector.count(ticket), aggregate_vector[ticket]);
+      aggregate_vector.increment_count(ticket);
     }
   });
 }
