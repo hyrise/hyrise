@@ -18,6 +18,8 @@
 
 namespace hyrise {
 
+class AbstractAggregator;
+
 class AggregateDYOD : public AbstractAggregateOperator {
  public:
   AggregateDYOD(const std::shared_ptr<AbstractOperator>& input_operator,
@@ -37,6 +39,10 @@ class AggregateDYOD : public AbstractAggregateOperator {
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
   void _on_cleanup() override;
+
+ private:
+  std::vector<std::unique_ptr<AbstractAggregator>> _build_aggregators(
+      const std::shared_ptr<const Table>& input_table) const;
 };
 
 }  // namespace hyrise
