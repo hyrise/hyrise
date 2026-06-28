@@ -394,34 +394,34 @@ int main(int argc, char* argv[]) {
   out_file.close();
 
   if (argc == 2) {
-    // try {
-    const auto scale_factor = std::stof(argv[1]);
-    std::cout << "Running TPC benchmarks with scale factor " << scale_factor << ".\n";
+    try {
+      const auto scale_factor = std::stof(argv[1]);
+      std::cout << "Running TPC benchmarks with scale factor " << scale_factor << ".\n";
 
-    for (const auto& encoding_config : ENCODING_CONFIGS) {
-      auto benchmark_config = std::make_shared<BenchmarkConfig>();
-      benchmark_config->cache_binary_tables = false;
-      benchmark_config->encoding_config = encoding_config;
+      for (const auto& encoding_config : ENCODING_CONFIGS) {
+        auto benchmark_config = std::make_shared<BenchmarkConfig>();
+        benchmark_config->cache_binary_tables = false;
+        benchmark_config->encoding_config = encoding_config;
 
-      silent_tpcx_table_generation(BenchmarkType::tpch, scale_factor, benchmark_config);
-      silent_tpcx_table_generation(BenchmarkType::tpcds, scale_factor, benchmark_config);
+        silent_tpcx_table_generation(BenchmarkType::tpch, scale_factor, benchmark_config);
+        silent_tpcx_table_generation(BenchmarkType::tpcds, scale_factor, benchmark_config);
 
-      TPCHQ01(scale_factor, encoding_config);
-      TPCHQ18(scale_factor, encoding_config);
-      TPCDSQ97(scale_factor, encoding_config);
+        TPCHQ01(scale_factor, encoding_config);
+        TPCHQ18(scale_factor, encoding_config);
+        TPCDSQ97(scale_factor, encoding_config);
+      }
+    } catch (...) {
+      const auto argument = std::string{argv[1]};
+      if (argument != "hidden") {
+        std::cerr << "Unexpected argument\n";
+        return 1;
+      }
+
+      HiddenTest1();
+      HiddenTest2();
+      HiddenTest3();
+      HiddenTest4();
     }
-    // } catch (...) {
-    // const auto argument = std::string{argv[1]};
-    // if (argument != "hidden") {
-    //   std::cerr << "Unexpected argument\n";
-    //   return 1;
-    // }
-
-    HiddenTest1();
-    HiddenTest2();
-    HiddenTest3();
-    HiddenTest4();
-    // }
 
     return 0;
   }
