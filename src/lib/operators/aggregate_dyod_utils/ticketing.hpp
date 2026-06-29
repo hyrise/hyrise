@@ -163,7 +163,7 @@ struct RowView {
   }
 };
 
-// All materialized rows of a single chunk, packed in `rows`. Long group-by strings referenced by those rows live in 
+// All materialized rows of a single chunk, packed in `rows`. Long group-by strings referenced by those rows live in
 // `string_arena`.
 struct MaterializedRows {
   uint64_t row_count = 0;

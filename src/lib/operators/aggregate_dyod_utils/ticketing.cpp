@@ -16,11 +16,11 @@
 
 namespace hyrise {
 
-// Build the group-by output columns from  the distinct key rows of the byte-row path. Each output value is read back out
-// of its group's row.
-pmr_vector<std::shared_ptr<AbstractSegment>> _build_groupby_segments(
-    const GroupKeyData& groups, const std::vector<ColumnID>& groupby_column_ids,
-    const std::shared_ptr<const Table>& input_table) {
+// Build the group-by output columns from  the distinct key rows of the byte-row path. Each output value is read back
+// out of its group's row.
+pmr_vector<std::shared_ptr<AbstractSegment>> _build_groupby_segments(const GroupKeyData& groups,
+                                                                     const std::vector<ColumnID>& groupby_column_ids,
+                                                                     const std::shared_ptr<const Table>& input_table) {
   const auto& row_format = groups.row_format;
   const auto group_count = groups.global_hash_table.size();
   const auto group_by_column_count = groupby_column_ids.size();
@@ -326,8 +326,7 @@ GroupingResult _compute_groups_byte_row(const std::vector<ColumnID>& groupby_col
 
 GroupingResult _compute_groups(const std::vector<ColumnID>& groupby_column_ids,
                                const std::shared_ptr<const Table>& input_table) {
-  if (groupby_column_ids.size() == 1 &&
-      input_table->column_data_type(groupby_column_ids[0]) != DataType::String) {
+  if (groupby_column_ids.size() == 1 && input_table->column_data_type(groupby_column_ids[0]) != DataType::String) {
     return _compute_groups_single_column(groupby_column_ids[0], input_table);
   }
   return _compute_groups_byte_row(groupby_column_ids, input_table);

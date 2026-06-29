@@ -139,8 +139,8 @@ int64_t _count_distinct_all_values(const std::shared_ptr<const Table>& input_tab
 // (non-NULL) value yields NULL, except COUNT which yields 0.
 template <typename ColumnDataType, typename AggregateType, WindowFunction window_function>
 std::pair<pmr_vector<AggregateType>, pmr_vector<bool>> _aggregate_grouped(
-    const std::vector<uint64_t>& tickets, const size_t group_count,
-    const std::shared_ptr<const Table>& input_table, const ColumnID input_column_id) {
+    const std::vector<uint64_t>& tickets, const size_t group_count, const std::shared_ptr<const Table>& input_table,
+    const ColumnID input_column_id) {
   const auto aggregate_function =
       WindowFunctionBuilder<ColumnDataType, AggregateType, window_function>().get_aggregate_function();
   auto values = pmr_vector<AggregateType>(group_count);
@@ -149,8 +149,7 @@ std::pair<pmr_vector<AggregateType>, pmr_vector<bool>> _aggregate_grouped(
   auto nulls = pmr_vector<bool>(group_count, window_function != WindowFunction::Count);
 
   const auto chunk_count = input_table->chunk_count();
-  auto row_index =
-      uint32_t{0};  // global row index across chunks, used to look up the group ticket in `tickets`
+  auto row_index = uint32_t{0};  // global row index across chunks, used to look up the group ticket in `tickets`
 
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto& chunk = input_table->get_chunk(chunk_id);
@@ -198,8 +197,7 @@ pmr_vector<int64_t> _count_distinct_grouped(const std::vector<uint64_t>& tickets
   auto distinct_values = std::vector<std::unordered_set<ColumnDataType>>(group_count);
 
   const auto chunk_count = input_table->chunk_count();
-  auto row_index =
-      uint32_t{0};  // global row index across chunks, used to look up the group ticket in `tickets`
+  auto row_index = uint32_t{0};  // global row index across chunks, used to look up the group ticket in `tickets`
 
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto& chunk = input_table->get_chunk(chunk_id);
@@ -232,8 +230,7 @@ std::pair<pmr_vector<ColumnDataType>, pmr_vector<bool>> _any_grouped(const std::
   auto nulls = pmr_vector<bool>(group_count, false);
 
   const auto chunk_count = input_table->chunk_count();
-  auto row_index =
-      uint32_t{0};  // global row index across chunks, used to look up the group ticket in `tickets`
+  auto row_index = uint32_t{0};  // global row index across chunks, used to look up the group ticket in `tickets`
 
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto& chunk = input_table->get_chunk(chunk_id);
@@ -258,16 +255,15 @@ std::pair<pmr_vector<ColumnDataType>, pmr_vector<bool>> _any_grouped(const std::
 // STDDEV: NULL for groups with fewer than two contributing values.
 template <typename ColumnDataType>
 std::pair<pmr_vector<double>, pmr_vector<bool>> _standard_deviation_sample_grouped(
-    const std::vector<uint64_t>& tickets, const size_t group_count,
-    const std::shared_ptr<const Table>& input_table, const ColumnID input_column_id) {
+    const std::vector<uint64_t>& tickets, const size_t group_count, const std::shared_ptr<const Table>& input_table,
+    const ColumnID input_column_id) {
   static_assert(std::is_arithmetic_v<ColumnDataType>, "StandardDeviationSample is only defined on arithmetic types.");
   const auto aggregate_function =
       WindowFunctionBuilder<ColumnDataType, double, WindowFunction::StandardDeviationSample>().get_aggregate_function();
   auto accumulators = std::vector<StandardDeviationSampleData>(group_count);
 
   const auto chunk_count = input_table->chunk_count();
-  auto row_index =
-      uint32_t{0};  // global row index across chunks, used to look up the group ticket in `tickets`
+  auto row_index = uint32_t{0};  // global row index across chunks, used to look up the group ticket in `tickets`
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto& chunk = input_table->get_chunk(chunk_id);
     const auto& aggregate_segment = chunk->get_segment(input_column_id);
