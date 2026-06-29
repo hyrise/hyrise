@@ -65,6 +65,4 @@ class FlatMapIteratorImpl : public BaseFlatMapIteratorImpl {
   size_t _vector_index;
 };
 
-EXPLICITLY_DECLARE_DATA_TYPES(FlatMapIteratorImpl);
-
 }  // namespace hyrise

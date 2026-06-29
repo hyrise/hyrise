@@ -82,6 +82,4 @@ class EqualDistinctCountHistogram : public AbstractHistogram<T> {
   HistogramCountType _total_distinct_count;
 };
 
-EXPLICITLY_DECLARE_DATA_TYPES(EqualDistinctCountHistogram);
-
 }  // namespace hyrise

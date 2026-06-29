@@ -180,7 +180,6 @@ class CreateAnySegmentIterable {
   static AnySegmentIterable<T> create(const AbstractSegment& abstract_segment);
 };
 
-EXPLICITLY_DECLARE_DATA_TYPES(CreateAnySegmentIterable);
 }  // namespace detail
 
 template <typename T>

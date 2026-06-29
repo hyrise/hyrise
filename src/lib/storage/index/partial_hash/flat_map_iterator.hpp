@@ -95,6 +95,4 @@ class CreateFlatMapIterator {
       const typename tsl::sparse_map<DataType, std::vector<RowID>>::const_iterator& it);
 };
 
-EXPLICITLY_DECLARE_DATA_TYPES(CreateFlatMapIterator);
-
 }  // namespace hyrise
