@@ -16,8 +16,8 @@
 
 namespace hyrise {
 
-// Build the group-by output columns from the distinct key rows of the byte-row path. Each output value is read back out
-// of its group's representative row; long strings are copied into the segment so the key arena can be freed afterwards.
+// Build the group-by output columns from  the distinct key rows of the byte-row path. Each output value is read back out
+// of its group's row.
 pmr_vector<std::shared_ptr<AbstractSegment>> _build_groupby_segments(
     const GroupKeyData& groups, const std::vector<ColumnID>& groupby_column_ids,
     const std::shared_ptr<const Table>& input_table) {
@@ -28,8 +28,7 @@ pmr_vector<std::shared_ptr<AbstractSegment>> _build_groupby_segments(
   auto output_segments = pmr_vector<std::shared_ptr<AbstractSegment>>{};
   output_segments.reserve(group_by_column_count);
 
-  // Index of the current string column among the group-by columns. Advanced once per string column (not per row),
-  // because it selects which string-pointer slot at the end of the row to read.
+  // Index of the current string column among the group-by columns. It selects which string-pointer slot to read.
   auto string_col_index = size_t{0};
   for (auto group_by_column_index = size_t{0}; group_by_column_index < group_by_column_count; ++group_by_column_index) {
     const auto column_id = groupby_column_ids[group_by_column_index];
@@ -44,8 +43,7 @@ pmr_vector<std::shared_ptr<AbstractSegment>> _build_groupby_segments(
       for (const auto& [group_key, ticket] : groups.global_hash_table) {
         const auto row = RowView{group_key.row, row_format};
 
-        // Only nullable columns carry a null bitmap; for non-nullable ones (and when the bitmap is omitted entirely)
-        // there is nothing to read and the value is always present.
+        // Only nullable columns carry a null bitmap.
         if (column_is_nullable) {
           nulls[ticket] = (row.null_bitmap() & null_mask_bit) != 0;
           if (nulls[ticket]) {
@@ -54,8 +52,8 @@ pmr_vector<std::shared_ptr<AbstractSegment>> _build_groupby_segments(
         }
 
         if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
-          // The string column is materialized as [length, prefix] inline. Strings up to PREFIX_LENGTH bytes live
-          // entirely in the inline prefix. Longer strings additionally store a heap pointer to the full value.
+          // The string column is materialized as [length, prefix] inline. Strings up to PREFIX_LENGTH bytes are stored
+          // entirely in the prefix. Longer strings additionally store a heap pointer to the full value.
           const auto str_length = row.string_length(group_by_column_index);
           if (str_length <= PREFIX_LENGTH) {
             values[ticket] = pmr_string{row.string_prefix(group_by_column_index), str_length};
@@ -72,8 +70,7 @@ pmr_vector<std::shared_ptr<AbstractSegment>> _build_groupby_segments(
         ++string_col_index;
       }
 
-      // Match the output column's nullability: a ValueSegment carrying a null vector is itself nullable, which would
-      // violate the (non-nullable) column definition for a non-nullable group-by column.
+      // Match the output column's nullability.
       if (column_is_nullable) {
         output_segments.push_back(std::make_shared<ValueSegment<ColumnDataType>>(std::move(values), std::move(nulls)));
       } else {
@@ -202,8 +199,7 @@ std::shared_ptr<MaterializedRows> _materialize_rows(const RowFormat& format, con
 }
 
 // Fast path for a single non-string group-by column: the value itself is the key, so a typed hash map replaces the
-// row materialization, hashing, and node-based key comparison of the general path. NULL is its own group (code via the
-// `null_ticket`), matching the byte-row path. Strings stay on the general path, which already stores them compactly.
+// row materialization. NULL is its own group (via `null_ticket`).
 GroupingResult _compute_groups_single_column(const ColumnID groupby_column_id,
                                              const std::shared_ptr<const Table>& input_table) {
   auto result = GroupingResult{};
@@ -267,11 +263,12 @@ GroupingResult _compute_groups_single_column(const ColumnID groupby_column_id,
   return result;
 }
 
-// General path: materialize each row's group-by key into a packed byte row, hash it, and deduplicate via a hash table.
+// Standard path: materialize each row's group-by key into a packed row format, hash it and probe a global hash table.
 GroupingResult _compute_groups_byte_row(const std::vector<ColumnID>& groupby_column_ids,
                                         const std::shared_ptr<const Table>& input_table) {
   const auto row_format = _create_row_format(input_table->column_definitions(), groupby_column_ids);
   const auto group_key_data = std::make_shared<GroupKeyData>(row_format);
+  group_key_data->tickets.reserve(input_table->row_count());
   const auto& format = group_key_data->row_format;
   auto& arena = group_key_data->key_arena;
   const auto chunk_count = input_table->chunk_count();
