@@ -281,17 +281,13 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& table, c
   // List of all elements that will be partitioned.
   auto radix_container = RadixContainer<T>{};
 
-  // Fan-out
+  // Determine fan-out (i.e., number of radix partitions to create).
   const auto num_radix_partitions = size_t{1} << radix_bits;
-
-  // Currently, we just do one pass.
-  const auto pass = size_t{0};
-  const auto radix_mask = static_cast<size_t>(std::pow(2, radix_bits * (pass + 1)) - 1);
+  const auto radix_mask = static_cast<size_t>(std::pow(2, radix_bits) - 1);
 
   Assert(output_bloom_filter.empty(), "Unexpected non-empty output_bloom_filter.");
   output_bloom_filter.resize(BLOOM_FILTER_SIZE);
   auto output_bloom_filter_mutex = std::mutex{};
-
   Assert(input_bloom_filter.size() == BLOOM_FILTER_SIZE, "Invalid input_bloom_filter.");
 
   if (table->chunk_count() == 0) {
@@ -371,14 +367,12 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& table, c
             }
 
             if (!skip) {
-              // Fill the corresponding slot in the bloom filter
+              // Fill the corresponding slot in the bloom filter.
               used_output_bloom_filter.get()[hashed_value & BLOOM_FILTER_MASK] = true;
 
-              /*
-              For ReferenceSegments we do not use the RowIDs from the referenced tables.
-              Instead, we use the index in the ReferenceSegment itself. This way we can later correctly dereference
-              values from different inputs (important for Multi Joins).
-              */
+              // For ReferenceSegments, we do not use the RowIDs from the referenced tables. Instead, we use the index
+              // in the ReferenceSegment itself. This way we can later correctly dereference values from different
+              // inputs (important for Multi Joins).
               if constexpr (is_reference_segment_iterable_v<IterableType>) {
                 *elements_iter = PartitionedElement<T>{RowID{chunk_id, reference_chunk_offset}, value.value()};
               } else {
@@ -401,7 +395,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& table, c
             }
           }
 
-          // reference_chunk_offset is only used for ReferenceSegments
+          // `reference_chunk_offset` is only used for ReferenceSegments.
           if constexpr (is_reference_segment_iterable_v<IterableType>) {
             ++reference_chunk_offset;
           }
@@ -543,9 +537,7 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
   const auto input_partition_count = radix_container.size();
   const auto output_partition_count = size_t{1} << radix_bits;
 
-  // Currently, we just do one pass.
-  const auto pass = size_t{0};
-  const auto radix_mask = static_cast<size_t>(std::pow(2, radix_bits * (pass + 1)) - 1);
+  const size_t radix_mask = static_cast<uint32_t>(std::pow(2, radix_bits) - 1);
 
   // allocate new (shared) output
   auto output = RadixContainer<T>(output_partition_count);
@@ -575,7 +567,7 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
     }
   }
 
-  std::vector<std::shared_ptr<AbstractTask>> jobs;
+  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   jobs.reserve(input_partition_count);
 
   for (auto input_partition_idx = ChunkID{0}; input_partition_idx < input_partition_count; ++input_partition_idx) {
