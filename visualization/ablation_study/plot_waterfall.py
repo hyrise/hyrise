@@ -59,6 +59,11 @@ def _compute_cumulative_values(incremental: dict[str, float]) -> tuple[list[str]
 	return labels, deltas, cumulative
 
 
+def _stage_output_path(output_path: Path, suffix: str) -> Path:
+	"""Derive a stage-specific PDF path from the requested base path."""
+	return output_path.with_name(f"{output_path.stem}_{suffix}{output_path.suffix}")
+
+
 def _annotation_y(delta: float, top: float, bottom: float, y_span: float) -> tuple[float, str]:
 	"""Place labels outside tiny bars for readability."""
 	bar_height = abs(delta)
@@ -70,7 +75,15 @@ def _annotation_y(delta: float, top: float, bottom: float, y_span: float) -> tup
 	return (top + 0.01 * y_span, "bottom") if delta >= 0 else (bottom - 0.01 * y_span, "top")
 
 
-def _plot_waterfall_subplot(ax: plt.Axes, benchmark_name: str, incremental: dict[str, float], y_min: float, y_max: float) -> None:
+def _plot_waterfall_subplot(
+	ax: plt.Axes,
+	benchmark_name: str,
+	incremental: dict[str, float],
+	visible_steps: int,
+	show_combined: bool,
+	y_min: float,
+	y_max: float,
+) -> None:
 	"""Plot a single waterfall chart for one benchmark."""
 	labels, deltas, cumulative = _compute_cumulative_values(incremental)
 	x_pos = np.arange(len(labels))
@@ -78,6 +91,9 @@ def _plot_waterfall_subplot(ax: plt.Axes, benchmark_name: str, incremental: dict
 
 	starts = [0.0] + cumulative[:-1]
 	for i, (x, delta, start, end) in enumerate(zip(x_pos, deltas, starts, cumulative)):
+		if i >= visible_steps:
+			continue
+
 		bottom = min(start, end)
 		height = abs(delta)
 		color = IMPROVE_COLOR if delta < 0 else REGRESS_COLOR
@@ -120,37 +136,38 @@ def _plot_waterfall_subplot(ax: plt.Axes, benchmark_name: str, incremental: dict
 				zorder=4,
 			)
 
-	combined = cumulative[-1]
-	line_color = IMPROVE_COLOR if combined < 0 else REGRESS_COLOR
-	line_x_start = -0.48
-	line_x_end = x_pos[-1] + 0.29
-	ax.plot([line_x_start, line_x_end], [combined, combined], color=line_color, linestyle=(0, (4, 3)), linewidth=1.1, zorder=2)
+	if show_combined:
+		combined = cumulative[-1]
+		line_color = IMPROVE_COLOR if combined < 0 else REGRESS_COLOR
+		line_x_start = -0.48
+		line_x_end = x_pos[visible_steps - 1] + 0.29
+		ax.plot([line_x_start, line_x_end], [combined, combined], color=line_color, linestyle=(0, (4, 3)), linewidth=1.1, zorder=2)
 
-	first_intersection_left: float | None = None
-	for i, (start, end) in enumerate(zip(starts, cumulative)):
-		bar_low = min(start, end)
-		bar_high = max(start, end)
-		if bar_low - 1e-12 <= combined <= bar_high + 1e-12:
-			first_intersection_left = x_pos[i] - 0.29
-			break
+		first_intersection_left: float | None = None
+		for i, (start, end) in enumerate(zip(starts, cumulative)):
+			bar_low = min(start, end)
+			bar_high = max(start, end)
+			if bar_low - 1e-12 <= combined <= bar_high + 1e-12:
+				first_intersection_left = x_pos[i] - 0.29
+				break
 
-	if first_intersection_left is None:
-		combined_label_x = 0.5 * (line_x_start + line_x_end)
-	else:
-		combined_label_x = 0.5 * (line_x_start + first_intersection_left)
-	combined_label_y = max(y_min + 0.04 * y_span, combined - 0.06 * y_span)
-	ax.text(
-		combined_label_x,
-		combined_label_y,
-		f"Combined: {combined:+.1f}%",
-		ha="center",
-		va="top",
-		fontsize=8.9,
-		color=line_color,
-		bbox={"boxstyle": "round,pad=0.18", "facecolor": "white", "edgecolor": "none", "alpha": 0.88},
-		clip_on=True,
-		zorder=7,
-	)
+		if first_intersection_left is None:
+			combined_label_x = 0.5 * (line_x_start + line_x_end)
+		else:
+			combined_label_x = 0.5 * (line_x_start + first_intersection_left)
+		combined_label_y = max(y_min + 0.04 * y_span, combined - 0.06 * y_span)
+		ax.text(
+			combined_label_x,
+			combined_label_y,
+			f"Combined: {combined:+.1f}%",
+			ha="center",
+			va="top",
+			fontsize=8.9,
+			color=line_color,
+			bbox={"boxstyle": "round,pad=0.18", "facecolor": "white", "edgecolor": "none", "alpha": 0.88},
+			clip_on=True,
+			zorder=7,
+		)
 
 	ax.set_xlim(-0.5, len(x_pos) - 0.5)
 	ax.set_ylim(y_min, y_max)
@@ -162,8 +179,8 @@ def _plot_waterfall_subplot(ax: plt.Axes, benchmark_name: str, incremental: dict
 	ax.set_title(benchmark_name, loc="left", fontsize=11, fontweight="bold")
 
 
-def plot_ablation_waterfall(output_path: Path) -> None:
-	"""Create a 2×2 waterfall chart for all benchmarks."""
+def _plot_ablation_waterfall_stage(output_path: Path, visible_steps: int, title_suffix: str) -> None:
+	"""Create a 2×2 waterfall chart for a specific stage."""
 	plt.rcParams.update(
 		{
 			"font.family": "serif",
@@ -191,7 +208,7 @@ def plot_ablation_waterfall(output_path: Path) -> None:
 	fig, axes = plt.subplots(2, 2, figsize=(10.0, 8.0), dpi=200)
 	
 	for ax, benchmark_name in zip(axes.flat, benchmark_names):
-		_plot_waterfall_subplot(ax, benchmark_name, ABLATION_DATA[benchmark_name], y_min, y_max)
+		_plot_waterfall_subplot(ax, benchmark_name, ABLATION_DATA[benchmark_name], visible_steps, visible_steps == 3, y_min, y_max)
 	
 	# Add shared labels
 	axes[1, 0].set_xlabel("Optimization Step", fontsize=10)
@@ -213,9 +230,24 @@ def plot_ablation_waterfall(output_path: Path) -> None:
 	
 	fig.tight_layout(rect=(0.0, 0.0, 1.0, 0.97))
 	
-	fig.savefig(output_path, transparent=True)
+	fig.savefig(output_path, facecolor="white", edgecolor="white")
 	plt.close(fig)
 	print(f"Wrote {output_path}")
+
+
+def plot_ablation_waterfall(output_path: Path) -> list[Path]:
+	"""Create three stage PDFs for the ablation waterfall chart."""
+	stage_specs = [
+		(1, "blocking"),
+		(2, "blocking_selector"),
+		(3, "blocking_selector_minmax"),
+	]
+	output_paths: list[Path] = []
+	for visible_steps, suffix in stage_specs:
+		stage_output_path = _stage_output_path(output_path, suffix)
+		_plot_ablation_waterfall_stage(stage_output_path, visible_steps, suffix)
+		output_paths.append(stage_output_path)
+	return output_paths
 
 
 def main() -> None:
