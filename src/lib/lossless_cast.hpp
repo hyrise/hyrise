@@ -199,16 +199,14 @@ std::optional<Target> lossless_variant_cast(const AllTypeVariant& variant) {
   // doesn't resolve NULL)
   if constexpr (std::is_same_v<Target, NullValue>) {
     if (source_data_type == DataType::Null) {
-      result = NullValue{};
-      return result;
+      return NullValue{};
     }
   }
 
   // Safe casting between NULL and non-NULL type is not possible. (Cannot be handled below as resolve_data_type()
   // doesn't resolve NULL)
   if ((source_data_type == DataType::Null) != std::is_same_v<Target, NullValue>) {
-    // std::nullopt
-    return result;
+    return std::nullopt;
   }
 
   resolve_data_type(source_data_type, [&](auto source_data_type_t) {
