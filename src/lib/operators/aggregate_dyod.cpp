@@ -48,7 +48,7 @@ const std::string& AggregateDYOD::name() const {
   return name;
 }
 
-// Computes a single aggregate over the whole table (no group-by). Returns the value and whether it is NULL: an
+// Computes a single aggregate over the whole table (no group-by). Returns the value and whether it is NULL. An
 // aggregate over zero contributing (non-NULL) values is NULL, except COUNT which is 0.
 template <typename ColumnDataType, typename AggregateType, WindowFunction window_function>
 std::pair<AggregateType, bool> _aggregate_all_values(const std::shared_ptr<const Table>& input_table,
@@ -204,8 +204,6 @@ pmr_vector<int64_t> _count_distinct_grouped(const std::vector<uint64_t>& tickets
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto& chunk = input_table->get_chunk(chunk_id);
     const auto& aggregate_segment = chunk->get_segment(input_column_id);
-    // const auto segment_size = aggregate_segment->size();
-    // for (auto chunk_offset = ChunkOffset{0}; chunk_offset < segment_size; ++chunk_offset) {
     segment_iterate<ColumnDataType>(*aggregate_segment, [&](const auto& position) {
       if (position.is_null()) {
         ++row_index;
@@ -427,7 +425,7 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
   column_definitions.reserve(groupby_column_count + aggregate_count);
 
   // The output schema is [group-by columns..., aggregate columns...]. The group-by output columns are already built by
-  // the grouping phase; the aggregate columns are appended below.
+  // the grouping phase. The aggregate columns are appended below.
   for (const auto groupby_column_id : _groupby_column_ids) {
     column_definitions.emplace_back(input_table->column_name(groupby_column_id),
                                     input_table->column_data_type(groupby_column_id),
@@ -547,7 +545,6 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
   }
 
   auto result_table = std::make_shared<Table>(column_definitions, TableType::Data);
-  // An empty input produces no groups; a 0-row chunk must not be appended (see `Table::append_chunk`).
   if (group_count > 0) {
     result_table->append_chunk(output_segments);
   }
