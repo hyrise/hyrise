@@ -7,8 +7,10 @@
 #include <unordered_map>
 #include <vector>
 
+#include "storage/abstract_segment.hpp"
 #include "storage/chunk.hpp"
 #include "storage/table_column_definition.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 inline std::uint64_t rotl(std::uint64_t x, int r) {
@@ -236,8 +238,21 @@ struct GroupKeyData {
       : row_format(row_format), global_hash_table(0, GroupKeyHash{}, GroupKeyEqual{&this->row_format}) {}
 };
 
-// Determines the distinct groups. A group exists if any row maps to it, even if its aggregated values are all NULL or
-// its group-by key contains NULL (NULL forms its own group).
-std::shared_ptr<GroupKeyData> _compute_group_keys(const std::vector<ColumnID>& groupby_column_ids,
-                                                  const std::shared_ptr<const Table>& input_table);
+// Outcome of the grouping phase, decoupled from the internal byte-row machinery (hash table, arenas, row pointers),
+// none of which escapes `ticketing.cpp`. It carries only what the aggregate phase and the output table need.
+struct GroupingResult {
+  // PER ROW: the group index (ticket) of that input row. Used to scatter aggregate values into per-group slots.
+  std::vector<uint64_t> tickets;
+  // PER GROUP: number of input rows in the group (needed for COUNT(*)).
+  std::vector<size_t> row_counts;
+  // Number of distinct groups; also the length of every per-group output vector.
+  size_t group_count = 0;
+  // The finished group-by output columns, index-aligned with `groupby_column_ids`.
+  pmr_vector<std::shared_ptr<AbstractSegment>> groupby_segments;
+};
+
+// Determines the distinct groups and builds the group-by output columns. A group exists if any row maps to it, even if
+// its aggregated values are all NULL or its group-by key contains NULL (NULL forms its own group).
+GroupingResult _compute_groups(const std::vector<ColumnID>& groupby_column_ids,
+                               const std::shared_ptr<const Table>& input_table);
 }  // namespace hyrise
