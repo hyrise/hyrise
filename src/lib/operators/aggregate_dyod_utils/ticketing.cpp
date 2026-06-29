@@ -124,7 +124,7 @@ std::shared_ptr<MaterializedRows> _materialize_rows(const RowFormat& format, con
   const auto hash_function = std::hash<std::string_view>{};
   for (auto row_index = size_t{0}; row_index < chunk_size; ++row_index) {
     const auto row = RowView{rows + row_index * format.row_size, format};
-    row.set_hash(hash_function(row.key_bytes()));
+    row.set_hash();
   }
 
   return materialized;

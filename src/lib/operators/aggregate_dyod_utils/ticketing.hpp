@@ -4,13 +4,67 @@
 #include <cstring>
 #include <memory>
 #include <memory_resource>
-#include <string_view>
 #include <unordered_map>
 #include <vector>
 
 #include "storage/chunk.hpp"
 #include "storage/table_column_definition.hpp"
 #include "utils/assert.hpp"
+
+inline std::uint64_t rotl(std::uint64_t x, int r) {
+  return (x << r) | (x >> (64 - r));
+}
+
+inline std::uint64_t read64(const unsigned char* p) {
+  std::uint64_t v;
+  std::memcpy(&v, p, sizeof v);  // single mov, no UB
+  return v;
+}
+
+inline std::uint64_t fmix64(std::uint64_t k) {
+  k ^= k >> 33;
+  k *= 0xff51afd7ed558ccdULL;
+  k ^= k >> 33;
+  k *= 0xc4ceb9fe1a85ec53ULL;
+  k ^= k >> 33;
+  return k;
+}
+
+// Single-lane MurmurHash3-x64 body, now with a 1–7 byte tail.
+inline std::uint64_t compute_hash(const void* key, std::size_t len, std::uint64_t seed = 0) {
+  const unsigned char* p = static_cast<const unsigned char*>(key);
+  const std::size_t nblocks = len / 8;
+
+  constexpr std::uint64_t c1 = 0x87c37b91114253d5ULL;
+  constexpr std::uint64_t c2 = 0x4cf5ad432745937fULL;
+
+  std::uint64_t h = seed;
+
+  // body: full 8-byte words
+  for (std::size_t i = 0; i < nblocks; ++i) {
+    std::uint64_t k = read64(p + i * 8);
+    k *= c1;
+    k = rotl(k, 31);
+    k *= c2;
+    h ^= k;
+    h = rotl(h, 27);
+    h = h * 5 + 0x52dce729ULL;
+  }
+
+  // tail: either nothing, or exactly 4 bytes
+  if (len & 4) {
+    std::uint32_t t;
+    std::memcpy(&t, p + nblocks * 8, 4);  // single 32-bit load, no UB
+    std::uint64_t k = t;
+    k *= c1;
+    k = rotl(k, 31);
+    k *= c2;
+    h ^= k;
+    // no h = rotl/h*5+const here, matching MurmurHash3's tail
+  }
+
+  return fmix64(h);  // avalanche
+}
 
 namespace hyrise {
 
@@ -48,7 +102,8 @@ struct RowView {
     return *reinterpret_cast<const uint64_t*>(base + format.hash_offset);
   }
 
-  void set_hash(const uint64_t value) const {
+  void set_hash() const {
+    const auto value = compute_hash(key_bytes(), format.string_ptr_offset - format.null_bitmap_offset);
     *reinterpret_cast<uint64_t*>(base + format.hash_offset) = value;
   }
 
@@ -101,9 +156,8 @@ struct RowView {
 
   // The bytes that participate in hashing and equality: the null bitmap plus the inline key data (length + prefix
   // for strings). Independent of the stored hash and the heap string pointers.
-  std::string_view key_bytes() const {
-    return {reinterpret_cast<const char*>(base + format.null_bitmap_offset),
-            format.string_ptr_offset - format.null_bitmap_offset};
+  const uint8_t* key_bytes() const {
+    return reinterpret_cast<const uint8_t*>(base + format.null_bitmap_offset);
   }
 
   size_t string_col_count() const {
@@ -143,7 +197,8 @@ struct GroupKeyEqual {
     const auto rhs_view = RowView{rhs.row, *format};
 
     // Compare the null bitmap and inline key data in one shot.
-    if (lhs_view.key_bytes() != rhs_view.key_bytes()) {
+    if (std::memcmp(lhs_view.key_bytes(), rhs_view.key_bytes(),
+                    format->string_ptr_offset - format->null_bitmap_offset)) {
       return false;
     }
 
