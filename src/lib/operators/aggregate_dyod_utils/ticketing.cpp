@@ -5,12 +5,82 @@
 #include <functional>
 #include <memory>
 #include <type_traits>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
+#include "resolve_type.hpp"
 #include "storage/segment_iterate.hpp"
+#include "storage/table.hpp"
+#include "storage/value_segment.hpp"
 
 namespace hyrise {
+
+// Build the group-by output columns from  the distinct key rows of the byte-row path. Each output value is read back out
+// of its group's row.
+pmr_vector<std::shared_ptr<AbstractSegment>> _build_groupby_segments(
+    const GroupKeyData& groups, const std::vector<ColumnID>& groupby_column_ids,
+    const std::shared_ptr<const Table>& input_table) {
+  const auto& row_format = groups.row_format;
+  const auto group_count = groups.global_hash_table.size();
+  const auto group_by_column_count = groupby_column_ids.size();
+
+  auto output_segments = pmr_vector<std::shared_ptr<AbstractSegment>>{};
+  output_segments.reserve(group_by_column_count);
+
+  // Index of the current string column among the group-by columns. It selects which string-pointer slot to read.
+  auto string_col_index = size_t{0};
+  for (auto group_by_column_index = size_t{0}; group_by_column_index < group_by_column_count; ++group_by_column_index) {
+    const auto column_id = groupby_column_ids[group_by_column_index];
+    const auto data_type = input_table->column_data_type(column_id);
+    const auto column_is_nullable = input_table->column_is_nullable(column_id);
+    resolve_data_type(data_type, [&](const auto data_type_t) {
+      using ColumnDataType = typename decltype(data_type_t)::type;
+      auto values = pmr_vector<ColumnDataType>(group_count);
+      auto nulls = pmr_vector<bool>(group_count, false);
+
+      const auto null_mask_bit = uint64_t{1} << group_by_column_index;
+      for (const auto& [group_key, ticket] : groups.global_hash_table) {
+        const auto row = RowView{group_key.row, row_format};
+
+        // Only nullable columns carry a null bitmap.
+        if (column_is_nullable) {
+          nulls[ticket] = (row.null_bitmap() & null_mask_bit) != 0;
+          if (nulls[ticket]) {
+            continue;
+          }
+        }
+
+        if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
+          // The string column is materialized as [length, prefix] inline. Strings up to PREFIX_LENGTH bytes are stored
+          // entirely in the prefix. Longer strings additionally store a heap pointer to the full value.
+          const auto str_length = row.string_length(group_by_column_index);
+          if (str_length <= PREFIX_LENGTH) {
+            values[ticket] = pmr_string{row.string_prefix(group_by_column_index), str_length};
+          } else {
+            // The string is copied into the segment, so the row owning the pointer can be freed afterwards.
+            values[ticket] = pmr_string{row.string_ptr(string_col_index)};
+          }
+        } else {
+          values[ticket] = row.read_value<ColumnDataType>(group_by_column_index);
+        }
+      }
+
+      if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
+        ++string_col_index;
+      }
+
+      // Match the output column's nullability.
+      if (column_is_nullable) {
+        output_segments.push_back(std::make_shared<ValueSegment<ColumnDataType>>(std::move(values), std::move(nulls)));
+      } else {
+        output_segments.push_back(std::make_shared<ValueSegment<ColumnDataType>>(std::move(values)));
+      }
+    });
+  }
+
+  return output_segments;
+}
 
 RowFormat _create_row_format(const TableColumnDefinitions& column_definitions,
                              const std::vector<ColumnID>& groupby_column_ids) {
@@ -128,10 +198,77 @@ std::shared_ptr<MaterializedRows> _materialize_rows(const RowFormat& format, con
   return materialized;
 }
 
-std::shared_ptr<GroupKeyData> _compute_group_keys(const std::vector<ColumnID>& groupby_column_ids,
-                                                  const std::shared_ptr<const Table>& input_table) {
+// Fast path for a single non-string group-by column: the value itself is the key, so a typed hash map replaces the
+// row materialization. NULL is its own group (via `null_ticket`).
+GroupingResult _compute_groups_single_column(const ColumnID groupby_column_id,
+                                             const std::shared_ptr<const Table>& input_table) {
+  auto result = GroupingResult{};
+  result.tickets.reserve(input_table->row_count());
+
+  const auto data_type = input_table->column_data_type(groupby_column_id);
+  const auto column_is_nullable = input_table->column_is_nullable(groupby_column_id);
+  const auto chunk_count = input_table->chunk_count();
+
+  resolve_data_type(data_type, [&](const auto data_type_t) {
+    using ColumnDataType = typename decltype(data_type_t)::type;
+    if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
+      Fail("The single-column fast path is not used for string columns.");
+    } else {
+      auto value_to_ticket = std::unordered_map<ColumnDataType, uint32_t>{};
+      auto null_ticket = uint32_t{0};
+      auto has_null = false;
+
+      // Representative value per group, used to build the output column. The NULL group's slot is never read.
+      auto group_values = pmr_vector<ColumnDataType>{};
+      auto group_nulls = pmr_vector<bool>{};
+
+      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+        const auto& segment = input_table->get_chunk(chunk_id)->get_segment(groupby_column_id);
+        segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
+          auto ticket = uint32_t{0};
+          if (position.is_null()) {
+            if (!has_null) {
+              has_null = true;
+              null_ticket = static_cast<uint32_t>(group_values.size());
+              group_values.emplace_back();
+              group_nulls.push_back(true);
+              result.row_counts.push_back(0);
+            }
+            ticket = null_ticket;
+          } else {
+            const auto [iter, inserted] =
+                value_to_ticket.try_emplace(position.value(), static_cast<uint32_t>(group_values.size()));
+            if (inserted) {
+              group_values.push_back(position.value());
+              group_nulls.push_back(false);
+              result.row_counts.push_back(0);
+            }
+            ticket = iter->second;
+          }
+          ++result.row_counts[ticket];
+          result.tickets.push_back(ticket);
+        });
+      }
+
+      result.group_count = group_values.size();
+      if (column_is_nullable) {
+        result.groupby_segments.push_back(
+            std::make_shared<ValueSegment<ColumnDataType>>(std::move(group_values), std::move(group_nulls)));
+      } else {
+        result.groupby_segments.push_back(std::make_shared<ValueSegment<ColumnDataType>>(std::move(group_values)));
+      }
+    }
+  });
+
+  return result;
+}
+
+// Standard path: materialize each row's group-by key into a packed row format, hash it and probe a global hash table.
+GroupingResult _compute_groups_byte_row(const std::vector<ColumnID>& groupby_column_ids,
+                                        const std::shared_ptr<const Table>& input_table) {
   const auto row_format = _create_row_format(input_table->column_definitions(), groupby_column_ids);
   const auto group_key_data = std::make_shared<GroupKeyData>(row_format);
+  group_key_data->tickets.reserve(input_table->row_count());
   const auto& format = group_key_data->row_format;
   auto& arena = group_key_data->key_arena;
   const auto chunk_count = input_table->chunk_count();
@@ -176,7 +313,24 @@ std::shared_ptr<GroupKeyData> _compute_group_keys(const std::vector<ColumnID>& g
       row_ptr += format.row_size;
     }
   }
-  return group_key_data;
+
+  // Build the group-by output columns while the key rows (and the arena backing their long strings) are still alive,
+  // then hand back only the slim result; `GroupKeyData` does not escape this function.
+  auto result = GroupingResult{};
+  result.group_count = group_key_data->global_hash_table.size();
+  result.groupby_segments = _build_groupby_segments(*group_key_data, groupby_column_ids, input_table);
+  result.tickets = std::move(group_key_data->tickets);
+  result.row_counts = std::move(group_key_data->row_counts);
+  return result;
+}
+
+GroupingResult _compute_groups(const std::vector<ColumnID>& groupby_column_ids,
+                               const std::shared_ptr<const Table>& input_table) {
+  if (groupby_column_ids.size() == 1 &&
+      input_table->column_data_type(groupby_column_ids[0]) != DataType::String) {
+    return _compute_groups_single_column(groupby_column_ids[0], input_table);
+  }
+  return _compute_groups_byte_row(groupby_column_ids, input_table);
 }
 
 }  // namespace hyrise

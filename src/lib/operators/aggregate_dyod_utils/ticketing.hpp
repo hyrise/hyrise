@@ -7,8 +7,10 @@
 #include <unordered_map>
 #include <vector>
 
+#include "storage/abstract_segment.hpp"
 #include "storage/chunk.hpp"
 #include "storage/table_column_definition.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 inline std::uint64_t rotl(std::uint64_t x, int r) {
@@ -68,15 +70,14 @@ inline std::uint64_t compute_hash(const void* key, std::size_t len, std::uint64_
 
 namespace hyrise {
 
-// Number of leading string bytes stored inline in a row. Strings up to this length live entirely inline
-// (length + prefix). Longer strings additionally store a heap pointer to the full value at the end of the row.
+// Number of leading string bytes stored inline in a row.
 constexpr uint64_t PREFIX_LENGTH = 8;
 
 // Byte layout of a single materialized group-by row:
 //   [hash | null bitmap? | inline column data ... | string pointers ...]
 // `col_offsets` are relative to `data_offset`. String columns store `[length, prefix]` inline. Longer strings
 // additionally store a heap pointer in the string-pointer area at the end of the row. The null bitmap is only present
-// when at least one group-by column is nullable (`stores_nulls`); otherwise it is omitted and the rows are 8 bytes
+// when at least one group-by column is nullable (`stores_nulls`). Otherwise it is omitted and the rows are 8 bytes
 // shorter. When it is absent, `null_bitmap_offset == data_offset`, so `key_bytes()` naturally starts at the data.
 struct RowFormat {
   uint64_t row_size;                                             // Size of a single row in bytes
@@ -93,7 +94,6 @@ RowFormat _create_row_format(const TableColumnDefinitions& column_definitions,
                              const std::vector<ColumnID>& groupby_column_ids);
 
 // Non-owning view on a single materialized row. It helps interpreting the byte layout.
-// Copying a `RowView` is cheap because it never owns the underlying bytes.
 struct RowView {
   uint8_t* base;
   const RowFormat& format;
@@ -117,7 +117,6 @@ struct RowView {
     *reinterpret_cast<uint64_t*>(base + format.null_bitmap_offset) = value;
   }
 
-  // Address of the inline data of group-by column `group_index` (index into `groupby_column_ids`).
   uint8_t* column_data(const size_t group_index) const {
     return base + format.data_offset + format.col_offsets[group_index];
   }
@@ -134,7 +133,6 @@ struct RowView {
     std::memcpy(column_data(group_index), &value, sizeof(T));
   }
 
-  // Inline string representation: a `size_t` length followed by up to `PREFIX_LENGTH` prefix bytes.
   size_t string_length(const size_t group_index) const {
     auto length = size_t{0};
     std::memcpy(&length, column_data(group_index), sizeof(size_t));
@@ -165,8 +163,8 @@ struct RowView {
   }
 };
 
-// All materialized rows of a single chunk, packed back-to-back in `rows`. Long group-by strings referenced by those
-// rows live in `string_arena` and are freed together with this object once the chunk has been processed.
+// All materialized rows of a single chunk, packed in `rows`. Long group-by strings referenced by those rows live in 
+// `string_arena`.
 struct MaterializedRows {
   uint64_t row_count = 0;
   std::unique_ptr<uint8_t[]> rows;
@@ -176,8 +174,8 @@ struct MaterializedRows {
 std::shared_ptr<MaterializedRows> _materialize_rows(const RowFormat& format, const std::shared_ptr<const Chunk>& chunk,
                                                     const std::vector<ColumnID>& groupby_column_ids);
 
-// Non-owning key into the global hash table. `row` points into the arena owned by `GroupKeyData`. `hash` is the
-// precomputed row hash, reused on every probe instead of recomputing it.
+// Key into the global hash table. `row` points into the arena owned by `GroupKeyData`. `hash` is the precomputed row
+// hash, reused on every probe instead of recomputing it.
 struct GroupKey {
   uint8_t* row;
   uint64_t hash;
@@ -202,8 +200,7 @@ struct GroupKeyEqual {
       return false;
     }
 
-    // Long strings share length and prefix here, so they need a full comparison via their heap pointers. Short strings
-    // (<= PREFIX_LENGTH) are fully represented inline and were already compared above; they carry no heap pointer.
+    // Long strings need a full comparison via their heap pointers.
     const auto string_col_count = lhs_view.string_col_count();
     for (auto string_col_index = size_t{0}; string_col_index < string_col_count; ++string_col_index) {
       const auto* lhs_str = lhs_view.string_ptr(string_col_index);
@@ -222,10 +219,8 @@ struct GroupKeyEqual {
 
 struct GroupKeyData {
   RowFormat row_format;
-  // Owns the copied distinct key rows and their long strings. Is freed when this object is destroyed.
+  // Owns the copied distinct key rows and their long strings.
   std::pmr::monotonic_buffer_resource key_arena;
-
-  // Maps a group key to its index in the output vectors
   std::unordered_map<GroupKey, uint64_t, GroupKeyHash, GroupKeyEqual> global_hash_table;
   std::vector<size_t> row_counts;
 
@@ -236,8 +231,19 @@ struct GroupKeyData {
       : row_format(row_format), global_hash_table(0, GroupKeyHash{}, GroupKeyEqual{&this->row_format}) {}
 };
 
-// Determines the distinct groups. A group exists if any row maps to it, even if its aggregated values are all NULL or
-// its group-by key contains NULL (NULL forms its own group).
-std::shared_ptr<GroupKeyData> _compute_group_keys(const std::vector<ColumnID>& groupby_column_ids,
-                                                  const std::shared_ptr<const Table>& input_table);
+// Outcome of the grouping phase. Carries only what the aggregate phase and the output table need.
+struct GroupingResult {
+  // PER ROW: the group index (ticket) of that input row. Used to scatter aggregate values into per-group slots.
+  std::vector<uint64_t> tickets;
+  // PER GROUP: number of input rows in the group (needed for COUNT(*)).
+  std::vector<size_t> row_counts;
+
+  size_t group_count = 0;
+  // The finished group-by output columns, index-aligned with `groupby_column_ids`.
+  pmr_vector<std::shared_ptr<AbstractSegment>> groupby_segments;
+};
+
+// Determines the distinct groups and builds the group-by output columns.
+GroupingResult _compute_groups(const std::vector<ColumnID>& groupby_column_ids,
+                               const std::shared_ptr<const Table>& input_table);
 }  // namespace hyrise
