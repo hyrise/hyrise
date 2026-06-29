@@ -120,8 +120,6 @@ std::shared_ptr<MaterializedRows> _materialize_rows(const RowFormat& format, con
   }
 
   // Compute and store the hash of each row's key bytes once; it is reused on every hash-table probe.
-  // TODO(@forUnity): use a real hash function here (instead of this 'hacky' solution)
-  const auto hash_function = std::hash<std::string_view>{};
   for (auto row_index = size_t{0}; row_index < chunk_size; ++row_index) {
     const auto row = RowView{rows + row_index * format.row_size, format};
     row.set_hash();
