@@ -70,20 +70,22 @@ inline std::uint64_t compute_hash(const void* key, std::size_t len, std::uint64_
 
 namespace hyrise {
 
+// Target number of groups per output chunk. The grouped output columns are split into chunks of this size.
+constexpr auto TARGET_CHUNK_SIZE = Chunk::DEFAULT_SIZE;
+
 // Number of leading string bytes stored inline in a row.
 constexpr uint64_t PREFIX_LENGTH = 8;
 
 // Byte layout of a single materialized group-by row:
-//   [hash | null bitmap? | inline column data ... | string pointers ...]
+//   [null bitmap? | inline column data ... | string pointers ...]
 // `col_offsets` are relative to `data_offset`. String columns store `[length, prefix]` inline. Longer strings
 // additionally store a heap pointer in the string-pointer area at the end of the row. The null bitmap is only present
 // when at least one group-by column is nullable (`stores_nulls`). Otherwise it is omitted and the rows are 8 bytes
 // shorter. When it is absent, `null_bitmap_offset == data_offset`, so `key_bytes()` naturally starts at the data.
 struct RowFormat {
   uint64_t row_size;                                             // Size of a single row in bytes
-  uint64_t hash_offset = 0;                                      // Offset of the hash in a single row
-  uint64_t null_bitmap_offset = hash_offset + sizeof(uint64_t);  // Skip the hash
-  uint64_t data_offset = null_bitmap_offset + sizeof(uint64_t);  // Skip the hash and the null bitmap
+  uint64_t null_bitmap_offset = 0;                               // Offset of the null bitmap in a single row
+  uint64_t data_offset = null_bitmap_offset + sizeof(uint64_t);  // Skip the null bitmap
   uint64_t string_ptr_offset = data_offset;                      // Offsets of the string pointers at the end of the row
   bool stores_nulls = true;                                      // Whether a null bitmap is present in each row
   std::vector<uint64_t> col_offsets;                             // Offsets of the columns relative to `data_offset`
@@ -97,15 +99,6 @@ RowFormat _create_row_format(const TableColumnDefinitions& column_definitions,
 struct RowView {
   uint8_t* base;
   const RowFormat& format;
-
-  uint64_t hash() const {
-    return *reinterpret_cast<const uint64_t*>(base + format.hash_offset);
-  }
-
-  void set_hash() const {
-    const auto value = compute_hash(key_bytes(), format.string_ptr_offset - format.null_bitmap_offset);
-    *reinterpret_cast<uint64_t*>(base + format.hash_offset) = value;
-  }
 
   uint64_t null_bitmap() const {
     DebugAssert(format.stores_nulls, "Row has no null bitmap (no group-by column is nullable).");
@@ -222,7 +215,6 @@ struct GroupKeyData {
   // Owns the copied distinct key rows and their long strings.
   std::pmr::monotonic_buffer_resource key_arena;
   std::unordered_map<GroupKey, uint64_t, GroupKeyHash, GroupKeyEqual> global_hash_table;
-  std::vector<size_t> row_counts;
 
   // PER ROW: ticket for this specific group key (index into `keys` and the output vectors)
   std::vector<uint64_t> tickets;
@@ -235,8 +227,6 @@ struct GroupKeyData {
 struct GroupingResult {
   // PER ROW: the group index (ticket) of that input row. Used to scatter aggregate values into per-group slots.
   std::vector<uint64_t> tickets;
-  // PER GROUP: number of input rows in the group (needed for COUNT(*)).
-  std::vector<size_t> row_counts;
 
   size_t group_count = 0;
   // The finished group-by output columns, index-aligned with `groupby_column_ids`.
