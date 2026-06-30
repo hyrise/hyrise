@@ -136,6 +136,12 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
     _aggregate_chunk(chunk);
   }
 
+  // SQL requires a single output row if the input table is empty and there is no GROUP BY clause.
+  // We ensure this by inserting a single group into the ticket table before writing the output table.
+  if (_ticket_table.empty() && _groupby_column_ids.empty()) {
+    _get_ticket(GroupKey{});
+  }
+
   return _write_output_table();
 }
 
