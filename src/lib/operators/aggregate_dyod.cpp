@@ -159,6 +159,9 @@ void AggregateDYOD::_resolve_aggregate_data_types() {
         case WindowFunction::Sum:
           _aggregate_data_types.emplace_back(WindowFunctionTraits<ColumnDataType, WindowFunction::Sum>::RESULT_TYPE);
           break;
+        case WindowFunction::Count:
+          _aggregate_data_types.emplace_back(WindowFunctionTraits<ColumnDataType, WindowFunction::Count>::RESULT_TYPE);
+          break;
         default:
           Fail("Unsupported aggregate function.");
       }
@@ -250,6 +253,7 @@ std::shared_ptr<AbstractSegment> AggregateDYOD::_write_groupby_segment(size_t gr
 
 template <typename AggregateDataType>
 std::shared_ptr<AbstractSegment> AggregateDYOD::_write_aggregate_segment(size_t aggregate_index) {
+  auto const aggregate_function = _aggregates[aggregate_index]->window_function;
   auto& aggregate_vector = static_cast<TypedAggregateVector<AggregateDataType>&>(*_aggregate_vectors[aggregate_index]);
 
   if (_aggregate_is_nullable(aggregate_index)) {
@@ -262,6 +266,15 @@ std::shared_ptr<AbstractSegment> AggregateDYOD::_write_aggregate_segment(size_t 
     }
     return std::make_shared<ValueSegment<AggregateDataType>>(std::move(aggregate_vector.values()),
                                                              std::move(null_values));
+  }
+
+  if (aggregate_function == WindowFunction::Count) {
+    if constexpr (std::is_same_v<AggregateDataType, int64_t>) {
+      const auto& counts = aggregate_vector.counts();
+      auto values = pmr_vector<AggregateDataType>(counts.begin(), counts.end());
+      return std::make_shared<ValueSegment<AggregateDataType>>(std::move(values));
+    }
+    Fail("Invalid AggregateDataType for COUNT aggregation.");
   }
 
   return std::make_shared<ValueSegment<AggregateDataType>>(std::move(aggregate_vector.values()));
@@ -311,6 +324,9 @@ void AggregateDYOD::_aggregate_chunk(const std::shared_ptr<const Chunk> chunk) {
           break;
         case WindowFunction::Sum:
           _aggregate_segment<ColumnDataType, WindowFunction::Sum>(aggregate_index, *segment, tickets);
+          break;
+        case WindowFunction::Count:
+          _aggregate_segment<ColumnDataType, WindowFunction::Count>(aggregate_index, *segment, tickets);
           break;
         default:
           Fail("Unsupported aggregate function.");

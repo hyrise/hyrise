@@ -39,8 +39,16 @@ class AbstractAggregateVector {
     _counts[index]++;
   }
 
+  std::vector<size_t>& counts() {
+    return _counts;
+  }
+
+  const std::vector<size_t>& counts() const {
+    return _counts;
+  }
+
  protected:
-  pmr_vector<size_t> _counts;
+  std::vector<size_t> _counts;
 };
 
 template <typename AggregateDataType>
