@@ -136,7 +136,7 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
     _aggregate_chunk(chunk);
   }
 
-  return _create_output_table();
+  return _write_output_table();
 }
 
 void AggregateDYOD::_resolve_aggregate_data_types() {
@@ -166,7 +166,7 @@ void AggregateDYOD::_resolve_aggregate_data_types() {
   }
 }
 
-std::shared_ptr<Table> AggregateDYOD::_create_output_table() {
+std::shared_ptr<Table> AggregateDYOD::_write_output_table() {
   const auto input_table = left_input_table();
   auto column_definitions = TableColumnDefinitions();
 
@@ -197,7 +197,7 @@ std::shared_ptr<Table> AggregateDYOD::_create_output_table() {
 
     resolve_data_type(data_type, [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
-      segments.push_back(_create_groupby_segment<ColumnDataType>(groupby_column_index));
+      segments.push_back(_write_groupby_segment<ColumnDataType>(groupby_column_index));
     });
   }
 
@@ -205,7 +205,7 @@ std::shared_ptr<Table> AggregateDYOD::_create_output_table() {
   for (auto aggregate_index = size_t{0}; aggregate_index < aggregate_count; ++aggregate_index) {
     resolve_data_type(_aggregate_data_types[aggregate_index], [&](auto type) {
       using AggregateDataType = typename decltype(type)::type;
-      segments.push_back(_create_aggregate_segment<AggregateDataType>(aggregate_index));
+      segments.push_back(_write_aggregate_segment<AggregateDataType>(aggregate_index));
     });
   }
 
@@ -216,7 +216,7 @@ std::shared_ptr<Table> AggregateDYOD::_create_output_table() {
 }
 
 template <typename ColumnDataType>
-std::shared_ptr<AbstractSegment> AggregateDYOD::_create_groupby_segment(size_t groupby_column_index) {
+std::shared_ptr<AbstractSegment> AggregateDYOD::_write_groupby_segment(size_t groupby_column_index) {
   const auto input_table = left_input_table();
   const auto column_id = _groupby_column_ids[groupby_column_index];
   const auto is_nullable = input_table->column_is_nullable(column_id);
@@ -251,7 +251,7 @@ std::shared_ptr<AbstractSegment> AggregateDYOD::_create_groupby_segment(size_t g
 }
 
 template <typename AggregateDataType>
-std::shared_ptr<AbstractSegment> AggregateDYOD::_create_aggregate_segment(size_t aggregate_index) {
+std::shared_ptr<AbstractSegment> AggregateDYOD::_write_aggregate_segment(size_t aggregate_index) {
   auto& aggregate_vector = static_cast<TypedAggregateVector<AggregateDataType>&>(*_aggregate_vectors[aggregate_index]);
   const auto& aggregate = _aggregates[aggregate_index];
   const auto aggregate_function = aggregate->window_function;
