@@ -85,10 +85,14 @@ struct DYODAggregateResult {
   // changing data types.
 };
 
+// empty base class for DYODAggregateResultContext
+class DYODSegmentVisitorContext {};
+
 // This vector holds the results for every group that was encountered and is indexed by DYODAggregateResultId.
 template <typename ColumnDataType, WindowFunction aggregate_function>
 using DYODAggregateResults = pmr_vector<DYODAggregateResult<ColumnDataType, aggregate_function>>;
 using DYODAggregateResultId = size_t;
+using ContextsPerColumn = std::vector<std::shared_ptr<DYODSegmentVisitorContext>>;
 
 // The DYODAggregateResultIdMap maps AggregateKeys to their index in the list of aggregate results.
 template <typename AggregateKey>
@@ -124,9 +128,6 @@ using AggregateKeys =
 template <typename AggregateKey>
 using KeysPerChunk = pmr_vector<AggregateKeys<AggregateKey>>;
 
-// empty base class for DYODAggregateResultContext
-class DYODSegmentVisitorContext {};
-
 /**
  * Types that are used for the special COUNT(*) and DISTINCT implementations
  */
@@ -155,11 +156,13 @@ class AggregateDYOD : public AbstractAggregateOperator {
   std::shared_ptr<const Table> _on_execute() override;
 
   template <typename AggregateKey>
-  KeysPerChunk<AggregateKey> _partition_by_groupby_keys();
+  KeysPerChunk<AggregateKey> _partition_by_groupby_keys(const std::shared_ptr<const Table>& input_table);
 
   template <typename AggregateKey>
-  void _aggregate(std::vector<std::shared_ptr<DYODSegmentVisitorContext>>& contexts_per_column,
-                  std::shared_ptr<const Table> input_table);
+  void _aggregate(ContextsPerColumn& contexts_per_column, const std::shared_ptr<const Table>& input_table);
+
+  template <typename ColumnDataType, WindowFunction aggregate_function>
+  void _merge_contexts(ColumnID aggregate_index, const std::vector<ContextsPerColumn>& _contexts_per_column_per_thread);
 
   template <typename AggregateKey>
   void _partition_and_aggregate();
@@ -180,8 +183,7 @@ class AggregateDYOD : public AbstractAggregateOperator {
 
   template <typename ColumnDataType, WindowFunction aggregate_function, typename AggregateKey>
   void _aggregate_segment(ChunkID chunk_id, ColumnID column_index, const AbstractSegment& abstract_segment,
-                          KeysPerChunk<AggregateKey>& keys_per_chunk,
-                          std::vector<std::shared_ptr<DYODSegmentVisitorContext>>& contexts_per_column);
+                          KeysPerChunk<AggregateKey>& keys_per_chunk, ContextsPerColumn& contexts_per_column);
 
   template <typename AggregateKey>
   std::shared_ptr<DYODSegmentVisitorContext> _create_aggregate_context(const DataType data_type,
@@ -193,7 +195,7 @@ class AggregateDYOD : public AbstractAggregateOperator {
   std::vector<Segments> _intermediate_result;
 
   std::vector<std::shared_ptr<BaseValueSegment>> _groupby_segments;
-  std::vector<std::shared_ptr<DYODSegmentVisitorContext>> _contexts_per_column;
+  ContextsPerColumn _contexts_per_column;
   bool _has_aggregate_functions;
 
   std::atomic_size_t _expected_result_size;
