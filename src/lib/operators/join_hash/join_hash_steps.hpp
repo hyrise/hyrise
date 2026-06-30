@@ -286,23 +286,20 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& table, c
   const auto radix_mask = static_cast<size_t>(std::pow(2, radix_bits) - 1);
 
   Assert(output_bloom_filter.empty(), "Unexpected non-empty output_bloom_filter.");
-  output_bloom_filter.resize(BLOOM_FILTER_SIZE);
-  auto output_bloom_filter_mutex = std::mutex{};
   Assert(input_bloom_filter.size() == BLOOM_FILTER_SIZE, "Invalid input_bloom_filter.");
 
   if (table->chunk_count() == 0) {
-    // We cannot exit before resizing the input bloom filter.
+    output_bloom_filter.resize(BLOOM_FILTER_SIZE);
     return radix_container;
   }
 
+  auto bloom_filters = std::vector<BloomFilter>{};
+
   const auto [jobs, _] = batch_chunks_for_scheduling(table, [&](size_t group_id, const std::span<ChunkID> chunk_ids) {
-    auto local_output_bloom_filter = BloomFilter{};
-    std::reference_wrapper<BloomFilter> used_output_bloom_filter = output_bloom_filter;
-    if (Hyrise::get().is_multi_threaded()) {
-      // We cannot write to BloomFilter concurrently, so we build a local one first.
-      local_output_bloom_filter = BloomFilter(BLOOM_FILTER_SIZE, false);
-      used_output_bloom_filter = local_output_bloom_filter;
-    }
+    // For the first group (the only one when single-threaded), we directly use the output filter. For all other groups,
+    // we use local ones that are later merged into the output filter.
+    auto& local_bloom_filter = (group_id == 0) ? output_bloom_filter : bloom_filters[group_id - 1];
+    local_bloom_filter.resize(BLOOM_FILTER_SIZE);
 
     // Gather shared pointers to chunks (ensure their lifetime) and overall row count for chunks to process.
     auto row_count = int64_t{0};
@@ -330,7 +327,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& table, c
     auto elements_iter = elements.begin();
     [[maybe_unused]] auto null_values_iter = null_values.begin();
 
-    // prepare histogram
+    // Prepare histogram.
     auto histogram = std::vector<size_t>(num_radix_partitions);
 
     for (const auto& [chunk_id, chunk] : chunks) {
@@ -368,7 +365,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& table, c
 
             if (!skip) {
               // Fill the corresponding slot in the bloom filter.
-              used_output_bloom_filter.get()[hashed_value & BLOOM_FILTER_MASK] = true;
+              local_bloom_filter[hashed_value & BLOOM_FILTER_MASK] = true;
 
               // For ReferenceSegments, we do not use the RowIDs from the referenced tables. Instead, we use the index
               // in the ReferenceSegment itself. This way we can later correctly dereference values from different
@@ -411,13 +408,9 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& table, c
     null_values.resize(std::distance(null_values.begin(), null_values_iter));
 
     histograms[group_id] = std::move(histogram);
-
-    if (Hyrise::get().is_multi_threaded()) {
-      // Merge the local_output_bloom_filter into output_bloom_filter
-      const auto lock = std::lock_guard<std::mutex>{output_bloom_filter_mutex};
-      output_bloom_filter |= local_output_bloom_filter;
-    }
   });
+
+
 
   const auto group_count = jobs.size();
 
@@ -426,7 +419,15 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& table, c
   // large number of jobs to keep all workers busy.
   histograms.resize(group_count);
   radix_container.resize(group_count);
+  bloom_filters.resize(group_count - 1);  // The first group uses the output bloom filter.
+  output_bloom_filter.resize(BLOOM_FILTER_SIZE);
+
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+
+
+  for (const auto& bloom_filter : bloom_filters) {
+    output_bloom_filter |= bloom_filter;
+  }
 
   return radix_container;
 }
