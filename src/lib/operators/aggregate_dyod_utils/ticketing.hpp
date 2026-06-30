@@ -70,6 +70,9 @@ inline std::uint64_t compute_hash(const void* key, std::size_t len, std::uint64_
 
 namespace hyrise {
 
+// Target number of groups per output chunk. The grouped output columns are split into chunks of this size.
+constexpr auto TARGET_CHUNK_SIZE = Chunk::DEFAULT_SIZE;
+
 // Number of leading string bytes stored inline in a row.
 constexpr uint64_t PREFIX_LENGTH = 8;
 

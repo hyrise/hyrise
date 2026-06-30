@@ -33,6 +33,7 @@
 #include "storage/chunk.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/table.hpp"
+#include "storage/value_segment.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -290,6 +291,56 @@ std::pair<pmr_vector<double>, pmr_vector<bool>> _standard_deviation_sample_group
   return {std::move(values), std::move(nulls)};
 }
 
+// Copies the half-open group range [begin, begin + length) of a full-length output column (one `ValueSegment` holding
+// every group) into a new, chunk-sized `ValueSegment` of the same data type and nullability. The source range is read
+// only, so slices of the same column for different chunks are independent.
+std::shared_ptr<AbstractSegment> _slice_column(const AbstractSegment& column, const size_t begin, const size_t length) {
+  auto slice = std::shared_ptr<AbstractSegment>{};
+  resolve_data_type(column.data_type(), [&](const auto data_type_t) {
+    using ColumnDataType = typename decltype(data_type_t)::type;
+    const auto& value_segment = static_cast<const ValueSegment<ColumnDataType>&>(column);
+
+    const auto& values = value_segment.values();
+    auto chunk_values = pmr_vector<ColumnDataType>(values.begin() + begin, values.begin() + begin + length);
+
+    if (value_segment.is_nullable()) {
+      const auto& nulls = value_segment.null_values();
+      auto chunk_nulls = pmr_vector<bool>(nulls.begin() + begin, nulls.begin() + begin + length);
+      slice = std::make_shared<ValueSegment<ColumnDataType>>(std::move(chunk_values), std::move(chunk_nulls));
+    } else {
+      slice = std::make_shared<ValueSegment<ColumnDataType>>(std::move(chunk_values));
+    }
+  });
+  return slice;
+}
+
+// Splits the full-length output columns (one `ValueSegment` per column, each holding all `group_count` groups) into
+// TARGET_CHUNK_SIZE-sized chunks, returning one segment list per output chunk ready for `Table::append_chunk`.
+//
+// Every (chunk, column) slice is produced from a disjoint, read-only input range and written to its own output slot, so
+// the nested loop carries no cross-iteration dependencies: once we go multi-threaded it can be dispatched to a
+// threadpool over output chunks (the outer loop) without any synchronization.
+std::vector<pmr_vector<std::shared_ptr<AbstractSegment>>> _split_into_chunks(
+    const pmr_vector<std::shared_ptr<AbstractSegment>>& columns, const size_t group_count) {
+  const auto column_count = columns.size();
+  const auto output_chunk_count = (group_count + TARGET_CHUNK_SIZE - 1) / TARGET_CHUNK_SIZE;
+
+  auto output_chunks = std::vector<pmr_vector<std::shared_ptr<AbstractSegment>>>(
+      output_chunk_count, pmr_vector<std::shared_ptr<AbstractSegment>>(column_count));
+
+  // Parallelization point: this outer loop over output chunks is embarrassingly parallel.
+  for (auto chunk_index = size_t{0}; chunk_index < output_chunk_count; ++chunk_index) {
+    const auto begin = chunk_index * TARGET_CHUNK_SIZE;
+    const auto this_chunk_size = std::min(static_cast<size_t>(TARGET_CHUNK_SIZE), group_count - begin);
+
+    for (auto column_index = size_t{0}; column_index < column_count; ++column_index) {
+      output_chunks[chunk_index][column_index] = _slice_column(*columns[column_index], begin, this_chunk_size);
+    }
+  }
+
+  return output_chunks;
+}
+
 std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
   const auto input_table = _left_input->get_output();
 
@@ -542,7 +593,12 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
 
   auto result_table = std::make_shared<Table>(column_definitions, TableType::Data);
   if (group_count > 0) {
-    result_table->append_chunk(output_segments);
+    // Each output column was accumulated as a single full-length segment. Split them into TARGET_CHUNK_SIZE-sized
+    // chunks in one final pass (`_split_into_chunks` is structured so this can later run on a threadpool).
+    auto output_chunks = _split_into_chunks(output_segments, group_count);
+    for (auto& chunk_segments : output_chunks) {
+      result_table->append_chunk(std::move(chunk_segments));
+    }
   }
   return result_table;
 }
