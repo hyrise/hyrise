@@ -180,10 +180,8 @@ std::shared_ptr<Table> AggregateDYOD::_write_output_table() {
 
   for (auto aggregate_index = size_t{0}; aggregate_index < aggregate_count; ++aggregate_index) {
     const auto& aggregate = _aggregates[aggregate_index];
-    const auto aggregate_function = aggregate->window_function;
-    const auto needs_null =
-        (aggregate_function != WindowFunction::Count && aggregate_function != WindowFunction::CountDistinct);
-    column_definitions.emplace_back(aggregate->as_column_name(), _aggregate_data_types[aggregate_index], needs_null);
+    column_definitions.emplace_back(aggregate->as_column_name(), _aggregate_data_type(aggregate_index),
+                                    _aggregate_is_nullable(aggregate_index));
   }
 
   auto segments = Segments{};
@@ -253,12 +251,8 @@ std::shared_ptr<AbstractSegment> AggregateDYOD::_write_groupby_segment(size_t gr
 template <typename AggregateDataType>
 std::shared_ptr<AbstractSegment> AggregateDYOD::_write_aggregate_segment(size_t aggregate_index) {
   auto& aggregate_vector = static_cast<TypedAggregateVector<AggregateDataType>&>(*_aggregate_vectors[aggregate_index]);
-  const auto& aggregate = _aggregates[aggregate_index];
-  const auto aggregate_function = aggregate->window_function;
-  const auto needs_null =
-      (aggregate_function != WindowFunction::Count && aggregate_function != WindowFunction::CountDistinct);
 
-  if (needs_null) {
+  if (_aggregate_is_nullable(aggregate_index)) {
     const auto group_count = _ticket_table.size();
     auto null_values = pmr_vector<bool>(group_count);
     for (auto chunk_offset = ChunkOffset{0}; chunk_offset < group_count; ++chunk_offset) {
@@ -381,6 +375,15 @@ void AggregateDYOD::_aggregate_segment(size_t aggregate_index, const AbstractSeg
       aggregate_vector.increment_count(ticket);
     }
   });
+}
+
+DataType AggregateDYOD::_aggregate_data_type(size_t aggregate_index) {
+  return _aggregate_data_types[aggregate_index];
+}
+
+bool AggregateDYOD::_aggregate_is_nullable(size_t aggregate_index) {
+  const auto aggregate_function = _aggregates[aggregate_index]->window_function;
+  return aggregate_function != WindowFunction::Count && aggregate_function != WindowFunction::CountDistinct;
 }
 
 std::shared_ptr<AbstractOperator> AggregateDYOD::_on_deep_copy(

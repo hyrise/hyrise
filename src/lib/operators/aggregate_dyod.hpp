@@ -142,6 +142,10 @@ class AggregateDYOD : public AbstractAggregateOperator {
 
   template <typename ColumnDataType, WindowFunction aggregate_function>
   void _aggregate_segment(size_t aggregate_index, const AbstractSegment& segment, const std::vector<Ticket>& tickets);
+
+  DataType _aggregate_data_type(size_t aggregate_index);
+
+  bool _aggregate_is_nullable(size_t aggregate_index);
 };
 
 }  // namespace hyrise
