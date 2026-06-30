@@ -292,42 +292,7 @@ size_t AggregateDYOD::_get_ticket(const GroupKey& group_key) {
 }
 
 void AggregateDYOD::_aggregate_chunk(const std::shared_ptr<const Chunk> chunk) {
-  const auto input_table = left_input_table();
-
-  // This is a two-dimensional vector, with the first dimension being the index of the grouping column, and the second
-  // being the chunk offset of the row.
-  auto group_keys_by_column =
-      std::vector<std::vector<GroupKeyEntry>>(_groupby_column_ids.size(), std::vector<GroupKeyEntry>(chunk->size()));
-
-  // First, compute the group keys within each column.
-  const auto groupby_column_count = _groupby_column_ids.size();
-  for (auto groupby_column_index = size_t{0}; groupby_column_index < groupby_column_count; ++groupby_column_index) {
-    const auto groupby_column_id = _groupby_column_ids[groupby_column_index];
-    const auto data_type = input_table->column_data_type(groupby_column_id);
-    const auto is_nullable = input_table->column_is_nullable(groupby_column_id);
-
-    resolve_data_type(data_type, [&](auto type) {
-      using ColumnDataType = typename decltype(type)::type;
-      const auto segment = chunk->get_segment(groupby_column_id);
-
-      segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
-        group_keys_by_column[groupby_column_index][position.chunk_offset()] =
-            is_nullable ? serialize_value(position.value(), position.is_null()) : serialize_value(position.value());
-      });
-    });
-  }
-
-  // Then assemble the group keys per row and get a ticket for each group key.
-  auto tickets = std::vector<Ticket>(chunk->size());
-
-  const auto row_count = chunk->size();
-  for (auto offset = ChunkOffset{0}; offset < row_count; ++offset) {
-    auto group_key = GroupKey(groupby_column_count);
-    for (auto groupby_column_index = size_t{0}; groupby_column_index < groupby_column_count; ++groupby_column_index) {
-      group_key[groupby_column_index] = std::move(group_keys_by_column[groupby_column_index][offset]);
-    }
-    tickets[offset] = _get_ticket(group_key);
-  }
+  const auto tickets = _get_tickets(*chunk);
 
   // Compute aggregates
   const auto aggregate_count = _aggregates.size();
@@ -358,6 +323,47 @@ void AggregateDYOD::_aggregate_chunk(const std::shared_ptr<const Chunk> chunk) {
       }
     });
   }
+}
+
+std::vector<Ticket> AggregateDYOD::_get_tickets(const Chunk& chunk) {
+  const auto input_table = left_input_table();
+
+  // This is a two-dimensional vector, with the first dimension being the index of the grouping column, and the second
+  // being the chunk offset of the row.
+  auto group_keys_by_column =
+      std::vector<std::vector<GroupKeyEntry>>(_groupby_column_ids.size(), std::vector<GroupKeyEntry>(chunk.size()));
+
+  // First, compute the group keys within each column.
+  const auto groupby_column_count = _groupby_column_ids.size();
+  for (auto groupby_column_index = size_t{0}; groupby_column_index < groupby_column_count; ++groupby_column_index) {
+    const auto groupby_column_id = _groupby_column_ids[groupby_column_index];
+    const auto data_type = input_table->column_data_type(groupby_column_id);
+    const auto is_nullable = input_table->column_is_nullable(groupby_column_id);
+
+    resolve_data_type(data_type, [&](auto type) {
+      using ColumnDataType = typename decltype(type)::type;
+      const auto segment = chunk.get_segment(groupby_column_id);
+
+      segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
+        group_keys_by_column[groupby_column_index][position.chunk_offset()] =
+            is_nullable ? serialize_value(position.value(), position.is_null()) : serialize_value(position.value());
+      });
+    });
+  }
+
+  // Then assemble the group keys per row and get a ticket for each group key.
+  auto tickets = std::vector<Ticket>(chunk.size());
+
+  const auto row_count = chunk.size();
+  for (auto offset = ChunkOffset{0}; offset < row_count; ++offset) {
+    auto group_key = GroupKey(groupby_column_count);
+    for (auto groupby_column_index = size_t{0}; groupby_column_index < groupby_column_count; ++groupby_column_index) {
+      group_key[groupby_column_index] = std::move(group_keys_by_column[groupby_column_index][offset]);
+    }
+    tickets[offset] = _get_ticket(group_key);
+  }
+
+  return tickets;
 }
 
 template <typename ColumnDataType, WindowFunction aggregate_function>
