@@ -972,8 +972,12 @@ void AggregateDYOD::_merge_contexts(
   //  which is a vector of DYODAggregateResult indexed by DYODAggregateResultId (size_t)
   // since the keys are distinct between threads, we can simply concat these two vectors.
   _contexts_per_column[aggregate_index] = left_context;
+  auto& left_results = left_context->results;
   auto& right_results = right_context->results;
-  // for (auto result_id = DYODAggregateResultId{0}; result_id < right_results_size; ++result_id) {}
+  auto results_count = right_results.size();
+  for (auto result_id = DYODAggregateResultId{0}; result_id < results_count; ++result_id) {
+    left_results.push_back(right_results[result_id]);
+  }
 }
 
 template <typename AggregateKey>
