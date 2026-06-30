@@ -47,6 +47,10 @@ class AbstractAggregateVector {
     return _counts;
   }
 
+  size_t size() {
+    return _counts.size();
+  }
+
  protected:
   std::vector<size_t> _counts;
 };
