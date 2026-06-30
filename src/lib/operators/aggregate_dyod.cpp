@@ -141,8 +141,6 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
 
 void AggregateDYOD::_resolve_aggregate_data_types() {
   for (const auto& aggregate : _aggregates) {
-    // TODO(anyone): Is this cast guaranteed to work? Or are there cases where there is no argument or the
-    // argument is not a PQPColumnExpression?
     const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
 
     resolve_data_type(pqp_column.data_type(), [&](auto type) {
@@ -328,10 +326,16 @@ void AggregateDYOD::_aggregate_chunk(const std::shared_ptr<const Chunk> chunk) {
   for (auto aggregate_index = size_t{0}; aggregate_index < aggregate_count; ++aggregate_index) {
     const auto& aggregate = _aggregates[aggregate_index];
 
-    // TODO(anyone): Same as above
     const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
+    const auto column_id = pqp_column.column_id;
 
-    const auto segment = chunk->get_segment(pqp_column.column_id);
+    // COUNT(*): Skip the generic path and just count the number of rows in each group
+    if (aggregate->window_function == WindowFunction::Count && column_id == INVALID_COLUMN_ID) {
+      _aggregate_count_star(aggregate_index, tickets);
+      continue;
+    }
+
+    const auto segment = chunk->get_segment(column_id);
 
     resolve_data_type(pqp_column.data_type(), [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
@@ -416,6 +420,14 @@ void AggregateDYOD::_aggregate_segment(size_t aggregate_index, const AbstractSeg
       aggregate_vector.increment_count(ticket);
     }
   });
+}
+
+void AggregateDYOD::_aggregate_count_star(size_t aggregate_index, const std::vector<Ticket>& tickets) {
+  auto& aggregate_vector = *_aggregate_vectors[aggregate_index];
+
+  for (const auto ticket : tickets) {
+    aggregate_vector.increment_count(ticket);
+  }
 }
 
 DataType AggregateDYOD::_aggregate_data_type(size_t aggregate_index) {
