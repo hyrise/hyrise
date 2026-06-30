@@ -273,8 +273,7 @@ GroupingResult _compute_groups_byte_row(const std::vector<ColumnID>& groupby_col
     auto* row_ptr = materialized->rows.get();
     for (auto row_index = size_t{0}; row_index < materialized->row_count; ++row_index) {
       const auto row_view = RowView{row_ptr, format};
-      const auto row_hash =
-          compute_hash(row_view.key_bytes(), format.string_ptr_offset - format.null_bitmap_offset);
+      const auto row_hash = compute_hash(row_view.key_bytes(), format.string_ptr_offset - format.null_bitmap_offset);
       const auto probe_key = GroupKey{.row = row_ptr, .hash = row_hash};
 
       auto iter = group_key_data->global_hash_table.find(probe_key);
