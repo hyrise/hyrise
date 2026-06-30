@@ -162,7 +162,7 @@ class AggregateDYOD : public AbstractAggregateOperator {
   void _aggregate(ContextsPerColumn& contexts_per_column, const std::shared_ptr<const Table>& input_table);
 
   template <typename ColumnDataType, WindowFunction aggregate_function>
-  void _merge_contexts(ColumnID aggregate_index, const std::vector<ContextsPerColumn>& _contexts_per_column_per_thread);
+  void _merge_contexts(ColumnID aggregate_index, const std::vector<ContextsPerColumn>& contexts_per_column_per_thread);
 
   template <typename AggregateKey>
   void _partition_and_aggregate();
