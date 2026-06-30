@@ -113,13 +113,12 @@ RowFormat _create_row_format(const TableColumnDefinitions& column_definitions,
   // The null bitmap is only present when at least one group-by column is nullable; otherwise the rows are 8 bytes
   // shorter and `null_bitmap_offset` collapses onto `data_offset` so `key_bytes()` starts directly at the data.
   const auto null_bitmap_size = stores_nulls ? sizeof(uint64_t) : uint64_t{0};
-  const auto data_offset = sizeof(uint64_t) + null_bitmap_size;  // hash (+ null bitmap)
-  const auto null_bitmap_offset = stores_nulls ? sizeof(uint64_t) : data_offset;
+  const auto data_offset = null_bitmap_size;  // null bitmap (if present)
+  const auto null_bitmap_offset = uint64_t{0};
   const auto string_ptr_offset = data_offset + curr_offset;
   const auto row_size = string_ptr_offset + string_column_count * sizeof(char*);
 
   return RowFormat{.row_size = row_size,
-                   .hash_offset = 0,
                    .null_bitmap_offset = null_bitmap_offset,
                    .data_offset = data_offset,
                    .string_ptr_offset = string_ptr_offset,
@@ -187,12 +186,6 @@ std::shared_ptr<MaterializedRows> _materialize_rows(const RowFormat& format, con
         ++string_col_index;
       }
     });
-  }
-
-  // Compute and store the hash of each row's key bytes once; it is reused on every hash-table probe.
-  for (auto row_index = size_t{0}; row_index < chunk_size; ++row_index) {
-    const auto row = RowView{rows + row_index * format.row_size, format};
-    row.set_hash();
   }
 
   return materialized;
@@ -279,7 +272,9 @@ GroupingResult _compute_groups_byte_row(const std::vector<ColumnID>& groupby_col
 
     auto* row_ptr = materialized->rows.get();
     for (auto row_index = size_t{0}; row_index < materialized->row_count; ++row_index) {
-      const auto row_hash = RowView{row_ptr, format}.hash();
+      const auto row_view = RowView{row_ptr, format};
+      const auto row_hash =
+          compute_hash(row_view.key_bytes(), format.string_ptr_offset - format.null_bitmap_offset);
       const auto probe_key = GroupKey{.row = row_ptr, .hash = row_hash};
 
       auto iter = group_key_data->global_hash_table.find(probe_key);
