@@ -467,18 +467,7 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
   const auto aggregate_count = _aggregates.size();
   const auto groupby_column_count = _groupby_column_ids.size();
 
-  // The per-group row counts are only consumed by COUNT(*). Skip building them in the grouping hot loop otherwise.
-  auto needs_row_counts = false;
-  for (const auto& aggregate : _aggregates) {
-    const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
-    if (aggregate->window_function == WindowFunction::Count && pqp_column.column_id == INVALID_COLUMN_ID) {
-      needs_row_counts = true;
-      break;
-    }
-  }
-
-  auto groups = needs_row_counts ? _compute_groups<true>(_groupby_column_ids, input_table)
-                                 : _compute_groups<false>(_groupby_column_ids, input_table);
+  auto groups = _compute_groups(_groupby_column_ids, input_table);
   const auto group_count = groups.group_count;
 
   auto column_definitions = TableColumnDefinitions{};
@@ -515,12 +504,12 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
       column_definitions.emplace_back(aggregate->as_column_name(), aggregate->data_type(), true);
     }
 
-    // COUNT(*) does not reference an input column. It counts all rows per group (NULLs included).
-    // Therefore, we can just emit the per-group `row_counts` from the grouping result.
+    // COUNT(*) does not reference an input column. It counts all rows per group (NULLs included). Every input row
+    // contributes its group's ticket exactly once, so the per-group count is just a histogram over the tickets.
     if (window_function == WindowFunction::Count && input_column_id == INVALID_COLUMN_ID) {
-      auto values = pmr_vector<int64_t>(group_count);
-      for (auto i = size_t{0}; i < group_count; ++i) {
-        values[i] = static_cast<int64_t>(groups.row_counts[i]);
+      auto values = pmr_vector<int64_t>(group_count, 0);
+      for (const auto ticket : groups.tickets) {
+        ++values[ticket];
       }
       output_segments.emplace_back(std::make_shared<ValueSegment<int64_t>>(std::move(values)));
       continue;

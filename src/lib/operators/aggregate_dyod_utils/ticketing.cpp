@@ -194,7 +194,6 @@ std::shared_ptr<MaterializedRows> _materialize_rows(const RowFormat& format, con
 
 // Fast path for a single non-string group-by column: the value itself is the key, so a typed hash map replaces the
 // row materialization. NULL is its own group (via `null_ticket`).
-template <bool TrackRowCounts>
 GroupingResult _compute_groups_single_column(const ColumnID groupby_column_id,
                                              const std::shared_ptr<const Table>& input_table) {
   auto result = GroupingResult{};
@@ -227,9 +226,6 @@ GroupingResult _compute_groups_single_column(const ColumnID groupby_column_id,
               null_ticket = static_cast<uint32_t>(group_values.size());
               group_values.emplace_back();
               group_nulls.push_back(true);
-              if constexpr (TrackRowCounts) {
-                result.row_counts.push_back(0);
-              }
             }
             ticket = null_ticket;
           } else {
@@ -238,14 +234,8 @@ GroupingResult _compute_groups_single_column(const ColumnID groupby_column_id,
             if (inserted) {
               group_values.push_back(position.value());
               group_nulls.push_back(false);
-              if constexpr (TrackRowCounts) {
-                result.row_counts.push_back(0);
-              }
             }
             ticket = iter->second;
-          }
-          if constexpr (TrackRowCounts) {
-            ++result.row_counts[ticket];
           }
           result.tickets.push_back(ticket);
         });
@@ -265,7 +255,6 @@ GroupingResult _compute_groups_single_column(const ColumnID groupby_column_id,
 }
 
 // Standard path: materialize each row's group-by key into a packed row format, hash it and probe a global hash table.
-template <bool TrackRowCounts>
 GroupingResult _compute_groups_byte_row(const std::vector<ColumnID>& groupby_column_ids,
                                         const std::shared_ptr<const Table>& input_table) {
   const auto row_format = _create_row_format(input_table->column_definitions(), groupby_column_ids);
@@ -305,15 +294,9 @@ GroupingResult _compute_groups_byte_row(const std::vector<ColumnID>& groupby_col
         }
 
         const auto group_key = GroupKey{.row = row_copy, .hash = row_hash};
-        if constexpr (TrackRowCounts) {
-          group_key_data->row_counts.push_back(0);
-        }
         iter = group_key_data->global_hash_table
                    .emplace(group_key, static_cast<uint64_t>(group_key_data->global_hash_table.size()))
                    .first;
-      }
-      if constexpr (TrackRowCounts) {
-        ++group_key_data->row_counts[iter->second];
       }
       group_key_data->tickets.push_back(iter->second);
 
@@ -327,22 +310,15 @@ GroupingResult _compute_groups_byte_row(const std::vector<ColumnID>& groupby_col
   result.group_count = group_key_data->global_hash_table.size();
   result.groupby_segments = _build_groupby_segments(*group_key_data, groupby_column_ids, input_table);
   result.tickets = std::move(group_key_data->tickets);
-  result.row_counts = std::move(group_key_data->row_counts);
   return result;
 }
 
-template <bool TrackRowCounts>
 GroupingResult _compute_groups(const std::vector<ColumnID>& groupby_column_ids,
                                const std::shared_ptr<const Table>& input_table) {
   if (groupby_column_ids.size() == 1 && input_table->column_data_type(groupby_column_ids[0]) != DataType::String) {
-    return _compute_groups_single_column<TrackRowCounts>(groupby_column_ids[0], input_table);
+    return _compute_groups_single_column(groupby_column_ids[0], input_table);
   }
-  return _compute_groups_byte_row<TrackRowCounts>(groupby_column_ids, input_table);
+  return _compute_groups_byte_row(groupby_column_ids, input_table);
 }
-
-template GroupingResult _compute_groups<true>(const std::vector<ColumnID>& groupby_column_ids,
-                                              const std::shared_ptr<const Table>& input_table);
-template GroupingResult _compute_groups<false>(const std::vector<ColumnID>& groupby_column_ids,
-                                               const std::shared_ptr<const Table>& input_table);
 
 }  // namespace hyrise

@@ -215,7 +215,6 @@ struct GroupKeyData {
   // Owns the copied distinct key rows and their long strings.
   std::pmr::monotonic_buffer_resource key_arena;
   std::unordered_map<GroupKey, uint64_t, GroupKeyHash, GroupKeyEqual> global_hash_table;
-  std::vector<size_t> row_counts;
 
   // PER ROW: ticket for this specific group key (index into `keys` and the output vectors)
   std::vector<uint64_t> tickets;
@@ -228,18 +227,13 @@ struct GroupKeyData {
 struct GroupingResult {
   // PER ROW: the group index (ticket) of that input row. Used to scatter aggregate values into per-group slots.
   std::vector<uint64_t> tickets;
-  // PER GROUP: number of input rows in the group (needed for COUNT(*)). Empty when grouping was asked not to track it.
-  std::vector<size_t> row_counts;
 
   size_t group_count = 0;
   // The finished group-by output columns, index-aligned with `groupby_column_ids`.
   pmr_vector<std::shared_ptr<AbstractSegment>> groupby_segments;
 };
 
-// Determines the distinct groups and builds the group-by output columns. `TrackRowCounts` controls whether the
-// per-group `row_counts` are populated; pass false (the COUNT(*)-free case) to skip that work. Both specializations are
-// explicitly instantiated in the .cpp.
-template <bool TrackRowCounts>
+// Determines the distinct groups and builds the group-by output columns.
 GroupingResult _compute_groups(const std::vector<ColumnID>& groupby_column_ids,
                                const std::shared_ptr<const Table>& input_table);
 }  // namespace hyrise
