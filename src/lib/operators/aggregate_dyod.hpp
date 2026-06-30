@@ -128,6 +128,12 @@ class AggregateDYOD : public AbstractAggregateOperator {
 
   std::shared_ptr<Table> _create_output_table();
 
+  template <typename ColumnDataType>
+  std::shared_ptr<AbstractSegment> _create_groupby_segment(size_t groupby_column_index);
+
+  template <typename AggregateDataType>
+  std::shared_ptr<AbstractSegment> _create_aggregate_segment(size_t aggregate_index);
+
   Ticket _get_ticket(const GroupKey& group_key);
 
   void _aggregate_chunk(const std::shared_ptr<const Chunk> chunk);
