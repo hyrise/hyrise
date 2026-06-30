@@ -37,7 +37,8 @@ pmr_vector<std::shared_ptr<AbstractSegment>> _build_groupby_segments(const Group
     resolve_data_type(data_type, [&](const auto data_type_t) {
       using ColumnDataType = typename decltype(data_type_t)::type;
       auto values = pmr_vector<ColumnDataType>(group_count);
-      auto nulls = pmr_vector<bool>(group_count, false);
+      // Only nullable columns carry a null bitmap, so only they need a nulls vector.
+      auto nulls = column_is_nullable ? pmr_vector<bool>(group_count, false) : pmr_vector<bool>{};
 
       const auto null_mask_bit = uint64_t{1} << group_by_column_index;
       for (const auto& [group_key, ticket] : groups.global_hash_table) {
@@ -193,6 +194,7 @@ std::shared_ptr<MaterializedRows> _materialize_rows(const RowFormat& format, con
 
 // Fast path for a single non-string group-by column: the value itself is the key, so a typed hash map replaces the
 // row materialization. NULL is its own group (via `null_ticket`).
+template <bool TrackRowCounts>
 GroupingResult _compute_groups_single_column(const ColumnID groupby_column_id,
                                              const std::shared_ptr<const Table>& input_table) {
   auto result = GroupingResult{};
@@ -225,7 +227,9 @@ GroupingResult _compute_groups_single_column(const ColumnID groupby_column_id,
               null_ticket = static_cast<uint32_t>(group_values.size());
               group_values.emplace_back();
               group_nulls.push_back(true);
-              result.row_counts.push_back(0);
+              if constexpr (TrackRowCounts) {
+                result.row_counts.push_back(0);
+              }
             }
             ticket = null_ticket;
           } else {
@@ -234,11 +238,15 @@ GroupingResult _compute_groups_single_column(const ColumnID groupby_column_id,
             if (inserted) {
               group_values.push_back(position.value());
               group_nulls.push_back(false);
-              result.row_counts.push_back(0);
+              if constexpr (TrackRowCounts) {
+                result.row_counts.push_back(0);
+              }
             }
             ticket = iter->second;
           }
-          ++result.row_counts[ticket];
+          if constexpr (TrackRowCounts) {
+            ++result.row_counts[ticket];
+          }
           result.tickets.push_back(ticket);
         });
       }
@@ -257,6 +265,7 @@ GroupingResult _compute_groups_single_column(const ColumnID groupby_column_id,
 }
 
 // Standard path: materialize each row's group-by key into a packed row format, hash it and probe a global hash table.
+template <bool TrackRowCounts>
 GroupingResult _compute_groups_byte_row(const std::vector<ColumnID>& groupby_column_ids,
                                         const std::shared_ptr<const Table>& input_table) {
   const auto row_format = _create_row_format(input_table->column_definitions(), groupby_column_ids);
@@ -296,12 +305,16 @@ GroupingResult _compute_groups_byte_row(const std::vector<ColumnID>& groupby_col
         }
 
         const auto group_key = GroupKey{.row = row_copy, .hash = row_hash};
-        group_key_data->row_counts.push_back(0);
+        if constexpr (TrackRowCounts) {
+          group_key_data->row_counts.push_back(0);
+        }
         iter = group_key_data->global_hash_table
                    .emplace(group_key, static_cast<uint64_t>(group_key_data->global_hash_table.size()))
                    .first;
       }
-      ++group_key_data->row_counts[iter->second];
+      if constexpr (TrackRowCounts) {
+        ++group_key_data->row_counts[iter->second];
+      }
       group_key_data->tickets.push_back(iter->second);
 
       row_ptr += format.row_size;
@@ -318,12 +331,18 @@ GroupingResult _compute_groups_byte_row(const std::vector<ColumnID>& groupby_col
   return result;
 }
 
+template <bool TrackRowCounts>
 GroupingResult _compute_groups(const std::vector<ColumnID>& groupby_column_ids,
                                const std::shared_ptr<const Table>& input_table) {
   if (groupby_column_ids.size() == 1 && input_table->column_data_type(groupby_column_ids[0]) != DataType::String) {
-    return _compute_groups_single_column(groupby_column_ids[0], input_table);
+    return _compute_groups_single_column<TrackRowCounts>(groupby_column_ids[0], input_table);
   }
-  return _compute_groups_byte_row(groupby_column_ids, input_table);
+  return _compute_groups_byte_row<TrackRowCounts>(groupby_column_ids, input_table);
 }
+
+template GroupingResult _compute_groups<true>(const std::vector<ColumnID>& groupby_column_ids,
+                                              const std::shared_ptr<const Table>& input_table);
+template GroupingResult _compute_groups<false>(const std::vector<ColumnID>& groupby_column_ids,
+                                               const std::shared_ptr<const Table>& input_table);
 
 }  // namespace hyrise

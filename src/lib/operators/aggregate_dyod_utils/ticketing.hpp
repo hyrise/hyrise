@@ -228,7 +228,7 @@ struct GroupKeyData {
 struct GroupingResult {
   // PER ROW: the group index (ticket) of that input row. Used to scatter aggregate values into per-group slots.
   std::vector<uint64_t> tickets;
-  // PER GROUP: number of input rows in the group (needed for COUNT(*)).
+  // PER GROUP: number of input rows in the group (needed for COUNT(*)). Empty when grouping was asked not to track it.
   std::vector<size_t> row_counts;
 
   size_t group_count = 0;
@@ -236,7 +236,10 @@ struct GroupingResult {
   pmr_vector<std::shared_ptr<AbstractSegment>> groupby_segments;
 };
 
-// Determines the distinct groups and builds the group-by output columns.
+// Determines the distinct groups and builds the group-by output columns. `TrackRowCounts` controls whether the
+// per-group `row_counts` are populated; pass false (the COUNT(*)-free case) to skip that work. Both specializations are
+// explicitly instantiated in the .cpp.
+template <bool TrackRowCounts>
 GroupingResult _compute_groups(const std::vector<ColumnID>& groupby_column_ids,
                                const std::shared_ptr<const Table>& input_table);
 }  // namespace hyrise

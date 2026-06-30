@@ -146,7 +146,9 @@ std::pair<pmr_vector<AggregateType>, pmr_vector<bool>> _aggregate_grouped(
       WindowFunctionBuilder<ColumnDataType, AggregateType, window_function>().get_aggregate_function();
   auto values = pmr_vector<AggregateType>(group_count);
 
-  auto value_counts = std::vector<size_t>(group_count, 0);
+  // Only AVG needs a per-group count of contributing (non-NULL) values, for its final division. MIN/MAX/SUM detect
+  // their first contributing value via `nulls`, and COUNT accumulates directly into `values`, so neither allocates it.
+  auto value_counts = std::vector<size_t>(window_function == WindowFunction::Avg ? group_count : 0, 0);
   auto nulls = pmr_vector<bool>(group_count, window_function != WindowFunction::Count);
 
   const auto chunk_count = input_table->chunk_count();
@@ -170,10 +172,10 @@ std::pair<pmr_vector<AggregateType>, pmr_vector<bool>> _aggregate_grouped(
       } else if constexpr (window_function == WindowFunction::Count) {
         values[ticket]++;
       } else {
-        // MIN/MAX/SUM: the aggregate function uses `aggregate_count == 0` to detect the first contributing value of a
-        // group, so we must pass (and advance) the running per-group count rather than a constant 0.
-        aggregate_function(value, value_counts[ticket], values[ticket]);
-        ++value_counts[ticket];
+        // MIN/MAX/SUM: the aggregate function only needs to know whether this is the group's first contributing value
+        // (it checks `aggregate_count == 0`). `nulls[ticket]` is still true until that first value, so it doubles as
+        // the first-seen flag and we avoid maintaining a separate per-group count.
+        aggregate_function(value, nulls[ticket] ? size_t{0} : size_t{1}, values[ticket]);
         nulls[ticket] = false;
       }
     });
@@ -465,7 +467,18 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
   const auto aggregate_count = _aggregates.size();
   const auto groupby_column_count = _groupby_column_ids.size();
 
-  auto groups = _compute_groups(_groupby_column_ids, input_table);
+  // The per-group row counts are only consumed by COUNT(*). Skip building them in the grouping hot loop otherwise.
+  auto needs_row_counts = false;
+  for (const auto& aggregate : _aggregates) {
+    const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
+    if (aggregate->window_function == WindowFunction::Count && pqp_column.column_id == INVALID_COLUMN_ID) {
+      needs_row_counts = true;
+      break;
+    }
+  }
+
+  auto groups = needs_row_counts ? _compute_groups<true>(_groupby_column_ids, input_table)
+                                 : _compute_groups<false>(_groupby_column_ids, input_table);
   const auto group_count = groups.group_count;
 
   auto column_definitions = TableColumnDefinitions{};
