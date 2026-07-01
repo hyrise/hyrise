@@ -330,7 +330,9 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& table, c
     // Prepare histogram.
     auto histogram = std::vector<size_t>(num_radix_partitions);
 
+    auto group_row_count = size_t{0};
     for (const auto& [chunk_id, chunk] : chunks) {
+      group_row_count += chunk->size();
       const auto chunk_size = chunk->size();
       auto reference_chunk_offset = ChunkOffset{0};
 
@@ -401,6 +403,8 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& table, c
         }
       });
     }
+
+    std::print("Job {}: group row count {}\n", group_id, group_row_count);
 
     // `elements` was allocated with the size of the processed chunks. As we might have skipped NULL values, we need to
     // resize the vector to the number of values actually written.
