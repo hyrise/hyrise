@@ -139,7 +139,7 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
   // SQL requires a single output row if the input table is empty and there is no GROUP BY clause.
   // We ensure this by inserting a single group into the group ID mapping before writing the output table.
   if (_group_id_map.empty() && _groupby_column_ids.empty()) {
-    _get_group_id(GroupKey{});
+    _group_id(GroupKey{});
   }
 
   return _write_output_table();
@@ -228,7 +228,7 @@ std::shared_ptr<AbstractSegment> AggregateDYOD::_write_groupby_segment(size_t gr
   const auto input_table = left_input_table();
   const auto column_id = _groupby_column_ids[groupby_column_index];
   const auto is_nullable = input_table->column_is_nullable(column_id);
-  const auto group_count = _group_id_map.size();
+  const auto group_count = _group_count();
 
   if (is_nullable) {
     auto values = pmr_vector<ColumnDataType>(group_count);
@@ -276,7 +276,7 @@ std::shared_ptr<AbstractSegment> AggregateDYOD::_write_aggregate_segment(size_t 
     if constexpr (std::is_arithmetic_v<AggregateDataType>) {
       const auto& values = aggregate_vector.values();
       const auto& counts = aggregate_vector.counts();
-      const auto group_count = aggregate_vector.size();
+      const auto group_count = _group_count();
       auto averages = pmr_vector<AggregateDataType>(group_count);
       auto null_values = pmr_vector<bool>(group_count);
       for (auto group_id = GroupID{0}; group_id < group_count; ++group_id) {
@@ -292,7 +292,7 @@ std::shared_ptr<AbstractSegment> AggregateDYOD::_write_aggregate_segment(size_t 
   }
 
   if (_aggregate_is_nullable(aggregate_index)) {
-    const auto group_count = aggregate_vector.size();
+    const auto group_count = _group_count();
     auto null_values = pmr_vector<bool>(group_count);
     for (auto group_id = GroupID{0}; group_id < group_count; ++group_id) {
       if (aggregate_vector.count(group_id) == 0) {
@@ -307,7 +307,7 @@ std::shared_ptr<AbstractSegment> AggregateDYOD::_write_aggregate_segment(size_t 
 }
 
 GroupID AggregateDYOD::_get_group_id(const GroupKey& group_key) {
-  auto [it, inserted] = _group_id_map.try_emplace(group_key, _group_id_map.size());
+  auto [it, inserted] = _group_id_map.try_emplace(group_key, _group_count());
 
   // The key was already present, so all we need to do is to return it.
   if (!inserted) {
@@ -326,8 +326,12 @@ GroupID AggregateDYOD::_get_group_id(const GroupKey& group_key) {
   return it->second;
 }
 
+GroupID AggregateDYOD::_group_count() {
+  return _group_id_map.size();
+}
+
 void AggregateDYOD::_aggregate_chunk(const std::shared_ptr<const Chunk> chunk) {
-  const auto group_ids = _get_group_ids_for_chunk(*chunk);
+  const auto group_ids = _group_ids_for_chunk(*chunk);
 
   // Compute aggregates
   const auto aggregate_count = _aggregates.size();
