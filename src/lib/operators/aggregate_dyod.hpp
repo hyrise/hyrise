@@ -114,8 +114,8 @@ class AggregateDYOD : public AbstractAggregateOperator {
 
  protected:
   std::vector<DataType> _aggregate_data_types;
-  GroupIDMap _group_id_map = std::unordered_map<GroupKey, GroupID, boost::hash<GroupKey>>{};
-  std::vector<GroupKey> _group_keys = std::vector<GroupKey>{};
+  GroupIDMap _group_id_map;
+  std::vector<GroupKey> _group_keys;
   std::vector<std::unique_ptr<AbstractAggregateVector>> _aggregate_vectors;
 
   std::shared_ptr<const Table> _on_execute() override;
