@@ -39,10 +39,6 @@ class AbstractAggregateVector {
     _counts[index]++;
   }
 
-  std::vector<size_t>& counts() {
-    return _counts;
-  }
-
   const std::vector<size_t>& counts() const {
     return _counts;
   }
@@ -62,6 +58,7 @@ struct TypedAggregateVector : AbstractAggregateVector {
     return _aggregates[index];
   }
 
+  // The mutable accessor is needed because aggregator functions mutate values directly.
   pmr_vector<AggregateDataType>& values() {
     return _aggregates;
   }
