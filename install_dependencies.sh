@@ -71,6 +71,11 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
                     exit 1
                 fi
 
+                if ! sudo apt-get install  -y bolt-21 libbolt-21-dev ; then
+                    echo "Error during bolt installations."
+                    exit 1
+                fi
+
                 if ! git submodule update --jobs 5 --init --recursive; then
                     echo "Error during git fetching submodules."
                     exit 1
