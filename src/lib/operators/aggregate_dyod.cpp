@@ -307,21 +307,23 @@ std::shared_ptr<AbstractSegment> AggregateDYOD::_write_aggregate_segment(size_t 
 }
 
 GroupID AggregateDYOD::_get_group_id(const GroupKey& group_key) {
-  const auto it = _group_id_map.find(group_key);
-  if (it != _group_id_map.end()) {
+  auto [it, inserted] = _group_id_map.try_emplace(group_key, _group_id_map.size());
+
+  // The key was already present, so all we need to do is to return it.
+  if (!inserted) {
     return it->second;
   }
 
-  const auto group_id = _group_id_map.size();
-  _group_id_map.emplace(group_key, group_id);
+  // Otherwise, store the group key for later retrieval.
   // TODO(anyone): Consider storing group key entries by column, not by row
   _group_keys.push_back(group_key);
 
+  // And append a new item for the new group to the aggregate vectors.
   for (auto& aggregate_vector : _aggregate_vectors) {
     aggregate_vector->push_back_default();
   }
 
-  return group_id;
+  return it->second;
 }
 
 void AggregateDYOD::_aggregate_chunk(const std::shared_ptr<const Chunk> chunk) {
