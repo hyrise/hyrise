@@ -47,12 +47,12 @@ TaskBatchingResult batch_chunks_for_scheduling(const std::shared_ptr<const Table
   // If Hyrise is running single-threaded, we do not gain anything by grouping chunks but increase the coordination
   // overhead afterwards. Thus, we use a single large group for all chunks. However, for testing we use one group per
   // chunk to make sure that the coordination afterwards is properly tested.
-  auto group_count = HYRISE_DEBUG ? size_t{chunk_count} : size_t{2};
+  auto group_count = HYRISE_DEBUG ? size_t{chunk_count} : size_t{1};
   if (const auto node_queue_scheduler = std::dynamic_pointer_cast<NodeQueueScheduler>(Hyrise::get().scheduler())) {
     // For the group count, we use the number of workers, which should allow sufficient parallelization not putting too
     // much pressure on the scheduler. Please note: If the load is high, the scheduler might further internally group
     // tasks and execute them sequentially.
-    group_count = 2 * node_queue_scheduler->workers().size();
+    group_count = node_queue_scheduler->workers().size();
   }
   group_count = std::min(group_count, size_t{chunk_count});
 
