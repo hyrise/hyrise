@@ -28,8 +28,4 @@ std::string replace_addresses(const std::string& input);
 template <typename String>
 pmr_string string_to_lower(const String& input);
 
-extern template pmr_string string_to_lower(const pmr_string& input);
-extern template pmr_string string_to_lower(const std::string& input);
-extern template pmr_string string_to_lower(const std::string_view& input);
-
 }  // namespace hyrise
