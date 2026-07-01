@@ -283,7 +283,9 @@ std::shared_ptr<AbstractSegment> AggregateDYOD::_write_aggregate_segment(size_t 
         if (counts[group_id] == 0) {
           null_values[group_id] = true;
         } else {
-          averages[group_id] = sums[group_id] / counts[group_id];
+          // TODO(anyone): The maximum representable RowID in Hyrise is 2^64 (minus a few reserved sentinel values).
+          // So in theory, the count could exceed the range of double, although in practice, it is rather unlikely.
+          averages[group_id] = sums[group_id] / static_cast<double>(counts[group_id]);
         }
       }
       return std::make_shared<ValueSegment<AggregateDataType>>(std::move(averages), std::move(null_values));
