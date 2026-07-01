@@ -4,8 +4,9 @@
 #include <cstring>
 #include <memory>
 #include <memory_resource>
-#include <unordered_map>
 #include <vector>
+
+#include <boost/unordered/unordered_flat_map.hpp>
 
 #include "storage/abstract_segment.hpp"
 #include "storage/chunk.hpp"
@@ -214,7 +215,7 @@ struct GroupKeyData {
   RowFormat row_format;
   // Owns the copied distinct key rows and their long strings.
   std::pmr::monotonic_buffer_resource key_arena;
-  std::unordered_map<GroupKey, uint64_t, GroupKeyHash, GroupKeyEqual> global_hash_table;
+  boost::unordered_flat_map<GroupKey, uint64_t, GroupKeyHash, GroupKeyEqual> global_hash_table;
 
   // PER ROW: ticket for this specific group key (index into `keys` and the output vectors)
   std::vector<uint64_t> tickets;
