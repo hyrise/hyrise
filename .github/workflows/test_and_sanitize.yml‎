@@ -8,7 +8,7 @@ env:
   CXX: clang++-20
 
 jobs:
-  RunTests:
+  test_and_sanitize:
     runs-on: [self-hosted, dyod2026ci]
     env:
       build_dir: cmake-build-ci
