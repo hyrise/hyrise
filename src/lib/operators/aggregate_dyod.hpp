@@ -104,6 +104,9 @@ template <typename T, bool Nullable>
   requires std::is_same_v<T, pmr_string> && Nullable
 std::optional<pmr_string> deserialize_value(const std::vector<std::byte>& bytes);
 
+template <typename Functor>
+void resolve_window_function(WindowFunction window_function, Functor&& functor);
+
 class AggregateDYOD : public AbstractAggregateOperator {
  public:
   AggregateDYOD(const std::shared_ptr<AbstractOperator>& input_operator,
@@ -129,7 +132,7 @@ class AggregateDYOD : public AbstractAggregateOperator {
 
   void _on_cleanup() override;
 
-  void _resolve_aggregate_data_types();
+  void _prepare_aggregate_vectors();
 
   std::shared_ptr<Table> _write_output_table();
 
@@ -156,6 +159,8 @@ class AggregateDYOD : public AbstractAggregateOperator {
   DataType _aggregate_data_type(size_t aggregate_index);
 
   bool _aggregate_is_nullable(size_t aggregate_index);
+
+  DataType _aggregate_column_data_type(size_t aggregate_index);
 };
 
 }  // namespace hyrise
