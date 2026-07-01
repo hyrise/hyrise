@@ -273,8 +273,8 @@ std::shared_ptr<AbstractSegment> AggregateDYOD::_write_aggregate_segment(size_t 
   }
 
   if (aggregate_function == WindowFunction::Avg) {
-    if constexpr (std::is_arithmetic_v<AggregateDataType>) {
-      const auto& values = aggregate_vector.values();
+    if constexpr (std::is_same_v<AggregateDataType, double>) {
+      const auto& sums = aggregate_vector.values();
       const auto& counts = aggregate_vector.counts();
       const auto group_count = _group_count();
       auto averages = pmr_vector<AggregateDataType>(group_count);
@@ -283,7 +283,7 @@ std::shared_ptr<AbstractSegment> AggregateDYOD::_write_aggregate_segment(size_t 
         if (counts[group_id] == 0) {
           null_values[group_id] = true;
         } else {
-          averages[group_id] = values[group_id] / counts[group_id];
+          averages[group_id] = sums[group_id] / counts[group_id];
         }
       }
       return std::make_shared<ValueSegment<AggregateDataType>>(std::move(averages), std::move(null_values));
