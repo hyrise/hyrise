@@ -5,9 +5,10 @@
 #include <functional>
 #include <memory>
 #include <type_traits>
-#include <unordered_map>
 #include <utility>
 #include <vector>
+
+#include <boost/unordered/unordered_flat_map.hpp>
 
 #include "resolve_type.hpp"
 #include "storage/segment_iterate.hpp"
@@ -208,7 +209,10 @@ GroupingResult _compute_groups_single_column(const ColumnID groupby_column_id,
     if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
       Fail("The single-column fast path is not used for string columns.");
     } else {
-      auto value_to_ticket = std::unordered_map<ColumnDataType, uint32_t>{};
+      auto value_to_ticket = boost::unordered_flat_map<ColumnDataType, uint32_t>{};
+      // The row count is the upper bound on the number of groups; reserving avoids repeated rehashing on
+      // high-cardinality group-bys (it over-allocates for low-cardinality inputs).
+      value_to_ticket.reserve(input_table->row_count());
       auto null_ticket = uint32_t{0};
       auto has_null = false;
 
@@ -258,8 +262,11 @@ GroupingResult _compute_groups_single_column(const ColumnID groupby_column_id,
 GroupingResult _compute_groups_byte_row(const std::vector<ColumnID>& groupby_column_ids,
                                         const std::shared_ptr<const Table>& input_table) {
   const auto row_format = _create_row_format(input_table->column_definitions(), groupby_column_ids);
-  const auto group_key_data = std::make_shared<GroupKeyData>(row_format);
+  auto group_key_data = std::make_shared<GroupKeyData>(row_format);
   group_key_data->tickets.reserve(input_table->row_count());
+  // The row count is the upper bound on the number of groups. Reserving it up front avoids repeated rehashing on
+  // high-cardinality group-bys; for low-cardinality inputs it over-allocates the table.
+  group_key_data->global_hash_table.reserve(input_table->row_count());
   const auto& format = group_key_data->row_format;
   auto& arena = group_key_data->key_arena;
   const auto chunk_count = input_table->chunk_count();
