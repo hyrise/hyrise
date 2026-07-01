@@ -21,10 +21,10 @@
 
 namespace hyrise {
 
+using GroupID = size_t;
 using GroupKeyEntry = std::vector<std::byte>;
 using GroupKey = std::vector<GroupKeyEntry>;
-using Ticket = size_t;
-using TicketTable = std::unordered_map<GroupKey, Ticket, boost::hash<GroupKey>>;
+using GroupIDMap = std::unordered_map<GroupKey, GroupID, boost::hash<GroupKey>>;
 
 class AbstractAggregateVector {
  public:
@@ -121,7 +121,7 @@ class AggregateDYOD : public AbstractAggregateOperator {
 
  protected:
   std::vector<DataType> _aggregate_data_types;
-  TicketTable _ticket_table = std::unordered_map<GroupKey, Ticket, boost::hash<GroupKey>>{};
+  GroupIDMap _group_id_map = std::unordered_map<GroupKey, GroupID, boost::hash<GroupKey>>{};
   std::vector<GroupKey> _group_keys = std::vector<GroupKey>{};
   std::vector<std::unique_ptr<AbstractAggregateVector>> _aggregate_vectors;
 
@@ -146,16 +146,17 @@ class AggregateDYOD : public AbstractAggregateOperator {
   template <typename AggregateDataType>
   std::shared_ptr<AbstractSegment> _write_aggregate_segment(size_t aggregate_index);
 
-  Ticket _get_ticket(const GroupKey& group_key);
+  GroupID _get_group_id(const GroupKey& group_key);
 
   void _aggregate_chunk(const std::shared_ptr<const Chunk> chunk);
 
-  std::vector<Ticket> _get_tickets(const Chunk& chunk);
+  std::vector<GroupID> _get_group_ids_for_chunk(const Chunk& chunk);
 
   template <typename ColumnDataType, WindowFunction aggregate_function>
-  void _aggregate_segment(size_t aggregate_index, const AbstractSegment& segment, const std::vector<Ticket>& tickets);
+  void _aggregate_segment(size_t aggregate_index, const AbstractSegment& segment,
+                          const std::vector<GroupID>& group_ids);
 
-  void _aggregate_count_star(size_t aggregate_index, const std::vector<Ticket>& tickets);
+  void _aggregate_count_star(size_t aggregate_index, const std::vector<GroupID>& group_ids);
 
   DataType _aggregate_data_type(size_t aggregate_index);
 

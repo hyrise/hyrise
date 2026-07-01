@@ -137,9 +137,9 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
   }
 
   // SQL requires a single output row if the input table is empty and there is no GROUP BY clause.
-  // We ensure this by inserting a single group into the ticket table before writing the output table.
-  if (_ticket_table.empty() && _groupby_column_ids.empty()) {
-    _get_ticket(GroupKey{});
+  // We ensure this by inserting a single group into the group ID mapping before writing the output table.
+  if (_group_id_map.empty() && _groupby_column_ids.empty()) {
+    _get_group_id(GroupKey{});
   }
 
   return _write_output_table();
@@ -228,20 +228,20 @@ std::shared_ptr<AbstractSegment> AggregateDYOD::_write_groupby_segment(size_t gr
   const auto input_table = left_input_table();
   const auto column_id = _groupby_column_ids[groupby_column_index];
   const auto is_nullable = input_table->column_is_nullable(column_id);
-  const auto group_count = _ticket_table.size();
+  const auto group_count = _group_id_map.size();
 
   if (is_nullable) {
     auto values = pmr_vector<ColumnDataType>(group_count);
     auto null_values = pmr_vector<bool>(group_count);
 
-    for (auto group_index = size_t{0}; group_index < group_count; ++group_index) {
-      const auto group_key_entry = _group_keys[group_index][groupby_column_index];
+    for (auto group_id = GroupID{0}; group_id < group_count; ++group_id) {
+      const auto group_key_entry = _group_keys[group_id][groupby_column_index];
       const auto deserialized = deserialize_value<ColumnDataType, true>(group_key_entry);
 
       if (deserialized.has_value()) {
-        values[group_index] = deserialized.value();
+        values[group_id] = deserialized.value();
       } else {
-        null_values[group_index] = true;
+        null_values[group_id] = true;
       }
     }
 
@@ -250,9 +250,9 @@ std::shared_ptr<AbstractSegment> AggregateDYOD::_write_groupby_segment(size_t gr
 
   auto values = pmr_vector<ColumnDataType>(group_count);
 
-  for (auto group_index = ChunkOffset{0}; group_index < group_count; ++group_index) {
-    const auto group_key_entry = _group_keys[group_index][groupby_column_index];
-    values[group_index] = deserialize_value<ColumnDataType, false>(group_key_entry);
+  for (auto group_id = GroupID{0}; group_id < group_count; ++group_id) {
+    const auto group_key_entry = _group_keys[group_id][groupby_column_index];
+    values[group_id] = deserialize_value<ColumnDataType, false>(group_key_entry);
   }
 
   return std::make_shared<ValueSegment<ColumnDataType>>(std::move(values));
@@ -279,11 +279,11 @@ std::shared_ptr<AbstractSegment> AggregateDYOD::_write_aggregate_segment(size_t 
       const auto group_count = aggregate_vector.size();
       auto averages = pmr_vector<AggregateDataType>(group_count);
       auto null_values = pmr_vector<bool>(group_count);
-      for (auto group_index = size_t{0}; group_index < group_count; ++group_index) {
-        if (counts[group_index] == 0) {
-          null_values[group_index] = true;
+      for (auto group_id = GroupID{0}; group_id < group_count; ++group_id) {
+        if (counts[group_id] == 0) {
+          null_values[group_id] = true;
         } else {
-          averages[group_index] = values[group_index] / counts[group_index];
+          averages[group_id] = values[group_id] / counts[group_id];
         }
       }
       return std::make_shared<ValueSegment<AggregateDataType>>(std::move(averages), std::move(null_values));
@@ -294,9 +294,9 @@ std::shared_ptr<AbstractSegment> AggregateDYOD::_write_aggregate_segment(size_t 
   if (_aggregate_is_nullable(aggregate_index)) {
     const auto group_count = aggregate_vector.size();
     auto null_values = pmr_vector<bool>(group_count);
-    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < group_count; ++chunk_offset) {
-      if (aggregate_vector.count(chunk_offset) == 0) {
-        null_values[chunk_offset] = true;
+    for (auto group_id = GroupID{0}; group_id < group_count; ++group_id) {
+      if (aggregate_vector.count(group_id) == 0) {
+        null_values[group_id] = true;
       }
     }
     return std::make_shared<ValueSegment<AggregateDataType>>(std::move(aggregate_vector.values()),
@@ -306,14 +306,14 @@ std::shared_ptr<AbstractSegment> AggregateDYOD::_write_aggregate_segment(size_t 
   return std::make_shared<ValueSegment<AggregateDataType>>(std::move(aggregate_vector.values()));
 }
 
-size_t AggregateDYOD::_get_ticket(const GroupKey& group_key) {
-  const auto it = _ticket_table.find(group_key);
-  if (it != _ticket_table.end()) {
+GroupID AggregateDYOD::_get_group_id(const GroupKey& group_key) {
+  const auto it = _group_id_map.find(group_key);
+  if (it != _group_id_map.end()) {
     return it->second;
   }
 
-  const auto ticket = _ticket_table.size();
-  _ticket_table.emplace(group_key, ticket);
+  const auto group_id = _group_id_map.size();
+  _group_id_map.emplace(group_key, group_id);
   // TODO(anyone): Consider storing group key entries by column, not by row
   _group_keys.push_back(group_key);
 
@@ -321,11 +321,11 @@ size_t AggregateDYOD::_get_ticket(const GroupKey& group_key) {
     aggregate_vector->push_back_default();
   }
 
-  return ticket;
+  return group_id;
 }
 
 void AggregateDYOD::_aggregate_chunk(const std::shared_ptr<const Chunk> chunk) {
-  const auto tickets = _get_tickets(*chunk);
+  const auto group_ids = _get_group_ids_for_chunk(*chunk);
 
   // Compute aggregates
   const auto aggregate_count = _aggregates.size();
@@ -337,7 +337,7 @@ void AggregateDYOD::_aggregate_chunk(const std::shared_ptr<const Chunk> chunk) {
 
     // COUNT(*): Skip the generic path and just count the number of rows in each group
     if (aggregate->window_function == WindowFunction::Count && column_id == INVALID_COLUMN_ID) {
-      _aggregate_count_star(aggregate_index, tickets);
+      _aggregate_count_star(aggregate_index, group_ids);
       continue;
     }
 
@@ -349,19 +349,19 @@ void AggregateDYOD::_aggregate_chunk(const std::shared_ptr<const Chunk> chunk) {
       switch (aggregate->window_function) {
         // TODO(anyone): Add missing cases
         case WindowFunction::Min:
-          _aggregate_segment<ColumnDataType, WindowFunction::Min>(aggregate_index, *segment, tickets);
+          _aggregate_segment<ColumnDataType, WindowFunction::Min>(aggregate_index, *segment, group_ids);
           break;
         case WindowFunction::Max:
-          _aggregate_segment<ColumnDataType, WindowFunction::Max>(aggregate_index, *segment, tickets);
+          _aggregate_segment<ColumnDataType, WindowFunction::Max>(aggregate_index, *segment, group_ids);
           break;
         case WindowFunction::Sum:
-          _aggregate_segment<ColumnDataType, WindowFunction::Sum>(aggregate_index, *segment, tickets);
+          _aggregate_segment<ColumnDataType, WindowFunction::Sum>(aggregate_index, *segment, group_ids);
           break;
         case WindowFunction::Count:
-          _aggregate_segment<ColumnDataType, WindowFunction::Count>(aggregate_index, *segment, tickets);
+          _aggregate_segment<ColumnDataType, WindowFunction::Count>(aggregate_index, *segment, group_ids);
           break;
         case WindowFunction::Avg:
-          _aggregate_segment<ColumnDataType, WindowFunction::Avg>(aggregate_index, *segment, tickets);
+          _aggregate_segment<ColumnDataType, WindowFunction::Avg>(aggregate_index, *segment, group_ids);
           break;
         default:
           Fail("Unsupported aggregate function.");
@@ -370,7 +370,7 @@ void AggregateDYOD::_aggregate_chunk(const std::shared_ptr<const Chunk> chunk) {
   }
 }
 
-std::vector<Ticket> AggregateDYOD::_get_tickets(const Chunk& chunk) {
+std::vector<GroupID> AggregateDYOD::_get_group_ids_for_chunk(const Chunk& chunk) {
   const auto input_table = left_input_table();
 
   // This is a two-dimensional vector, with the first dimension being the index of the grouping column, and the second
@@ -396,8 +396,8 @@ std::vector<Ticket> AggregateDYOD::_get_tickets(const Chunk& chunk) {
     });
   }
 
-  // Then assemble the group keys per row and get a ticket for each group key.
-  auto tickets = std::vector<Ticket>(chunk.size());
+  // Then assemble the group keys per row and get the GroupID.
+  auto group_ids = std::vector<GroupID>(chunk.size());
 
   const auto row_count = chunk.size();
   for (auto offset = ChunkOffset{0}; offset < row_count; ++offset) {
@@ -405,15 +405,15 @@ std::vector<Ticket> AggregateDYOD::_get_tickets(const Chunk& chunk) {
     for (auto groupby_column_index = size_t{0}; groupby_column_index < groupby_column_count; ++groupby_column_index) {
       group_key[groupby_column_index] = std::move(group_keys_by_column[groupby_column_index][offset]);
     }
-    tickets[offset] = _get_ticket(group_key);
+    group_ids[offset] = _get_group_id(group_key);
   }
 
-  return tickets;
+  return group_ids;
 }
 
 template <typename ColumnDataType, WindowFunction aggregate_function>
 void AggregateDYOD::_aggregate_segment(size_t aggregate_index, const AbstractSegment& segment,
-                                       const std::vector<Ticket>& tickets) {
+                                       const std::vector<GroupID>& group_ids) {
   using AggregateDataType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
   auto aggregator =
       WindowFunctionBuilder<ColumnDataType, AggregateDataType, aggregate_function>().get_aggregate_function();
@@ -421,18 +421,18 @@ void AggregateDYOD::_aggregate_segment(size_t aggregate_index, const AbstractSeg
 
   segment_iterate<ColumnDataType>(segment, [&](const auto& position) {
     if (!position.is_null()) {
-      const auto ticket = tickets[position.chunk_offset()];
-      aggregator(position.value(), aggregate_vector.count(ticket), aggregate_vector[ticket]);
-      aggregate_vector.increment_count(ticket);
+      const auto group_id = group_ids[position.chunk_offset()];
+      aggregator(position.value(), aggregate_vector.count(group_id), aggregate_vector[group_id]);
+      aggregate_vector.increment_count(group_id);
     }
   });
 }
 
-void AggregateDYOD::_aggregate_count_star(size_t aggregate_index, const std::vector<Ticket>& tickets) {
+void AggregateDYOD::_aggregate_count_star(size_t aggregate_index, const std::vector<GroupID>& group_ids) {
   auto& aggregate_vector = *_aggregate_vectors[aggregate_index];
 
-  for (const auto ticket : tickets) {
-    aggregate_vector.increment_count(ticket);
+  for (const auto group_id : group_ids) {
+    aggregate_vector.increment_count(group_id);
   }
 }
 
