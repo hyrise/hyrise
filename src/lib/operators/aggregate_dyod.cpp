@@ -306,7 +306,7 @@ std::shared_ptr<AbstractSegment> AggregateDYOD::_write_aggregate_segment(size_t 
   return std::make_shared<ValueSegment<AggregateDataType>>(std::move(aggregate_vector.values()));
 }
 
-GroupID AggregateDYOD::_get_group_id(const GroupKey& group_key) {
+GroupID AggregateDYOD::_group_id(const GroupKey& group_key) {
   auto [it, inserted] = _group_id_map.try_emplace(group_key, _group_count());
 
   // The key was already present, so all we need to do is to return it.
@@ -376,7 +376,7 @@ void AggregateDYOD::_aggregate_chunk(const std::shared_ptr<const Chunk> chunk) {
   }
 }
 
-std::vector<GroupID> AggregateDYOD::_get_group_ids_for_chunk(const Chunk& chunk) {
+std::vector<GroupID> AggregateDYOD::_group_ids_for_chunk(const Chunk& chunk) {
   const auto input_table = left_input_table();
 
   // This is a two-dimensional vector, with the first dimension being the index of the grouping column, and the second
@@ -411,7 +411,7 @@ std::vector<GroupID> AggregateDYOD::_get_group_ids_for_chunk(const Chunk& chunk)
     for (auto groupby_column_index = size_t{0}; groupby_column_index < groupby_column_count; ++groupby_column_index) {
       group_key[groupby_column_index] = std::move(group_keys_by_column[groupby_column_index][offset]);
     }
-    group_ids[offset] = _get_group_id(group_key);
+    group_ids[offset] = _group_id(group_key);
   }
 
   return group_ids;

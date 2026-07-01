@@ -142,11 +142,13 @@ class AggregateDYOD : public AbstractAggregateOperator {
   template <typename AggregateDataType>
   std::shared_ptr<AbstractSegment> _write_aggregate_segment(size_t aggregate_index);
 
-  GroupID _get_group_id(const GroupKey& group_key);
+  GroupID _group_id(const GroupKey& group_key);
+
+  GroupID _group_count();
+
+  std::vector<GroupID> _group_ids_for_chunk(const Chunk& chunk);
 
   void _aggregate_chunk(const std::shared_ptr<const Chunk> chunk);
-
-  std::vector<GroupID> _get_group_ids_for_chunk(const Chunk& chunk);
 
   template <typename ColumnDataType, WindowFunction aggregate_function>
   void _aggregate_segment(size_t aggregate_index, const AbstractSegment& segment,
