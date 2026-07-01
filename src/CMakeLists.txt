@@ -74,26 +74,27 @@ if (NOT "${HYRISE_RELAXED_BUILD}")
     if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
         add_compile_options(
             -Weverything
-            -Wno-c++98-compat-pedantic          # We are incompatible with C++98.
-            -Wno-ctad-maybe-unsupported         # We use CTAD.
-            -Wno-documentation                  # We do not use Doxygen.
-            -Wno-exit-time-destructors          # We use declarations that require exit-time destructors.
-            -Wno-float-equal                    # Currently we compare floats for equality or inequality.
-            -Wno-global-constructors            # We use declarations that require global destructors.
-            -Wno-missing-prototypes             # Messes with our tests and benchmarks.
-            -Wno-padded                         # Do not warn when structs not have been manually padded.
-            -Wno-pass-failed                    # Complains about failed loop unrolling when building release builds
-                                                # with sanitization.
-            -Wno-sign-conversion                # Currently we do many implicit conversions that change signedness.
-            -Wno-switch-default                 # Warns if a switch has no default, even if all enum values are
-                                                # covered. Contradicts -Wcovered-switch-default.
-            -Wno-switch-enum                    # We have switches in which we do not want to cover every enum value
-                                                # but use a default.
-            -Wno-unsafe-buffer-usage            # We access buffers via pointers / pointer arithmetic in some cases when
-                                                # we know what we do (e.g., uninitialized vector works like this).
-            -Wno-weak-vtables                   # Some of our base classes have no out-of-line virtual method
-                                                # definitions. I do not know if this is fixable.
-            -Wno-undefined-func-template
+            -Wno-c++98-compat-pedantic      # We are incompatible with C++98.
+            -Wno-ctad-maybe-unsupported     # We use CTAD.
+            -Wno-documentation              # We do not use Doxygen.
+            -Wno-exit-time-destructors      # We use declarations that require exit-time destructors.
+            -Wno-float-equal                # Currently we compare floats for equality or inequality.
+            -Wno-global-constructors        # We use declarations that require global destructors.
+            -Wno-missing-prototypes         # Messes with our tests and benchmarks.
+            -Wno-padded                     # Do not warn when structs not have been manually padded.
+            -Wno-pass-failed                # Complains about failed loop unrolling when building release builds with
+                                            # sanitization.
+            -Wno-sign-conversion            # Currently we do many implicit conversions that change signedness.
+            -Wno-switch-default             # Warns if a switch has no default, even if all enum values are
+                                            # covered. Contradicts -Wcovered-switch-default.
+            -Wno-switch-enum                # We have switches in which we do not want to cover every enum value
+                                            # but use a default.
+            -Wno-undefined-func-template    # We explicitly instantiate templates for our data types in .cpp files; the
+                                            # extern declarations in headers are not required for correctness.
+            -Wno-unsafe-buffer-usage        # We access buffers via pointers / pointer arithmetic in some cases when we
+                                            # know what we do (e.g., uninitialized vector works like this).
+            -Wno-weak-vtables               # Anchoring every polymorphic class in a .cpp solely to move its vtable is
+                                            # not worth the boilerplate.
         )
     endif()
 
