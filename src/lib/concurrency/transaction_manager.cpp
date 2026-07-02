@@ -48,12 +48,12 @@ std::shared_ptr<TransactionContext> TransactionManager::new_transaction_context(
 }
 
 void TransactionManager::_register_transaction(const CommitID snapshot_commit_id) {
-  const auto lock = std::lock_guard<std::mutex>{_active_snapshot_commit_ids_mutex};
+  const auto lock = std::scoped_lock<std::mutex>{_active_snapshot_commit_ids_mutex};
   _active_snapshot_commit_ids.insert(snapshot_commit_id);
 }
 
 void TransactionManager::_deregister_transaction(const CommitID snapshot_commit_id) {
-  const auto lock = std::lock_guard<std::mutex>{_active_snapshot_commit_ids_mutex};
+  const auto lock = std::scoped_lock<std::mutex>{_active_snapshot_commit_ids_mutex};
 
   auto it = std::ranges::find(_active_snapshot_commit_ids, snapshot_commit_id);
 
@@ -69,7 +69,7 @@ void TransactionManager::_deregister_transaction(const CommitID snapshot_commit_
 }
 
 std::optional<CommitID> TransactionManager::get_lowest_active_snapshot_commit_id() const {
-  const auto lock = std::lock_guard<std::mutex>{_active_snapshot_commit_ids_mutex};
+  const auto lock = std::scoped_lock<std::mutex>{_active_snapshot_commit_ids_mutex};
 
   if (_active_snapshot_commit_ids.empty()) {
     return std::nullopt;
