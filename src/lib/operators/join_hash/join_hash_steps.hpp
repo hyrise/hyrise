@@ -404,7 +404,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& table, c
       });
     }
 
-    std::print("Job {}: group row count {}\n", group_id, group_row_count);
+    // std::cerr << std::format("Job {}: group row count {}\n", group_id, group_row_count);
 
     // `elements` was allocated with the size of the processed chunks. As we might have skipped NULL values, we need to
     // resize the vector to the number of values actually written.
