@@ -37,8 +37,8 @@ struct TaskBatchingResult {
  * scheduled.
  */
 template <typename Functor>
-TaskBatchingResult batch_chunks_for_scheduling(const std::shared_ptr<const Table>& table,
-                                                                       Functor&& functor) {
+TaskBatchingResult batch_chunks_for_scheduling(const std::shared_ptr<const Table>& table, Functor&& functor,
+                                               const size_t minimal_group_row_count = 2'000) {
   const auto chunk_count = table->chunk_count();
   Assert(chunk_count > 0, "Tables without any chunks must be handled by the caller.");
 
@@ -60,25 +60,26 @@ TaskBatchingResult batch_chunks_for_scheduling(const std::shared_ptr<const Table
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   jobs.reserve(group_count);
 
-  // auto group_row_counts = std::vector<size_t>{};
-  // group_row_counts.reserve(group_count);
-
   auto chunk_ids = std::vector<ChunkID>{};
   chunk_ids.reserve(chunk_count);
   auto chunk_ids_start_offset = size_t{0};
   auto group_size = size_t{0};
-  // auto group_row_count = size_t{0};  // Track row count of current group.
+  auto group_row_count = size_t{0};  // Track row count of current group.
   auto group_id = size_t{0};
 
   // The concurrent vector of chunks in a table does not allow us to use something like `views::chunk()`.
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     chunk_ids.push_back(chunk_id);
     ++group_size;
-    // group_row_count += table->get_chunk(chunk_id)->size();
+    group_row_count += table->get_chunk(chunk_id)->size();
 
-    if (group_size < tasks_per_group) {
+    // We emit when we have sufficent rows AND the group size is reached
+    //
+    // std::cout << group_row_count << " < " << minimal_group_row_count << std::endl;
+    if ((group_row_count < minimal_group_row_count) || (group_size < tasks_per_group)) {
       continue;
     }
+    // std::cout << "GRPUING\n";
 
     const auto first = chunk_ids.begin() + static_cast<std::ptrdiff_t>(chunk_ids_start_offset);
     const auto last = chunk_ids.end();
@@ -89,6 +90,7 @@ TaskBatchingResult batch_chunks_for_scheduling(const std::shared_ptr<const Table
 
     chunk_ids_start_offset = chunk_ids.size();
     group_size = 0;
+    group_row_count = 0;
     ++group_id;
   }
 

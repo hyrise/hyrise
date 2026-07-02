@@ -59,7 +59,7 @@ TEST_F(SchedulingUtilsTest, MultiThreadedGrouping) {
     ASSERT_FALSE(group_markers.empty());
     // As we resize to the returned group size before spawning the jobs, this write should be safe.
     group_markers[group_id] = group_id;
-  });
+  }, 2);
   const auto group_count = jobs.size();
   group_markers.resize(group_count);
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);

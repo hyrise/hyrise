@@ -330,9 +330,9 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& table, c
     // Prepare histogram.
     auto histogram = std::vector<size_t>(num_radix_partitions);
 
-    auto group_row_count = size_t{0};
+    // auto group_row_count = size_t{0};
     for (const auto& [chunk_id, chunk] : chunks) {
-      group_row_count += chunk->size();
+      // group_row_count += chunk->size();
       const auto chunk_size = chunk->size();
       auto reference_chunk_offset = ChunkOffset{0};
 
@@ -414,8 +414,6 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& table, c
     histograms[group_id] = std::move(histogram);
   });
 
-
-
   const auto group_count = jobs.size();
 
   // Create histograms and radix container per group (i.e., a group of chunks). As we need to merge histograms later in
@@ -427,7 +425,6 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& table, c
   output_bloom_filter.resize(BLOOM_FILTER_SIZE);
 
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
-
 
   for (const auto& bloom_filter : bloom_filters) {
     output_bloom_filter |= bloom_filter;
