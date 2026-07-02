@@ -218,7 +218,9 @@ GroupingResult _compute_groups_single_column(const ColumnID groupby_column_id,
 
       // Representative value per group, used to build the output column. The NULL group's slot is never read.
       auto group_values = pmr_vector<ColumnDataType>{};
+      group_values.reserve(input_table->row_count());
       auto group_nulls = pmr_vector<bool>{};
+      group_nulls.reserve(input_table->row_count());
 
       for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
         const auto& segment = input_table->get_chunk(chunk_id)->get_segment(groupby_column_id);
