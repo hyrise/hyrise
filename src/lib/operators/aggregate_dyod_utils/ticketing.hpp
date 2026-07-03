@@ -158,12 +158,16 @@ struct RowView {
   }
 };
 
-// All materialized rows of a single chunk, packed in `rows`. Long group-by strings referenced by those rows live in
-// `string_arena`.
+// All materialized rows of a single chunk, packed in `rows`. Long group-by strings referenced by those rows either
+// point directly into the (query-lifetime) source segment or, for the generic fallback path, live in `string_arena`.
 struct MaterializedRows {
   uint64_t row_count = 0;
   std::unique_ptr<uint8_t[]> rows;
   std::pmr::monotonic_buffer_resource string_arena;
+  // Per string group-by column (indexed by string-column order): whether its long-string pointers reference the
+  // transient per-chunk `string_arena` (true) and must therefore be copied into the key arena when a group is first
+  // inserted, or point at stable source memory (false) that outlives the whole grouping phase.
+  std::vector<bool> string_pointer_needs_copy;
 };
 
 std::shared_ptr<MaterializedRows> _materialize_rows(const RowFormat& format, const std::shared_ptr<const Chunk>& chunk,

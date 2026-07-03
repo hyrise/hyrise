@@ -161,26 +161,28 @@ std::shared_ptr<MaterializedRows> _materialize_rows(const RowFormat& format, con
           return RowView{rows + offset * format.row_size, format};
         };
 
-        // Packs one string value into `row`'s slot for this column: the inline [length, prefix], plus a full,
-        // null-terminated copy in the chunk arena (referenced by pointer) for strings longer than the prefix (so
-        // equality can resolve prefix collisions without re-reading the source segment). It reads straight from
-        // `data`/`length`, so no intermediate `pmr_string` is constructed per value.
-        const auto write_string = [&](const RowView& row, const char* const data, const size_t length) {
+        // Writes the inline part of a string value ([length, prefix]) into `row`'s slot for this column. Returns
+        // whether the value is longer than the prefix, i.e. whether the caller must additionally set a heap pointer to
+        // the full value so equality can resolve prefix collisions. Reads straight from `data`, so no intermediate
+        // `pmr_string` is constructed per value.
+        const auto write_inline = [&](const RowView& row, const char* const data, const size_t length) {
           auto* const inline_data = row.column_data(group_by_column_index);
           std::memcpy(inline_data, &length, sizeof(size_t));
           const auto prefix_length = std::min(length, static_cast<size_t>(PREFIX_LENGTH));
           std::memcpy(inline_data + sizeof(size_t), data, prefix_length);
-          if (length > PREFIX_LENGTH) {
-            auto* const str_copy = static_cast<char*>(string_arena.allocate(length + 1));
-            std::memcpy(str_copy, data, length);
-            str_copy[length] = '\0';
-            row.set_string_ptr(string_col_index, str_copy);
-          }
+          return length > PREFIX_LENGTH;
         };
 
         if (const auto* const value_segment = dynamic_cast<const ValueSegment<pmr_string>*>(segment.get())) {
-          // Value segment: read each string straight out of the segment's value vector by reference.
+          // Value segment: the segment owns its strings for the whole query, so point long strings straight at them
+          // instead of copying. `const_cast` is safe: the pointer is only ever read (hash equality, output build).
+          materialized->string_pointer_needs_copy.push_back(false);
           const auto& values = value_segment->values();
+          const auto write_value_string = [&](const RowView& row, const pmr_string& value) {
+            if (write_inline(row, value.c_str(), value.size())) {
+              row.set_string_ptr(string_col_index, const_cast<char*>(value.c_str()));
+            }
+          };
           if (value_segment->is_nullable()) {
             const auto& null_values = value_segment->null_values();
             for (auto offset = size_t{0}; offset < chunk_size; ++offset) {
@@ -189,18 +191,19 @@ std::shared_ptr<MaterializedRows> _materialize_rows(const RowFormat& format, con
                 row.set_null_bitmap(row.null_bitmap() | null_mask_bit);
                 continue;
               }
-              write_string(row, values[offset].c_str(), values[offset].size());
+              write_value_string(row, values[offset]);
             }
           } else {
             for (auto offset = size_t{0}; offset < chunk_size; ++offset) {
-              write_string(row_at(offset), values[offset].c_str(), values[offset].size());
+              write_value_string(row_at(offset), values[offset]);
             }
           }
         } else if (const auto* const dictionary_segment =
                        dynamic_cast<const DictionarySegment<pmr_string>*>(segment.get())) {
-          // Dictionary segment: pack each distinct dictionary entry once, then per row copy the packed bytes indexed
-          // by the row's value id. This avoids reconstructing a pmr_string per row and packs long strings into the
-          // arena once per distinct value instead of once per row.
+          // Dictionary segment: pack each distinct dictionary entry's inline bytes once, then per row copy the packed
+          // bytes indexed by the row's value id. Long strings point straight at the dictionary entry (owned for the
+          // whole query), so no per-row or per-group string copy is needed.
+          materialized->string_pointer_needs_copy.push_back(false);
           const auto& dictionary = *dictionary_segment->dictionary();
           const auto null_value_id = dictionary_segment->null_value_id();
           const auto dictionary_size = dictionary.size();
@@ -215,10 +218,8 @@ std::shared_ptr<MaterializedRows> _materialize_rows(const RowFormat& format, con
             const auto prefix_length = std::min(length, static_cast<size_t>(PREFIX_LENGTH));
             std::memcpy(inline_blobs[value_id].data() + sizeof(size_t), str.c_str(), prefix_length);
             if (length > PREFIX_LENGTH) {
-              auto* const str_copy = static_cast<char*>(string_arena.allocate(length + 1));
-              std::memcpy(str_copy, str.c_str(), length);
-              str_copy[length] = '\0';
-              long_string_ptrs[value_id] = str_copy;
+              // Points into the dictionary; `const_cast` is safe because the pointer is only ever read.
+              long_string_ptrs[value_id] = const_cast<char*>(str.c_str());
             }
           }
 
@@ -239,7 +240,9 @@ std::shared_ptr<MaterializedRows> _materialize_rows(const RowFormat& format, con
           });
         } else {
           // Fallback for every other segment kind (reference segments, fixed-string dictionaries, other encodings): go
-          // through the generic iterator. This materializes a pmr_string per row, but keeps correctness for all types.
+          // through the generic iterator. The iterator materializes a transient `pmr_string` per row, so long strings
+          // must be copied into the per-chunk arena and promoted into the key arena when a group is first inserted.
+          materialized->string_pointer_needs_copy.push_back(true);
           auto chunk_offset = size_t{0};
           segment_iterate<pmr_string>(*segment, [&](const auto& position) {
             const auto row = row_at(chunk_offset);
@@ -249,7 +252,13 @@ std::shared_ptr<MaterializedRows> _materialize_rows(const RowFormat& format, con
               return;
             }
             const auto& str_value = position.value();
-            write_string(row, str_value.c_str(), str_value.size());
+            if (write_inline(row, str_value.c_str(), str_value.size())) {
+              const auto length = str_value.size();
+              auto* const str_copy = static_cast<char*>(string_arena.allocate(length + 1));
+              std::memcpy(str_copy, str_value.c_str(), length);
+              str_copy[length] = '\0';
+              row.set_string_ptr(string_col_index, str_copy);
+            }
           });
         }
 
@@ -366,13 +375,17 @@ GroupingResult _compute_groups_byte_row(const std::vector<ColumnID>& groupby_col
       auto iter = group_key_data->global_hash_table.find(probe_key);
       if (iter == group_key_data->global_hash_table.end()) {
         // First time we see this group: copy the key row into the arena so it outlives the per-chunk materialized
-        // buffer, and copy any long strings alongside it, repointing the copied row at the arena copies.
+        // buffer. Long strings that live in the per-chunk arena (fallback path) are copied alongside it and the copied
+        // row is repointed; strings that already point at stable source memory (value/dictionary paths) are left as is.
         auto* const row_copy = static_cast<uint8_t*>(arena.allocate(format.row_size, alignof(uint64_t)));
         std::memcpy(row_copy, row_ptr, format.row_size);
 
         const auto copy_view = RowView{row_copy, format};
         const auto string_col_count = copy_view.string_col_count();
         for (auto string_col_index = size_t{0}; string_col_index < string_col_count; ++string_col_index) {
+          if (!materialized->string_pointer_needs_copy[string_col_index]) {
+            continue;
+          }
           auto* const str_ptr = copy_view.string_ptr(string_col_index);
           if (str_ptr != nullptr) {
             const auto length = std::strlen(str_ptr) + 1;
