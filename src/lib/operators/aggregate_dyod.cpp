@@ -31,6 +31,7 @@
 #include "operators/abstract_aggregate_operator.hpp"
 #include "operators/abstract_operator.hpp"
 #include "operators/operator_performance_data.hpp"
+#include "operators/print.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
@@ -1028,8 +1029,8 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
       current_predicate_bucket_2 = is_not_null_(operand_2);
     } else {
       auto value = value_(variant);
-      current_predicate_bucket_1 = greater_than_equals_(operand_1, value);
-      current_predicate_bucket_2 = less_than_(operand_2, value);
+      current_predicate_bucket_1 = equals_(operand_1, value);
+      current_predicate_bucket_2 = not_equals_(operand_2, value);
 
       if (input_table->column_is_nullable(column_id)) {
         current_predicate_bucket_2 = or_(current_predicate_bucket_2, is_null_(operand_2));
