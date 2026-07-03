@@ -14,6 +14,7 @@
 
 #include "resolve_type.hpp"
 #include "storage/dictionary_segment.hpp"
+#include "storage/reference_segment.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/table.hpp"
 #include "storage/value_segment.hpp"
@@ -173,16 +174,44 @@ std::shared_ptr<MaterializedRows> _materialize_rows(const RowFormat& format, con
           return length > PREFIX_LENGTH;
         };
 
+        // Writes a string that lives in stable, query-lifetime memory (a value/dictionary segment owned by the input
+        // or by a referenced table): the inline bytes, plus a direct pointer into that memory for long strings.
+        // `const_cast` is safe because the pointer is only ever read (hash equality, output build).
+        const auto write_stable_string = [&](const RowView& row, const pmr_string& value) {
+          if (write_inline(row, value.c_str(), value.size())) {
+            row.set_string_ptr(string_col_index, const_cast<char*>(value.c_str()));
+          }
+        };
+
+        // Generic fallback: the iterator materializes a transient `pmr_string` per row, so long strings must be copied
+        // into the per-chunk arena and promoted into the key arena when a group is first inserted.
+        const auto materialize_via_iterator = [&] {
+          materialized->string_pointer_needs_copy.push_back(true);
+          auto chunk_offset = size_t{0};
+          segment_iterate<pmr_string>(*segment, [&](const auto& position) {
+            const auto row = row_at(chunk_offset);
+            ++chunk_offset;
+            if (position.is_null()) {
+              row.set_null_bitmap(row.null_bitmap() | null_mask_bit);
+              return;
+            }
+            const auto& str_value = position.value();
+            if (write_inline(row, str_value.c_str(), str_value.size())) {
+              const auto length = str_value.size();
+              auto* const str_copy = static_cast<char*>(string_arena.allocate(length + 1));
+              std::memcpy(str_copy, str_value.c_str(), length);
+              str_copy[length] = '\0';
+              row.set_string_ptr(string_col_index, str_copy);
+            }
+          });
+        };
+
         if (const auto* const value_segment = dynamic_cast<const ValueSegment<pmr_string>*>(segment.get())) {
+          TRACE_EVENT("Aggregate", "Ticketing::materialize::ValueSegment<string>");
           // Value segment: the segment owns its strings for the whole query, so point long strings straight at them
-          // instead of copying. `const_cast` is safe: the pointer is only ever read (hash equality, output build).
+          // instead of copying.
           materialized->string_pointer_needs_copy.push_back(false);
           const auto& values = value_segment->values();
-          const auto write_value_string = [&](const RowView& row, const pmr_string& value) {
-            if (write_inline(row, value.c_str(), value.size())) {
-              row.set_string_ptr(string_col_index, const_cast<char*>(value.c_str()));
-            }
-          };
           if (value_segment->is_nullable()) {
             const auto& null_values = value_segment->null_values();
             for (auto offset = size_t{0}; offset < chunk_size; ++offset) {
@@ -191,15 +220,16 @@ std::shared_ptr<MaterializedRows> _materialize_rows(const RowFormat& format, con
                 row.set_null_bitmap(row.null_bitmap() | null_mask_bit);
                 continue;
               }
-              write_value_string(row, values[offset]);
+              write_stable_string(row, values[offset]);
             }
           } else {
             for (auto offset = size_t{0}; offset < chunk_size; ++offset) {
-              write_value_string(row_at(offset), values[offset]);
+              write_stable_string(row_at(offset), values[offset]);
             }
           }
         } else if (const auto* const dictionary_segment =
                        dynamic_cast<const DictionarySegment<pmr_string>*>(segment.get())) {
+          TRACE_EVENT("Aggregate", "Ticketing::materialize::DictionarySegment<string>");
           // Dictionary segment: pack each distinct dictionary entry's inline bytes once, then per row copy the packed
           // bytes indexed by the row's value id. Long strings point straight at the dictionary entry (owned for the
           // whole query), so no per-row or per-group string copy is needed.
@@ -238,32 +268,80 @@ std::shared_ptr<MaterializedRows> _materialize_rows(const RowFormat& format, con
               }
             }
           });
+        } else if (const auto* const reference_segment = dynamic_cast<const ReferenceSegment*>(segment.get())) {
+          // Reference segment: in the common case the pos-list references a single chunk of a stable referenced table,
+          // so we resolve that chunk's segment once and point long strings straight at its (value/dictionary) string
+          // storage, exactly like the direct value/dictionary paths. Anything else (multi-chunk pos-lists, other
+          // referenced encodings) uses the generic copying fallback.
+          const auto& pos_list = reference_segment->pos_list();
+          auto handled = false;
+
+          if (pos_list->references_single_chunk() && !pos_list->empty()) {
+            // A single-chunk pos-list is guaranteed to contain no NULL row ids, so only value-level NULLs are handled.
+            const auto& referenced_table = reference_segment->referenced_table();
+            const auto referenced_column_id = reference_segment->referenced_column_id();
+            const auto referenced_segment =
+                referenced_table->get_chunk(pos_list->common_chunk_id())->get_segment(referenced_column_id);
+
+            if (const auto* const referenced_value =
+                    dynamic_cast<const ValueSegment<pmr_string>*>(referenced_segment.get())) {
+              TRACE_EVENT("Aggregate", "Ticketing::materialize::ReferenceSegment<string> (value)");
+              materialized->string_pointer_needs_copy.push_back(false);
+              const auto& values = referenced_value->values();
+              if (referenced_value->is_nullable()) {
+                const auto& null_values = referenced_value->null_values();
+                for (auto offset = size_t{0}; offset < chunk_size; ++offset) {
+                  const auto chunk_offset = (*pos_list)[offset].chunk_offset;
+                  const auto row = row_at(offset);
+                  if (null_values[chunk_offset]) {
+                    row.set_null_bitmap(row.null_bitmap() | null_mask_bit);
+                    continue;
+                  }
+                  write_stable_string(row, values[chunk_offset]);
+                }
+              } else {
+                for (auto offset = size_t{0}; offset < chunk_size; ++offset) {
+                  write_stable_string(row_at(offset), values[(*pos_list)[offset].chunk_offset]);
+                }
+              }
+              handled = true;
+            } else if (const auto* const referenced_dictionary =
+                           dynamic_cast<const DictionarySegment<pmr_string>*>(referenced_segment.get())) {
+              TRACE_EVENT("Aggregate", "Ticketing::materialize::ReferenceSegment<string> (dictionary)");
+              materialized->string_pointer_needs_copy.push_back(false);
+              const auto& dictionary = *referenced_dictionary->dictionary();
+              const auto null_value_id = referenced_dictionary->null_value_id();
+              resolve_compressed_vector_type(
+                  *referenced_dictionary->attribute_vector(), [&](const auto& attribute_vector) {
+                    auto decompressor = attribute_vector.create_decompressor();
+                    for (auto offset = size_t{0}; offset < chunk_size; ++offset) {
+                      const auto chunk_offset = (*pos_list)[offset].chunk_offset;
+                      const auto value_id = static_cast<ValueID>(decompressor.get(chunk_offset));
+                      const auto row = row_at(offset);
+                      if (value_id == null_value_id) {
+                        row.set_null_bitmap(row.null_bitmap() | null_mask_bit);
+                        continue;
+                      }
+                      write_stable_string(row, dictionary[value_id]);
+                    }
+                  });
+              handled = true;
+            }
+          }
+
+          if (!handled) {
+            TRACE_EVENT("Aggregate", "Ticketing::materialize::ReferenceSegment<string> (fallback)");
+            materialize_via_iterator();
+          }
         } else {
-          // Fallback for every other segment kind (reference segments, fixed-string dictionaries, other encodings): go
-          // through the generic iterator. The iterator materializes a transient `pmr_string` per row, so long strings
-          // must be copied into the per-chunk arena and promoted into the key arena when a group is first inserted.
-          materialized->string_pointer_needs_copy.push_back(true);
-          auto chunk_offset = size_t{0};
-          segment_iterate<pmr_string>(*segment, [&](const auto& position) {
-            const auto row = row_at(chunk_offset);
-            ++chunk_offset;
-            if (position.is_null()) {
-              row.set_null_bitmap(row.null_bitmap() | null_mask_bit);
-              return;
-            }
-            const auto& str_value = position.value();
-            if (write_inline(row, str_value.c_str(), str_value.size())) {
-              const auto length = str_value.size();
-              auto* const str_copy = static_cast<char*>(string_arena.allocate(length + 1));
-              std::memcpy(str_copy, str_value.c_str(), length);
-              str_copy[length] = '\0';
-              row.set_string_ptr(string_col_index, str_copy);
-            }
-          });
+          // Fallback for every other segment kind (fixed-string dictionaries, other encodings).
+          TRACE_EVENT("Aggregate", "Ticketing::materialize::fallback<string>");
+          materialize_via_iterator();
         }
 
         ++string_col_index;
       } else {
+        TRACE_EVENT("Aggregate", "Ticketing::materialize::numeric");
         // Non-string columns hold trivially-copyable fixed-width values; the generic iterator's by-value position is
         // free here, so there is nothing to gain from bypassing it.
         auto chunk_offset = size_t{0};
