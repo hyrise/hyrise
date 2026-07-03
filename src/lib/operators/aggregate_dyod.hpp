@@ -179,7 +179,8 @@ class AggregateDYOD : public AbstractAggregateOperator {
   void _write_groupby_output(RowIDPosList& pos_list);
 
   template <typename ColumnDataType, WindowFunction aggregate_function>
-  void _write_aggregate_output(ColumnID aggregate_index, ContextsPerColumn& contexts_per_column);
+  void _write_aggregate_output(ColumnID aggregate_index, ContextsPerColumn& contexts_per_column,
+                               std::vector<Segments>& intermediate_result);
 
   std::shared_ptr<const Table> _create_output_table(ContextsPerColumn& contexts_per_column);
 
@@ -194,9 +195,9 @@ class AggregateDYOD : public AbstractAggregateOperator {
   // Data structure used to gather intermediate results of grouping and aggregation. This data structure stores both
   // the PosLists for group-by columns as well as the materialized aggregate results that are later returned as
   // EntirePosList ReferenceSegments in the output table.
-  std::vector<Segments> _intermediate_result;
+  // std::vector<Segments> _intermediate_result;
 
-  std::vector<std::shared_ptr<BaseValueSegment>> _groupby_segments;
+  // std::vector<std::shared_ptr<BaseValueSegment>> _groupby_segments;
   ContextsPerColumn _contexts_per_column;
   bool _has_aggregate_functions;
 
