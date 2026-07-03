@@ -24,6 +24,7 @@
 #include "all_type_variant.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
+#include "expression/expression_utils.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "expression/window_function_expression.hpp"
 #include "hyrise.hpp"
@@ -51,6 +52,7 @@
 
 namespace {
 using namespace hyrise;
+using namespace hyrise::expression_functional;
 
 /**
  * The following template functions write the aggregated values for the different aggregate functions. They are separate
@@ -989,45 +991,75 @@ void AggregateDYOD::_partition_and_aggregate() {
   // Check for invalid aggregates
   _validate_aggregates();
 
-  if (_groupby_column_ids.size() == 0 || input_table->row_count() == 0) {
+  auto groupby_keys_count = _groupby_column_ids.size();
+
+  if (groupby_keys_count == 0 || input_table->row_count() == 0) {
     _contexts_per_column = ContextsPerColumn(_aggregates.size());
     _aggregate<AggregateKey>(_contexts_per_column, input_table);
     return;
   }
-  const auto table_wrapper = std::make_shared<TableWrapper>(input_table);
-  table_wrapper->execute();
-  auto column_id = _groupby_column_ids.at(0);
+
+  // Figure out a Pivot element:
+  // We take the first row, and use that combination of group by keys as the pivot element.
   auto row = input_table->get_row(size_t{0});
 
-  // Assert(column_id < input_table->column_count(), "Damnit");
+  // Set predicate_bucket_1 and predicate_bucket_2 for the first groupby_column_id,
+  // then use and_ to build the other groupby_column_ids on top of that.
 
-  auto operand = hyrise::expression_functional::pqp_column_(column_id, input_table->column_data_type(column_id), "");
-  // Assert(!variant_is_null(row.at(column_id)), "Whelp");
-  auto greater_equal_predicate = std::make_shared<BinaryPredicateExpression>(
-      PredicateCondition::GreaterThanEquals, operand, hyrise::expression_functional::value_(row.at(column_id)));
+  std::shared_ptr<AbstractExpression> predicate_bucket_1, predicate_bucket_2;
 
-  // TODO(anyone): NULLS
-  const auto left_table_scan = std::make_shared<TableScan>(table_wrapper, greater_equal_predicate);
-  left_table_scan->execute();
+  for (auto operand_index = size_t{0}; operand_index < groupby_keys_count; ++operand_index) {
+    auto column_id = _groupby_column_ids[operand_index];
+    auto operand_1 = PQPColumnExpression::from_table(*input_table, column_id);
+    auto operand_2 = PQPColumnExpression::from_table(*input_table, column_id);
+    auto variant = row[column_id];
 
-  auto operand2 = hyrise::expression_functional::pqp_column_(column_id, input_table->column_data_type(column_id), "");
+    std::shared_ptr<AbstractExpression> current_predicate_bucket_1, current_predicate_bucket_2;
 
-  auto less_than_predicate = std::make_shared<BinaryPredicateExpression>(
-      PredicateCondition::LessThan, operand2, hyrise::expression_functional::value_(row.at(column_id)));
+    if (variant_is_null(variant)) {
+      current_predicate_bucket_1 = is_null_(operand_1);
+      current_predicate_bucket_2 = is_not_null_(operand_2);
+    } else {
+      auto value = value_(variant);
+      current_predicate_bucket_1 = greater_than_equals_(operand_1, value);
+      current_predicate_bucket_2 = less_than_(operand_2, value);
 
-  const auto table_wrapper2 = std::make_shared<TableWrapper>(input_table);
-  table_wrapper2->execute();
-  const auto right_table_scan = std::make_shared<TableScan>(table_wrapper2, less_than_predicate);
-  right_table_scan->execute();
+      if (input_table->column_is_nullable(column_id)) {
+        current_predicate_bucket_2 = or_(current_predicate_bucket_2, is_null_(operand_2));
+      }
+    }
+
+    // TODO(anyone): HACK
+    if (operand_index == 0) {
+      predicate_bucket_1 = current_predicate_bucket_1;
+      predicate_bucket_2 = current_predicate_bucket_2;
+    } else {
+      predicate_bucket_1 = and_(predicate_bucket_1, current_predicate_bucket_1);
+      predicate_bucket_2 = or_(predicate_bucket_2, current_predicate_bucket_2);
+    }
+  }
+
+  // We now have two predicates, one for bucket 1 and one for bucket 2:
+
+  const auto table_wrapper_bucket_1 = std::make_shared<TableWrapper>(input_table);
+  const auto table_wrapper_bucket_2 = std::make_shared<TableWrapper>(input_table);
+  table_wrapper_bucket_1->execute();
+  table_wrapper_bucket_2->execute();
+
+  const auto table_scan_bucket_1 = std::make_shared<TableScan>(table_wrapper_bucket_1, predicate_bucket_1);
+  const auto table_scan_bucket_2 = std::make_shared<TableScan>(table_wrapper_bucket_2, predicate_bucket_2);
+
+  table_scan_bucket_1->execute();
+  table_scan_bucket_2->execute();
 
   // SPLIT END
 
   // TODO(anyone): Make this run in threads. I think we will need to adapt both _expected_result_size; and
   // _use_immediate_key_shortcut{};, as those are probably currently not thread-compatible
   auto _contexts_per_column = ContextsPerColumn(_aggregates.size());
-  _aggregate<AggregateKey>(_contexts_per_column, left_table_scan->get_output());
+  _aggregate<AggregateKey>(_contexts_per_column, table_scan_bucket_1->get_output());
   auto right_contexts_per_column = ContextsPerColumn(_aggregates.size());
-  _aggregate<AggregateKey>(right_contexts_per_column, right_table_scan->get_output());
+  _aggregate<AggregateKey>(right_contexts_per_column, table_scan_bucket_2->get_output());
 
   // TODO(anyone): check if this is still necessary
   // we just set this to some valid value to avoid edge cases where _aggregates is empty
