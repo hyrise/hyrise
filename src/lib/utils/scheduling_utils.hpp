@@ -17,8 +17,13 @@
 
 namespace hyrise {
 
+struct ChunkBatch {
+  std::function<void()> function;
+  size_t batch_row_count;
+};
+
 struct TaskBatchingResult {
-  std::vector<std::shared_ptr<AbstractTask>> jobs;
+  std::vector<ChunkBatch> chunk_batches;
   std::vector<ChunkID> chunk_ids;
 };
 
@@ -37,8 +42,7 @@ struct TaskBatchingResult {
  * scheduled.
  */
 template <typename Functor>
-TaskBatchingResult batch_chunks_for_scheduling(const std::shared_ptr<const Table>& table, Functor&& functor,
-                                               const size_t minimal_group_row_count = 2'000) {
+TaskBatchingResult batch_chunks_for_scheduling(const std::shared_ptr<const Table>& table, const size_t minimal_group_row_count, Functor&& functor) {
   const auto chunk_count = table->chunk_count();
   Assert(chunk_count > 0, "Tables without any chunks must be handled by the caller.");
 
@@ -57,8 +61,8 @@ TaskBatchingResult batch_chunks_for_scheduling(const std::shared_ptr<const Table
   group_count = std::min(group_count, size_t{chunk_count});
 
   const auto tasks_per_group = (chunk_count + group_count - 1) / group_count;  // Ceil of divison.
-  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
-  jobs.reserve(group_count);
+  auto chunk_batches = std::vector<ChunkBatch>{};
+  chunk_batches.reserve(group_count);
 
   auto chunk_ids = std::vector<ChunkID>{};
   chunk_ids.reserve(chunk_count);
@@ -83,9 +87,9 @@ TaskBatchingResult batch_chunks_for_scheduling(const std::shared_ptr<const Table
 
     const auto first = chunk_ids.begin() + static_cast<std::ptrdiff_t>(chunk_ids_start_offset);
     const auto last = chunk_ids.end();
-    jobs.emplace_back(std::make_shared<JobTask>([&, group_id, first, last, owned_functor]() {
+    chunk_batches.emplace_back([&, group_id, first, last, owned_functor]() {
       owned_functor(group_id, std::span(first, last));
-    }));
+    }, group_row_count);
     // group_row_counts.push_back()
 
     chunk_ids_start_offset = chunk_ids.size();
@@ -97,17 +101,17 @@ TaskBatchingResult batch_chunks_for_scheduling(const std::shared_ptr<const Table
   if (chunk_ids_start_offset < chunk_ids.size()) {
     const auto first = chunk_ids.begin() + static_cast<std::ptrdiff_t>(chunk_ids_start_offset);
     const auto last = chunk_ids.end();
-    jobs.emplace_back(std::make_shared<JobTask>([&, group_id, first, last, owned_functor]() {
+    chunk_batches.emplace_back([&, group_id, first, last, owned_functor]() {
       owned_functor(group_id, std::span(first, last));
-    }));
+    }, group_row_count);
     ++group_id;
   }
 
-  DebugAssert(group_id == jobs.size(), "Group count unexpectedly deviates from number of created jobs.");
+  DebugAssert(group_id == chunk_batches.size(), "Group count unexpectedly deviates from number of created chunk_batches.");
 
-  // No jobs have been scheduled at this point. Scheduling is up to the caller. We further pass chunk_ids along which
-  // needs to be kept alive as the jobs reference ChunkIDs in this vector.
-  return {.jobs = std::move(jobs), .chunk_ids = std::move(chunk_ids)};
+  // No chunk_batches have been scheduled at this point. Scheduling is up to the caller. We further pass chunk_ids along
+  // which needs to be kept alive as the chunk_batches reference ChunkIDs in this vector.
+  return {.chunk_batches = std::move(chunk_batches), .chunk_ids = std::move(chunk_ids)};
 }
 
 }  // namespace hyrise
