@@ -1,6 +1,8 @@
 #include "ticketing.hpp"
 
 #include <algorithm>
+#include <array>
+#include <cstdint>
 #include <cstring>
 #include <functional>
 #include <memory>
@@ -11,9 +13,11 @@
 #include <boost/unordered/unordered_flat_map.hpp>
 
 #include "resolve_type.hpp"
+#include "storage/dictionary_segment.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/table.hpp"
 #include "storage/value_segment.hpp"
+#include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 
 namespace hyrise {
 
@@ -152,41 +156,117 @@ std::shared_ptr<MaterializedRows> _materialize_rows(const RowFormat& format, con
     resolve_data_type(segment->data_type(), [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
 
-      auto chunk_offset = size_t{0};
-      segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
-        const auto row = RowView{rows + chunk_offset * format.row_size, format};
-        ++chunk_offset;
+      if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
+        const auto row_at = [&](const size_t offset) {
+          return RowView{rows + offset * format.row_size, format};
+        };
 
-        if (position.is_null()) {
-          row.set_null_bitmap(row.null_bitmap() | null_mask_bit);
-          return;
-        }
-
-        if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
-          const auto& str_value = position.value();
-          const auto str_length = str_value.size();
-
-          // Inline representation: length + prefix.
+        // Packs one string value into `row`'s slot for this column: the inline [length, prefix], plus a full,
+        // null-terminated copy in the chunk arena (referenced by pointer) for strings longer than the prefix (so
+        // equality can resolve prefix collisions without re-reading the source segment). It reads straight from
+        // `data`/`length`, so no intermediate `pmr_string` is constructed per value.
+        const auto write_string = [&](const RowView& row, const char* const data, const size_t length) {
           auto* const inline_data = row.column_data(group_by_column_index);
-          std::memcpy(inline_data, &str_length, sizeof(size_t));
-          const auto prefix_length = std::min(str_length, static_cast<size_t>(PREFIX_LENGTH));
-          std::memcpy(inline_data + sizeof(size_t), str_value.c_str(), prefix_length);
-
-          // Strings longer than the prefix additionally store the full, null-terminated value in the chunk's arena
-          // so equality can resolve prefix collisions without re-reading the source segment.
-          if (str_length > PREFIX_LENGTH) {
-            auto* const str_copy = static_cast<char*>(string_arena.allocate(str_length + 1));
-            std::memcpy(str_copy, str_value.c_str(), str_length);
-            str_copy[str_length] = '\0';
+          std::memcpy(inline_data, &length, sizeof(size_t));
+          const auto prefix_length = std::min(length, static_cast<size_t>(PREFIX_LENGTH));
+          std::memcpy(inline_data + sizeof(size_t), data, prefix_length);
+          if (length > PREFIX_LENGTH) {
+            auto* const str_copy = static_cast<char*>(string_arena.allocate(length + 1));
+            std::memcpy(str_copy, data, length);
+            str_copy[length] = '\0';
             row.set_string_ptr(string_col_index, str_copy);
           }
-        } else {
-          row.write_value(group_by_column_index, position.value());
-        }
-      });
+        };
 
-      if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
+        if (const auto* const value_segment = dynamic_cast<const ValueSegment<pmr_string>*>(segment.get())) {
+          // Value segment: read each string straight out of the segment's value vector by reference.
+          const auto& values = value_segment->values();
+          if (value_segment->is_nullable()) {
+            const auto& null_values = value_segment->null_values();
+            for (auto offset = size_t{0}; offset < chunk_size; ++offset) {
+              const auto row = row_at(offset);
+              if (null_values[offset]) {
+                row.set_null_bitmap(row.null_bitmap() | null_mask_bit);
+                continue;
+              }
+              write_string(row, values[offset].c_str(), values[offset].size());
+            }
+          } else {
+            for (auto offset = size_t{0}; offset < chunk_size; ++offset) {
+              write_string(row_at(offset), values[offset].c_str(), values[offset].size());
+            }
+          }
+        } else if (const auto* const dictionary_segment =
+                       dynamic_cast<const DictionarySegment<pmr_string>*>(segment.get())) {
+          // Dictionary segment: pack each distinct dictionary entry once, then per row copy the packed bytes indexed
+          // by the row's value id. This avoids reconstructing a pmr_string per row and packs long strings into the
+          // arena once per distinct value instead of once per row.
+          const auto& dictionary = *dictionary_segment->dictionary();
+          const auto null_value_id = dictionary_segment->null_value_id();
+          const auto dictionary_size = dictionary.size();
+
+          static constexpr auto INLINE_SIZE = sizeof(size_t) + PREFIX_LENGTH;
+          auto inline_blobs = std::vector<std::array<uint8_t, INLINE_SIZE>>(dictionary_size);
+          auto long_string_ptrs = std::vector<char*>(dictionary_size, nullptr);
+          for (auto value_id = size_t{0}; value_id < dictionary_size; ++value_id) {
+            const auto& str = dictionary[value_id];
+            const auto length = str.size();
+            std::memcpy(inline_blobs[value_id].data(), &length, sizeof(size_t));
+            const auto prefix_length = std::min(length, static_cast<size_t>(PREFIX_LENGTH));
+            std::memcpy(inline_blobs[value_id].data() + sizeof(size_t), str.c_str(), prefix_length);
+            if (length > PREFIX_LENGTH) {
+              auto* const str_copy = static_cast<char*>(string_arena.allocate(length + 1));
+              std::memcpy(str_copy, str.c_str(), length);
+              str_copy[length] = '\0';
+              long_string_ptrs[value_id] = str_copy;
+            }
+          }
+
+          resolve_compressed_vector_type(*dictionary_segment->attribute_vector(), [&](const auto& attribute_vector) {
+            auto offset = size_t{0};
+            for (auto it = attribute_vector.cbegin(), end = attribute_vector.cend(); it != end; ++it, ++offset) {
+              const auto value_id = static_cast<ValueID>(*it);
+              const auto row = row_at(offset);
+              if (value_id == null_value_id) {
+                row.set_null_bitmap(row.null_bitmap() | null_mask_bit);
+                continue;
+              }
+              std::memcpy(row.column_data(group_by_column_index), inline_blobs[value_id].data(), INLINE_SIZE);
+              if (long_string_ptrs[value_id] != nullptr) {
+                row.set_string_ptr(string_col_index, long_string_ptrs[value_id]);
+              }
+            }
+          });
+        } else {
+          // Fallback for every other segment kind (reference segments, fixed-string dictionaries, other encodings): go
+          // through the generic iterator. This materializes a pmr_string per row, but keeps correctness for all types.
+          auto chunk_offset = size_t{0};
+          segment_iterate<pmr_string>(*segment, [&](const auto& position) {
+            const auto row = row_at(chunk_offset);
+            ++chunk_offset;
+            if (position.is_null()) {
+              row.set_null_bitmap(row.null_bitmap() | null_mask_bit);
+              return;
+            }
+            const auto& str_value = position.value();
+            write_string(row, str_value.c_str(), str_value.size());
+          });
+        }
+
         ++string_col_index;
+      } else {
+        // Non-string columns hold trivially-copyable fixed-width values; the generic iterator's by-value position is
+        // free here, so there is nothing to gain from bypassing it.
+        auto chunk_offset = size_t{0};
+        segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
+          const auto row = RowView{rows + chunk_offset * format.row_size, format};
+          ++chunk_offset;
+          if (position.is_null()) {
+            row.set_null_bitmap(row.null_bitmap() | null_mask_bit);
+            return;
+          }
+          row.write_value(group_by_column_index, position.value());
+        });
       }
     });
   }
