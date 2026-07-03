@@ -549,18 +549,18 @@ void dyod_get_aggregate_key(const std::shared_ptr<const Table>& input_table,
 
 namespace hyrise {
 
+inline bool has_aggregate_functions(const std::vector<std::shared_ptr<WindowFunctionExpression>>& aggregates) {
+  return !aggregates.empty() && !std::ranges::all_of(aggregates, [](const auto& aggregate_expression) {
+    return aggregate_expression->window_function == WindowFunction::Any;
+  });
+}
+
 AggregateDYOD::AggregateDYOD(const std::shared_ptr<AbstractOperator>& input_operator,
                              const std::vector<std::shared_ptr<WindowFunctionExpression>>& aggregates,
                              const std::vector<ColumnID>& groupby_column_ids)
     : AbstractAggregateOperator(input_operator, aggregates, groupby_column_ids,
-                                std::make_unique<OperatorPerformanceData<OperatorSteps>>()) {
-  // clang-tidy wants _has_aggregate_functions in the member initializer list.
-  // NOLINTNEXTLINE(cppcoreguidelines-prefer-member-initializer)
-  _has_aggregate_functions =
-      !_aggregates.empty() && !std::ranges::all_of(_aggregates, [](const auto& aggregate_expression) {
-        return aggregate_expression->window_function == WindowFunction::Any;
-      });
-}
+                                std::make_unique<OperatorPerformanceData<OperatorSteps>>()),
+      _has_aggregate_functions(has_aggregate_functions(_aggregates)) {}
 
 const std::string& AggregateDYOD::name() const {
   static const auto name = std::string{"AggregateDYOD"};
@@ -578,7 +578,6 @@ void AggregateDYOD::_on_set_parameters(const std::unordered_map<ParameterID, All
 
 void AggregateDYOD::_on_cleanup() {
   // TODO(anyone): cleanup
-  _contexts_per_column.clear();
 }
 
 /*
@@ -615,7 +614,7 @@ struct AggregateContext : public DYODAggregateResultContext<ColumnDataType, aggr
 template <typename ColumnDataType, WindowFunction aggregate_function, typename AggregateKey>
 void AggregateDYOD::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, const AbstractSegment& abstract_segment,
                                        KeysPerChunk<AggregateKey>& keys_per_chunk,
-                                       ContextsPerColumn& contexts_per_column) {
+                                       ContextsPerColumn& contexts_per_column, bool use_immediate_key_shortcut) {
   using AggregateType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
 
   auto aggregator = WindowFunctionBuilder<ColumnDataType, AggregateType, aggregate_function>().get_aggregate_function();
@@ -654,7 +653,7 @@ void AggregateDYOD::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, 
   // (and thus more than one context), it makes sense to cache the results indexes, see dyod_prepare_output for details.
   // Furthermore, if we use the immediate key shortcut (which uses the same code path as caching), we need to pass
   // true_type so that the aggregate keys are checked for immediate access values.
-  if (contexts_per_column.size() > 1 || _use_immediate_key_shortcut) {
+  if (contexts_per_column.size() > 1 || use_immediate_key_shortcut) {
     segment_iterate<ColumnDataType>(abstract_segment, [&](const auto& position) {
       process_position(std::true_type{}, position);
     });
@@ -670,7 +669,9 @@ void AggregateDYOD::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, 
  * AggregateKey for each row. It is gradually built by visitors, one for each group segment.
  */
 template <typename AggregateKey>
-KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::shared_ptr<const Table>& input_table) {
+KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::shared_ptr<const Table>& input_table,
+                                                                     std::atomic_size_t& expected_result_size,
+                                                                     bool& use_immediate_key_shortcut) {
   auto keys_per_chunk = KeysPerChunk<AggregateKey>{};
 
   if constexpr (!std::is_same_v<AggregateKey, DYODEmptyAggregateKey>) {
@@ -721,7 +722,7 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
     const auto groupby_column_count = _groupby_column_ids.size();
     for (auto group_column_index = size_t{0}; group_column_index < groupby_column_count; ++group_column_index) {
       jobs.emplace_back(std::make_shared<JobTask>([&input_table, group_column_index, &keys_per_chunk, chunk_count,
-                                                   this]() {
+                                                   &expected_result_size, &use_immediate_key_shortcut, this]() {
         const auto groupby_column_id = _groupby_column_ids.at(group_column_index);
         const auto data_type = input_table->column_data_type(groupby_column_id);
 
@@ -793,8 +794,8 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
               if (max_key > 0 &&
                   static_cast<double>(max_key - min_key) < static_cast<double>(input_table->row_count()) * 1.2) {
                 // Include space for min, max, and NULL
-                _expected_result_size = static_cast<size_t>(max_key - min_key) + 2;
-                _use_immediate_key_shortcut = true;
+                expected_result_size = static_cast<size_t>(max_key - min_key) + 2;
+                use_immediate_key_shortcut = true;
 
                 // Rewrite the keys and (1) subtract min so that we can also handle consecutive keys that do not start
                 // at 1* and (2) set the first bit which indicates that the key is an immediate index into the result
@@ -941,11 +942,11 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
             // for the results. Estimating the number of groups for multiple GROUP BY columns is somewhat hard, so we
             // simply take the number of groups created by the GROUP BY column with the highest number of distinct
             // values.
-            auto previous_max = _expected_result_size.load();
+            auto previous_max = expected_result_size.load();
             while (previous_max < id_map.size()) {
-              // _expected_result_size needs to be atomatically updated as the GROUP BY columns are processed in
+              // expected_result_size needs to be atomatically updated as the GROUP BY columns are processed in
               // parallel. How to atomically update a maximum value? from https://stackoverflow.com/a/16190791/2204581
-              if (_expected_result_size.compare_exchange_strong(previous_max, id_map.size())) {
+              if (expected_result_size.compare_exchange_strong(previous_max, id_map.size())) {
                 break;
               }
             }
@@ -960,26 +961,26 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
   return keys_per_chunk;
 }
 
-template <typename ColumnDataType, WindowFunction aggregate_function>
-void AggregateDYOD::_merge_contexts(ColumnID aggregate_index,
-                                    const std::vector<ContextsPerColumn>& contexts_per_column_per_thread) {
-  if (contexts_per_column_per_thread.size() < 1) {
-    return;
-  }
-  auto target_context = std::static_pointer_cast<DYODAggregateResultContext<ColumnDataType, aggregate_function>>(
-      _contexts_per_column[aggregate_index]);
-  auto& target_results = target_context->results;
-  const auto contexts_count = contexts_per_column_per_thread.size();
-  for (auto context_index = size_t{0}; context_index < contexts_count; ++context_index) {
-    auto other_context = std::static_pointer_cast<DYODAggregateResultContext<ColumnDataType, aggregate_function>>(
-        contexts_per_column_per_thread[context_index][aggregate_index]);
-    auto& other_results = other_context->results;
-    auto results_count = other_results.size();
-    for (auto result_id = DYODAggregateResultId{0}; result_id < results_count; ++result_id) {
-      target_results.push_back(other_results[result_id]);
-    }
-  }
-}
+// template <typename ColumnDataType, WindowFunction aggregate_function>
+// void AggregateDYOD::_merge_contexts(ColumnID aggregate_index,
+//                                     const std::vector<ContextsPerColumn>& contexts_per_column_per_thread) {
+//   if (contexts_per_column_per_thread.size() < 1) {
+//     return;
+//   }
+//   auto target_context = std::static_pointer_cast<DYODAggregateResultContext<ColumnDataType, aggregate_function>>(
+//       _contexts_per_column[aggregate_index]);
+//   auto& target_results = target_context->results;
+//   const auto contexts_count = contexts_per_column_per_thread.size();
+//   for (auto context_index = size_t{0}; context_index < contexts_count; ++context_index) {
+//     auto other_context = std::static_pointer_cast<DYODAggregateResultContext<ColumnDataType, aggregate_function>>(
+//         contexts_per_column_per_thread[context_index][aggregate_index]);
+//     auto& other_results = other_context->results;
+//     auto results_count = other_results.size();
+//     for (auto result_id = DYODAggregateResultId{0}; result_id < results_count; ++result_id) {
+//       target_results.push_back(other_results[result_id]);
+//     }
+//   }
+// }
 
 template <typename AggregateKey>
 std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
@@ -993,12 +994,16 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
   // Check for invalid aggregates
   _validate_aggregates();
 
+  std::atomic_size_t left_expected_result_size;
+
+  std::atomic_size_t right_expected_result_size;
+
   auto groupby_keys_count = _groupby_column_ids.size();
 
   if (groupby_keys_count == 0 || input_table->row_count() == 0) {
-    _contexts_per_column = ContextsPerColumn(_aggregates.size());
-    _aggregate<AggregateKey>(_contexts_per_column, input_table);
-    return _create_output_table(_contexts_per_column, input_table);
+    auto contexts_per_column = ContextsPerColumn(_aggregates.size());
+    _aggregate<AggregateKey>(contexts_per_column, input_table, left_expected_result_size);
+    return _create_output_table(contexts_per_column, input_table, left_expected_result_size);
   }
 
   // Figure out a Pivot element:
@@ -1056,19 +1061,20 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
 
   // SPLIT END
 
-  // TODO(anyone): Make this run in threads. I think we will need to adapt both _expected_result_size; and
+  // TODO(anyone): Make this run in threads. I think we will need to adapt both expected_result_size; and
   // _use_immediate_key_shortcut{};, as those are probably currently not thread-compatible
-  _contexts_per_column = ContextsPerColumn(_aggregates.size());
+  auto left_contexts_per_column = ContextsPerColumn(_aggregates.size());
   auto right_contexts_per_column = ContextsPerColumn(_aggregates.size());
 
   auto left_input_table = table_scan_bucket_1->get_output();
   auto right_input_table = table_scan_bucket_2->get_output();
 
-  _aggregate<AggregateKey>(_contexts_per_column, left_input_table);
-  _aggregate<AggregateKey>(right_contexts_per_column, right_input_table);
+  _aggregate<AggregateKey>(left_contexts_per_column, left_input_table, left_expected_result_size);
+  _aggregate<AggregateKey>(right_contexts_per_column, right_input_table, right_expected_result_size);
 
-  auto left_output_table = _create_output_table(_contexts_per_column, left_input_table);
-  auto right_output_table = _create_output_table(right_contexts_per_column, right_input_table);
+  auto left_output_table = _create_output_table(left_contexts_per_column, left_input_table, left_expected_result_size);
+  auto right_output_table =
+      _create_output_table(right_contexts_per_column, right_input_table, right_expected_result_size);
 
   auto chunk_count = right_output_table->chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; chunk_id++) {
@@ -1136,15 +1142,17 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
 }
 
 template <typename AggregateKey>
-void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column,
-                               const std::shared_ptr<const Table>& input_table) {
+void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std::shared_ptr<const Table>& input_table,
+                               std::atomic_size_t& expected_result_size) {
   // auto& step_performance_data = dynamic_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
   // auto timer = Timer{};
 
   /**
    * PARTITIONING STEP
    */
-  auto keys_per_chunk = _partition_by_groupby_keys<AggregateKey>(input_table);
+  bool use_immediate_key_shortcut = false;
+  auto keys_per_chunk =
+      _partition_by_groupby_keys<AggregateKey>(input_table, expected_result_size, use_immediate_key_shortcut);
   // step_performance_data.set_step_runtime(OperatorSteps::GroupByKeyPartitioning, timer.lap());
 
   /**
@@ -1157,8 +1165,7 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column,
     one context with results. This is important later on when we write the group keys into the table. The template
     parameters (int32_t, WindowFunction::Min) do not matter, as we do not calculate an aggregate anyway.
     */
-    auto context =
-        std::make_shared<AggregateContext<int32_t, WindowFunction::Min, AggregateKey>>(_expected_result_size);
+    auto context = std::make_shared<AggregateContext<int32_t, WindowFunction::Min, AggregateKey>>(expected_result_size);
 
     contexts_per_column.push_back(context);
   }
@@ -1179,13 +1186,14 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column,
       Assert(aggregate->window_function == WindowFunction::Count, "Only COUNT may have an invalid ColumnID.");
       // SELECT COUNT(*) - we know the template arguments, so we do not need a visitor.
       auto context = std::make_shared<AggregateContext<CountColumnType, WindowFunction::Count, AggregateKey>>(
-          _expected_result_size);
+          expected_result_size);
 
       contexts_per_column[aggregate_idx] = context;
       continue;
     }
     const auto data_type = input_table->column_data_type(input_column_id);
-    contexts_per_column[aggregate_idx] = _create_aggregate_context<AggregateKey>(data_type, aggregate->window_function);
+    contexts_per_column[aggregate_idx] =
+        _create_aggregate_context<AggregateKey>(data_type, aggregate->window_function, expected_result_size);
   }
 
   // Process chunks and perform aggregations.
@@ -1218,7 +1226,7 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column,
 
       // Add value or combination of values is added to the list of distinct value(s). This is done by calling
       // dyod_prepare_output, which adds the corresponding entry in the list of GROUP BY values.
-      if (_use_immediate_key_shortcut) {
+      if (use_immediate_key_shortcut) {
         for (auto chunk_offset = ChunkOffset{0}; chunk_offset < input_chunk_size; ++chunk_offset) {
           // We are able to use immediate keys, so pass true_type so that the combined caching/immediate key code path
           // is enabled in dyod_prepare_output.
@@ -1269,7 +1277,7 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column,
           } else {
             // Count occurrences for each group key -  If we have more than one aggregate function (and thus more than
             // one context), it makes sense to cache the results indexes, see dyod_prepare_output for details.
-            if (contexts_per_column.size() > 1 || _use_immediate_key_shortcut) {
+            if (contexts_per_column.size() > 1 || use_immediate_key_shortcut) {
               for (auto chunk_offset = ChunkOffset{0}; chunk_offset < input_chunk_size; ++chunk_offset) {
                 // Use CacheResultIds==true_type if we have more than one group by column or if the cached result ids
                 // have been written by the immediate key shortcut
@@ -1307,31 +1315,38 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column,
           switch (aggregate->window_function) {
             case WindowFunction::Min:
               _aggregate_segment<ColumnDataType, WindowFunction::Min, AggregateKey>(
-                  chunk_id, aggregate_idx, *abstract_segment, keys_per_chunk, contexts_per_column);
+                  chunk_id, aggregate_idx, *abstract_segment, keys_per_chunk, contexts_per_column,
+                  use_immediate_key_shortcut);
               break;
             case WindowFunction::Max:
               _aggregate_segment<ColumnDataType, WindowFunction::Max, AggregateKey>(
-                  chunk_id, aggregate_idx, *abstract_segment, keys_per_chunk, contexts_per_column);
+                  chunk_id, aggregate_idx, *abstract_segment, keys_per_chunk, contexts_per_column,
+                  use_immediate_key_shortcut);
               break;
             case WindowFunction::Sum:
               _aggregate_segment<ColumnDataType, WindowFunction::Sum, AggregateKey>(
-                  chunk_id, aggregate_idx, *abstract_segment, keys_per_chunk, contexts_per_column);
+                  chunk_id, aggregate_idx, *abstract_segment, keys_per_chunk, contexts_per_column,
+                  use_immediate_key_shortcut);
               break;
             case WindowFunction::Avg:
               _aggregate_segment<ColumnDataType, WindowFunction::Avg, AggregateKey>(
-                  chunk_id, aggregate_idx, *abstract_segment, keys_per_chunk, contexts_per_column);
+                  chunk_id, aggregate_idx, *abstract_segment, keys_per_chunk, contexts_per_column,
+                  use_immediate_key_shortcut);
               break;
             case WindowFunction::Count:
               _aggregate_segment<ColumnDataType, WindowFunction::Count, AggregateKey>(
-                  chunk_id, aggregate_idx, *abstract_segment, keys_per_chunk, contexts_per_column);
+                  chunk_id, aggregate_idx, *abstract_segment, keys_per_chunk, contexts_per_column,
+                  use_immediate_key_shortcut);
               break;
             case WindowFunction::CountDistinct:
               _aggregate_segment<ColumnDataType, WindowFunction::CountDistinct, AggregateKey>(
-                  chunk_id, aggregate_idx, *abstract_segment, keys_per_chunk, contexts_per_column);
+                  chunk_id, aggregate_idx, *abstract_segment, keys_per_chunk, contexts_per_column,
+                  use_immediate_key_shortcut);
               break;
             case WindowFunction::StandardDeviationSample:
               _aggregate_segment<ColumnDataType, WindowFunction::StandardDeviationSample, AggregateKey>(
-                  chunk_id, aggregate_idx, *abstract_segment, keys_per_chunk, contexts_per_column);
+                  chunk_id, aggregate_idx, *abstract_segment, keys_per_chunk, contexts_per_column,
+                  use_immediate_key_shortcut);
               break;
             case WindowFunction::Any:
               // ANY is a pseudo-function and is handled by `dyod_get_aggregate_key`.
@@ -1354,7 +1369,8 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column,
 }  // NOLINT(readability/fn_size)
 
 std::shared_ptr<Table> AggregateDYOD::_create_output_table(ContextsPerColumn& contexts_per_column,
-                                                           const std::shared_ptr<const Table>& input_table) {
+                                                           const std::shared_ptr<const Table>& input_table,
+                                                           std::atomic_size_t& expected_result_size) {
   const auto num_output_columns = _groupby_column_ids.size() + _aggregates.size();
   _output_column_definitions.resize(num_output_columns);
 
@@ -1645,10 +1661,10 @@ void AggregateDYOD::_write_aggregate_output(ColumnID aggregate_index, ContextsPe
 
 template <typename AggregateKey>
 std::shared_ptr<DYODSegmentVisitorContext> AggregateDYOD::_create_aggregate_context(
-    const DataType data_type, const WindowFunction aggregate_function) const {
+    const DataType data_type, const WindowFunction aggregate_function, std::atomic_size_t& expected_result_size) const {
   std::shared_ptr<DYODSegmentVisitorContext> context;
   resolve_data_type(data_type, [&](auto type) {
-    const auto size = _expected_result_size.load();
+    const auto size = expected_result_size.load();
     using ColumnDataType = typename decltype(type)::type;
     switch (aggregate_function) {
       case WindowFunction::Min:

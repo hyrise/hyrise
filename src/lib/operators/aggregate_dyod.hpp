@@ -156,13 +156,16 @@ class AggregateDYOD : public AbstractAggregateOperator {
   std::shared_ptr<const Table> _on_execute() override;
 
   template <typename AggregateKey>
-  KeysPerChunk<AggregateKey> _partition_by_groupby_keys(const std::shared_ptr<const Table>& input_table);
+  KeysPerChunk<AggregateKey> _partition_by_groupby_keys(const std::shared_ptr<const Table>& input_table,
+                                                        std::atomic_size_t& expected_result_size,
+                                                        bool& use_immediate_key_shortcut);
 
   template <typename AggregateKey>
-  void _aggregate(ContextsPerColumn& contexts_per_column, const std::shared_ptr<const Table>& input_table);
+  void _aggregate(ContextsPerColumn& contexts_per_column, const std::shared_ptr<const Table>& input_table,
+                  std::atomic_size_t& expected_result_size);
 
-  template <typename ColumnDataType, WindowFunction aggregate_function>
-  void _merge_contexts(ColumnID aggregate_index, const std::vector<ContextsPerColumn>& contexts_per_column_per_thread);
+  // template <typename ColumnDataType, WindowFunction aggregate_function>
+  // void _merge_contexts(ColumnID aggregate_index, const std::vector<ContextsPerColumn>& contexts_per_column_per_thread);
 
   template <typename AggregateKey>
   std::shared_ptr<Table> _partition_and_aggregate();
@@ -184,15 +187,18 @@ class AggregateDYOD : public AbstractAggregateOperator {
                                const std::shared_ptr<const Table>& input_table);
 
   std::shared_ptr<Table> _create_output_table(ContextsPerColumn& contexts_per_column,
-                                              const std::shared_ptr<const Table>& input_table);
+                                              const std::shared_ptr<const Table>& input_table,
+                                              std::atomic_size_t& expected_result_size);
 
   template <typename ColumnDataType, WindowFunction aggregate_function, typename AggregateKey>
   void _aggregate_segment(ChunkID chunk_id, ColumnID column_index, const AbstractSegment& abstract_segment,
-                          KeysPerChunk<AggregateKey>& keys_per_chunk, ContextsPerColumn& contexts_per_column);
+                          KeysPerChunk<AggregateKey>& keys_per_chunk, ContextsPerColumn& contexts_per_column,
+                          bool use_immediate_key_shortcut);
 
   template <typename AggregateKey>
   std::shared_ptr<DYODSegmentVisitorContext> _create_aggregate_context(const DataType data_type,
-                                                                       const WindowFunction aggregate_function) const;
+                                                                       const WindowFunction aggregate_function,
+                                                                       std::atomic_size_t& expected_result_size) const;
 
   // Data structure used to gather intermediate results of grouping and aggregation. This data structure stores both
   // the PosLists for group-by columns as well as the materialized aggregate results that are later returned as
@@ -200,11 +206,11 @@ class AggregateDYOD : public AbstractAggregateOperator {
   // std::vector<Segments> _intermediate_result;
 
   // std::vector<std::shared_ptr<BaseValueSegment>> _groupby_segments;
-  ContextsPerColumn _contexts_per_column;
+  // ContextsPerColumn _contexts_per_column;
   bool _has_aggregate_functions;
 
-  std::atomic_size_t _expected_result_size;
-  bool _use_immediate_key_shortcut{};
+  // std::atomic_size_t _expected_result_size;
+  // bool _use_immediate_key_shortcut{};
 
   // std::chrono::nanoseconds _groupby_columns_writing_duration{};
   // std::chrono::nanoseconds _aggregate_columns_writing_duration{};
