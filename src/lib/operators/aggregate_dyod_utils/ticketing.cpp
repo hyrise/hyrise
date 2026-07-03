@@ -5,7 +5,9 @@
 #include <cstdint>
 #include <cstring>
 #include <functional>
+#include <limits>
 #include <memory>
+#include <string_view>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -135,6 +137,196 @@ RowFormat _create_row_format(const TableColumnDefinitions& column_definitions,
                    .column_is_nullable = std::move(column_is_nullable)};
 }
 
+// Materializes one string group-by column of a chunk into the packed rows (see `_materialize_rows`). Dispatches on the
+// segment's concrete type so value/dictionary segments (and single-chunk references to them) can point rows straight
+// at the segment's own string storage instead of copying; other kinds fall back to the generic copying iterator.
+// `materialized.string_pointer_needs_copy` records, per string column, whether its long-string pointers reference the
+// transient per-chunk arena (and so must be promoted on insert) or stable, query-lifetime source memory.
+void _materialize_string_column(const RowFormat& format, const AbstractSegment& segment,
+                                const size_t group_by_column_index, const size_t string_col_index,
+                                const uint64_t null_mask_bit, MaterializedRows& materialized) {
+  auto* const rows = materialized.rows.get();
+  const auto chunk_size = materialized.row_count;
+  auto& string_arena = materialized.string_arena;
+
+  const auto row_at = [&](const size_t offset) {
+    return RowView{rows + offset * format.row_size, format};
+  };
+
+  // Writes the inline part of a string value ([length, prefix]) into `row`'s slot for this column. Returns whether the
+  // value is longer than the prefix, i.e. whether the caller must additionally set a heap pointer to the full value so
+  // equality can resolve prefix collisions. Reads straight from `data`, so no intermediate `pmr_string` is constructed.
+  const auto write_inline = [&](const RowView& row, const char* const data, const size_t length) {
+    auto* const inline_data = row.column_data(group_by_column_index);
+    std::memcpy(inline_data, &length, sizeof(size_t));
+    const auto prefix_length = std::min(length, static_cast<size_t>(PREFIX_LENGTH));
+    std::memcpy(inline_data + sizeof(size_t), data, prefix_length);
+    return length > PREFIX_LENGTH;
+  };
+
+  // Writes a string that lives in stable, query-lifetime memory (a value/dictionary segment owned by the input or by a
+  // referenced table): the inline bytes, plus a direct pointer into that memory for long strings. `const_cast` is safe
+  // because the pointer is only ever read (hash equality, output build).
+  const auto write_stable_string = [&](const RowView& row, const pmr_string& value) {
+    if (write_inline(row, value.c_str(), value.size())) {
+      row.set_string_ptr(string_col_index, const_cast<char*>(value.c_str()));
+    }
+  };
+
+  // Generic fallback: the iterator materializes a transient `pmr_string` per row, so long strings must be copied into
+  // the per-chunk arena and promoted into the key arena when a group is first inserted.
+  const auto materialize_via_iterator = [&] {
+    materialized.string_pointer_needs_copy.push_back(true);
+    auto chunk_offset = size_t{0};
+    segment_iterate<pmr_string>(segment, [&](const auto& position) {
+      const auto row = row_at(chunk_offset);
+      ++chunk_offset;
+      if (position.is_null()) {
+        row.set_null_bitmap(row.null_bitmap() | null_mask_bit);
+        return;
+      }
+      const auto& str_value = position.value();
+      if (write_inline(row, str_value.c_str(), str_value.size())) {
+        const auto length = str_value.size();
+        auto* const str_copy = static_cast<char*>(string_arena.allocate(length + 1));
+        std::memcpy(str_copy, str_value.c_str(), length);
+        str_copy[length] = '\0';
+        row.set_string_ptr(string_col_index, str_copy);
+      }
+    });
+  };
+
+  if (const auto* const value_segment = dynamic_cast<const ValueSegment<pmr_string>*>(&segment)) {
+    TRACE_EVENT("Aggregate", "Ticketing::materialize::ValueSegment<string>");
+    // Value segment: the segment owns its strings for the whole query, so point long strings straight at them
+    // instead of copying.
+    materialized.string_pointer_needs_copy.push_back(false);
+    const auto& values = value_segment->values();
+    if (value_segment->is_nullable()) {
+      const auto& null_values = value_segment->null_values();
+      for (auto offset = size_t{0}; offset < chunk_size; ++offset) {
+        const auto row = row_at(offset);
+        if (null_values[offset]) {
+          row.set_null_bitmap(row.null_bitmap() | null_mask_bit);
+          continue;
+        }
+        write_stable_string(row, values[offset]);
+      }
+    } else {
+      for (auto offset = size_t{0}; offset < chunk_size; ++offset) {
+        write_stable_string(row_at(offset), values[offset]);
+      }
+    }
+  } else if (const auto* const dictionary_segment = dynamic_cast<const DictionarySegment<pmr_string>*>(&segment)) {
+    TRACE_EVENT("Aggregate", "Ticketing::materialize::DictionarySegment<string>");
+    // Dictionary segment: pack each distinct dictionary entry's inline bytes once, then per row copy the packed
+    // bytes indexed by the row's value id. Long strings point straight at the dictionary entry (owned for the
+    // whole query), so no per-row or per-group string copy is needed.
+    materialized.string_pointer_needs_copy.push_back(false);
+    const auto& dictionary = *dictionary_segment->dictionary();
+    const auto null_value_id = dictionary_segment->null_value_id();
+    const auto dictionary_size = dictionary.size();
+
+    static constexpr auto INLINE_SIZE = sizeof(size_t) + PREFIX_LENGTH;
+    auto inline_blobs = std::vector<std::array<uint8_t, INLINE_SIZE>>(dictionary_size);
+    auto long_string_ptrs = std::vector<char*>(dictionary_size, nullptr);
+    for (auto value_id = size_t{0}; value_id < dictionary_size; ++value_id) {
+      const auto& str = dictionary[value_id];
+      const auto length = str.size();
+      std::memcpy(inline_blobs[value_id].data(), &length, sizeof(size_t));
+      const auto prefix_length = std::min(length, static_cast<size_t>(PREFIX_LENGTH));
+      std::memcpy(inline_blobs[value_id].data() + sizeof(size_t), str.c_str(), prefix_length);
+      if (length > PREFIX_LENGTH) {
+        // Points into the dictionary; `const_cast` is safe because the pointer is only ever read.
+        long_string_ptrs[value_id] = const_cast<char*>(str.c_str());
+      }
+    }
+
+    resolve_compressed_vector_type(*dictionary_segment->attribute_vector(), [&](const auto& attribute_vector) {
+      auto offset = size_t{0};
+      for (auto it = attribute_vector.cbegin(), end = attribute_vector.cend(); it != end; ++it, ++offset) {
+        const auto value_id = static_cast<ValueID>(*it);
+        const auto row = row_at(offset);
+        if (value_id == null_value_id) {
+          row.set_null_bitmap(row.null_bitmap() | null_mask_bit);
+          continue;
+        }
+        std::memcpy(row.column_data(group_by_column_index), inline_blobs[value_id].data(), INLINE_SIZE);
+        if (long_string_ptrs[value_id] != nullptr) {
+          row.set_string_ptr(string_col_index, long_string_ptrs[value_id]);
+        }
+      }
+    });
+  } else if (const auto* const reference_segment = dynamic_cast<const ReferenceSegment*>(&segment)) {
+    // Reference segment: in the common case the pos-list references a single chunk of a stable referenced table,
+    // so we resolve that chunk's segment once and point long strings straight at its (value/dictionary) string
+    // storage, exactly like the direct value/dictionary paths. Anything else (multi-chunk pos-lists, other
+    // referenced encodings) uses the generic copying fallback.
+    const auto& pos_list = reference_segment->pos_list();
+    auto handled = false;
+
+    if (pos_list->references_single_chunk() && !pos_list->empty()) {
+      // A single-chunk pos-list is guaranteed to contain no NULL row ids, so only value-level NULLs are handled.
+      const auto& referenced_table = reference_segment->referenced_table();
+      const auto referenced_column_id = reference_segment->referenced_column_id();
+      const auto referenced_segment =
+          referenced_table->get_chunk(pos_list->common_chunk_id())->get_segment(referenced_column_id);
+
+      if (const auto* const referenced_value = dynamic_cast<const ValueSegment<pmr_string>*>(referenced_segment.get())) {
+        TRACE_EVENT("Aggregate", "Ticketing::materialize::ReferenceSegment<string> (value)");
+        materialized.string_pointer_needs_copy.push_back(false);
+        const auto& values = referenced_value->values();
+        if (referenced_value->is_nullable()) {
+          const auto& null_values = referenced_value->null_values();
+          for (auto offset = size_t{0}; offset < chunk_size; ++offset) {
+            const auto chunk_offset = (*pos_list)[offset].chunk_offset;
+            const auto row = row_at(offset);
+            if (null_values[chunk_offset]) {
+              row.set_null_bitmap(row.null_bitmap() | null_mask_bit);
+              continue;
+            }
+            write_stable_string(row, values[chunk_offset]);
+          }
+        } else {
+          for (auto offset = size_t{0}; offset < chunk_size; ++offset) {
+            write_stable_string(row_at(offset), values[(*pos_list)[offset].chunk_offset]);
+          }
+        }
+        handled = true;
+      } else if (const auto* const referenced_dictionary =
+                     dynamic_cast<const DictionarySegment<pmr_string>*>(referenced_segment.get())) {
+        TRACE_EVENT("Aggregate", "Ticketing::materialize::ReferenceSegment<string> (dictionary)");
+        materialized.string_pointer_needs_copy.push_back(false);
+        const auto& dictionary = *referenced_dictionary->dictionary();
+        const auto null_value_id = referenced_dictionary->null_value_id();
+        resolve_compressed_vector_type(*referenced_dictionary->attribute_vector(), [&](const auto& attribute_vector) {
+          auto decompressor = attribute_vector.create_decompressor();
+          for (auto offset = size_t{0}; offset < chunk_size; ++offset) {
+            const auto chunk_offset = (*pos_list)[offset].chunk_offset;
+            const auto value_id = static_cast<ValueID>(decompressor.get(chunk_offset));
+            const auto row = row_at(offset);
+            if (value_id == null_value_id) {
+              row.set_null_bitmap(row.null_bitmap() | null_mask_bit);
+              continue;
+            }
+            write_stable_string(row, dictionary[value_id]);
+          }
+        });
+        handled = true;
+      }
+    }
+
+    if (!handled) {
+      TRACE_EVENT("Aggregate", "Ticketing::materialize::ReferenceSegment<string> (fallback)");
+      materialize_via_iterator();
+    }
+  } else {
+    // Fallback for every other segment kind (fixed-string dictionaries, other encodings).
+    TRACE_EVENT("Aggregate", "Ticketing::materialize::fallback<string>");
+    materialize_via_iterator();
+  }
+}
+
 // TODO(@forUnity): think about alignment and padding, also sort string_columns to be last in groupby columns?
 std::shared_ptr<MaterializedRows> _materialize_rows(const RowFormat& format, const std::shared_ptr<const Chunk>& chunk,
                                                     const std::vector<ColumnID>& groupby_column_ids) {
@@ -144,7 +336,6 @@ std::shared_ptr<MaterializedRows> _materialize_rows(const RowFormat& format, con
   materialized->row_count = chunk_size;
   materialized->rows = std::make_unique<uint8_t[]>(chunk_size * format.row_size);
   auto* const rows = materialized->rows.get();
-  auto& string_arena = materialized->string_arena;
 
   // Index of the current string column among the group-by columns. Selects which string-pointer slot to write.
   auto string_col_index = size_t{0};
@@ -158,187 +349,8 @@ std::shared_ptr<MaterializedRows> _materialize_rows(const RowFormat& format, con
       using ColumnDataType = typename decltype(type)::type;
 
       if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
-        const auto row_at = [&](const size_t offset) {
-          return RowView{rows + offset * format.row_size, format};
-        };
-
-        // Writes the inline part of a string value ([length, prefix]) into `row`'s slot for this column. Returns
-        // whether the value is longer than the prefix, i.e. whether the caller must additionally set a heap pointer to
-        // the full value so equality can resolve prefix collisions. Reads straight from `data`, so no intermediate
-        // `pmr_string` is constructed per value.
-        const auto write_inline = [&](const RowView& row, const char* const data, const size_t length) {
-          auto* const inline_data = row.column_data(group_by_column_index);
-          std::memcpy(inline_data, &length, sizeof(size_t));
-          const auto prefix_length = std::min(length, static_cast<size_t>(PREFIX_LENGTH));
-          std::memcpy(inline_data + sizeof(size_t), data, prefix_length);
-          return length > PREFIX_LENGTH;
-        };
-
-        // Writes a string that lives in stable, query-lifetime memory (a value/dictionary segment owned by the input
-        // or by a referenced table): the inline bytes, plus a direct pointer into that memory for long strings.
-        // `const_cast` is safe because the pointer is only ever read (hash equality, output build).
-        const auto write_stable_string = [&](const RowView& row, const pmr_string& value) {
-          if (write_inline(row, value.c_str(), value.size())) {
-            row.set_string_ptr(string_col_index, const_cast<char*>(value.c_str()));
-          }
-        };
-
-        // Generic fallback: the iterator materializes a transient `pmr_string` per row, so long strings must be copied
-        // into the per-chunk arena and promoted into the key arena when a group is first inserted.
-        const auto materialize_via_iterator = [&] {
-          materialized->string_pointer_needs_copy.push_back(true);
-          auto chunk_offset = size_t{0};
-          segment_iterate<pmr_string>(*segment, [&](const auto& position) {
-            const auto row = row_at(chunk_offset);
-            ++chunk_offset;
-            if (position.is_null()) {
-              row.set_null_bitmap(row.null_bitmap() | null_mask_bit);
-              return;
-            }
-            const auto& str_value = position.value();
-            if (write_inline(row, str_value.c_str(), str_value.size())) {
-              const auto length = str_value.size();
-              auto* const str_copy = static_cast<char*>(string_arena.allocate(length + 1));
-              std::memcpy(str_copy, str_value.c_str(), length);
-              str_copy[length] = '\0';
-              row.set_string_ptr(string_col_index, str_copy);
-            }
-          });
-        };
-
-        if (const auto* const value_segment = dynamic_cast<const ValueSegment<pmr_string>*>(segment.get())) {
-          TRACE_EVENT("Aggregate", "Ticketing::materialize::ValueSegment<string>");
-          // Value segment: the segment owns its strings for the whole query, so point long strings straight at them
-          // instead of copying.
-          materialized->string_pointer_needs_copy.push_back(false);
-          const auto& values = value_segment->values();
-          if (value_segment->is_nullable()) {
-            const auto& null_values = value_segment->null_values();
-            for (auto offset = size_t{0}; offset < chunk_size; ++offset) {
-              const auto row = row_at(offset);
-              if (null_values[offset]) {
-                row.set_null_bitmap(row.null_bitmap() | null_mask_bit);
-                continue;
-              }
-              write_stable_string(row, values[offset]);
-            }
-          } else {
-            for (auto offset = size_t{0}; offset < chunk_size; ++offset) {
-              write_stable_string(row_at(offset), values[offset]);
-            }
-          }
-        } else if (const auto* const dictionary_segment =
-                       dynamic_cast<const DictionarySegment<pmr_string>*>(segment.get())) {
-          TRACE_EVENT("Aggregate", "Ticketing::materialize::DictionarySegment<string>");
-          // Dictionary segment: pack each distinct dictionary entry's inline bytes once, then per row copy the packed
-          // bytes indexed by the row's value id. Long strings point straight at the dictionary entry (owned for the
-          // whole query), so no per-row or per-group string copy is needed.
-          materialized->string_pointer_needs_copy.push_back(false);
-          const auto& dictionary = *dictionary_segment->dictionary();
-          const auto null_value_id = dictionary_segment->null_value_id();
-          const auto dictionary_size = dictionary.size();
-
-          static constexpr auto INLINE_SIZE = sizeof(size_t) + PREFIX_LENGTH;
-          auto inline_blobs = std::vector<std::array<uint8_t, INLINE_SIZE>>(dictionary_size);
-          auto long_string_ptrs = std::vector<char*>(dictionary_size, nullptr);
-          for (auto value_id = size_t{0}; value_id < dictionary_size; ++value_id) {
-            const auto& str = dictionary[value_id];
-            const auto length = str.size();
-            std::memcpy(inline_blobs[value_id].data(), &length, sizeof(size_t));
-            const auto prefix_length = std::min(length, static_cast<size_t>(PREFIX_LENGTH));
-            std::memcpy(inline_blobs[value_id].data() + sizeof(size_t), str.c_str(), prefix_length);
-            if (length > PREFIX_LENGTH) {
-              // Points into the dictionary; `const_cast` is safe because the pointer is only ever read.
-              long_string_ptrs[value_id] = const_cast<char*>(str.c_str());
-            }
-          }
-
-          resolve_compressed_vector_type(*dictionary_segment->attribute_vector(), [&](const auto& attribute_vector) {
-            auto offset = size_t{0};
-            for (auto it = attribute_vector.cbegin(), end = attribute_vector.cend(); it != end; ++it, ++offset) {
-              const auto value_id = static_cast<ValueID>(*it);
-              const auto row = row_at(offset);
-              if (value_id == null_value_id) {
-                row.set_null_bitmap(row.null_bitmap() | null_mask_bit);
-                continue;
-              }
-              std::memcpy(row.column_data(group_by_column_index), inline_blobs[value_id].data(), INLINE_SIZE);
-              if (long_string_ptrs[value_id] != nullptr) {
-                row.set_string_ptr(string_col_index, long_string_ptrs[value_id]);
-              }
-            }
-          });
-        } else if (const auto* const reference_segment = dynamic_cast<const ReferenceSegment*>(segment.get())) {
-          // Reference segment: in the common case the pos-list references a single chunk of a stable referenced table,
-          // so we resolve that chunk's segment once and point long strings straight at its (value/dictionary) string
-          // storage, exactly like the direct value/dictionary paths. Anything else (multi-chunk pos-lists, other
-          // referenced encodings) uses the generic copying fallback.
-          const auto& pos_list = reference_segment->pos_list();
-          auto handled = false;
-
-          if (pos_list->references_single_chunk() && !pos_list->empty()) {
-            // A single-chunk pos-list is guaranteed to contain no NULL row ids, so only value-level NULLs are handled.
-            const auto& referenced_table = reference_segment->referenced_table();
-            const auto referenced_column_id = reference_segment->referenced_column_id();
-            const auto referenced_segment =
-                referenced_table->get_chunk(pos_list->common_chunk_id())->get_segment(referenced_column_id);
-
-            if (const auto* const referenced_value =
-                    dynamic_cast<const ValueSegment<pmr_string>*>(referenced_segment.get())) {
-              TRACE_EVENT("Aggregate", "Ticketing::materialize::ReferenceSegment<string> (value)");
-              materialized->string_pointer_needs_copy.push_back(false);
-              const auto& values = referenced_value->values();
-              if (referenced_value->is_nullable()) {
-                const auto& null_values = referenced_value->null_values();
-                for (auto offset = size_t{0}; offset < chunk_size; ++offset) {
-                  const auto chunk_offset = (*pos_list)[offset].chunk_offset;
-                  const auto row = row_at(offset);
-                  if (null_values[chunk_offset]) {
-                    row.set_null_bitmap(row.null_bitmap() | null_mask_bit);
-                    continue;
-                  }
-                  write_stable_string(row, values[chunk_offset]);
-                }
-              } else {
-                for (auto offset = size_t{0}; offset < chunk_size; ++offset) {
-                  write_stable_string(row_at(offset), values[(*pos_list)[offset].chunk_offset]);
-                }
-              }
-              handled = true;
-            } else if (const auto* const referenced_dictionary =
-                           dynamic_cast<const DictionarySegment<pmr_string>*>(referenced_segment.get())) {
-              TRACE_EVENT("Aggregate", "Ticketing::materialize::ReferenceSegment<string> (dictionary)");
-              materialized->string_pointer_needs_copy.push_back(false);
-              const auto& dictionary = *referenced_dictionary->dictionary();
-              const auto null_value_id = referenced_dictionary->null_value_id();
-              resolve_compressed_vector_type(
-                  *referenced_dictionary->attribute_vector(), [&](const auto& attribute_vector) {
-                    auto decompressor = attribute_vector.create_decompressor();
-                    for (auto offset = size_t{0}; offset < chunk_size; ++offset) {
-                      const auto chunk_offset = (*pos_list)[offset].chunk_offset;
-                      const auto value_id = static_cast<ValueID>(decompressor.get(chunk_offset));
-                      const auto row = row_at(offset);
-                      if (value_id == null_value_id) {
-                        row.set_null_bitmap(row.null_bitmap() | null_mask_bit);
-                        continue;
-                      }
-                      write_stable_string(row, dictionary[value_id]);
-                    }
-                  });
-              handled = true;
-            }
-          }
-
-          if (!handled) {
-            TRACE_EVENT("Aggregate", "Ticketing::materialize::ReferenceSegment<string> (fallback)");
-            materialize_via_iterator();
-          }
-        } else {
-          // Fallback for every other segment kind (fixed-string dictionaries, other encodings).
-          TRACE_EVENT("Aggregate", "Ticketing::materialize::fallback<string>");
-          materialize_via_iterator();
-        }
-
+        _materialize_string_column(format, *segment, group_by_column_index, string_col_index, null_mask_bit,
+                                   *materialized);
         ++string_col_index;
       } else {
         TRACE_EVENT("Aggregate", "Ticketing::materialize::numeric");
@@ -508,10 +520,178 @@ GroupingResult _compute_groups_byte_row(const std::vector<ColumnID>& groupby_col
   return result;
 }
 
+// Transparent hashing/equality so the single-string-column grouping map can be probed with a `std::string_view` (no
+// allocation) and only materialize an owning `pmr_string` when a brand-new group is inserted.
+struct StringViewHash {
+  using is_transparent = void;
+
+  size_t operator()(const std::string_view value) const {
+    return compute_hash(value.data(), value.size());
+  }
+
+  size_t operator()(const pmr_string& value) const {
+    return compute_hash(value.data(), value.size());
+  }
+};
+
+struct StringViewEqual {
+  using is_transparent = void;
+
+  bool operator()(const std::string_view lhs, const std::string_view rhs) const {
+    return lhs == rhs;
+  }
+};
+
+// Fast path for a single string group-by column. Groups are keyed on the actual string, but dictionary-encoded chunks
+// (directly, or referenced through a single-chunk reference segment) are grouped by their value ids: each distinct
+// value id is resolved to a group ticket once per chunk and cached in `value_id_ticket`, so a string is only hashed and
+// copied when its value id is first seen. Value segments are read by reference; anything else falls back to the generic
+// iterator. The string is only copied when a genuinely new group is inserted into the global map.
+GroupingResult _compute_groups_single_string_column(const ColumnID column_id,
+                                                    const std::shared_ptr<const Table>& input_table) {
+  const auto column_is_nullable = input_table->column_is_nullable(column_id);
+  const auto chunk_count = input_table->chunk_count();
+
+  auto result = GroupingResult{};
+  result.tickets.reserve(input_table->row_count());
+
+  // Global grouping structure keyed on the group string. Transparent lookup lets us probe with a `string_view`; the
+  // string is only copied into the map when a new group is inserted.
+  auto value_to_ticket = boost::unordered_flat_map<pmr_string, uint32_t, StringViewHash, StringViewEqual>{};
+  auto next_ticket = uint32_t{0};
+  auto has_null = false;
+  auto null_ticket = uint32_t{0};
+
+  const auto ticket_for_string = [&](const std::string_view value) {
+    const auto iter = value_to_ticket.find(value);
+    if (iter != value_to_ticket.end()) {
+      return iter->second;
+    }
+    const auto ticket = next_ticket++;
+    value_to_ticket.emplace(pmr_string{value}, ticket);
+    return ticket;
+  };
+
+  const auto ticket_for_null = [&] {
+    if (!has_null) {
+      has_null = true;
+      null_ticket = next_ticket++;
+    }
+    return null_ticket;
+  };
+
+  constexpr auto UNRESOLVED = std::numeric_limits<uint32_t>::max();
+
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+    const auto& segment = input_table->get_chunk(chunk_id)->get_segment(column_id);
+    const auto chunk_size = segment->size();
+
+    // Try to reach a dictionary or value segment, directly or through a single-chunk reference. When `pos_list` is set,
+    // a sequential row offset maps to the referenced chunk offset; `referenced_holder` keeps the referenced segment
+    // alive for the duration of this chunk.
+    const auto* dictionary_segment = dynamic_cast<const DictionarySegment<pmr_string>*>(segment.get());
+    const auto* value_segment = dynamic_cast<const ValueSegment<pmr_string>*>(segment.get());
+    const AbstractPosList* pos_list = nullptr;
+    auto referenced_holder = std::shared_ptr<const AbstractSegment>{};
+
+    if (!dictionary_segment && !value_segment) {
+      if (const auto* const reference_segment = dynamic_cast<const ReferenceSegment*>(segment.get())) {
+        const auto& reference_pos_list = reference_segment->pos_list();
+        if (reference_pos_list->references_single_chunk() && !reference_pos_list->empty()) {
+          referenced_holder = reference_segment->referenced_table()
+                                  ->get_chunk(reference_pos_list->common_chunk_id())
+                                  ->get_segment(reference_segment->referenced_column_id());
+          dictionary_segment = dynamic_cast<const DictionarySegment<pmr_string>*>(referenced_holder.get());
+          value_segment = dynamic_cast<const ValueSegment<pmr_string>*>(referenced_holder.get());
+          if (dictionary_segment || value_segment) {
+            pos_list = reference_pos_list.get();
+          }
+        }
+      }
+    }
+
+    if (dictionary_segment) {
+      TRACE_EVENT("Aggregate", "Ticketing::single-string::dictionary");
+      // Compare value ids within the chunk: resolve each distinct value id to a global ticket once, then reuse it.
+      const auto& dictionary = *dictionary_segment->dictionary();
+      const auto null_value_id = dictionary_segment->null_value_id();
+      auto value_id_ticket = std::vector<uint32_t>(dictionary.size(), UNRESOLVED);
+
+      const auto emit_value_id = [&](const ValueID value_id) {
+        if (value_id == null_value_id) {
+          result.tickets.push_back(ticket_for_null());
+          return;
+        }
+        auto& cached = value_id_ticket[value_id];
+        if (cached == UNRESOLVED) {
+          cached = ticket_for_string(std::string_view{dictionary[value_id]});
+        }
+        result.tickets.push_back(cached);
+      };
+
+      resolve_compressed_vector_type(*dictionary_segment->attribute_vector(), [&](const auto& attribute_vector) {
+        auto decompressor = attribute_vector.create_decompressor();
+        for (auto offset = size_t{0}; offset < chunk_size; ++offset) {
+          const auto row_offset = pos_list ? size_t{(*pos_list)[offset].chunk_offset} : offset;
+          emit_value_id(static_cast<ValueID>(decompressor.get(row_offset)));
+        }
+      });
+    } else if (value_segment) {
+      TRACE_EVENT("Aggregate", "Ticketing::single-string::value");
+      const auto& values = value_segment->values();
+      const auto is_nullable = value_segment->is_nullable();
+      const auto* const null_values = is_nullable ? &value_segment->null_values() : nullptr;
+      for (auto offset = size_t{0}; offset < chunk_size; ++offset) {
+        const auto row_offset = pos_list ? size_t{(*pos_list)[offset].chunk_offset} : offset;
+        if (is_nullable && (*null_values)[row_offset]) {
+          result.tickets.push_back(ticket_for_null());
+          continue;
+        }
+        result.tickets.push_back(ticket_for_string(std::string_view{values[row_offset]}));
+      }
+    } else {
+      TRACE_EVENT("Aggregate", "Ticketing::single-string::fallback");
+      // Multi-chunk references and other encodings: the generic iterator handles NULL row ids and materializes a
+      // transient string per row, which we probe by view (copied only on insert).
+      segment_iterate<pmr_string>(*segment, [&](const auto& position) {
+        if (position.is_null()) {
+          result.tickets.push_back(ticket_for_null());
+          return;
+        }
+        result.tickets.push_back(ticket_for_string(std::string_view{position.value()}));
+      });
+    }
+  }
+
+  // Build the group-by output column from the distinct strings. Each group's representative lives in the map; the NULL
+  // group's slot stays default-constructed and is flagged in `nulls`.
+  const auto group_count = next_ticket;
+  auto values = pmr_vector<pmr_string>(group_count);
+  auto nulls = column_is_nullable ? pmr_vector<bool>(group_count, false) : pmr_vector<bool>{};
+  for (const auto& [group_string, ticket] : value_to_ticket) {
+    values[ticket] = group_string;
+  }
+  if (has_null && column_is_nullable) {
+    nulls[null_ticket] = true;
+  }
+
+  result.group_count = group_count;
+  if (column_is_nullable) {
+    result.groupby_segments.push_back(std::make_shared<ValueSegment<pmr_string>>(std::move(values), std::move(nulls)));
+  } else {
+    result.groupby_segments.push_back(std::make_shared<ValueSegment<pmr_string>>(std::move(values)));
+  }
+  return result;
+}
+
 GroupingResult _compute_groups(const std::vector<ColumnID>& groupby_column_ids,
                                const std::shared_ptr<const Table>& input_table) {
-  if (groupby_column_ids.size() == 1 && input_table->column_data_type(groupby_column_ids[0]) != DataType::String) {
-    return _compute_groups_single_column(groupby_column_ids[0], input_table);
+  if (groupby_column_ids.size() == 1) {
+    const auto column_id = groupby_column_ids[0];
+    if (input_table->column_data_type(column_id) == DataType::String) {
+      return _compute_groups_single_string_column(column_id, input_table);
+    }
+    return _compute_groups_single_column(column_id, input_table);
   }
   return _compute_groups_byte_row(groupby_column_ids, input_table);
 }
