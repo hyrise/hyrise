@@ -165,8 +165,7 @@ void _materialize_string_column(const RowFormat& format, const AbstractSegment& 
   };
 
   // Writes a string that lives in stable, query-lifetime memory (a value/dictionary segment owned by the input or by a
-  // referenced table): the inline bytes, plus a direct pointer into that memory for long strings. `const_cast` is safe
-  // because the pointer is only ever read (hash equality, output build).
+  // referenced table): the inline bytes, plus a direct pointer into that memory for long strings.
   const auto write_stable_string = [&](const RowView& row, const pmr_string& value) {
     if (write_inline(row, value.c_str(), value.size())) {
       row.set_string_ptr(string_col_index, const_cast<char*>(value.c_str()));
@@ -221,38 +220,21 @@ void _materialize_string_column(const RowFormat& format, const AbstractSegment& 
     // bytes indexed by the row's value id. Long strings point straight at the dictionary entry (owned for the
     // whole query), so no per-row or per-group string copy is needed.
     materialized.string_pointer_needs_copy.push_back(false);
-    const auto& dictionary = *dictionary_segment->dictionary();
-    const auto null_value_id = dictionary_segment->null_value_id();
-    const auto dictionary_size = dictionary.size();
-
     static constexpr auto INLINE_SIZE = sizeof(size_t) + PREFIX_LENGTH;
-    auto inline_blobs = std::vector<std::array<uint8_t, INLINE_SIZE>>(dictionary_size);
-    auto long_string_ptrs = std::vector<char*>(dictionary_size, nullptr);
-    for (auto value_id = size_t{0}; value_id < dictionary_size; ++value_id) {
-      const auto& str = dictionary[value_id];
-      const auto length = str.size();
-      std::memcpy(inline_blobs[value_id].data(), &length, sizeof(size_t));
-      const auto prefix_length = std::min(length, static_cast<size_t>(PREFIX_LENGTH));
-      std::memcpy(inline_blobs[value_id].data() + sizeof(size_t), str.c_str(), prefix_length);
-      if (length > PREFIX_LENGTH) {
-        // Points into the dictionary; `const_cast` is safe because the pointer is only ever read.
-        long_string_ptrs[value_id] = const_cast<char*>(str.c_str());
-      }
-    }
+    const auto& dictionary = *dictionary_segment->dictionary();
 
     resolve_compressed_vector_type(*dictionary_segment->attribute_vector(), [&](const auto& attribute_vector) {
-      auto offset = size_t{0};
-      for (auto it = attribute_vector.cbegin(), end = attribute_vector.cend(); it != end; ++it, ++offset) {
-        const auto value_id = static_cast<ValueID>(*it);
+      auto decompressor = attribute_vector.create_decompressor();
+      const auto null_value_id = dictionary_segment->null_value_id();
+      for (auto offset = size_t{0}; offset < chunk_size; ++offset) {
+        const auto value_id = static_cast<ValueID>(decompressor.get(offset));
         const auto row = row_at(offset);
+
         if (value_id == null_value_id) {
           row.set_null_bitmap(row.null_bitmap() | null_mask_bit);
           continue;
         }
-        std::memcpy(row.column_data(group_by_column_index), inline_blobs[value_id].data(), INLINE_SIZE);
-        if (long_string_ptrs[value_id] != nullptr) {
-          row.set_string_ptr(string_col_index, long_string_ptrs[value_id]);
-        }
+        write_stable_string(row, dictionary[value_id]);
       }
     });
   } else if (const auto* const reference_segment = dynamic_cast<const ReferenceSegment*>(&segment)) {
@@ -270,7 +252,8 @@ void _materialize_string_column(const RowFormat& format, const AbstractSegment& 
       const auto referenced_segment =
           referenced_table->get_chunk(pos_list->common_chunk_id())->get_segment(referenced_column_id);
 
-      if (const auto* const referenced_value = dynamic_cast<const ValueSegment<pmr_string>*>(referenced_segment.get())) {
+      if (const auto* const referenced_value =
+              dynamic_cast<const ValueSegment<pmr_string>*>(referenced_segment.get())) {
         materialized.string_pointer_needs_copy.push_back(false);
         const auto& values = referenced_value->values();
         if (referenced_value->is_nullable()) {
@@ -294,8 +277,8 @@ void _materialize_string_column(const RowFormat& format, const AbstractSegment& 
                      dynamic_cast<const DictionarySegment<pmr_string>*>(referenced_segment.get())) {
         materialized.string_pointer_needs_copy.push_back(false);
         const auto& dictionary = *referenced_dictionary->dictionary();
-        const auto null_value_id = referenced_dictionary->null_value_id();
         resolve_compressed_vector_type(*referenced_dictionary->attribute_vector(), [&](const auto& attribute_vector) {
+          const auto null_value_id = referenced_dictionary->null_value_id();
           auto decompressor = attribute_vector.create_decompressor();
           for (auto offset = size_t{0}; offset < chunk_size; ++offset) {
             const auto chunk_offset = (*pos_list)[offset].chunk_offset;
@@ -513,174 +496,10 @@ GroupingResult _compute_groups_byte_row(const std::vector<ColumnID>& groupby_col
   return result;
 }
 
-// Transparent hashing/equality so the single-string-column grouping map can be probed with a `std::string_view` (no
-// allocation) and only materialize an owning `pmr_string` when a brand-new group is inserted.
-struct StringViewHash {
-  using is_transparent = void;
-
-  size_t operator()(const std::string_view value) const {
-    return compute_hash(value.data(), value.size());
-  }
-
-  size_t operator()(const pmr_string& value) const {
-    return compute_hash(value.data(), value.size());
-  }
-};
-
-struct StringViewEqual {
-  using is_transparent = void;
-
-  bool operator()(const std::string_view lhs, const std::string_view rhs) const {
-    return lhs == rhs;
-  }
-};
-
-// Fast path for a single string group-by column. Groups are keyed on the actual string, but dictionary-encoded chunks
-// (directly, or referenced through a single-chunk reference segment) are grouped by their value ids: each distinct
-// value id is resolved to a group ticket once per chunk and cached in `value_id_ticket`, so a string is only hashed and
-// copied when its value id is first seen. Value segments are read by reference; anything else falls back to the generic
-// iterator. The string is only copied when a genuinely new group is inserted into the global map.
-GroupingResult _compute_groups_single_string_column(const ColumnID column_id,
-                                                    const std::shared_ptr<const Table>& input_table) {
-  const auto column_is_nullable = input_table->column_is_nullable(column_id);
-  const auto chunk_count = input_table->chunk_count();
-
-  auto result = GroupingResult{};
-  result.tickets.reserve(input_table->row_count());
-
-  // Global grouping structure keyed on the group string. Transparent lookup lets us probe with a `string_view`; the
-  // string is only copied into the map when a new group is inserted.
-  auto value_to_ticket = boost::unordered_flat_map<pmr_string, uint32_t, StringViewHash, StringViewEqual>{};
-  auto next_ticket = uint32_t{0};
-  auto has_null = false;
-  auto null_ticket = uint32_t{0};
-
-  const auto ticket_for_string = [&](const std::string_view value) {
-    const auto iter = value_to_ticket.find(value);
-    if (iter != value_to_ticket.end()) {
-      return iter->second;
-    }
-    const auto ticket = next_ticket++;
-    value_to_ticket.emplace(pmr_string{value}, ticket);
-    return ticket;
-  };
-
-  const auto ticket_for_null = [&] {
-    if (!has_null) {
-      has_null = true;
-      null_ticket = next_ticket++;
-    }
-    return null_ticket;
-  };
-
-  constexpr auto UNRESOLVED = std::numeric_limits<uint32_t>::max();
-
-  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-    const auto& segment = input_table->get_chunk(chunk_id)->get_segment(column_id);
-    const auto chunk_size = segment->size();
-
-    // Try to reach a dictionary or value segment, directly or through a single-chunk reference. When `pos_list` is set,
-    // a sequential row offset maps to the referenced chunk offset; `referenced_holder` keeps the referenced segment
-    // alive for the duration of this chunk.
-    const auto* dictionary_segment = dynamic_cast<const DictionarySegment<pmr_string>*>(segment.get());
-    const auto* value_segment = dynamic_cast<const ValueSegment<pmr_string>*>(segment.get());
-    const AbstractPosList* pos_list = nullptr;
-    auto referenced_holder = std::shared_ptr<const AbstractSegment>{};
-
-    if (!dictionary_segment && !value_segment) {
-      if (const auto* const reference_segment = dynamic_cast<const ReferenceSegment*>(segment.get())) {
-        const auto& reference_pos_list = reference_segment->pos_list();
-        if (reference_pos_list->references_single_chunk() && !reference_pos_list->empty()) {
-          referenced_holder = reference_segment->referenced_table()
-                                  ->get_chunk(reference_pos_list->common_chunk_id())
-                                  ->get_segment(reference_segment->referenced_column_id());
-          dictionary_segment = dynamic_cast<const DictionarySegment<pmr_string>*>(referenced_holder.get());
-          value_segment = dynamic_cast<const ValueSegment<pmr_string>*>(referenced_holder.get());
-          if (dictionary_segment || value_segment) {
-            pos_list = reference_pos_list.get();
-          }
-        }
-      }
-    }
-
-    if (dictionary_segment) {
-      // Compare value ids within the chunk: resolve each distinct value id to a global ticket once, then reuse it.
-      const auto& dictionary = *dictionary_segment->dictionary();
-      const auto null_value_id = dictionary_segment->null_value_id();
-      auto value_id_ticket = std::vector<uint32_t>(dictionary.size(), UNRESOLVED);
-
-      const auto emit_value_id = [&](const ValueID value_id) {
-        if (value_id == null_value_id) {
-          result.tickets.push_back(ticket_for_null());
-          return;
-        }
-        auto& cached = value_id_ticket[value_id];
-        if (cached == UNRESOLVED) {
-          cached = ticket_for_string(std::string_view{dictionary[value_id]});
-        }
-        result.tickets.push_back(cached);
-      };
-
-      resolve_compressed_vector_type(*dictionary_segment->attribute_vector(), [&](const auto& attribute_vector) {
-        auto decompressor = attribute_vector.create_decompressor();
-        for (auto offset = size_t{0}; offset < chunk_size; ++offset) {
-          const auto row_offset = pos_list ? size_t{(*pos_list)[offset].chunk_offset} : offset;
-          emit_value_id(static_cast<ValueID>(decompressor.get(row_offset)));
-        }
-      });
-    } else if (value_segment) {
-      const auto& values = value_segment->values();
-      const auto is_nullable = value_segment->is_nullable();
-      const auto* const null_values = is_nullable ? &value_segment->null_values() : nullptr;
-      for (auto offset = size_t{0}; offset < chunk_size; ++offset) {
-        const auto row_offset = pos_list ? size_t{(*pos_list)[offset].chunk_offset} : offset;
-        if (is_nullable && (*null_values)[row_offset]) {
-          result.tickets.push_back(ticket_for_null());
-          continue;
-        }
-        result.tickets.push_back(ticket_for_string(std::string_view{values[row_offset]}));
-      }
-    } else {
-      // Multi-chunk references and other encodings: the generic iterator handles NULL row ids and materializes a
-      // transient string per row, which we probe by view (copied only on insert).
-      segment_iterate<pmr_string>(*segment, [&](const auto& position) {
-        if (position.is_null()) {
-          result.tickets.push_back(ticket_for_null());
-          return;
-        }
-        result.tickets.push_back(ticket_for_string(std::string_view{position.value()}));
-      });
-    }
-  }
-
-  // Build the group-by output column from the distinct strings. Each group's representative lives in the map; the NULL
-  // group's slot stays default-constructed and is flagged in `nulls`.
-  const auto group_count = next_ticket;
-  auto values = pmr_vector<pmr_string>(group_count);
-  auto nulls = column_is_nullable ? pmr_vector<bool>(group_count, false) : pmr_vector<bool>{};
-  for (const auto& [group_string, ticket] : value_to_ticket) {
-    values[ticket] = group_string;
-  }
-  if (has_null && column_is_nullable) {
-    nulls[null_ticket] = true;
-  }
-
-  result.group_count = group_count;
-  if (column_is_nullable) {
-    result.groupby_segments.push_back(std::make_shared<ValueSegment<pmr_string>>(std::move(values), std::move(nulls)));
-  } else {
-    result.groupby_segments.push_back(std::make_shared<ValueSegment<pmr_string>>(std::move(values)));
-  }
-  return result;
-}
-
 GroupingResult _compute_groups(const std::vector<ColumnID>& groupby_column_ids,
                                const std::shared_ptr<const Table>& input_table) {
-  if (groupby_column_ids.size() == 1) {
+  if (groupby_column_ids.size() == 1 && input_table->column_data_type(groupby_column_ids[0]) != DataType::String) {
     const auto column_id = groupby_column_ids[0];
-    if (input_table->column_data_type(column_id) == DataType::String) {
-      return _compute_groups_single_string_column(column_id, input_table);
-    }
     return _compute_groups_single_column(column_id, input_table);
   }
   return _compute_groups_byte_row(groupby_column_ids, input_table);
