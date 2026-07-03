@@ -63,98 +63,98 @@ using namespace hyrise::expression_functional;
 template <typename ColumnDataType, typename AggregateType, WindowFunction aggregate_func>
   requires(aggregate_func == WindowFunction::Min || aggregate_func == WindowFunction::Max ||
            aggregate_func == WindowFunction::Sum || aggregate_func == WindowFunction::Any)
-bool write_aggregate_values(const DYODAggregateResults<ColumnDataType, aggregate_func>& results,
-                            std::vector<pmr_vector<AggregateType>>& value_vectors,
-                            std::vector<pmr_vector<bool>>& null_vectors) {
+bool dyod_write_aggregate_values(const DYODAggregateResults<ColumnDataType, aggregate_func>& results,
+                                 std::vector<pmr_vector<AggregateType>>& value_vectors,
+                                 std::vector<pmr_vector<bool>>& null_vectors) {
   auto null_written = std::atomic<bool>{};
-  split_results_chunk_wise(true, results, value_vectors, null_vectors,
-                           [&](auto begin, const auto end, const ChunkID chunk_id) {
-                             auto& values = value_vectors[chunk_id];
-                             auto& null_values = null_vectors[chunk_id];
+  dyod_split_results_chunk_wise(true, results, value_vectors, null_vectors,
+                                [&](auto begin, const auto end, const ChunkID chunk_id) {
+                                  auto& values = value_vectors[chunk_id];
+                                  auto& null_values = null_vectors[chunk_id];
 
-                             for (; begin != end; ++begin) {
-                               const auto& result = *begin;
+                                  for (; begin != end; ++begin) {
+                                    const auto& result = *begin;
 
-                               // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap
-                               // (in the case of an unused immediate key) or the result of overallocating the result
-                               // vector. As such, it must be skipped.
-                               if (result.row_id.is_null()) {
-                                 continue;
-                               }
+                                    // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap
+                                    // (in the case of an unused immediate key) or the result of overallocating the result
+                                    // vector. As such, it must be skipped.
+                                    if (result.row_id.is_null()) {
+                                      continue;
+                                    }
 
-                               if (result.aggregate_count > 0) {
-                                 values.emplace_back(result.accumulator);
-                                 null_values.emplace_back(false);
-                               } else {
-                                 values.emplace_back();
-                                 null_values.emplace_back(true);
-                                 null_written = true;
-                               }
-                             }
-                           });
+                                    if (result.aggregate_count > 0) {
+                                      values.emplace_back(result.accumulator);
+                                      null_values.emplace_back(false);
+                                    } else {
+                                      values.emplace_back();
+                                      null_values.emplace_back(true);
+                                      null_written = true;
+                                    }
+                                  }
+                                });
   return null_written;
 }
 
 // COUNT writes the aggregate counter.
 template <typename ColumnDataType, typename AggregateType, WindowFunction aggregate_func>
   requires(aggregate_func == WindowFunction::Count)
-bool write_aggregate_values(const DYODAggregateResults<ColumnDataType, aggregate_func>& results,
-                            std::vector<pmr_vector<AggregateType>>& value_vectors,
-                            std::vector<pmr_vector<bool>>& null_vectors) {
-  split_results_chunk_wise(false, results, value_vectors, null_vectors,
-                           [&](auto begin, const auto end, const ChunkID chunk_id) {
-                             auto& values = value_vectors[chunk_id];
+bool dyod_write_aggregate_values(const DYODAggregateResults<ColumnDataType, aggregate_func>& results,
+                                 std::vector<pmr_vector<AggregateType>>& value_vectors,
+                                 std::vector<pmr_vector<bool>>& null_vectors) {
+  dyod_split_results_chunk_wise(false, results, value_vectors, null_vectors,
+                                [&](auto begin, const auto end, const ChunkID chunk_id) {
+                                  auto& values = value_vectors[chunk_id];
 
-                             for (; begin != end; ++begin) {
-                               const auto& result = *begin;
+                                  for (; begin != end; ++begin) {
+                                    const auto& result = *begin;
 
-                               // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap
-                               // (in the case of an unused immediate key) or the result of overallocating the result
-                               // vector. As such, it must be skipped.
-                               if (result.row_id.is_null()) {
-                                 continue;
-                               }
+                                    // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap
+                                    // (in the case of an unused immediate key) or the result of overallocating the result
+                                    // vector. As such, it must be skipped.
+                                    if (result.row_id.is_null()) {
+                                      continue;
+                                    }
 
-                               values.emplace_back(result.aggregate_count);
-                             }
-                           });
+                                    values.emplace_back(result.aggregate_count);
+                                  }
+                                });
   return false;
 }
 
 // COUNT(DISTINCT) writes the number of distinct values.
 template <typename ColumnDataType, typename AggregateType, WindowFunction aggregate_func>
   requires(aggregate_func == WindowFunction::CountDistinct)
-bool write_aggregate_values(const DYODAggregateResults<ColumnDataType, aggregate_func>& results,
-                            std::vector<pmr_vector<AggregateType>>& value_vectors,
-                            std::vector<pmr_vector<bool>>& null_vectors) {
-  split_results_chunk_wise(false, results, value_vectors, null_vectors,
-                           [&](auto begin, const auto end, const ChunkID chunk_id) {
-                             auto& values = value_vectors[chunk_id];
+bool dyod_write_aggregate_values(const DYODAggregateResults<ColumnDataType, aggregate_func>& results,
+                                 std::vector<pmr_vector<AggregateType>>& value_vectors,
+                                 std::vector<pmr_vector<bool>>& null_vectors) {
+  dyod_split_results_chunk_wise(false, results, value_vectors, null_vectors,
+                                [&](auto begin, const auto end, const ChunkID chunk_id) {
+                                  auto& values = value_vectors[chunk_id];
 
-                             for (; begin != end; ++begin) {
-                               const auto& result = *begin;
+                                  for (; begin != end; ++begin) {
+                                    const auto& result = *begin;
 
-                               // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap
-                               // (in the case of an unused immediate key) or the result of overallocating the result
-                               // vector. As such, it must be skipped.
-                               if (result.row_id.is_null()) {
-                                 continue;
-                               }
+                                    // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap
+                                    // (in the case of an unused immediate key) or the result of overallocating the result
+                                    // vector. As such, it must be skipped.
+                                    if (result.row_id.is_null()) {
+                                      continue;
+                                    }
 
-                               values.emplace_back(result.accumulator.size());
-                             }
-                           });
+                                    values.emplace_back(result.accumulator.size());
+                                  }
+                                });
   return false;
 }
 
 // AVG writes the calculated average from current aggregate and the aggregate counter.
 template <typename ColumnDataType, typename AggregateType, WindowFunction aggregate_func>
   requires(aggregate_func == WindowFunction::Avg && std::is_arithmetic_v<AggregateType>)
-bool write_aggregate_values(const DYODAggregateResults<ColumnDataType, aggregate_func>& results,
-                            std::vector<pmr_vector<AggregateType>>& value_vectors,
-                            std::vector<pmr_vector<bool>>& null_vectors) {
+bool dyod_write_aggregate_values(const DYODAggregateResults<ColumnDataType, aggregate_func>& results,
+                                 std::vector<pmr_vector<AggregateType>>& value_vectors,
+                                 std::vector<pmr_vector<bool>>& null_vectors) {
   auto null_written = std::atomic<bool>{};
-  split_results_chunk_wise(
+  dyod_split_results_chunk_wise(
       true, results, value_vectors, null_vectors, [&](auto begin, const auto end, const ChunkID chunk_id) {
         auto& values = value_vectors[chunk_id];
         auto& null_values = null_vectors[chunk_id];
@@ -184,54 +184,54 @@ bool write_aggregate_values(const DYODAggregateResults<ColumnDataType, aggregate
 // AVG is not defined for non-arithmetic types. Avoiding compiler errors.
 template <typename ColumnDataType, typename AggregateType, WindowFunction aggregate_func>
   requires(aggregate_func == WindowFunction::Avg && !std::is_arithmetic_v<AggregateType>)
-bool write_aggregate_values(const DYODAggregateResults<ColumnDataType, aggregate_func>& /*results*/,
-                            std::vector<pmr_vector<AggregateType>>& /* values */,
-                            std::vector<pmr_vector<bool>>& /* null_vectors */) {
+bool dyod_write_aggregate_values(const DYODAggregateResults<ColumnDataType, aggregate_func>& /*results*/,
+                                 std::vector<pmr_vector<AggregateType>>& /* values */,
+                                 std::vector<pmr_vector<bool>>& /* null_vectors */) {
   Fail("Invalid aggregate.");
 }
 
 // STDDEV_SAMP writes the calculated standard deviation from current aggregate and the aggregate counter.
 template <typename ColumnDataType, typename AggregateType, WindowFunction aggregate_func>
   requires(aggregate_func == WindowFunction::StandardDeviationSample && std::is_arithmetic_v<AggregateType>)
-bool write_aggregate_values(const DYODAggregateResults<ColumnDataType, aggregate_func>& results,
-                            std::vector<pmr_vector<AggregateType>>& value_vectors,
-                            std::vector<pmr_vector<bool>>& null_vectors) {
+bool dyod_write_aggregate_values(const DYODAggregateResults<ColumnDataType, aggregate_func>& results,
+                                 std::vector<pmr_vector<AggregateType>>& value_vectors,
+                                 std::vector<pmr_vector<bool>>& null_vectors) {
   auto null_written = std::atomic<bool>{};
-  split_results_chunk_wise(true, results, value_vectors, null_vectors,
-                           [&](auto begin, const auto end, const ChunkID chunk_id) {
-                             auto& values = value_vectors[chunk_id];
-                             auto& null_values = null_vectors[chunk_id];
+  dyod_split_results_chunk_wise(true, results, value_vectors, null_vectors,
+                                [&](auto begin, const auto end, const ChunkID chunk_id) {
+                                  auto& values = value_vectors[chunk_id];
+                                  auto& null_values = null_vectors[chunk_id];
 
-                             for (; begin != end; ++begin) {
-                               const auto& result = *begin;
+                                  for (; begin != end; ++begin) {
+                                    const auto& result = *begin;
 
-                               // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap
-                               // (in the case of an unused immediate key) or the result of overallocating the result
-                               // vector. As such, it must be skipped.
-                               if (result.row_id.is_null()) {
-                                 continue;
-                               }
+                                    // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap
+                                    // (in the case of an unused immediate key) or the result of overallocating the result
+                                    // vector. As such, it must be skipped.
+                                    if (result.row_id.is_null()) {
+                                      continue;
+                                    }
 
-                               if (result.aggregate_count > 1) {
-                                 values.emplace_back(result.accumulator[3]);
-                                 null_values.emplace_back(false);
-                               } else {
-                                 // STDDEV_SAMP is undefined for lists with less than two elements.
-                                 values.emplace_back();
-                                 null_values.emplace_back(true);
-                                 null_written = true;
-                               }
-                             }
-                           });
+                                    if (result.aggregate_count > 1) {
+                                      values.emplace_back(result.accumulator[3]);
+                                      null_values.emplace_back(false);
+                                    } else {
+                                      // STDDEV_SAMP is undefined for lists with less than two elements.
+                                      values.emplace_back();
+                                      null_values.emplace_back(true);
+                                      null_written = true;
+                                    }
+                                  }
+                                });
   return null_written;
 }
 
 // STDDEV_SAMP is not defined for non-arithmetic types. Avoiding compiler errors.
 template <typename ColumnDataType, typename AggregateType, WindowFunction aggregate_func>
   requires(aggregate_func == WindowFunction::StandardDeviationSample && !std::is_arithmetic_v<AggregateType>)
-bool write_aggregate_values(const DYODAggregateResults<ColumnDataType, aggregate_func>& /*results*/,
-                            std::vector<pmr_vector<AggregateType>>& /* values */,
-                            std::vector<pmr_vector<bool>>& /* null_vectors */) {
+bool dyod_write_aggregate_values(const DYODAggregateResults<ColumnDataType, aggregate_func>& /*results*/,
+                                 std::vector<pmr_vector<AggregateType>>& /* values */,
+                                 std::vector<pmr_vector<bool>>& /* null_vectors */) {
   Fail("Invalid aggregate.");
 }
 
@@ -241,10 +241,11 @@ bool write_aggregate_values(const DYODAggregateResults<ColumnDataType, aggregate
  * concurrently). Helper is used either to process RowIDs (for GROUP BY columns) or values (for aggregation results).
  */
 template <typename ColumnDataType, WindowFunction aggregate_func, typename ResultConsumer, typename ValueVectorType>
-void split_results_chunk_wise(const bool write_nulls,
-                              const DYODAggregateResults<ColumnDataType, aggregate_func>& results,
-                              std::vector<ValueVectorType>& value_vectors, std::vector<pmr_vector<bool>>& null_vectors,
-                              const ResultConsumer consumer_function) {
+void dyod_split_results_chunk_wise(const bool write_nulls,
+                                   const DYODAggregateResults<ColumnDataType, aggregate_func>& results,
+                                   std::vector<ValueVectorType>& value_vectors,
+                                   std::vector<pmr_vector<bool>>& null_vectors,
+                                   const ResultConsumer consumer_function) {
   if (results.empty()) {
     return;
   }
@@ -300,7 +301,7 @@ void split_results_chunk_wise(const bool write_nulls,
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);  // No-op for `output_chunk_count` < 2.
 }
 
-void prepare_output(std::vector<Segments>& output, const size_t chunk_count, const size_t column_count) {
+void dyod_prepare_output(std::vector<Segments>& output, const size_t chunk_count, const size_t column_count) {
   DebugAssert(output.empty() || output.size() == chunk_count,
               "Output data structure should be either empty or already prepared.");
 
@@ -313,20 +314,20 @@ void prepare_output(std::vector<Segments>& output, const size_t chunk_count, con
   }
 }
 
-// `get_or_add_result` is called once per row when iterating over a column that is to be aggregated. The row's `key` has
+// `dyod_prepare_output` is called once per row when iterating over a column that is to be aggregated. The row's `key` has
 // been calculated as part of `_partition_by_groupby_keys`. We also pass in the `row_id` of that row. This row id is
 // stored in `Results` so that we can later use it to reconstruct the values in the GROUP BY columns. If the operator
 // calculates multiple aggregate functions, we only need to perform this lookup as part of the first aggregate function.
 // By setting CacheResultIds to true_type, we can store the result of the lookup in the AggregateKey. Following
 // aggregate functions can then retrieve the index from the AggregateKey.
-constexpr auto CACHE_MASK = DYODAggregateKeyEntry{1} << uint8_t{63};  // See explanation below
+constexpr auto DYOD_CACHE_MASK = DYODAggregateKeyEntry{1} << uint8_t{63};  // See explanation below
 
 template <typename CacheResultIds, typename ResultIds, typename Results, typename AggregateKey>
-typename Results::reference get_or_add_result(CacheResultIds /*cache_result_ids*/, ResultIds& result_ids,
-                                              Results& results, AggregateKey& key, const RowID& row_id) {
+typename Results::reference dyod_prepare_output(CacheResultIds /*cache_result_ids*/, ResultIds& result_ids,
+                                                Results& results, AggregateKey& key, const RowID& row_id) {
   if constexpr (std::is_same_v<AggregateKey, DYODEmptyAggregateKey>) {
     // No GROUP BY columns are defined for this aggregate operator. We still want to keep most code paths similar and
-    // avoid special handling. Thus, get_or_add_result is still called, however, we always return the same result
+    // avoid special handling. Thus, dyod_prepare_output is still called, however, we always return the same result
     // reference.
     if (results.empty()) {
       results.emplace_back();
@@ -344,7 +345,7 @@ typename Results::reference get_or_add_result(CacheResultIds /*cache_result_ids*
       first_key_entry = &key[0];
     }
 
-    // Explanation for CACHE_MASK (placed here because it has to be defined outside but the explanation makes more sense
+    // Explanation for DYOD_CACHE_MASK (placed here because it has to be defined outside but the explanation makes more sense
     // at this place):
     // If we store the result of the hashmap lookup (i.e., the index into results) in the DYODAggregateKeyEntry, we do
     // this by storing the index in the lower 63 bits of first_key_entry and setting the most significant bit to 1 as a
@@ -360,9 +361,9 @@ typename Results::reference get_or_add_result(CacheResultIds /*cache_result_ids*
 
     // Check if the AggregateKey already contains a stored index.
     if constexpr (std::is_same_v<CacheResultIds, std::true_type>) {
-      if (*first_key_entry & CACHE_MASK) {
+      if (*first_key_entry & DYOD_CACHE_MASK) {
         // The most significant bit is a 1, remove it by XORing the mask gives us the index into the results vector.
-        const auto result_id = *first_key_entry ^ CACHE_MASK;
+        const auto result_id = *first_key_entry ^ DYOD_CACHE_MASK;
 
         // If we have not seen this index as part of the current aggregate function, the results vector may not yet have
         // the correct size. Resize it if necessary and write the current row_id so that we can recover the GroupBy
@@ -377,7 +378,7 @@ typename Results::reference get_or_add_result(CacheResultIds /*cache_result_ids*
         return results[result_id];
       }
     } else {
-      Assert(!(*first_key_entry & CACHE_MASK),
+      Assert(!(*first_key_entry & DYOD_CACHE_MASK),
              "CacheResultIds is set to false, but a cached or immediate key shortcut entry was found.");
     }
 
@@ -388,7 +389,7 @@ typename Results::reference get_or_add_result(CacheResultIds /*cache_result_ids*
       const auto result_id = it->second;
       if constexpr (std::is_same_v<CacheResultIds, std::true_type>) {
         // If requested, store the index the the first_key_entry and set the most significant bit to 1.
-        *first_key_entry = CACHE_MASK | result_id;
+        *first_key_entry = DYOD_CACHE_MASK | result_id;
       }
       return results[result_id];
     }
@@ -403,7 +404,7 @@ typename Results::reference get_or_add_result(CacheResultIds /*cache_result_ids*
 
     if constexpr (std::is_same_v<CacheResultIds, std::true_type>) {
       // If requested, store the index the the first_key_entry and set the most significant bit to 1.
-      *first_key_entry = CACHE_MASK | result_id;
+      *first_key_entry = DYOD_CACHE_MASK | result_id;
     }
 
     return results[result_id];
@@ -411,9 +412,9 @@ typename Results::reference get_or_add_result(CacheResultIds /*cache_result_ids*
 }
 
 template <typename AggregateKey>
-AggregateKey& get_aggregate_key([[maybe_unused]] KeysPerChunk<AggregateKey>& keys_per_chunk,
-                                [[maybe_unused]] const ChunkID chunk_id,
-                                [[maybe_unused]] const ChunkOffset chunk_offset) {
+AggregateKey& dyod_get_aggregate_key([[maybe_unused]] KeysPerChunk<AggregateKey>& keys_per_chunk,
+                                     [[maybe_unused]] const ChunkID chunk_id,
+                                     [[maybe_unused]] const ChunkOffset chunk_offset) {
   if constexpr (!std::is_same_v<AggregateKey, DYODEmptyAggregateKey>) {
     auto& hash_keys = keys_per_chunk[chunk_id];
 
@@ -427,11 +428,11 @@ AggregateKey& get_aggregate_key([[maybe_unused]] KeysPerChunk<AggregateKey>& key
 }
 
 template <typename Results>
-void write_groupby_output(const std::shared_ptr<const Table>& input_table,
-                          const std::vector<std::shared_ptr<WindowFunctionExpression>>& aggregates,
-                          const std::vector<ColumnID>& groupby_column_ids, const Results& results,
-                          TableColumnDefinitions& intermediate_result_column_definitions,
-                          std::vector<Segments>& intermediate_result) {
+void dyod_get_aggregate_key(const std::shared_ptr<const Table>& input_table,
+                            const std::vector<std::shared_ptr<WindowFunctionExpression>>& aggregates,
+                            const std::vector<ColumnID>& groupby_column_ids, const Results& results,
+                            TableColumnDefinitions& intermediate_result_column_definitions,
+                            std::vector<Segments>& intermediate_result) {
   DebugAssert(intermediate_result.empty(), "Expected output data structure to be empty.");
 
   // Mapping from input to output ColumnIDs for unaggregated columns (i.e., GROUP BY columns and ANY aggregates).
@@ -478,18 +479,18 @@ void write_groupby_output(const std::shared_ptr<const Table>& input_table,
     if (input_is_data_table) {
       referenced_table = input_table;
 
-      split_results_chunk_wise(false, results, pos_lists, unused_nulls,
-                               [&](auto begin, const auto end, const ChunkID chunk_id) {
-                                 auto& pos_list = *pos_lists[chunk_id];
+      dyod_split_results_chunk_wise(false, results, pos_lists, unused_nulls,
+                                    [&](auto begin, const auto end, const ChunkID chunk_id) {
+                                      auto& pos_list = *pos_lists[chunk_id];
 
-                                 for (; begin != end; ++begin) {
-                                   const auto& row_id = begin->row_id;
-                                   if (row_id.is_null()) {
-                                     continue;
-                                   }
-                                   pos_list.push_back(row_id);
-                                 }
-                               });
+                                      for (; begin != end; ++begin) {
+                                        const auto& row_id = begin->row_id;
+                                        if (row_id.is_null()) {
+                                          continue;
+                                        }
+                                        pos_list.push_back(row_id);
+                                      }
+                                    });
     } else {
       if (input_table->chunk_count() > 0) {
         // Unless we are processing an empty input, obtain the referenced table and column from the first chunk. We
@@ -501,7 +502,7 @@ void write_groupby_output(const std::shared_ptr<const Table>& input_table,
         referenced_column_id = first_reference_segment.referenced_column_id();
       }
 
-      split_results_chunk_wise(
+      dyod_split_results_chunk_wise(
           false, results, pos_lists, unused_nulls, [&](auto begin, const auto end, const ChunkID chunk_id) {
             // Map to cache references to PosLists (avoids frequent dynamic casts to obtain position list of reference
             // segments).
@@ -533,8 +534,8 @@ void write_groupby_output(const std::shared_ptr<const Table>& input_table,
     // `referenced_table` is unset for empty inputs. No reason to prepare and create output.
     if (referenced_table) {
       const auto intermediate_result_chunk_count = pos_lists.size();
-      prepare_output(intermediate_result, intermediate_result_chunk_count,
-                     intermediate_result_column_definitions.size());
+      dyod_prepare_output(intermediate_result, intermediate_result_chunk_count,
+                          intermediate_result_column_definitions.size());
       for (auto output_chunk_id = ChunkID{0}; output_chunk_id < intermediate_result_chunk_count; ++output_chunk_id) {
         const auto& pos_list = pos_lists[output_chunk_id];
         intermediate_result[output_chunk_id][output_column_id] =
@@ -626,12 +627,12 @@ void AggregateDYOD::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, 
 
   auto chunk_offset = ChunkOffset{0};
 
-  // CacheResultIds is a boolean type parameter that is forwarded to get_or_add_result, see the documentation over there
+  // CacheResultIds is a boolean type parameter that is forwarded to dyod_prepare_output, see the documentation over there
   // for details.
   const auto process_position = [&](const auto cache_result_ids, const auto& position) {
-    auto& result = get_or_add_result(cache_result_ids, result_ids, results,
-                                     get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
-                                     RowID{chunk_id, chunk_offset});
+    auto& result = dyod_prepare_output(cache_result_ids, result_ids, results,
+                                       dyod_get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
+                                       RowID{chunk_id, chunk_offset});
 
     // If the value is NULL, the current aggregate value does not change.
     if (!position.is_null()) {
@@ -648,8 +649,8 @@ void AggregateDYOD::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, 
     ++chunk_offset;
   };
 
-  // Pass true_type into get_or_add_result to enable certain optimizations: If we have more than one aggregate function
-  // (and thus more than one context), it makes sense to cache the results indexes, see get_or_add_result for details.
+  // Pass true_type into dyod_prepare_output to enable certain optimizations: If we have more than one aggregate function
+  // (and thus more than one context), it makes sense to cache the results indexes, see dyod_prepare_output for details.
   // Furthermore, if we use the immediate key shortcut (which uses the same code path as caching), we need to pass
   // true_type so that the aggregate keys are checked for immediate access values.
   if (_contexts_per_column.size() > 1 || _use_immediate_key_shortcut) {
@@ -796,7 +797,7 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
 
                 // Rewrite the keys and (1) subtract min so that we can also handle consecutive keys that do not start
                 // at 1* and (2) set the first bit which indicates that the key is an immediate index into the result
-                // vector (see get_or_add_result).
+                // vector (see dyod_prepare_output).
                 // *) Note: Because of int_to_uint above, the values do not start at 1, anyway.
 
                 for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
@@ -805,9 +806,9 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
                     auto& key = keys_per_chunk[chunk_id][chunk_offset];
                     if (key == 0) {
                       // Key that denotes NULL, do not rewrite but set the cached flag
-                      key = key | CACHE_MASK;
+                      key = key | DYOD_CACHE_MASK;
                     } else {
-                      key = (key - min_key + 1) | CACHE_MASK;
+                      key = (key - min_key + 1) | DYOD_CACHE_MASK;
                     }
                   }
                 }
@@ -1056,7 +1057,7 @@ void AggregateDYOD::_partition_and_aggregate() {
 
   // TODO(anyone): Make this run in threads. I think we will need to adapt both _expected_result_size; and
   // _use_immediate_key_shortcut{};, as those are probably currently not thread-compatible
-  auto _contexts_per_column = ContextsPerColumn(_aggregates.size());
+  _contexts_per_column = ContextsPerColumn(_aggregates.size());
   _aggregate<AggregateKey>(_contexts_per_column, table_scan_bucket_1->get_output());
   auto right_contexts_per_column = ContextsPerColumn(_aggregates.size());
   _aggregate<AggregateKey>(right_contexts_per_column, table_scan_bucket_2->get_output());
@@ -1200,22 +1201,22 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column,
       auto& results = context->results;
 
       // Add value or combination of values is added to the list of distinct value(s). This is done by calling
-      // get_or_add_result, which adds the corresponding entry in the list of GROUP BY values.
+      // dyod_prepare_output, which adds the corresponding entry in the list of GROUP BY values.
       if (_use_immediate_key_shortcut) {
         for (auto chunk_offset = ChunkOffset{0}; chunk_offset < input_chunk_size; ++chunk_offset) {
           // We are able to use immediate keys, so pass true_type so that the combined caching/immediate key code path
-          // is enabled in get_or_add_result.
-          get_or_add_result(std::true_type{}, result_ids, results,
-                            get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
-                            RowID{chunk_id, chunk_offset});
+          // is enabled in dyod_prepare_output.
+          dyod_prepare_output(std::true_type{}, result_ids, results,
+                              dyod_get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
+                              RowID{chunk_id, chunk_offset});
         }
       } else {
         // Same as above, but we do not have immediate keys, so we disable that code path to reduce the complexity of
-        // get_aggregate_key.
+        // dyod_get_aggregate_key.
         for (auto chunk_offset = ChunkOffset{0}; chunk_offset < input_chunk_size; ++chunk_offset) {
-          get_or_add_result(std::false_type{}, result_ids, results,
-                            get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
-                            RowID{chunk_id, chunk_offset});
+          dyod_prepare_output(std::false_type{}, result_ids, results,
+                              dyod_get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
+                              RowID{chunk_id, chunk_offset});
         }
       }
     } else {
@@ -1251,23 +1252,23 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column,
             results[0].row_id = RowID{ChunkID{0}, ChunkOffset{0}};
           } else {
             // Count occurrences for each group key -  If we have more than one aggregate function (and thus more than
-            // one context), it makes sense to cache the results indexes, see get_or_add_result for details.
+            // one context), it makes sense to cache the results indexes, see dyod_prepare_output for details.
             if (contexts_per_column.size() > 1 || _use_immediate_key_shortcut) {
               for (auto chunk_offset = ChunkOffset{0}; chunk_offset < input_chunk_size; ++chunk_offset) {
                 // Use CacheResultIds==true_type if we have more than one group by column or if the cached result ids
                 // have been written by the immediate key shortcut
                 auto& result =
-                    get_or_add_result(std::true_type{}, result_ids, results,
-                                      get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
-                                      RowID{chunk_id, chunk_offset});
+                    dyod_prepare_output(std::true_type{}, result_ids, results,
+                                        dyod_get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
+                                        RowID{chunk_id, chunk_offset});
                 ++result.aggregate_count;
               }
             } else {
               for (auto chunk_offset = ChunkOffset{0}; chunk_offset < input_chunk_size; ++chunk_offset) {
                 auto& result =
-                    get_or_add_result(std::false_type{}, result_ids, results,
-                                      get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
-                                      RowID{chunk_id, chunk_offset});
+                    dyod_prepare_output(std::false_type{}, result_ids, results,
+                                        dyod_get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
+                                        RowID{chunk_id, chunk_offset});
                 ++result.aggregate_count;
               }
             }
@@ -1317,7 +1318,7 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column,
                   chunk_id, aggregate_idx, *abstract_segment, keys_per_chunk, contexts_per_column);
               break;
             case WindowFunction::Any:
-              // ANY is a pseudo-function and is handled by `write_groupby_output`.
+              // ANY is a pseudo-function and is handled by `dyod_get_aggregate_key`.
               break;
             case WindowFunction::CumeDist:
             case WindowFunction::DenseRank:
@@ -1361,7 +1362,7 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
   _output_column_definitions.resize(num_output_columns);
 
   /**
-   * If only GROUP BY columns (including ANY pseudo-aggregates) are written, we need to call `write_groupby_output`.
+   * If only GROUP BY columns (including ANY pseudo-aggregates) are written, we need to call `dyod_get_aggregate_key`.
    *   Example: SELECT c_custkey, c_name FROM customer GROUP BY c_custkey, c_name (same as SELECT DISTINCT), which
    *            is rewritten to group only on c_custkey and collect c_name as an ANY pseudo-aggregate.
    * Otherwise, it is called by the first call to `_write_aggregate_output`.
@@ -1370,8 +1371,8 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
     auto context = std::static_pointer_cast<DYODAggregateResultContext<DistinctColumnType, WindowFunction::Min>>(
         _contexts_per_column[0]);
     // auto groupby_columns_writing_timer = Timer{};
-    write_groupby_output(left_input_table(), _aggregates, _groupby_column_ids, context->results,
-                         _output_column_definitions, _intermediate_result);
+    dyod_get_aggregate_key(left_input_table(), _aggregates, _groupby_column_ids, context->results,
+                           _output_column_definitions, _intermediate_result);
     // DebugAssert(_groupby_columns_writing_duration == std::chrono::nanoseconds{0},
     // "_groupby_columns_writing_duration() was apparently called more than once.");
     // _groupby_columns_writing_duration = groupby_columns_writing_timer.lap();
@@ -1415,7 +1416,7 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
           _write_aggregate_output<ColumnDataType, WindowFunction::StandardDeviationSample>(aggregate_idx);
           break;
         case WindowFunction::Any:
-          // Pseudo-aggregates are written by write_groupby_output.
+          // Pseudo-aggregates are written by dyod_get_aggregate_key.
           break;
         case WindowFunction::CumeDist:
         case WindowFunction::DenseRank:
@@ -1490,7 +1491,7 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
     const auto output_table_chunk_count = _intermediate_result.size();
     for (auto chunk_id = ChunkID{0}; chunk_id < output_table_chunk_count; ++chunk_id) {
       if (!_intermediate_result[chunk_id][0]) {
-        // When vectors have been oversized (see get_or_add_result()), intermediate chunks might be completely empty.
+        // When vectors have been oversized (see dyod_prepare_output()), intermediate chunks might be completely empty.
         continue;
       }
 
@@ -1562,8 +1563,8 @@ void AggregateDYOD::_write_aggregate_output(ColumnID aggregate_index) {
   // Before writing the first aggregate column, write all group keys into the respective columns.
   if (aggregate_index == 0) {
     // auto groupby_columns_writing_timer = Timer{};
-    write_groupby_output(left_input_table(), _aggregates, _groupby_column_ids, results, _output_column_definitions,
-                         _intermediate_result);
+    dyod_get_aggregate_key(left_input_table(), _aggregates, _groupby_column_ids, results, _output_column_definitions,
+                           _intermediate_result);
     // const auto groupby_columns_writing_runtime = groupby_columns_writing_timer.lap();
     // DebugAssert(_groupby_columns_writing_duration == std::chrono::nanoseconds{0},
     //             "_groupby_columns_writing_duration() was apparently called more than once.");
@@ -1578,7 +1579,8 @@ void AggregateDYOD::_write_aggregate_output(ColumnID aggregate_index) {
   auto value_vectors = std::vector<pmr_vector<aggregate_type>>{};
   auto null_vectors = std::vector<pmr_vector<bool>>{};
   auto aggregate_result_contains_nulls =
-      write_aggregate_values<ColumnDataType, aggregate_type, aggregate_function>(results, value_vectors, null_vectors);
+      dyod_write_aggregate_values<ColumnDataType, aggregate_type, aggregate_function>(results, value_vectors,
+                                                                                      null_vectors);
 
   if (_groupby_column_ids.empty() && value_vectors.empty()) {
     // If we did not GROUP BY anything and we have no results, we need to add NULL for most aggregates and 0 for count.
@@ -1592,9 +1594,9 @@ void AggregateDYOD::_write_aggregate_output(ColumnID aggregate_index) {
     }
   }
 
-  DebugAssert(NEEDS_NULL || null_vectors.empty(), "write_aggregate_values unexpectedly wrote NULL values.");
+  DebugAssert(NEEDS_NULL || null_vectors.empty(), "dyod_write_aggregate_values unexpectedly wrote NULL values.");
 
-  prepare_output(_intermediate_result, value_vectors.size(), _output_column_definitions.size());
+  dyod_prepare_output(_intermediate_result, value_vectors.size(), _output_column_definitions.size());
 
   _output_column_definitions[output_column_id] =
       TableColumnDefinition{aggregate->as_column_name(), result_type, NEEDS_NULL};
