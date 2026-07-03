@@ -124,6 +124,7 @@ RowFormat _create_row_format(const TableColumnDefinitions& column_definitions,
                    .null_bitmap_offset = null_bitmap_offset,
                    .data_offset = data_offset,
                    .string_ptr_offset = string_ptr_offset,
+                   .key_length = string_ptr_offset - null_bitmap_offset,
                    .stores_nulls = stores_nulls,
                    .col_offsets = std::move(col_offsets),
                    .column_is_nullable = std::move(column_is_nullable)};
@@ -264,9 +265,10 @@ GroupingResult _compute_groups_byte_row(const std::vector<ColumnID>& groupby_col
   const auto row_format = _create_row_format(input_table->column_definitions(), groupby_column_ids);
   auto group_key_data = std::make_shared<GroupKeyData>(row_format);
   group_key_data->tickets.reserve(input_table->row_count());
-  // The row count is the upper bound on the number of groups. Reserving it up front avoids repeated rehashing on
-  // high-cardinality group-bys; for low-cardinality inputs it over-allocates the table.
-  group_key_data->global_hash_table.reserve(input_table->row_count());
+  // The global hash table is intentionally NOT pre-reserved to `row_count`. That upper bound is only tight for
+  // high-cardinality group-bys; for low-cardinality ones it allocates a huge, sparse table whose every probe is a
+  // cache/TLB miss into cold memory. Instead we let the first chunk grow the table naturally and then size it from
+  // the observed group density (see below), keeping it compact and cache-resident when there are few groups.
   const auto& format = group_key_data->row_format;
   auto& arena = group_key_data->key_arena;
   const auto chunk_count = input_table->chunk_count();
@@ -278,7 +280,7 @@ GroupingResult _compute_groups_byte_row(const std::vector<ColumnID>& groupby_col
     auto* row_ptr = materialized->rows.get();
     for (auto row_index = size_t{0}; row_index < materialized->row_count; ++row_index) {
       const auto row_view = RowView{row_ptr, format};
-      const auto row_hash = compute_hash(row_view.key_bytes(), format.string_ptr_offset - format.null_bitmap_offset);
+      const auto row_hash = compute_hash(row_view.key_bytes(), format.key_length);
       const auto probe_key = GroupKey{.row = row_ptr, .hash = row_hash};
 
       auto iter = group_key_data->global_hash_table.find(probe_key);
@@ -308,6 +310,21 @@ GroupingResult _compute_groups_byte_row(const std::vector<ColumnID>& groupby_col
       group_key_data->tickets.push_back(iter->second);
 
       row_ptr += format.row_size;
+    }
+
+    // After the first chunk, size the table from the observed group density rather than the `row_count` upper bound.
+    // We extrapolate the distinct groups seen so far linearly to the remaining rows (capped at `row_count`): a
+    // low-cardinality group-by that already saw all its groups reserves almost nothing and stays cache-resident, while
+    // a high-cardinality one reserves close to `row_count` and avoids repeated rehashing over the remaining chunks.
+    if (chunk_id == ChunkID{0} && chunk_count > 1) {
+      const auto rows_seen = materialized->row_count;
+      const auto groups_seen = group_key_data->global_hash_table.size();
+      if (rows_seen > 0) {
+        const auto remaining_rows = input_table->row_count() - rows_seen;
+        const auto estimated_groups =
+            std::min<size_t>(input_table->row_count(), groups_seen + remaining_rows * groups_seen / rows_seen);
+        group_key_data->global_hash_table.reserve(estimated_groups);
+      }
     }
   }
 

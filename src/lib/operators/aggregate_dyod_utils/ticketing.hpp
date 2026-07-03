@@ -88,6 +88,7 @@ struct RowFormat {
   uint64_t null_bitmap_offset = 0;                               // Offset of the null bitmap in a single row
   uint64_t data_offset = null_bitmap_offset + sizeof(uint64_t);  // Skip the null bitmap
   uint64_t string_ptr_offset = data_offset;                      // Offsets of the string pointers at the end of the row
+  uint64_t key_length = string_ptr_offset - null_bitmap_offset;  // Bytes hashed/compared: null bitmap + inline key data
   bool stores_nulls = true;                                      // Whether a null bitmap is present in each row
   std::vector<uint64_t> col_offsets;                             // Offsets of the columns relative to `data_offset`
   std::vector<uint8_t> column_is_nullable;                       // Per group-by column: 1 if nullable, else 0
@@ -189,8 +190,7 @@ struct GroupKeyEqual {
     const auto rhs_view = RowView{rhs.row, *format};
 
     // Compare the null bitmap and inline key data in one shot.
-    if (std::memcmp(lhs_view.key_bytes(), rhs_view.key_bytes(),
-                    format->string_ptr_offset - format->null_bitmap_offset)) {
+    if (std::memcmp(lhs_view.key_bytes(), rhs_view.key_bytes(), format->key_length)) {
       return false;
     }
 
