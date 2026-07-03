@@ -611,7 +611,7 @@ struct AggregateContext : public DYODAggregateResultContext<ColumnDataType, aggr
 template <typename ColumnDataType, WindowFunction aggregate_function, typename AggregateKey>
 void AggregateDYOD::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, const AbstractSegment& abstract_segment,
                                        KeysPerChunk<AggregateKey>& keys_per_chunk,
-                                       std::vector<std::shared_ptr<DYODSegmentVisitorContext>>& contexts_per_column) {
+                                       ContextsPerColumn& contexts_per_column) {
   using AggregateType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
 
   auto aggregator = WindowFunctionBuilder<ColumnDataType, AggregateType, aggregate_function>().get_aggregate_function();
@@ -956,27 +956,24 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
   return keys_per_chunk;
 }
 
-// TODO(anyone): readable type alias for contexts_per_column
 template <typename ColumnDataType, WindowFunction aggregate_function>
-void AggregateDYOD::_merge_contexts(
-    ColumnID aggregate_index,
-    const std::vector<std::vector<std::shared_ptr<DYODSegmentVisitorContext>>>& contexts_per_column_per_thread) {
-  auto context = std::static_pointer_cast<DYODAggregateResultContext<ColumnDataType, aggregate_function>>(
+void AggregateDYOD::_merge_contexts(ColumnID aggregate_index,
+                                    const std::vector<ContextsPerColumn>& contexts_per_column_per_thread) {
+  if (contexts_per_column_per_thread.size() < 1) {
+    return;
+  }
+  auto target_context = std::static_pointer_cast<DYODAggregateResultContext<ColumnDataType, aggregate_function>>(
       _contexts_per_column[aggregate_index]);
-  auto left_context = std::static_pointer_cast<DYODAggregateResultContext<ColumnDataType, aggregate_function>>(
-      contexts_per_column_per_thread[0][aggregate_index]);
-  auto right_context = std::static_pointer_cast<DYODAggregateResultContext<ColumnDataType, aggregate_function>>(
-      contexts_per_column_per_thread[1][aggregate_index]);
-  // DYODAggregateResultContext has
-  //  DYODAggregateResults<ColumnDataType, aggregate_function> results;
-  //  which is a vector of DYODAggregateResult indexed by DYODAggregateResultId (size_t)
-  // since the keys are distinct between threads, we can simply concat these two vectors.
-  _contexts_per_column[aggregate_index] = left_context;
-  auto& left_results = left_context->results;
-  auto& right_results = right_context->results;
-  auto results_count = right_results.size();
-  for (auto result_id = DYODAggregateResultId{0}; result_id < results_count; ++result_id) {
-    left_results.push_back(right_results[result_id]);
+  auto& target_results = target_context->results;
+  const auto contexts_count = contexts_per_column_per_thread.size();
+  for (auto context_index = size_t{0}; context_index < contexts_count; ++context_index) {
+    auto other_context = std::static_pointer_cast<DYODAggregateResultContext<ColumnDataType, aggregate_function>>(
+        contexts_per_column_per_thread[context_index][aggregate_index]);
+    auto& other_results = other_context->results;
+    auto results_count = other_results.size();
+    for (auto result_id = DYODAggregateResultId{0}; result_id < results_count; ++result_id) {
+      target_results.push_back(other_results[result_id]);
+    }
   }
 }
 
@@ -993,7 +990,7 @@ void AggregateDYOD::_partition_and_aggregate() {
   _validate_aggregates();
 
   if (_groupby_column_ids.size() == 0 || input_table->row_count() == 0) {
-    _contexts_per_column = std::vector<std::shared_ptr<DYODSegmentVisitorContext>>(_aggregates.size());
+    _contexts_per_column = ContextsPerColumn(_aggregates.size());
     _aggregate<AggregateKey>(_contexts_per_column, input_table);
     return;
   }
@@ -1009,6 +1006,7 @@ void AggregateDYOD::_partition_and_aggregate() {
   auto greater_equal_predicate = std::make_shared<BinaryPredicateExpression>(
       PredicateCondition::GreaterThanEquals, operand, hyrise::expression_functional::value_(row.at(column_id)));
 
+  // TODO(anyone): NULLS
   const auto left_table_scan = std::make_shared<TableScan>(table_wrapper, greater_equal_predicate);
   left_table_scan->execute();
 
@@ -1026,18 +1024,17 @@ void AggregateDYOD::_partition_and_aggregate() {
 
   // TODO(anyone): Make this run in threads. I think we will need to adapt both _expected_result_size; and
   // _use_immediate_key_shortcut{};, as those are probably currently not thread-compatible
-  auto left_contexts_per_column = std::vector<std::shared_ptr<DYODSegmentVisitorContext>>(_aggregates.size());
-  _aggregate<AggregateKey>(left_contexts_per_column, left_table_scan->get_output());
-  auto right_contexts_per_column = std::vector<std::shared_ptr<DYODSegmentVisitorContext>>(_aggregates.size());
+  auto _contexts_per_column = ContextsPerColumn(_aggregates.size());
+  _aggregate<AggregateKey>(_contexts_per_column, left_table_scan->get_output());
+  auto right_contexts_per_column = ContextsPerColumn(_aggregates.size());
   _aggregate<AggregateKey>(right_contexts_per_column, right_table_scan->get_output());
 
   // TODO(anyone): check if this is still necessary
   // we just set this to some valid value to avoid edge cases where _aggregates is empty
-  _contexts_per_column = left_contexts_per_column;
   // TODO(anyone): Join the two other contexts into _contexts_per_column (horrible, horrible templates)
 
   // // TODO(anyone): better name?
-  const auto contexts_per_column_per_thread = std::vector{left_contexts_per_column, right_contexts_per_column};
+  const auto contexts_per_column_per_thread = std::vector(1, right_contexts_per_column);
 
   const auto aggregate_count = _aggregates.size();
   for (auto aggregate_idx = ColumnID{0}; aggregate_idx < aggregate_count; ++aggregate_idx) {
@@ -1090,7 +1087,7 @@ void AggregateDYOD::_partition_and_aggregate() {
 }
 
 template <typename AggregateKey>
-void AggregateDYOD::_aggregate(std::vector<std::shared_ptr<DYODSegmentVisitorContext>>& contexts_per_column,
+void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column,
                                const std::shared_ptr<const Table>& input_table) {
   // auto& step_performance_data = dynamic_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
   // auto timer = Timer{};
