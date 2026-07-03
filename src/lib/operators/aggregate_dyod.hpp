@@ -165,7 +165,7 @@ class AggregateDYOD : public AbstractAggregateOperator {
   void _merge_contexts(ColumnID aggregate_index, const std::vector<ContextsPerColumn>& contexts_per_column_per_thread);
 
   template <typename AggregateKey>
-  void _partition_and_aggregate();
+  std::shared_ptr<Table> _partition_and_aggregate();
 
   std::shared_ptr<AbstractOperator> _on_deep_copy(
       const std::shared_ptr<AbstractOperator>& copied_left_input,
@@ -180,9 +180,11 @@ class AggregateDYOD : public AbstractAggregateOperator {
 
   template <typename ColumnDataType, WindowFunction aggregate_function>
   void _write_aggregate_output(ColumnID aggregate_index, ContextsPerColumn& contexts_per_column,
-                               std::vector<Segments>& intermediate_result);
+                               std::vector<Segments>& intermediate_result,
+                               const std::shared_ptr<const Table>& input_table);
 
-  std::shared_ptr<const Table> _create_output_table(ContextsPerColumn& contexts_per_column);
+  std::shared_ptr<Table> _create_output_table(ContextsPerColumn& contexts_per_column,
+                                              const std::shared_ptr<const Table>& input_table);
 
   template <typename ColumnDataType, WindowFunction aggregate_function, typename AggregateKey>
   void _aggregate_segment(ChunkID chunk_id, ColumnID column_index, const AbstractSegment& abstract_segment,
