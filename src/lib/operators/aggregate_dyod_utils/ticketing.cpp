@@ -197,7 +197,6 @@ void _materialize_string_column(const RowFormat& format, const AbstractSegment& 
   };
 
   if (const auto* const value_segment = dynamic_cast<const ValueSegment<pmr_string>*>(&segment)) {
-    TRACE_EVENT("Aggregate", "Ticketing::materialize::ValueSegment<string>");
     // Value segment: the segment owns its strings for the whole query, so point long strings straight at them
     // instead of copying.
     materialized.string_pointer_needs_copy.push_back(false);
@@ -218,7 +217,6 @@ void _materialize_string_column(const RowFormat& format, const AbstractSegment& 
       }
     }
   } else if (const auto* const dictionary_segment = dynamic_cast<const DictionarySegment<pmr_string>*>(&segment)) {
-    TRACE_EVENT("Aggregate", "Ticketing::materialize::DictionarySegment<string>");
     // Dictionary segment: pack each distinct dictionary entry's inline bytes once, then per row copy the packed
     // bytes indexed by the row's value id. Long strings point straight at the dictionary entry (owned for the
     // whole query), so no per-row or per-group string copy is needed.
@@ -273,7 +271,6 @@ void _materialize_string_column(const RowFormat& format, const AbstractSegment& 
           referenced_table->get_chunk(pos_list->common_chunk_id())->get_segment(referenced_column_id);
 
       if (const auto* const referenced_value = dynamic_cast<const ValueSegment<pmr_string>*>(referenced_segment.get())) {
-        TRACE_EVENT("Aggregate", "Ticketing::materialize::ReferenceSegment<string> (value)");
         materialized.string_pointer_needs_copy.push_back(false);
         const auto& values = referenced_value->values();
         if (referenced_value->is_nullable()) {
@@ -295,7 +292,6 @@ void _materialize_string_column(const RowFormat& format, const AbstractSegment& 
         handled = true;
       } else if (const auto* const referenced_dictionary =
                      dynamic_cast<const DictionarySegment<pmr_string>*>(referenced_segment.get())) {
-        TRACE_EVENT("Aggregate", "Ticketing::materialize::ReferenceSegment<string> (dictionary)");
         materialized.string_pointer_needs_copy.push_back(false);
         const auto& dictionary = *referenced_dictionary->dictionary();
         const auto null_value_id = referenced_dictionary->null_value_id();
@@ -317,12 +313,10 @@ void _materialize_string_column(const RowFormat& format, const AbstractSegment& 
     }
 
     if (!handled) {
-      TRACE_EVENT("Aggregate", "Ticketing::materialize::ReferenceSegment<string> (fallback)");
       materialize_via_iterator();
     }
   } else {
     // Fallback for every other segment kind (fixed-string dictionaries, other encodings).
-    TRACE_EVENT("Aggregate", "Ticketing::materialize::fallback<string>");
     materialize_via_iterator();
   }
 }
@@ -353,7 +347,6 @@ std::shared_ptr<MaterializedRows> _materialize_rows(const RowFormat& format, con
                                    *materialized);
         ++string_col_index;
       } else {
-        TRACE_EVENT("Aggregate", "Ticketing::materialize::numeric");
         // Non-string columns hold trivially-copyable fixed-width values; the generic iterator's by-value position is
         // free here, so there is nothing to gain from bypassing it.
         auto chunk_offset = size_t{0};
@@ -611,7 +604,6 @@ GroupingResult _compute_groups_single_string_column(const ColumnID column_id,
     }
 
     if (dictionary_segment) {
-      TRACE_EVENT("Aggregate", "Ticketing::single-string::dictionary");
       // Compare value ids within the chunk: resolve each distinct value id to a global ticket once, then reuse it.
       const auto& dictionary = *dictionary_segment->dictionary();
       const auto null_value_id = dictionary_segment->null_value_id();
@@ -637,7 +629,6 @@ GroupingResult _compute_groups_single_string_column(const ColumnID column_id,
         }
       });
     } else if (value_segment) {
-      TRACE_EVENT("Aggregate", "Ticketing::single-string::value");
       const auto& values = value_segment->values();
       const auto is_nullable = value_segment->is_nullable();
       const auto* const null_values = is_nullable ? &value_segment->null_values() : nullptr;
@@ -650,7 +641,6 @@ GroupingResult _compute_groups_single_string_column(const ColumnID column_id,
         result.tickets.push_back(ticket_for_string(std::string_view{values[row_offset]}));
       }
     } else {
-      TRACE_EVENT("Aggregate", "Ticketing::single-string::fallback");
       // Multi-chunk references and other encodings: the generic iterator handles NULL row ids and materializes a
       // transient string per row, which we probe by view (copied only on insert).
       segment_iterate<pmr_string>(*segment, [&](const auto& position) {
