@@ -179,7 +179,9 @@ class AggregateDYOD : public AbstractAggregateOperator {
   void _write_groupby_output(RowIDPosList& pos_list);
 
   template <typename ColumnDataType, WindowFunction aggregate_function>
-  void _write_aggregate_output(ColumnID aggregate_index);
+  void _write_aggregate_output(ColumnID aggregate_index, ContextsPerColumn& contexts_per_column);
+
+  std::shared_ptr<const Table> _create_output_table(ContextsPerColumn& contexts_per_column);
 
   template <typename ColumnDataType, WindowFunction aggregate_function, typename AggregateKey>
   void _aggregate_segment(ChunkID chunk_id, ColumnID column_index, const AbstractSegment& abstract_segment,

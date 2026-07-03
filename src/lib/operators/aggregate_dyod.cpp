@@ -577,6 +577,7 @@ std::shared_ptr<AbstractOperator> AggregateDYOD::_on_deep_copy(
 void AggregateDYOD::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 void AggregateDYOD::_on_cleanup() {
+  // TODO(anyone): cleanup
   _contexts_per_column.clear();
 }
 
@@ -653,7 +654,7 @@ void AggregateDYOD::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, 
   // (and thus more than one context), it makes sense to cache the results indexes, see dyod_prepare_output for details.
   // Furthermore, if we use the immediate key shortcut (which uses the same code path as caching), we need to pass
   // true_type so that the aggregate keys are checked for immediate access values.
-  if (_contexts_per_column.size() > 1 || _use_immediate_key_shortcut) {
+  if (contexts_per_column.size() > 1 || _use_immediate_key_shortcut) {
     segment_iterate<ColumnDataType>(abstract_segment, [&](const auto& position) {
       process_position(std::true_type{}, position);
     });
@@ -1337,27 +1338,7 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column,
   // step_performance_data.set_step_runtime(OperatorSteps::Aggregating, timer.lap());
 }  // NOLINT(readability/fn_size)
 
-std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
-  // We do not want the overhead of a vector with heap storage when we have a limited number of aggregate columns.
-  // However, more specializations mean more compile time. We now have specializations for 0, 1, 2, and >2 GROUP BY
-  // columns.
-
-  switch (_groupby_column_ids.size()) {
-    case 0:
-      _partition_and_aggregate<DYODEmptyAggregateKey>();
-      break;
-    case 1:
-      // No need for a complex data structure if we only have one entry.
-      _partition_and_aggregate<DYODAggregateKeyEntry>();
-      break;
-    case 2:
-      _partition_and_aggregate<std::array<DYODAggregateKeyEntry, 2>>();
-      break;
-    default:
-      _partition_and_aggregate<DYODAggregateKeySmallVector>();
-      break;
-  }
-
+std::shared_ptr<const Table> AggregateDYOD::_create_output_table(ContextsPerColumn& contexts_per_column) {
   const auto num_output_columns = _groupby_column_ids.size() + _aggregates.size();
   _output_column_definitions.resize(num_output_columns);
 
@@ -1369,7 +1350,7 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
    **/
   if (!_has_aggregate_functions) {
     auto context = std::static_pointer_cast<DYODAggregateResultContext<DistinctColumnType, WindowFunction::Min>>(
-        _contexts_per_column[0]);
+        contexts_per_column[0]);
     // auto groupby_columns_writing_timer = Timer{};
     dyod_get_aggregate_key(left_input_table(), _aggregates, _groupby_column_ids, context->results,
                            _output_column_definitions, _intermediate_result);
@@ -1395,25 +1376,26 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
       using ColumnDataType = typename decltype(type)::type;
       switch (aggregate->window_function) {
         case WindowFunction::Min:
-          _write_aggregate_output<ColumnDataType, WindowFunction::Min>(aggregate_idx);
+          _write_aggregate_output<ColumnDataType, WindowFunction::Min>(aggregate_idx, contexts_per_column);
           break;
         case WindowFunction::Max:
-          _write_aggregate_output<ColumnDataType, WindowFunction::Max>(aggregate_idx);
+          _write_aggregate_output<ColumnDataType, WindowFunction::Max>(aggregate_idx, contexts_per_column);
           break;
         case WindowFunction::Sum:
-          _write_aggregate_output<ColumnDataType, WindowFunction::Sum>(aggregate_idx);
+          _write_aggregate_output<ColumnDataType, WindowFunction::Sum>(aggregate_idx, contexts_per_column);
           break;
         case WindowFunction::Avg:
-          _write_aggregate_output<ColumnDataType, WindowFunction::Avg>(aggregate_idx);
+          _write_aggregate_output<ColumnDataType, WindowFunction::Avg>(aggregate_idx, contexts_per_column);
           break;
         case WindowFunction::Count:
-          _write_aggregate_output<ColumnDataType, WindowFunction::Count>(aggregate_idx);
+          _write_aggregate_output<ColumnDataType, WindowFunction::Count>(aggregate_idx, contexts_per_column);
           break;
         case WindowFunction::CountDistinct:
-          _write_aggregate_output<ColumnDataType, WindowFunction::CountDistinct>(aggregate_idx);
+          _write_aggregate_output<ColumnDataType, WindowFunction::CountDistinct>(aggregate_idx, contexts_per_column);
           break;
         case WindowFunction::StandardDeviationSample:
-          _write_aggregate_output<ColumnDataType, WindowFunction::StandardDeviationSample>(aggregate_idx);
+          _write_aggregate_output<ColumnDataType, WindowFunction::StandardDeviationSample>(aggregate_idx,
+                                                                                           contexts_per_column);
           break;
         case WindowFunction::Any:
           // Pseudo-aggregates are written by dyod_get_aggregate_key.
@@ -1533,8 +1515,32 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
   return operator_output;
 }
 
+std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
+  // We do not want the overhead of a vector with heap storage when we have a limited number of aggregate columns.
+  // However, more specializations mean more compile time. We now have specializations for 0, 1, 2, and >2 GROUP BY
+  // columns.
+
+  switch (_groupby_column_ids.size()) {
+    case 0:
+      _partition_and_aggregate<DYODEmptyAggregateKey>();
+      break;
+    case 1:
+      // No need for a complex data structure if we only have one entry.
+      _partition_and_aggregate<DYODAggregateKeyEntry>();
+      break;
+    case 2:
+      _partition_and_aggregate<std::array<DYODAggregateKeyEntry, 2>>();
+      break;
+    default:
+      _partition_and_aggregate<DYODAggregateKeySmallVector>();
+      break;
+  }
+
+  return _create_output_table(_contexts_per_column);
+}
+
 template <typename ColumnDataType, WindowFunction aggregate_function>
-void AggregateDYOD::_write_aggregate_output(ColumnID aggregate_index) {
+void AggregateDYOD::_write_aggregate_output(ColumnID aggregate_index, ContextsPerColumn& contexts_per_column) {
   // Used to track the duration of groupby columns writing, which is done for the first aggregate column only. Value is
   // subtracted from the runtime of this method (thus, it is either non-zero for the first aggregate column or zero for
   // the remaining columns).
@@ -1556,7 +1562,7 @@ void AggregateDYOD::_write_aggregate_output(ColumnID aggregate_index) {
   }
 
   auto context = std::static_pointer_cast<DYODAggregateResultContext<ColumnDataType, aggregate_function>>(
-      _contexts_per_column[aggregate_index]);
+      contexts_per_column[aggregate_index]);
 
   const auto& results = context->results;
 
