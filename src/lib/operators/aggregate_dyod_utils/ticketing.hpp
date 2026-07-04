@@ -88,6 +88,7 @@ struct RowFormat {
   uint64_t null_bitmap_offset = 0;                               // Offset of the null bitmap in a single row
   uint64_t data_offset = null_bitmap_offset + sizeof(uint64_t);  // Skip the null bitmap
   uint64_t string_ptr_offset = data_offset;                      // Offsets of the string pointers at the end of the row
+  uint64_t key_length = string_ptr_offset - null_bitmap_offset;  // Bytes hashed/compared: null bitmap + inline key data
   bool stores_nulls = true;                                      // Whether a null bitmap is present in each row
   std::vector<uint64_t> col_offsets;                             // Offsets of the columns relative to `data_offset`
   std::vector<uint8_t> column_is_nullable;                       // Per group-by column: 1 if nullable, else 0
@@ -157,12 +158,16 @@ struct RowView {
   }
 };
 
-// All materialized rows of a single chunk, packed in `rows`. Long group-by strings referenced by those rows live in
-// `string_arena`.
+// All materialized rows of a single chunk, packed in `rows`. Long group-by strings referenced by those rows either
+// point directly into the (query-lifetime) source segment or, for the generic fallback path, live in `string_arena`.
 struct MaterializedRows {
   uint64_t row_count = 0;
   std::unique_ptr<uint8_t[]> rows;
   std::pmr::monotonic_buffer_resource string_arena;
+  // Per string group-by column (indexed by string-column order): whether its long-string pointers reference the
+  // transient per-chunk `string_arena` (true) and must therefore be copied into the key arena when a group is first
+  // inserted, or point at stable source memory (false) that outlives the whole grouping phase.
+  std::vector<bool> string_pointer_needs_copy;
 };
 
 std::shared_ptr<MaterializedRows> _materialize_rows(const RowFormat& format, const std::shared_ptr<const Chunk>& chunk,
@@ -189,8 +194,7 @@ struct GroupKeyEqual {
     const auto rhs_view = RowView{rhs.row, *format};
 
     // Compare the null bitmap and inline key data in one shot.
-    if (std::memcmp(lhs_view.key_bytes(), rhs_view.key_bytes(),
-                    format->string_ptr_offset - format->null_bitmap_offset)) {
+    if (std::memcmp(lhs_view.key_bytes(), rhs_view.key_bytes(), format->key_length)) {
       return false;
     }
 
@@ -200,6 +204,10 @@ struct GroupKeyEqual {
       const auto* lhs_str = lhs_view.string_ptr(string_col_index);
       const auto* rhs_str = rhs_view.string_ptr(string_col_index);
       if (lhs_str == nullptr || rhs_str == nullptr) {
+        continue;
+      }
+      // Fast path: identical pointers point at the same source string, so no byte comparison is needed.
+      if (lhs_str == rhs_str) {
         continue;
       }
       if (std::strcmp(lhs_str, rhs_str) != 0) {
