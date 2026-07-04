@@ -346,7 +346,7 @@ std::shared_ptr<MaterializedRows> _materialize_rows(const RowFormat& format, con
   return materialized;
 }
 
-// Fast path for a single non-string group-by column: the value is the key, so we do not need to materialize rows.
+// Fast path for a single non-string group-by column. Here the value is the key, so we do not need to materialize rows.
 GroupingResult _compute_groups_single_column(const ColumnID groupby_column_id,
                                              const std::shared_ptr<const Table>& input_table) {
   auto result = GroupingResult{};
