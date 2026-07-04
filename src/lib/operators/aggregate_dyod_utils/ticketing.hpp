@@ -206,11 +206,7 @@ struct GroupKeyEqual {
       if (lhs_str == nullptr || rhs_str == nullptr) {
         continue;
       }
-      // Fast path: identical pointers point at the same (query-lifetime) source string, so no byte comparison is
-      // needed. This hits whenever both rows reference the same value/dictionary storage - e.g. a group's stored key
-      // being re-probed by later rows of the same chunk. It is only a shortcut: differing pointers can still be equal
-      // strings (separate per-chunk dictionaries, distinct value-segment objects, per-row arena copies), so a mismatch
-      // falls through to the full comparison rather than declaring the strings different.
+      // Fast path: identical pointers point at the same source string, so no byte comparison is needed.
       if (lhs_str == rhs_str) {
         continue;
       }

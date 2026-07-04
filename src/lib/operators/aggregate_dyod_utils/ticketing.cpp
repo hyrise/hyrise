@@ -139,9 +139,9 @@ RowFormat _create_row_format(const TableColumnDefinitions& column_definitions,
 
 // Materializes one string group-by column of a chunk into the packed rows (see `_materialize_rows`). Dispatches on the
 // segment's concrete type so value/dictionary segments (and single-chunk references to them) can point rows straight
-// at the segment's own string storage instead of copying; other kinds fall back to the generic copying iterator.
+// at the segment's own string storage instead of copying. Other kinds fall back to the generic copying iterator.
 // `materialized.string_pointer_needs_copy` records, per string column, whether its long-string pointers reference the
-// transient per-chunk arena (and so must be promoted on insert) or stable, query-lifetime source memory.
+// transient per-chunk arena (and so must be promoted on insert) or stable source memory.
 void _materialize_string_column(const RowFormat& format, const AbstractSegment& segment,
                                 const size_t group_by_column_index, const size_t string_col_index,
                                 const uint64_t null_mask_bit, MaterializedRows& materialized) {
@@ -154,8 +154,7 @@ void _materialize_string_column(const RowFormat& format, const AbstractSegment& 
   };
 
   // Writes the inline part of a string value ([length, prefix]) into `row`'s slot for this column. Returns whether the
-  // value is longer than the prefix, i.e. whether the caller must additionally set a heap pointer to the full value so
-  // equality can resolve prefix collisions. Reads straight from `data`, so no intermediate `pmr_string` is constructed.
+  // value is longer than the prefix, i.e. whether the caller must additionally set a heap pointer to the full value.
   const auto write_inline = [&](const RowView& row, const char* const data, const size_t length) {
     auto* const inline_data = row.column_data(group_by_column_index);
     std::memcpy(inline_data, &length, sizeof(size_t));
@@ -164,8 +163,9 @@ void _materialize_string_column(const RowFormat& format, const AbstractSegment& 
     return length > PREFIX_LENGTH;
   };
 
-  // Writes a string that lives in stable, query-lifetime memory (a value/dictionary segment owned by the input or by a
+  // Writes a string that lives in stable memory (a value/dictionary segment owned by the input or by a
   // referenced table): the inline bytes, plus a direct pointer into that memory for long strings.
+  // NOTE(@Rob2U): We could actually do this for more segment types.
   const auto write_stable_string = [&](const RowView& row, const pmr_string& value) {
     if (write_inline(row, value.c_str(), value.size())) {
       row.set_string_ptr(string_col_index, const_cast<char*>(value.c_str()));
@@ -220,7 +220,6 @@ void _materialize_string_column(const RowFormat& format, const AbstractSegment& 
     // bytes indexed by the row's value id. Long strings point straight at the dictionary entry (owned for the
     // whole query), so no per-row or per-group string copy is needed.
     materialized.string_pointer_needs_copy.push_back(false);
-    static constexpr auto INLINE_SIZE = sizeof(size_t) + PREFIX_LENGTH;
     const auto& dictionary = *dictionary_segment->dictionary();
 
     resolve_compressed_vector_type(*dictionary_segment->attribute_vector(), [&](const auto& attribute_vector) {
@@ -330,8 +329,6 @@ std::shared_ptr<MaterializedRows> _materialize_rows(const RowFormat& format, con
                                    *materialized);
         ++string_col_index;
       } else {
-        // Non-string columns hold trivially-copyable fixed-width values; the generic iterator's by-value position is
-        // free here, so there is nothing to gain from bypassing it.
         auto chunk_offset = size_t{0};
         segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
           const auto row = RowView{rows + chunk_offset * format.row_size, format};
@@ -349,8 +346,7 @@ std::shared_ptr<MaterializedRows> _materialize_rows(const RowFormat& format, con
   return materialized;
 }
 
-// Fast path for a single non-string group-by column: the value itself is the key, so a typed hash map replaces the
-// row materialization. NULL is its own group (via `null_ticket`).
+// Fast path for a single non-string group-by column: the value is the key, so we do not need to materialize rows.
 GroupingResult _compute_groups_single_column(const ColumnID groupby_column_id,
                                              const std::shared_ptr<const Table>& input_table) {
   auto result = GroupingResult{};
@@ -368,13 +364,16 @@ GroupingResult _compute_groups_single_column(const ColumnID groupby_column_id,
       auto value_to_ticket = boost::unordered_flat_map<ColumnDataType, uint32_t>{};
       // The row count is the upper bound on the number of groups; reserving avoids repeated rehashing on
       // high-cardinality group-bys (it over-allocates for low-cardinality inputs).
-      value_to_ticket.reserve(input_table->row_count());
+      const auto input_row_count = input_table->row_count();
+      value_to_ticket.reserve(input_row_count);
       auto null_ticket = uint32_t{0};
       auto has_null = false;
 
       // Representative value per group, used to build the output column. The NULL group's slot is never read.
       auto group_values = pmr_vector<ColumnDataType>{};
+      group_values.reserve(input_row_count);
       auto group_nulls = pmr_vector<bool>{};
+      group_nulls.reserve(input_row_count);
 
       for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
         const auto& segment = input_table->get_chunk(chunk_id)->get_segment(groupby_column_id);
@@ -392,7 +391,7 @@ GroupingResult _compute_groups_single_column(const ColumnID groupby_column_id,
             const auto [iter, inserted] =
                 value_to_ticket.try_emplace(position.value(), static_cast<uint32_t>(group_values.size()));
             if (inserted) {
-              group_values.push_back(position.value());
+              group_values.push_back(std::move(position.value()));
               group_nulls.push_back(false);
             }
             ticket = iter->second;
@@ -424,6 +423,7 @@ GroupingResult _compute_groups_byte_row(const std::vector<ColumnID>& groupby_col
   // high-cardinality group-bys; for low-cardinality ones it allocates a huge, sparse table whose every probe is a
   // cache/TLB miss into cold memory. Instead we let the first chunk grow the table naturally and then size it from
   // the observed group density (see below), keeping it compact and cache-resident when there are few groups.
+  auto& global_hash_table = group_key_data->global_hash_table;
   const auto& format = group_key_data->row_format;
   auto& arena = group_key_data->key_arena;
   const auto chunk_count = input_table->chunk_count();
@@ -438,11 +438,11 @@ GroupingResult _compute_groups_byte_row(const std::vector<ColumnID>& groupby_col
       const auto row_hash = compute_hash(row_view.key_bytes(), format.key_length);
       const auto probe_key = GroupKey{.row = row_ptr, .hash = row_hash};
 
-      auto iter = group_key_data->global_hash_table.find(probe_key);
-      if (iter == group_key_data->global_hash_table.end()) {
+      auto iter = global_hash_table.find(probe_key);
+      if (iter == global_hash_table.end()) {
         // First time we see this group: copy the key row into the arena so it outlives the per-chunk materialized
-        // buffer. Long strings that live in the per-chunk arena (fallback path) are copied alongside it and the copied
-        // row is repointed; strings that already point at stable source memory (value/dictionary paths) are left as is.
+        // buffer. Long strings that live in the per-chunk arena are copied alongside it.
+        // Strings that already point at stable source memory (value/dictionary paths) are left as is.
         auto* const row_copy = static_cast<uint8_t*>(arena.allocate(format.row_size, alignof(uint64_t)));
         std::memcpy(row_copy, row_ptr, format.row_size);
 
@@ -462,9 +462,7 @@ GroupingResult _compute_groups_byte_row(const std::vector<ColumnID>& groupby_col
         }
 
         const auto group_key = GroupKey{.row = row_copy, .hash = row_hash};
-        iter = group_key_data->global_hash_table
-                   .emplace(group_key, static_cast<uint64_t>(group_key_data->global_hash_table.size()))
-                   .first;
+        iter = global_hash_table.emplace(group_key, static_cast<uint64_t>(global_hash_table.size())).first;
       }
       group_key_data->tickets.push_back(iter->second);
 
@@ -477,12 +475,12 @@ GroupingResult _compute_groups_byte_row(const std::vector<ColumnID>& groupby_col
     // a high-cardinality one reserves close to `row_count` and avoids repeated rehashing over the remaining chunks.
     if (chunk_id == ChunkID{0} && chunk_count > 1) {
       const auto rows_seen = materialized->row_count;
-      const auto groups_seen = group_key_data->global_hash_table.size();
+      const auto groups_seen = global_hash_table.size();
       if (rows_seen > 0) {
         const auto remaining_rows = input_table->row_count() - rows_seen;
         const auto estimated_groups =
             std::min<size_t>(input_table->row_count(), groups_seen + remaining_rows * groups_seen / rows_seen);
-        group_key_data->global_hash_table.reserve(estimated_groups);
+        global_hash_table.reserve(estimated_groups);
       }
     }
   }
@@ -490,7 +488,7 @@ GroupingResult _compute_groups_byte_row(const std::vector<ColumnID>& groupby_col
   // Build the group-by output columns while the key rows (and the arena backing their long strings) are still alive,
   // then hand back only the slim result; `GroupKeyData` does not escape this function.
   auto result = GroupingResult{};
-  result.group_count = group_key_data->global_hash_table.size();
+  result.group_count = global_hash_table.size();
   result.groupby_segments = _build_groupby_segments(*group_key_data, groupby_column_ids, input_table);
   result.tickets = std::move(group_key_data->tickets);
   return result;
