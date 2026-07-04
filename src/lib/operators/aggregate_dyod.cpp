@@ -29,6 +29,8 @@
 #include "operators/abstract_aggregate_operator.hpp"
 #include "operators/abstract_operator.hpp"
 #include "resolve_type.hpp"
+#include "scheduler/abstract_task.hpp"
+#include "scheduler/job_task.hpp"
 #include "storage/abstract_segment.hpp"
 #include "storage/chunk.hpp"
 #include "storage/segment_iterate.hpp"
@@ -481,8 +483,12 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
                                     input_table->column_is_nullable(groupby_column_id));
   }
   auto output_segments = std::move(groups.groupby_segments);
-  output_segments.reserve(groupby_column_count + aggregate_count);
+  // The group-by columns occupy the first `groupby_column_count` slots. Reserve one further slot per aggregate so each
+  // aggregate job can write its result into a fixed, disjoint slot without touching a shared, growing container.
+  output_segments.resize(groupby_column_count + aggregate_count);
 
+  // Build the aggregate column definitions serially (cheap metadata lookups). This must not run inside the per-aggregate
+  // jobs below, as they would race on `column_definitions`.
   for (auto aggregate_id = uint32_t{0}; aggregate_id < aggregate_count; ++aggregate_id) {
     const auto& aggregate = _aggregates[aggregate_id];
     const auto window_function = aggregate->window_function;
@@ -503,6 +509,18 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
       // All other aggregates can produce NULL.
       column_definitions.emplace_back(aggregate->as_column_name(), aggregate->data_type(), true);
     }
+  }
+
+  // Each aggregate column is computed independently from the shared, read-only grouping structure (`groups.tickets`) and
+  // input table, and writes into its own `output_segments` slot. There are no cross-column dependencies, so we compute
+  // one aggregate per job.
+  const auto compute_aggregate = [&](const uint32_t aggregate_id) {
+    const auto& aggregate = _aggregates[aggregate_id];
+    const auto window_function = aggregate->window_function;
+
+    const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
+    const auto input_column_id = pqp_column.column_id;
+    const auto target_index = groupby_column_count + aggregate_id;
 
     // COUNT(*) does not reference an input column. It counts all rows per group (NULLs included). Every input row
     // contributes its group's ticket exactly once, so the per-group count is just a histogram over the tickets.
@@ -511,8 +529,8 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
       for (const auto ticket : groups.tickets) {
         ++values[ticket];
       }
-      output_segments.emplace_back(std::make_shared<ValueSegment<int64_t>>(std::move(values)));
-      continue;
+      output_segments[target_index] = std::make_shared<ValueSegment<int64_t>>(std::move(values));
+      return;
     }
 
     resolve_data_type(input_table->column_data_type(input_column_id), [&](const auto data_type_t) {
@@ -523,32 +541,32 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
           using AggregateType = typename WindowFunctionTraits<ColumnDataType, WindowFunction::Min>::ReturnType;
           auto [values, nulls] = _aggregate_grouped<ColumnDataType, AggregateType, WindowFunction::Min>(
               groups.tickets, group_count, input_table, input_column_id);
-          output_segments.emplace_back(
-              std::make_shared<ValueSegment<AggregateType>>(std::move(values), std::move(nulls)));
+          output_segments[target_index] =
+              std::make_shared<ValueSegment<AggregateType>>(std::move(values), std::move(nulls));
           break;
         }
         case WindowFunction::Max: {
           using AggregateType = typename WindowFunctionTraits<ColumnDataType, WindowFunction::Max>::ReturnType;
           auto [values, nulls] = _aggregate_grouped<ColumnDataType, AggregateType, WindowFunction::Max>(
               groups.tickets, group_count, input_table, input_column_id);
-          output_segments.emplace_back(
-              std::make_shared<ValueSegment<AggregateType>>(std::move(values), std::move(nulls)));
+          output_segments[target_index] =
+              std::make_shared<ValueSegment<AggregateType>>(std::move(values), std::move(nulls));
           break;
         }
         case WindowFunction::Sum: {
           using AggregateType = typename WindowFunctionTraits<ColumnDataType, WindowFunction::Sum>::ReturnType;
           auto [values, nulls] = _aggregate_grouped<ColumnDataType, AggregateType, WindowFunction::Sum>(
               groups.tickets, group_count, input_table, input_column_id);
-          output_segments.emplace_back(
-              std::make_shared<ValueSegment<AggregateType>>(std::move(values), std::move(nulls)));
+          output_segments[target_index] =
+              std::make_shared<ValueSegment<AggregateType>>(std::move(values), std::move(nulls));
           break;
         }
         case WindowFunction::Avg: {
           using AggregateType = typename WindowFunctionTraits<ColumnDataType, WindowFunction::Avg>::ReturnType;
           auto [values, nulls] = _aggregate_grouped<ColumnDataType, AggregateType, WindowFunction::Avg>(
               groups.tickets, group_count, input_table, input_column_id);
-          output_segments.emplace_back(
-              std::make_shared<ValueSegment<AggregateType>>(std::move(values), std::move(nulls)));
+          output_segments[target_index] =
+              std::make_shared<ValueSegment<AggregateType>>(std::move(values), std::move(nulls));
           break;
         }
         case WindowFunction::Count: {
@@ -556,20 +574,20 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
           auto result = _aggregate_grouped<ColumnDataType, AggregateType, WindowFunction::Count>(
               groups.tickets, group_count, input_table, input_column_id);
           // COUNT never produces NULL.
-          output_segments.emplace_back(std::make_shared<ValueSegment<AggregateType>>(std::move(result.first)));
+          output_segments[target_index] = std::make_shared<ValueSegment<AggregateType>>(std::move(result.first));
           break;
         }
         case WindowFunction::CountDistinct: {
           auto values =
               _count_distinct_grouped<ColumnDataType>(groups.tickets, group_count, input_table, input_column_id);
-          output_segments.emplace_back(std::make_shared<ValueSegment<int64_t>>(std::move(values)));
+          output_segments[target_index] = std::make_shared<ValueSegment<int64_t>>(std::move(values));
           break;
         }
         case WindowFunction::StandardDeviationSample: {
           if constexpr (std::is_arithmetic_v<ColumnDataType>) {
             auto [values, nulls] = _standard_deviation_sample_grouped<ColumnDataType>(groups.tickets, group_count,
                                                                                       input_table, input_column_id);
-            output_segments.emplace_back(std::make_shared<ValueSegment<double>>(std::move(values), std::move(nulls)));
+            output_segments[target_index] = std::make_shared<ValueSegment<double>>(std::move(values), std::move(nulls));
           } else {
             Fail("StandardDeviationSample is not available on non-arithmetic types.");
           }
@@ -580,10 +598,10 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
               _any_grouped<ColumnDataType>(groups.tickets, group_count, input_table, input_column_id);
           // ANY() passes the source column through, so the output keeps its nullability.
           if (input_table->column_is_nullable(input_column_id)) {
-            output_segments.emplace_back(
-                std::make_shared<ValueSegment<ColumnDataType>>(std::move(values), std::move(nulls)));
+            output_segments[target_index] =
+                std::make_shared<ValueSegment<ColumnDataType>>(std::move(values), std::move(nulls));
           } else {
-            output_segments.emplace_back(std::make_shared<ValueSegment<ColumnDataType>>(std::move(values)));
+            output_segments[target_index] = std::make_shared<ValueSegment<ColumnDataType>>(std::move(values));
           }
           break;
         }
@@ -591,6 +609,22 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
           Fail(std::format("Unsupported aggregate function '{}'.", window_function_to_string.left.at(window_function)));
       }
     });
+  };
+
+  // One job per aggregate column. With a single aggregate we run inline to avoid the scheduling overhead.
+  if (aggregate_count < 2) {
+    for (auto aggregate_id = uint32_t{0}; aggregate_id < aggregate_count; ++aggregate_id) {
+      compute_aggregate(aggregate_id);
+    }
+  } else {
+    auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+    jobs.reserve(aggregate_count);
+    for (auto aggregate_id = uint32_t{0}; aggregate_id < aggregate_count; ++aggregate_id) {
+      jobs.emplace_back(std::make_shared<JobTask>([&compute_aggregate, aggregate_id]() {
+        compute_aggregate(aggregate_id);
+      }));
+    }
+    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
   }
 
   auto result_table = std::make_shared<Table>(column_definitions, TableType::Data);
