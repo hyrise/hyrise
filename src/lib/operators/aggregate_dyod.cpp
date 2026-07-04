@@ -487,8 +487,8 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
   // aggregate job can write its result into a fixed, disjoint slot without touching a shared, growing container.
   output_segments.resize(groupby_column_count + aggregate_count);
 
-  // Build the aggregate column definitions serially (cheap metadata lookups). This must not run inside the per-aggregate
-  // jobs below, as they would race on `column_definitions`.
+  // Build the aggregate column definitions serially (cheap metadata lookups). This must not run inside the
+  // per-aggregate jobs below, as they would race on `column_definitions`.
   for (auto aggregate_id = uint32_t{0}; aggregate_id < aggregate_count; ++aggregate_id) {
     const auto& aggregate = _aggregates[aggregate_id];
     const auto window_function = aggregate->window_function;
@@ -511,7 +511,7 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
     }
   }
 
-  // Each aggregate column is computed independently from the shared, read-only grouping structure (`groups.tickets`) and
+  // Each aggregate column is computed independently from the shared grouping structure (`groups.tickets`) and
   // input table, and writes into its own `output_segments` slot. There are no cross-column dependencies, so we compute
   // one aggregate per job.
   const auto compute_aggregate = [&](const uint32_t aggregate_id) {
