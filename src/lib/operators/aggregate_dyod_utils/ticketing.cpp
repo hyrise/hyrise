@@ -346,7 +346,7 @@ GroupingResult _compute_groups_single_column(const ColumnID groupby_column_id,
   return result;
 }
 
-// A single slot of the direct-mapped cache that sits in front of the global hash table (see `_compute_groups_byte_row`).
+// A single slot of the direct-mapped cache that sits in front of the global hash table.
 // `key.row == nullptr` marks an empty slot; occupied slots store a *stable* key pointer into `GroupKeyData::key_arena`,
 // so entries stay valid across chunks.
 struct GroupCacheSlot {
@@ -428,7 +428,8 @@ GroupingResult _compute_groups_byte_row(const std::vector<ColumnID>& groupby_col
         iter = global_hash_table.emplace(group_key, static_cast<uint64_t>(global_hash_table.size())).first;
       }
       // Fill the cache slot with the group's *stable* arena key (from the global entry, not the transient probe row) so
-      // later rows of this group, in this or a later chunk, hit above. This overwrites any group previously in the slot.
+      // later rows of this group, in this or a later chunk, hit above. This overwrites any group previously in the
+      // slot.
       slot.key = GroupKey{.row = iter->first.row, .hash = row_hash};
       slot.ticket = iter->second;
       group_key_data->tickets.push_back(iter->second);
