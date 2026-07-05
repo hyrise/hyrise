@@ -539,16 +539,6 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
   // aggregate. Every job writes a fixed, disjoint slot, so none of them touch a shared, growing container.
   auto output_segments = pmr_vector<std::shared_ptr<AbstractSegment>>(groupby_column_count + aggregate_count);
 
-  // The single-column fast path already materialized its group-by column during grouping; drop it straight in. The
-  // byte-row path leaves `groupby_segments` empty and instead builds each group-by column below via a ticket-pass over
-  // the source data (one job per column), just like the aggregates.
-  const auto groupby_columns_prebuilt = !groups.groupby_segments.empty();
-  if (groupby_columns_prebuilt) {
-    for (auto groupby_index = size_t{0}; groupby_index < groupby_column_count; ++groupby_index) {
-      output_segments[groupby_index] = std::move(groups.groupby_segments[groupby_index]);
-    }
-  }
-
   // Build the aggregate column definitions serially (cheap metadata lookups). This must not run inside the
   // per-aggregate jobs below, as they would race on `column_definitions`.
   for (auto aggregate_id = uint32_t{0}; aggregate_id < aggregate_count; ++aggregate_id) {
@@ -715,16 +705,15 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
     });
   };
 
-  // One job per output column: build each not-yet-built group-by column and compute each aggregate. They all read the
+  // One job per output column: build each group-by column and compute each aggregate. They all read the
   // shared, read-only grouping structure and input table and write disjoint output slots, so there are no
   // dependencies between them. With fewer than two units we run inline to avoid the scheduling overhead.
-  const auto groupby_job_count = groupby_columns_prebuilt ? size_t{0} : groupby_column_count;
-  const auto unit_count = groupby_job_count + aggregate_count;
+  const auto unit_count = groupby_column_count + aggregate_count;
   const auto run_unit = [&](const size_t unit) {
-    if (unit < groupby_job_count) {
+    if (unit < groupby_column_count) {
       build_groupby_column(static_cast<uint32_t>(unit));
     } else {
-      compute_aggregate(static_cast<uint32_t>(unit - groupby_job_count));
+      compute_aggregate(static_cast<uint32_t>(unit - groupby_column_count));
     }
   };
 

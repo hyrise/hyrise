@@ -279,40 +279,15 @@ std::shared_ptr<MaterializedRows> _materialize_rows(const RowFormat& format, con
   return materialized;
 }
 
-// Builds the single group-by output column of the single-column fast path from the finished value->ticket map. Each
-// group's representative value is its key, placed at its ticket slot. The NULL group (if any) occupies `null_ticket`;
-// its value slot is never read, only flagged in the null bitmap.
-template <typename ColumnDataType>
-std::shared_ptr<AbstractSegment> _build_single_column_groupby_segment(
-    const boost::unordered_flat_map<ColumnDataType, uint32_t>& value_to_ticket, const size_t group_count,
-    const bool has_null, const uint32_t null_ticket, const bool column_is_nullable) {
-  auto values = pmr_vector<ColumnDataType>(group_count);
-  for (const auto& [value, ticket] : value_to_ticket) {
-    values[ticket] = value;
-  }
-
-  if (column_is_nullable) {
-    auto nulls = pmr_vector<bool>(group_count, false);
-    if (has_null) {
-      nulls[null_ticket] = true;
-    }
-    return std::make_shared<ValueSegment<ColumnDataType>>(std::move(values), std::move(nulls));
-  }
-  return std::make_shared<ValueSegment<ColumnDataType>>(std::move(values));
-}
-
 // Fast path for a single non-string group-by column. Here the value is the key, so we do not need to materialize rows.
 // Like the byte-row path, ticketing is kept separate from building the output column: the hot loop only grows the
-// value->ticket map and emits tickets, and `_build_single_column_groupby_segment` recovers the representative values
-// from the finished map afterwards. Keeping the loop free of output-building side effects is what makes it
-// straightforward to parallelize later.
+// value->ticket map and emits tickets.
 GroupingResult _compute_groups_single_column(const ColumnID groupby_column_id,
                                              const std::shared_ptr<const Table>& input_table) {
   auto result = GroupingResult{};
   result.tickets.reserve(input_table->row_count());
 
   const auto data_type = input_table->column_data_type(groupby_column_id);
-  const auto column_is_nullable = input_table->column_is_nullable(groupby_column_id);
   const auto chunk_count = input_table->chunk_count();
 
   resolve_data_type(data_type, [&](const auto data_type_t) {
@@ -320,20 +295,20 @@ GroupingResult _compute_groups_single_column(const ColumnID groupby_column_id,
     if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
       Fail("The single-column fast path is not used for string columns.");
     } else {
-      auto value_to_ticket = boost::unordered_flat_map<ColumnDataType, uint32_t>{};
-      // The row count is the upper bound on the number of groups; reserving avoids repeated rehashing on
-      // high-cardinality group-bys (it over-allocates for low-cardinality inputs).
-      value_to_ticket.reserve(input_table->row_count());
+      auto value_to_ticket = boost::unordered_flat_map<ColumnDataType, uint64_t>{};
+      value_to_ticket.reserve(Chunk::DEFAULT_SIZE);
+
       // Tickets are handed out densely in first-seen order across the NULL group and the value groups alike, so a
       // single counter suffices and no output vectors are touched in the hot loop.
-      auto next_ticket = uint32_t{0};
-      auto null_ticket = uint32_t{0};
+      auto next_ticket = uint64_t{0};
+      auto null_ticket = uint64_t{0};
       auto has_null = false;
 
       for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-        const auto& segment = input_table->get_chunk(chunk_id)->get_segment(groupby_column_id);
+        const auto& chunk = input_table->get_chunk(chunk_id);
+        const auto& segment = chunk->get_segment(groupby_column_id);
+        auto ticket = uint64_t{0};
         segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
-          auto ticket = uint32_t{0};
           if (position.is_null()) {
             if (!has_null) {
               has_null = true;
@@ -349,12 +324,22 @@ GroupingResult _compute_groups_single_column(const ColumnID groupby_column_id,
           }
           result.tickets.push_back(ticket);
         });
+
+        // Adaptively reserve space in the hashmap just as in `_compute_groups_byte_row`.
+        if (chunk_id == ChunkID{0} && chunk_count > 1) {
+          const auto rows_seen = chunk->size();
+          const auto groups_seen = value_to_ticket.size();
+          if (rows_seen > 0) {
+            const auto remaining_rows = input_table->row_count() - rows_seen;
+            const auto estimated_groups =
+                std::min<size_t>(input_table->row_count(), groups_seen + remaining_rows * groups_seen / rows_seen);
+            value_to_ticket.reserve(estimated_groups);
+          }
+        }
       }
 
       const auto group_count = size_t{next_ticket};
       result.group_count = group_count;
-      result.groupby_segments.push_back(_build_single_column_groupby_segment<ColumnDataType>(
-          value_to_ticket, group_count, has_null, null_ticket, column_is_nullable));
     }
   });
 

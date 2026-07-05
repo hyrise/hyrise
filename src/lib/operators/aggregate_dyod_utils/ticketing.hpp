@@ -238,8 +238,6 @@ struct GroupingResult {
   std::vector<uint64_t> tickets;
 
   size_t group_count = 0;
-  // The finished group-by output columns, index-aligned with `groupby_column_ids`.
-  pmr_vector<std::shared_ptr<AbstractSegment>> groupby_segments;
 
   // The grouping hash table and its distinct key rows (byte-row path only; null for the single-column fast path, which
   // prebuilds `groupby_segments` instead). Kept alive so the aggregate phase can read each group's group-by values
