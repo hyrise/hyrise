@@ -185,7 +185,8 @@ class AggregateDYOD : public AbstractAggregateOperator {
   template <typename ColumnDataType, WindowFunction aggregate_function>
   void _write_aggregate_output(ColumnID aggregate_index, ContextsPerColumn& contexts_per_column,
                                std::vector<Segments>& intermediate_result,
-                               const std::shared_ptr<const Table>& input_table);
+                               const std::shared_ptr<const Table>& input_table,
+                               TableColumnDefinitions& output_column_definitions);
 
   std::shared_ptr<Table> _create_output_table(ContextsPerColumn& contexts_per_column,
                                               const std::shared_ptr<const Table>& input_table,
