@@ -346,6 +346,18 @@ GroupingResult _compute_groups_single_column(const ColumnID groupby_column_id,
   return result;
 }
 
+// A single slot of the direct-mapped cache that sits in front of the global hash table (see `_compute_groups_byte_row`).
+// `key.row == nullptr` marks an empty slot; occupied slots store a *stable* key pointer into `GroupKeyData::key_arena`,
+// so entries stay valid across chunks.
+struct GroupCacheSlot {
+  GroupKey key{nullptr, 0};
+  uint64_t ticket = 0;
+};
+
+// Size of the direct-mapped cache. 4096 slots * sizeof(GroupCacheSlot) (24 B) ~= 96 KiB, comfortably L2-resident.
+constexpr auto GROUP_CACHE_SLOTS = size_t{1} << 12;
+constexpr auto GROUP_CACHE_MASK = GROUP_CACHE_SLOTS - 1;
+
 // Standard path: materialize each row's group-by key into a packed row format, hash it and probe a global hash table.
 GroupingResult _compute_groups_byte_row(const std::vector<ColumnID>& groupby_column_ids,
                                         const std::shared_ptr<const Table>& input_table) {
@@ -361,6 +373,13 @@ GroupingResult _compute_groups_byte_row(const std::vector<ColumnID>& groupby_col
   auto& arena = group_key_data->key_arena;
   const auto chunk_count = input_table->chunk_count();
 
+  // Direct-mapped cache in front of the global table: a fixed-size array indexed by the low bits of the row hash. It is
+  // probed before the global table so that a recently seen group (within or across chunks) skips the often-cold global
+  // lookup and its string comparisons. Each occupied slot stores a *stable* key pointer into `key_arena`, so entries
+  // survive across chunks; the fixed footprint keeps the cache cache-resident regardless of the total group count.
+  auto local_cache = std::vector<GroupCacheSlot>(GROUP_CACHE_SLOTS);
+  const auto key_equal = GroupKeyEqual{&format};
+
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto& chunk = input_table->get_chunk(chunk_id);
     const auto materialized = _materialize_rows(format, chunk, groupby_column_ids);
@@ -371,6 +390,17 @@ GroupingResult _compute_groups_byte_row(const std::vector<ColumnID>& groupby_col
       const auto row_hash = compute_hash(row_view.key_bytes(), format.key_length);
       const auto probe_key = GroupKey{.row = row_ptr, .hash = row_hash};
 
+      // Probe the direct-mapped cache first. On a hit we already know this group's global ticket: the `hash` compare
+      // cheaply rejects a slot holding a different group, and `key_equal` then confirms the full key so a false hit is
+      // impossible. `slot` stays valid below because the global-table operations never touch `local_cache`.
+      auto& slot = local_cache[row_hash & GROUP_CACHE_MASK];
+      if (slot.key.row != nullptr && slot.key.hash == row_hash && key_equal(slot.key, probe_key)) {
+        group_key_data->tickets.push_back(slot.ticket);
+        row_ptr += format.row_size;
+        continue;
+      }
+
+      // Cache miss: this group is not in the cache, so look it up in (or insert it into) the global table.
       auto iter = global_hash_table.find(probe_key);
       if (iter == global_hash_table.end()) {
         // First time we see this group: copy the key row into the arena so it outlives the per-chunk materialized
@@ -397,6 +427,10 @@ GroupingResult _compute_groups_byte_row(const std::vector<ColumnID>& groupby_col
         const auto group_key = GroupKey{.row = row_copy, .hash = row_hash};
         iter = global_hash_table.emplace(group_key, static_cast<uint64_t>(global_hash_table.size())).first;
       }
+      // Fill the cache slot with the group's *stable* arena key (from the global entry, not the transient probe row) so
+      // later rows of this group, in this or a later chunk, hit above. This overwrites any group previously in the slot.
+      slot.key = GroupKey{.row = iter->first.row, .hash = row_hash};
+      slot.ticket = iter->second;
       group_key_data->tickets.push_back(iter->second);
 
       row_ptr += format.row_size;
