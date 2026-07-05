@@ -1062,16 +1062,27 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
 
   // SPLIT END
 
-  // TODO(anyone): Make this run in threads. I think we will need to adapt both expected_result_size; and
-  // _use_immediate_key_shortcut{};, as those are probably currently not thread-compatible
+  // TODO(anyone): Make this run in threads.
+
   auto left_contexts_per_column = ContextsPerColumn(_aggregates.size());
   auto right_contexts_per_column = ContextsPerColumn(_aggregates.size());
 
   auto left_input_table = table_scan_bucket_1->get_output();
   auto right_input_table = table_scan_bucket_2->get_output();
 
-  _aggregate<AggregateKey>(left_contexts_per_column, left_input_table, left_expected_result_size);
-  _aggregate<AggregateKey>(right_contexts_per_column, right_input_table, right_expected_result_size);
+  auto threads = std::vector<std::thread>{};
+
+  threads.emplace_back([&]() {
+    _aggregate<AggregateKey>(left_contexts_per_column, left_input_table, left_expected_result_size);
+  });
+
+  threads.emplace_back([&]() {
+    _aggregate<AggregateKey>(right_contexts_per_column, right_input_table, right_expected_result_size);
+  });
+
+  for (auto& thread : threads) {
+    thread.join();
+  }
 
   auto left_output_table = _create_output_table(left_contexts_per_column, left_input_table, left_expected_result_size);
   auto right_output_table =
