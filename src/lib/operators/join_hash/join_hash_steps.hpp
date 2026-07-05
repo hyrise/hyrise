@@ -295,7 +295,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& table, c
 
   auto bloom_filters = std::vector<BloomFilter>{};
 
-  const auto [tasks, _] = batch_chunks_for_scheduling(table, 2'000, [&](size_t group_id, const std::span<ChunkID> chunk_ids) {
+  const auto [jobs, _] = batch_chunks_for_scheduling(table, [&](size_t group_id, const std::span<ChunkID> chunk_ids) {
     // For the first group (the only one when single-threaded), we directly use the output filter. For all other groups,
     // we use local ones that are later merged into the output filter.
     auto& local_bloom_filter = (group_id == 0) ? output_bloom_filter : bloom_filters[group_id - 1];
@@ -414,7 +414,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& table, c
     histograms[group_id] = std::move(histogram);
   });
 
-  const auto group_count = tasks.size();
+  const auto group_count = jobs.size();
 
   // Create histograms and radix container per group (i.e., a group of chunks). As we need to merge histograms later in
   // the radix partitining phase, we want to lower the merging overhead by grouping while still having a sufficiently
@@ -423,15 +423,6 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& table, c
   radix_container.resize(group_count);
   bloom_filters.resize(group_count - 1);  // The first group uses the output bloom filter.
   output_bloom_filter.resize(BLOOM_FILTER_SIZE);
-
-  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
-  for (const auto& task : tasks) {
-    if (task.batch_row_count < 2'000) {
-      task.function();
-    } else {
-      jobs.emplace_back(std::make_shared<JobTask>(task.function));
-    }
-  }
 
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 

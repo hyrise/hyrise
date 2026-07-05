@@ -15,7 +15,7 @@ class SchedulingUtilsTest : public BaseTest {};
 
 TEST_F(SchedulingUtilsTest, NoChunksTableGrouping) {
   const auto empty_table = Table::create_dummy_table({{"a", DataType::Int, false}});
-  EXPECT_THROW(batch_chunks_for_scheduling(empty_table, 2'000, [&](auto, auto) {}), std::logic_error);
+  EXPECT_THROW(batch_chunks_for_scheduling(empty_table, [&](auto, auto) {}), std::logic_error);
 }
 
 TEST_F(SchedulingUtilsTest, SingleThreadedGrouping) {
@@ -25,11 +25,11 @@ TEST_F(SchedulingUtilsTest, SingleThreadedGrouping) {
   EXPECT_EQ(table->chunk_count(), CHUNK_COUNT);
 
   if constexpr (HYRISE_DEBUG) {
-    const auto [jobs, chunk_ids] = batch_chunks_for_scheduling(table, 2, [&](auto, auto) {});
+    const auto [jobs, chunk_ids] = batch_chunks_for_scheduling(table, [&](auto, auto) {});
     EXPECT_EQ(jobs.size(), CHUNK_COUNT);
     EXPECT_EQ(chunk_ids.size(), table->chunk_count());
   } else {
-    const auto [jobs, chunk_ids] = batch_chunks_for_scheduling(table, 2'000, [&](auto, auto) {});
+    const auto [jobs, chunk_ids] = batch_chunks_for_scheduling(table, [&](auto, auto) {});
     EXPECT_EQ(jobs.size(), 1);
     EXPECT_EQ(chunk_ids.size(), table->chunk_count());
   }
@@ -48,7 +48,7 @@ TEST_F(SchedulingUtilsTest, MultiThreadedGrouping) {
   auto sum = std::atomic<size_t>{0};
   auto group_markers = std::vector<size_t>{};
   auto chunk_markers = std::vector<size_t>(CHUNK_COUNT);
-  const auto [tasks, chunk_ids] = batch_chunks_for_scheduling(table, 2, [&](const auto group_id, const auto chunks) {
+  const auto [jobs, chunk_ids] = batch_chunks_for_scheduling(table, [&](const auto group_id, const auto chunks) {
     ++sum;
     EXPECT_EQ(CHUNK_COUNT / THREAD_COUNT, chunks.size());
 
@@ -59,14 +59,9 @@ TEST_F(SchedulingUtilsTest, MultiThreadedGrouping) {
     ASSERT_FALSE(group_markers.empty());
     // As we resize to the returned group size before spawning the jobs, this write should be safe.
     group_markers[group_id] = group_id;
-  });
-  const auto group_count = tasks.size();
+  }, 2);
+  const auto group_count = jobs.size();
   group_markers.resize(group_count);
-
-  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
-  std::ranges::transform(tasks, std::back_inserter(jobs), [] (const auto& task) {
-    return std::make_shared<JobTask>(task.function);
-  });
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 
   EXPECT_EQ(chunk_ids.size(), table->chunk_count());
