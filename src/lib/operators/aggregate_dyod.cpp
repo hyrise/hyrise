@@ -227,8 +227,7 @@ std::shared_ptr<Table> AggregateDYOD::_write_output_table() {
 
       resolve_window_function(aggregate->window_function, [&](auto type) {
         constexpr auto aggregate_function = decltype(type)::value;
-        using AggregateDataType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
-        segments.push_back(_write_aggregate_segment<AggregateDataType>(aggregate_index));
+        segments.push_back(_write_aggregate_segment<ColumnDataType, aggregate_function>(aggregate_index));
       });
     });
   }
@@ -274,41 +273,59 @@ std::shared_ptr<AbstractSegment> AggregateDYOD::_write_groupby_segment(size_t gr
   return std::make_shared<ValueSegment<ColumnDataType>>(std::move(values));
 }
 
-template <typename AggregateDataType>
+template <typename ColumnDataType, WindowFunction aggregate_function>
 std::shared_ptr<AbstractSegment> AggregateDYOD::_write_aggregate_segment(size_t aggregate_index) {
-  auto const aggregate_function = _aggregates[aggregate_index]->window_function;
+  using AggregateDataType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
+  constexpr auto data_type = WindowFunctionTraits<ColumnDataType, aggregate_function>::RESULT_TYPE;
   auto& aggregate_vector = static_cast<TypedAggregateVector<AggregateDataType>&>(*_aggregate_vectors[aggregate_index]);
 
-  if (aggregate_function == WindowFunction::Count) {
-    if constexpr (std::is_same_v<AggregateDataType, int64_t>) {
-      const auto& counts = aggregate_vector.counts();
-      auto values = pmr_vector<AggregateDataType>(counts.begin(), counts.end());
-      return std::make_shared<ValueSegment<AggregateDataType>>(std::move(values));
+  if constexpr (data_type == DataType::Null) {
+    Fail("Invalid combination of column type and aggregate function.");
+  } else {
+    if constexpr (aggregate_function == WindowFunction::Count) {
+      return _write_count_aggregate_segment(aggregate_index, aggregate_vector);
+    } else if constexpr (aggregate_function == WindowFunction::Avg) {
+      return _write_avg_aggregate_segment(aggregate_index, aggregate_vector);
+    } else {
+      return _write_default_aggregate_segment(aggregate_index, aggregate_vector);
     }
-    Fail("Invalid AggregateDataType for COUNT aggregation.");
+  }
+}
+
+template <typename AggregateDataType>
+std::shared_ptr<AbstractSegment> AggregateDYOD::_write_avg_aggregate_segment(
+    size_t aggregate_index, TypedAggregateVector<AggregateDataType>& aggregate_vector) {
+  const auto& sums = aggregate_vector.values();
+  const auto& counts = aggregate_vector.counts();
+  const auto group_count = _group_count();
+
+  auto averages = pmr_vector<AggregateDataType>(group_count);
+  auto null_values = pmr_vector<bool>(group_count);
+
+  for (auto group_id = GroupID{0}; group_id < group_count; ++group_id) {
+    if (counts[group_id] == 0) {
+      null_values[group_id] = true;
+    } else {
+      // TODO(anyone): The maximum representable RowID in Hyrise is 2^64 (minus a few reserved sentinel values).
+      // So in theory, the count could exceed the range of double, although in practice, it is rather unlikely.
+      averages[group_id] = sums[group_id] / static_cast<double>(counts[group_id]);
+    }
   }
 
-  if (aggregate_function == WindowFunction::Avg) {
-    if constexpr (std::is_same_v<AggregateDataType, double>) {
-      const auto& sums = aggregate_vector.values();
-      const auto& counts = aggregate_vector.counts();
-      const auto group_count = _group_count();
-      auto averages = pmr_vector<AggregateDataType>(group_count);
-      auto null_values = pmr_vector<bool>(group_count);
-      for (auto group_id = GroupID{0}; group_id < group_count; ++group_id) {
-        if (counts[group_id] == 0) {
-          null_values[group_id] = true;
-        } else {
-          // TODO(anyone): The maximum representable RowID in Hyrise is 2^64 (minus a few reserved sentinel values).
-          // So in theory, the count could exceed the range of double, although in practice, it is rather unlikely.
-          averages[group_id] = sums[group_id] / static_cast<double>(counts[group_id]);
-        }
-      }
-      return std::make_shared<ValueSegment<AggregateDataType>>(std::move(averages), std::move(null_values));
-    }
-    Fail("Invalid AggregateDataType for AVG aggregation.");
-  }
+  return std::make_shared<ValueSegment<AggregateDataType>>(std::move(averages), std::move(null_values));
+}
 
+template <typename AggregateDataType>
+std::shared_ptr<AbstractSegment> AggregateDYOD::_write_count_aggregate_segment(
+    size_t aggregate_index, TypedAggregateVector<AggregateDataType>& aggregate_vector) {
+  const auto& counts = aggregate_vector.counts();
+  auto values = pmr_vector<AggregateDataType>(counts.begin(), counts.end());
+  return std::make_shared<ValueSegment<AggregateDataType>>(std::move(values));
+}
+
+template <typename AggregateDataType>
+std::shared_ptr<AbstractSegment> AggregateDYOD::_write_default_aggregate_segment(
+    size_t aggregate_index, TypedAggregateVector<AggregateDataType>& aggregate_vector) {
   if (_aggregate_is_nullable(aggregate_index)) {
     const auto group_count = _group_count();
     auto null_values = pmr_vector<bool>(group_count);
