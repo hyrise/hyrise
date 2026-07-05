@@ -630,8 +630,7 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
     const auto groupby_column_id = _groupby_column_ids[groupby_index];
     resolve_data_type(input_table->column_data_type(groupby_column_id), [&](const auto data_type_t) {
       using ColumnDataType = typename decltype(data_type_t)::type;
-      auto [values, nulls] =
-          _any_grouped<ColumnDataType>(groups.tickets, group_count, input_table, groupby_column_id);
+      auto [values, nulls] = _any_grouped<ColumnDataType>(groups.tickets, group_count, input_table, groupby_column_id);
       if (input_table->column_is_nullable(groupby_column_id)) {
         output_segments[groupby_index] =
             std::make_shared<ValueSegment<ColumnDataType>>(std::move(values), std::move(nulls));
