@@ -361,17 +361,9 @@ GroupingResult _compute_groups_byte_row(const std::vector<ColumnID>& groupby_col
   auto& arena = group_key_data->key_arena;
   const auto chunk_count = input_table->chunk_count();
 
-  // Chunk-local hash table: maps a group key already seen within the current chunk to its resolved global ticket. It is
-  // probed before the global table so that rows repeating a group within a chunk skip the (often cold) global-table
-  // lookup and its string comparisons. Its keys point into the per-chunk materialized buffer, so it is cleared (keeping
-  // its capacity) at the start of every chunk.
-  auto local_hash_table = boost::unordered_flat_map<GroupKey, uint64_t, GroupKeyHash, GroupKeyEqual>(
-      0, GroupKeyHash{}, GroupKeyEqual{&format});
-
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto& chunk = input_table->get_chunk(chunk_id);
     const auto materialized = _materialize_rows(format, chunk, groupby_column_ids);
-    local_hash_table.clear();
 
     auto* row_ptr = materialized->rows.get();
     for (auto row_index = size_t{0}; row_index < materialized->row_count; ++row_index) {
@@ -379,18 +371,6 @@ GroupingResult _compute_groups_byte_row(const std::vector<ColumnID>& groupby_col
       const auto row_hash = compute_hash(row_view.key_bytes(), format.key_length);
       const auto probe_key = GroupKey{.row = row_ptr, .hash = row_hash};
 
-      // Probe the chunk-local table first. On a hit we already know this row's global ticket and are done; on a miss we
-      // reserve the slot and resolve it against the global table below. The local key points into the per-chunk buffer,
-      // which is valid for the rest of this chunk (the table is cleared before the next one).
-      const auto [local_iter, local_inserted] = local_hash_table.try_emplace(probe_key, uint64_t{0});
-      if (!local_inserted) {
-        group_key_data->tickets.push_back(local_iter->second);
-        row_ptr += format.row_size;
-        continue;
-      }
-
-      // Miss in the chunk-local table: this group has not been seen yet in this chunk, so look it up in (or insert it
-      // into) the global table.
       auto iter = global_hash_table.find(probe_key);
       if (iter == global_hash_table.end()) {
         // First time we see this group: copy the key row into the arena so it outlives the per-chunk materialized
@@ -417,8 +397,6 @@ GroupingResult _compute_groups_byte_row(const std::vector<ColumnID>& groupby_col
         const auto group_key = GroupKey{.row = row_copy, .hash = row_hash};
         iter = global_hash_table.emplace(group_key, static_cast<uint64_t>(global_hash_table.size())).first;
       }
-      // Cache the resolved ticket in the chunk-local table so later rows of the same group in this chunk hit above.
-      local_iter->second = iter->second;
       group_key_data->tickets.push_back(iter->second);
 
       row_ptr += format.row_size;
