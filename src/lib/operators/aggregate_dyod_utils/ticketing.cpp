@@ -91,7 +91,6 @@ void _materialize_string_column(const RowFormat& format, const AbstractSegment& 
   const auto write_inline = [&](const RowView& row, const char* const data, const size_t length) {
     auto* const inline_data = row.column_data(group_by_column_index);
     std::memcpy(inline_data, &length, sizeof(size_t));
-    const auto is_long = length > PREFIX_LENGTH;
     const auto prefix_length = std::min(length, static_cast<size_t>(PREFIX_LENGTH));
     std::memcpy(inline_data + sizeof(size_t), data, prefix_length);
     return length > PREFIX_LENGTH;
