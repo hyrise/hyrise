@@ -76,9 +76,9 @@ bool dyod_write_aggregate_values(const DYODAggregateResults<ColumnDataType, aggr
                                   for (; begin != end; ++begin) {
                                     const auto& result = *begin;
 
-                                    // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap
-                                    // (in the case of an unused immediate key) or the result of overallocating the result
-                                    // vector. As such, it must be skipped.
+                                    // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either
+                                    // a gap (in the case of an unused immediate key) or the result of overallocating
+                                    // the result vector. As such, it must be skipped.
                                     if (result.row_id.is_null()) {
                                       continue;
                                     }
@@ -109,9 +109,9 @@ bool dyod_write_aggregate_values(const DYODAggregateResults<ColumnDataType, aggr
                                   for (; begin != end; ++begin) {
                                     const auto& result = *begin;
 
-                                    // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap
-                                    // (in the case of an unused immediate key) or the result of overallocating the result
-                                    // vector. As such, it must be skipped.
+                                    // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either
+                                    // a gap (in the case of an unused immediate key) or the result of overallocating
+                                    // the result vector. As such, it must be skipped.
                                     if (result.row_id.is_null()) {
                                       continue;
                                     }
@@ -135,9 +135,9 @@ bool dyod_write_aggregate_values(const DYODAggregateResults<ColumnDataType, aggr
                                   for (; begin != end; ++begin) {
                                     const auto& result = *begin;
 
-                                    // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap
-                                    // (in the case of an unused immediate key) or the result of overallocating the result
-                                    // vector. As such, it must be skipped.
+                                    // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either
+                                    // a gap (in the case of an unused immediate key) or the result of overallocating
+                                    // the result vector. As such, it must be skipped.
                                     if (result.row_id.is_null()) {
                                       continue;
                                     }
@@ -206,9 +206,9 @@ bool dyod_write_aggregate_values(const DYODAggregateResults<ColumnDataType, aggr
                                   for (; begin != end; ++begin) {
                                     const auto& result = *begin;
 
-                                    // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap
-                                    // (in the case of an unused immediate key) or the result of overallocating the result
-                                    // vector. As such, it must be skipped.
+                                    // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either
+                                    // a gap (in the case of an unused immediate key) or the result of overallocating
+                                    // the result vector. As such, it must be skipped.
                                     if (result.row_id.is_null()) {
                                       continue;
                                     }
@@ -315,9 +315,9 @@ void dyod_prepare_output(std::vector<Segments>& output, const size_t chunk_count
   }
 }
 
-// `dyod_prepare_output` is called once per row when iterating over a column that is to be aggregated. The row's `key` has
-// been calculated as part of `_partition_by_groupby_keys`. We also pass in the `row_id` of that row. This row id is
-// stored in `Results` so that we can later use it to reconstruct the values in the GROUP BY columns. If the operator
+// `dyod_prepare_output` is called once per row when iterating over a column that is to be aggregated. The row's `key`
+// has been calculated as part of `_partition_by_groupby_keys`. We also pass in the `row_id` of that row. This row id
+// is stored in `Results` so that we can later use it to reconstruct the values in the GROUP BY columns. If the operator
 // calculates multiple aggregate functions, we only need to perform this lookup as part of the first aggregate function.
 // By setting CacheResultIds to true_type, we can store the result of the lookup in the AggregateKey. Following
 // aggregate functions can then retrieve the index from the AggregateKey.
@@ -346,8 +346,8 @@ typename Results::reference dyod_prepare_output(CacheResultIds /*cache_result_id
       first_key_entry = &key[0];
     }
 
-    // Explanation for DYOD_CACHE_MASK (placed here because it has to be defined outside but the explanation makes more sense
-    // at this place):
+    // Explanation for DYOD_CACHE_MASK (placed here because it has to be defined outside but the explanation makes more
+    // sense at this place):
     // If we store the result of the hashmap lookup (i.e., the index into results) in the DYODAggregateKeyEntry, we do
     // this by storing the index in the lower 63 bits of first_key_entry and setting the most significant bit to 1 as a
     // marker that the DYODAggregateKeyEntry now contains a cached result. We can do this because DYODAggregateKeyEntry
@@ -628,8 +628,8 @@ void AggregateDYOD::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, 
 
   auto chunk_offset = ChunkOffset{0};
 
-  // CacheResultIds is a boolean type parameter that is forwarded to dyod_prepare_output, see the documentation over there
-  // for details.
+  // CacheResultIds is a boolean type parameter that is forwarded to dyod_prepare_output, see the documentation over
+  // there for details.
   const auto process_position = [&](const auto cache_result_ids, const auto& position) {
     auto& result = dyod_prepare_output(cache_result_ids, result_ids, results,
                                        dyod_get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
@@ -650,8 +650,8 @@ void AggregateDYOD::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, 
     ++chunk_offset;
   };
 
-  // Pass true_type into dyod_prepare_output to enable certain optimizations: If we have more than one aggregate function
-  // (and thus more than one context), it makes sense to cache the results indexes, see dyod_prepare_output for details.
+  // Pass true_type into prepare_output to enable certain optimizations: If we have more than one aggregate function
+  // (and thus more than one context), it makes sense to cache the results indexes, see prepare_output for details.
   // Furthermore, if we use the immediate key shortcut (which uses the same code path as caching), we need to pass
   // true_type so that the aggregate keys are checked for immediate access values.
   if (contexts_per_column.size() > 1 || use_immediate_key_shortcut) {
@@ -1121,7 +1121,7 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
   //       _merge_contexts<ColumnDataType, WindowFunction::Count>(aggregate_idx, contexts_per_column_per_thread);
   //       break;
   //     case WindowFunction::CountDistinct:
-  //       _merge_contexts<ColumnDataType, WindowFunction::CountDistinct>(aggregate_idx, contexts_per_column_per_thread);
+  //     _merge_contexts<ColumnDataType, WindowFunction::CountDistinct>(aggregate_idx, contexts_per_column_per_thread);
   //       break;
   //     case WindowFunction::StandardDeviationSample:
   //       _merge_contexts<ColumnDataType, WindowFunction::StandardDeviationSample>(aggregate_idx,
