@@ -92,17 +92,9 @@ void _materialize_string_column(const RowFormat& format, const AbstractSegment& 
     auto* const inline_data = row.column_data(group_by_column_index);
     std::memcpy(inline_data, &length, sizeof(size_t));
     const auto is_long = length > PREFIX_LENGTH;
-    // Task 1 experiment: skip the inline prefix for long strings. They carry a heap pointer, so equality falls back to
-    // the pointer fast-path + strcmp, and the value is reconstructed from the source column (not the prefix), so the
-    // prefix is dead weight for them. Short strings still need it: it holds the whole value and drives hash + equality.
-    // The prefix region stays zero (the row buffer is zero-initialized), so hashing/comparison remain consistent.
-    // To restore the previous behavior, replace the guarded copy below with the unconditional prefix write:
-    //   const auto prefix_length = std::min(length, static_cast<size_t>(PREFIX_LENGTH));
-    //   std::memcpy(inline_data + sizeof(size_t), data, prefix_length);
-    if (!is_long) {
-      std::memcpy(inline_data + sizeof(size_t), data, length);
-    }
-    return is_long;
+    const auto prefix_length = std::min(length, static_cast<size_t>(PREFIX_LENGTH));
+    std::memcpy(inline_data + sizeof(size_t), data, prefix_length);
+    return length > PREFIX_LENGTH;
   };
 
   // Writes a string that lives in stable memory (a value/dictionary segment owned by the input or by a
@@ -288,7 +280,33 @@ std::shared_ptr<MaterializedRows> _materialize_rows(const RowFormat& format, con
   return materialized;
 }
 
+// Builds the single group-by output column of the single-column fast path from the finished value->ticket map. Each
+// group's representative value is its key, placed at its ticket slot. The NULL group (if any) occupies `null_ticket`;
+// its value slot is never read, only flagged in the null bitmap.
+template <typename ColumnDataType>
+std::shared_ptr<AbstractSegment> _build_single_column_groupby_segment(
+    const boost::unordered_flat_map<ColumnDataType, uint32_t>& value_to_ticket, const size_t group_count,
+    const bool has_null, const uint32_t null_ticket, const bool column_is_nullable) {
+  auto values = pmr_vector<ColumnDataType>(group_count);
+  for (const auto& [value, ticket] : value_to_ticket) {
+    values[ticket] = value;
+  }
+
+  if (column_is_nullable) {
+    auto nulls = pmr_vector<bool>(group_count, false);
+    if (has_null) {
+      nulls[null_ticket] = true;
+    }
+    return std::make_shared<ValueSegment<ColumnDataType>>(std::move(values), std::move(nulls));
+  }
+  return std::make_shared<ValueSegment<ColumnDataType>>(std::move(values));
+}
+
 // Fast path for a single non-string group-by column. Here the value is the key, so we do not need to materialize rows.
+// Like the byte-row path, ticketing is kept separate from building the output column: the hot loop only grows the
+// value->ticket map and emits tickets, and `_build_single_column_groupby_segment` recovers the representative values
+// from the finished map afterwards. Keeping the loop free of output-building side effects is what makes it
+// straightforward to parallelize later.
 GroupingResult _compute_groups_single_column(const ColumnID groupby_column_id,
                                              const std::shared_ptr<const Table>& input_table) {
   auto result = GroupingResult{};
@@ -306,16 +324,12 @@ GroupingResult _compute_groups_single_column(const ColumnID groupby_column_id,
       auto value_to_ticket = boost::unordered_flat_map<ColumnDataType, uint32_t>{};
       // The row count is the upper bound on the number of groups; reserving avoids repeated rehashing on
       // high-cardinality group-bys (it over-allocates for low-cardinality inputs).
-      const auto input_row_count = input_table->row_count();
-      value_to_ticket.reserve(input_row_count);
+      value_to_ticket.reserve(input_table->row_count());
+      // Tickets are handed out densely in first-seen order across the NULL group and the value groups alike, so a
+      // single counter suffices and no output vectors are touched in the hot loop.
+      auto next_ticket = uint32_t{0};
       auto null_ticket = uint32_t{0};
       auto has_null = false;
-
-      // Representative value per group, used to build the output column. The NULL group's slot is never read.
-      auto group_values = pmr_vector<ColumnDataType>{};
-      group_values.reserve(input_row_count);
-      auto group_nulls = pmr_vector<bool>{};
-      group_nulls.reserve(input_row_count);
 
       for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
         const auto& segment = input_table->get_chunk(chunk_id)->get_segment(groupby_column_id);
@@ -324,17 +338,13 @@ GroupingResult _compute_groups_single_column(const ColumnID groupby_column_id,
           if (position.is_null()) {
             if (!has_null) {
               has_null = true;
-              null_ticket = static_cast<uint32_t>(group_values.size());
-              group_values.emplace_back();
-              group_nulls.push_back(true);
+              null_ticket = next_ticket++;
             }
             ticket = null_ticket;
           } else {
-            const auto [iter, inserted] =
-                value_to_ticket.try_emplace(position.value(), static_cast<uint32_t>(group_values.size()));
+            const auto [iter, inserted] = value_to_ticket.try_emplace(position.value(), next_ticket);
             if (inserted) {
-              group_values.push_back(std::move(position.value()));
-              group_nulls.push_back(false);
+              ++next_ticket;
             }
             ticket = iter->second;
           }
@@ -342,13 +352,10 @@ GroupingResult _compute_groups_single_column(const ColumnID groupby_column_id,
         });
       }
 
-      result.group_count = group_values.size();
-      if (column_is_nullable) {
-        result.groupby_segments.push_back(
-            std::make_shared<ValueSegment<ColumnDataType>>(std::move(group_values), std::move(group_nulls)));
-      } else {
-        result.groupby_segments.push_back(std::make_shared<ValueSegment<ColumnDataType>>(std::move(group_values)));
-      }
+      const auto group_count = size_t{next_ticket};
+      result.group_count = group_count;
+      result.groupby_segments.push_back(_build_single_column_groupby_segment<ColumnDataType>(
+          value_to_ticket, group_count, has_null, null_ticket, column_is_nullable));
     }
   });
 
