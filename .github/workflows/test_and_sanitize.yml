@@ -1,0 +1,57 @@
+name: Test and Sanitize
+
+on:
+  pull_request:
+
+env:
+  CC: clang-20
+  CXX: clang++-20
+
+jobs:
+  test_and_sanitize:
+    runs-on: [self-hosted, dyod2026ci]
+    env:
+      build_dir: cmake-build-ci
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: true
+
+      - name: System Information
+        run: |
+          ${{env.CC}} --version
+          ${{env.CXX}} --version
+
+      - name: Run Lint Script
+        run: ./scripts/lint.sh
+
+      - name: Setup CMake
+        run: cmake -B ${build_dir} -DCMAKE_C_COMPILER=${{env.CC}} -DCMAKE_CXX_COMPILER=${{env.CXX}} -DCMAKE_BUILD_TYPE=Debug -G Ninja
+
+      - name: Build Project
+        run: ninja -C ${build_dir}
+
+      - name: Run Tests
+        run: ${build_dir}/hyriseTest
+
+      - name: Build and Run Tests with UBSan, ASan, and LSan
+        if: contains(github.event.pull_request.labels.*.name, 'fullci')
+        run: |
+          cmake -B build_ubsan -DCMAKE_C_COMPILER=${{env.CC}} -DCMAKE_CXX_COMPILER=${{env.CXX}} -DCMAKE_BUILD_TYPE=Debug -DENABLE_ADDR_UB_LEAK_SANITIZATION=ON -G Ninja
+          ninja -C build_ubsan hyriseTest
+          ASAN_OPTIONS='strict_string_checks=1:detect_stack_use_after_return=1:check_initialization_order=1:use_odr_indicator=1:strict_init_order=1:detect_leaks=1' build_ubsan/hyriseTest
+
+      - name: Build and Run Tests with TSan
+        if: contains(github.event.pull_request.labels.*.name, 'fullci')
+        run: |
+          cmake -B build_tsan -DCMAKE_C_COMPILER=${{env.CC}} -DCMAKE_CXX_COMPILER=${{env.CXX}} -DCMAKE_BUILD_TYPE=Debug -DENABLE_THREAD_SANITIZATION=ON -G Ninja
+          ninja -C build_tsan hyriseTest
+          TSAN_OPTIONS="history_size=7 suppressions=resources/.tsan-ignore.txt" build_tsan/hyriseTest --gtest_filter=-*SQLiteTestRunner*
+
+      - name: Cleanup
+        if: always()
+        run: rm -rf ${{ github.workspace }}/*
