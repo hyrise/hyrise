@@ -377,7 +377,8 @@ GroupingResult _compute_groups_byte_row(const std::vector<ColumnID>& groupby_col
   // probed before the global table so that a recently seen group (within or across chunks) skips the often-cold global
   // lookup and its string comparisons. Each occupied slot stores a *stable* key pointer into `key_arena`, so entries
   // survive across chunks; the fixed footprint keeps the cache cache-resident regardless of the total group count.
-  auto local_cache = std::vector<GroupCacheSlot>(GROUP_CACHE_SLOTS);
+  auto local_cache = std::array<GroupCacheSlot, GROUP_CACHE_SLOTS>{};
+
   const auto key_equal = GroupKeyEqual{&format};
 
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
