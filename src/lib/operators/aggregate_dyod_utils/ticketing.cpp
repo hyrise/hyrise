@@ -433,12 +433,14 @@ GroupingResult _compute_groups_byte_row(const std::vector<ColumnID>& groupby_col
     }
   }
 
-  // The group-by output columns are built afterwards from `tickets` via a per-column pass over the source data (see
-  // `AggregateDYOD::_on_execute`), so we do not materialize them here. Leaving `groupby_segments` empty signals to the
-  // caller that it must build them; `GroupKeyData` (and its key rows) does not escape this function.
+  // The group-by output columns are built afterwards (see `AggregateDYOD::_on_execute`): either by scanning the source
+  // columns or, for low-cardinality group-bys, by reading each group's value from its key row. We therefore leave
+  // `groupby_segments` empty (signalling the caller must build them) and hand back `GroupKeyData` so its hash table and
+  // key-row arena outlive this function.
   auto result = GroupingResult{};
   result.group_count = global_hash_table.size();
   result.tickets = std::move(group_key_data->tickets);
+  result.group_key_data = std::move(group_key_data);
   return result;
 }
 

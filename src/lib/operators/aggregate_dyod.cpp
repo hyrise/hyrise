@@ -41,6 +41,12 @@
 
 namespace hyrise {
 
+// Threshold that decides how the group-by output columns are built. When the input has at least this many rows per
+// group (low cardinality), each group-by column is materialized by reading every group's value once from its distinct
+// key row in the grouping hash table; below it (high cardinality), a sequential scan of the source column is cheaper.
+// See `build_groupby_column` in `_on_execute`. This is a heuristic crossover and can be tuned.
+constexpr auto GROUPBY_HASH_TABLE_MIN_ROWS_PER_GROUP = size_t{4};
+
 AggregateDYOD::AggregateDYOD(const std::shared_ptr<AbstractOperator>& input_operator,
                              const std::vector<std::shared_ptr<WindowFunctionExpression>>& aggregates,
                              const std::vector<ColumnID>& groupby_column_ids)
@@ -254,6 +260,51 @@ std::pair<pmr_vector<ColumnDataType>, pmr_vector<bool>> _any_grouped(const std::
       }
     });
   }
+  return {std::move(values), std::move(nulls)};
+}
+
+// Builds one group-by output column by reading each group's representative value directly from its distinct key row in
+// the grouping hash table. Every group appears exactly once as a hash-table key, so a single const pass over the table
+// (`group_count` entries) yields all values without re-scanning the source column. Preferred for low-cardinality
+// group-bys, where there are far fewer groups than input rows; otherwise the sequential scan in `_any_grouped` wins.
+//
+// `groupby_index` is the column's position among the group-by columns (its slot in the row's null bitmap and column
+// offsets); `string_col_index` is its position among the string group-by columns (its heap string-pointer slot).
+template <typename ColumnDataType>
+std::pair<pmr_vector<ColumnDataType>, pmr_vector<bool>> _groupby_from_hash_table(const GroupKeyData& group_key_data,
+                                                                                 const size_t group_count,
+                                                                                 const size_t groupby_index,
+                                                                                 const size_t string_col_index) {
+  const auto& format = group_key_data.row_format;
+  const auto& hash_table = group_key_data.global_hash_table;
+  auto values = pmr_vector<ColumnDataType>(group_count);
+  auto nulls = pmr_vector<bool>(group_count, false);
+  const auto null_mask_bit = uint64_t{1} << groupby_index;
+
+  for (auto iter = hash_table.cbegin(); iter != hash_table.cend(); ++iter) {
+    const auto row_view = RowView{iter->first.row, format};
+    const auto ticket = iter->second;
+
+    // `stores_nulls` is only false when no group-by column is nullable, so `null_bitmap()` is only read when present.
+    if (format.stores_nulls && (row_view.null_bitmap() & null_mask_bit)) {
+      nulls[ticket] = true;
+      continue;
+    }
+
+    if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
+      const auto length = row_view.string_length(groupby_index);
+      if (length <= PREFIX_LENGTH) {
+        // Short string: the whole value lives inline in the prefix.
+        values[ticket] = pmr_string{row_view.string_prefix(groupby_index), length};
+      } else {
+        // Long string: the full, null-terminated value lives at the row's heap pointer.
+        values[ticket] = pmr_string{row_view.string_ptr(string_col_index)};
+      }
+    } else {
+      values[ticket] = row_view.read_value<ColumnDataType>(groupby_index);
+    }
+  }
+
   return {std::move(values), std::move(nulls)};
 }
 
@@ -622,15 +673,39 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
     });
   };
 
-  // Builds one group-by output column with a single pass over its source column, scattering each row's value into its
-  // group's slot (the first row seen per group wins; every row in a group carries the same group-by value). This is
-  // just the ANY aggregation applied to a group-by column, and it reads the source sequentially instead of chasing the
-  // scattered key rows in the hash table.
+  // For low-cardinality group-bys (far fewer groups than input rows), each group-by column is cheaper to build by
+  // reading every group's value once from its distinct key row in the hash table than by scanning the whole source
+  // column; above that ratio the scattered key-row access loses to a sequential source scan. Only the byte-row grouping
+  // path exposes a hash table (`group_key_data`); the single-column fast path prebuilds its group-by segment.
+  const auto input_row_count = input_table->row_count();
+  const auto use_hash_table_for_groupby =
+      groups.group_key_data && group_count * GROUPBY_HASH_TABLE_MIN_ROWS_PER_GROUP <= input_row_count;
+
+  // Builds one group-by output column. Every row in a group carries the same group-by value, so we only need one value
+  // per group. Depending on cardinality (`use_hash_table_for_groupby`) we either read it from the group's hash-table
+  // key row or recover it with a sequential ANY scan of the source column (the first row seen per group wins).
   const auto build_groupby_column = [&](const uint32_t groupby_index) {
     const auto groupby_column_id = _groupby_column_ids[groupby_index];
     resolve_data_type(input_table->column_data_type(groupby_column_id), [&](const auto data_type_t) {
       using ColumnDataType = typename decltype(data_type_t)::type;
-      auto [values, nulls] = _any_grouped<ColumnDataType>(groups.tickets, group_count, input_table, groupby_column_id);
+
+      auto [values, nulls] = [&]() -> std::pair<pmr_vector<ColumnDataType>, pmr_vector<bool>> {
+        if (!use_hash_table_for_groupby) {
+          // High cardinality: a sequential scan of the source column beats chasing the scattered key rows.
+          return _any_grouped<ColumnDataType>(groups.tickets, group_count, input_table, groupby_column_id);
+        }
+        // Low cardinality: read each group's value straight from its hash-table key row. `string_col_index` locates
+        // this column among the string group-by columns (see `RowView::string_ptr`).
+        auto string_col_index = size_t{0};
+        for (auto index = uint32_t{0}; index < groupby_index; ++index) {
+          if (input_table->column_data_type(_groupby_column_ids[index]) == DataType::String) {
+            ++string_col_index;
+          }
+        }
+        return _groupby_from_hash_table<ColumnDataType>(*groups.group_key_data, group_count, groupby_index,
+                                                        string_col_index);
+      }();
+
       if (input_table->column_is_nullable(groupby_column_id)) {
         output_segments[groupby_index] =
             std::make_shared<ValueSegment<ColumnDataType>>(std::move(values), std::move(nulls));
