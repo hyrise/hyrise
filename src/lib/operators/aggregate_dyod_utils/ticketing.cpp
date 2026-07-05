@@ -367,13 +367,19 @@ GroupingResult _compute_groups_byte_row(const std::vector<ColumnID>& groupby_col
   // its capacity) at the start of every chunk.
   auto local_hash_table = boost::unordered_flat_map<GroupKey, uint64_t, GroupKeyHash, GroupKeyEqual>(
       0, GroupKeyHash{}, GroupKeyEqual{&format});
+  auto use_local_hash_table = true;
 
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto& chunk = input_table->get_chunk(chunk_id);
     const auto materialized = _materialize_rows(format, chunk, groupby_column_ids);
-    local_hash_table.clear();
+    if (use_local_hash_table) {
+      local_hash_table.clear();
+      local_hash_table.reserve(materialized->row_count);
+    }
 
     auto* row_ptr = materialized->rows.get();
+    auto local_iter =
+        local_hash_table.end();  // cache the last local-table hit for the next row, which often repeats the same group
     for (auto row_index = size_t{0}; row_index < materialized->row_count; ++row_index) {
       const auto row_view = RowView{row_ptr, format};
       const auto row_hash = compute_hash(row_view.key_bytes(), format.key_length);
@@ -382,11 +388,15 @@ GroupingResult _compute_groups_byte_row(const std::vector<ColumnID>& groupby_col
       // Probe the chunk-local table first. On a hit we already know this row's global ticket and are done; on a miss we
       // reserve the slot and resolve it against the global table below. The local key points into the per-chunk buffer,
       // which is valid for the rest of this chunk (the table is cleared before the next one).
-      const auto [local_iter, local_inserted] = local_hash_table.try_emplace(probe_key, uint64_t{0});
-      if (!local_inserted) {
-        group_key_data->tickets.push_back(local_iter->second);
-        row_ptr += format.row_size;
-        continue;
+
+      if (use_local_hash_table) {
+        const auto [local_iter_, local_inserted] = local_hash_table.try_emplace(probe_key, uint64_t{0});
+        local_iter = local_iter_;
+        if (!local_inserted) {
+          group_key_data->tickets.push_back(local_iter->second);
+          row_ptr += format.row_size;
+          continue;
+        }
       }
 
       // Miss in the chunk-local table: this group has not been seen yet in this chunk, so look it up in (or insert it
@@ -418,7 +428,9 @@ GroupingResult _compute_groups_byte_row(const std::vector<ColumnID>& groupby_col
         iter = global_hash_table.emplace(group_key, static_cast<uint64_t>(global_hash_table.size())).first;
       }
       // Cache the resolved ticket in the chunk-local table so later rows of the same group in this chunk hit above.
-      local_iter->second = iter->second;
+      if (use_local_hash_table) {
+        local_iter->second = iter->second;
+      }
       group_key_data->tickets.push_back(iter->second);
 
       row_ptr += format.row_size;
@@ -436,6 +448,12 @@ GroupingResult _compute_groups_byte_row(const std::vector<ColumnID>& groupby_col
         const auto estimated_groups =
             std::min<size_t>(input_table->row_count(), groups_seen + remaining_rows * groups_seen / rows_seen);
         global_hash_table.reserve(estimated_groups);
+
+        if (groups_seen / static_cast<double>(rows_seen) > 0.9 || estimated_groups < Chunk::DEFAULT_SIZE) {
+          // The first chunk was of very high cardinality, so we will almost always miss in the local table.
+          // Alternatively: If the estimated group count is smaller than the default chunk size, the global table will be very small and reside in the cache.
+          use_local_hash_table = false;
+        }
       }
     }
   }
