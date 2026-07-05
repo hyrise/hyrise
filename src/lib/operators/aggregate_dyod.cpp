@@ -985,6 +985,7 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
 
 template <typename AggregateKey>
 std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
+  const auto aggregate_count = _aggregates.size();
   const auto& input_table = left_input_table();
   if constexpr (HYRISE_DEBUG) {
     for (const auto& groupby_column_id : _groupby_column_ids) {
@@ -995,26 +996,25 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
   // Check for invalid aggregates
   _validate_aggregates();
 
-  std::atomic_size_t left_expected_result_size;
-
-  std::atomic_size_t right_expected_result_size;
-
   auto groupby_keys_count = _groupby_column_ids.size();
 
   if (groupby_keys_count == 0 || input_table->row_count() == 0) {
-    auto contexts_per_column = ContextsPerColumn(_aggregates.size());
-    _aggregate<AggregateKey>(contexts_per_column, input_table, left_expected_result_size);
-    return _create_output_table(contexts_per_column, input_table, left_expected_result_size);
+    std::atomic_size_t expected_result_size;
+    auto contexts_per_column = ContextsPerColumn(aggregate_count);
+    _aggregate<AggregateKey>(contexts_per_column, input_table, expected_result_size);
+    return _create_output_table(contexts_per_column, input_table, expected_result_size);
   }
 
+  const auto thread_count = size_t{2};
   // Figure out a Pivot element:
   // We take the first row, and use that combination of group by keys as the pivot element.
   auto row = input_table->get_row(size_t{0});
 
-  // Set predicate_bucket_1 and predicate_bucket_2 for the first groupby_column_id,
+  // Set predicate_buckets[0] and predicate_buckets[1] for the first groupby_column_id,
   // then use and_ to build the other groupby_column_ids on top of that.
 
-  std::shared_ptr<AbstractExpression> predicate_bucket_1, predicate_bucket_2;
+  auto predicate_buckets = std::vector<std::shared_ptr<AbstractExpression>>{};
+  predicate_buckets.resize(thread_count);
 
   for (auto operand_index = size_t{0}; operand_index < groupby_keys_count; ++operand_index) {
     auto column_id = _groupby_column_ids[operand_index];
@@ -1039,62 +1039,46 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
 
     // TODO(anyone): HACK
     if (operand_index == 0) {
-      predicate_bucket_1 = current_predicate_bucket_1;
-      predicate_bucket_2 = current_predicate_bucket_2;
+      predicate_buckets[0] = current_predicate_bucket_1;
+      predicate_buckets[1] = current_predicate_bucket_2;
     } else {
-      predicate_bucket_1 = and_(predicate_bucket_1, current_predicate_bucket_1);
-      predicate_bucket_2 = or_(predicate_bucket_2, current_predicate_bucket_2);
+      predicate_buckets[0] = and_(predicate_buckets[0], current_predicate_bucket_1);
+      predicate_buckets[1] = or_(predicate_buckets[1], current_predicate_bucket_2);
     }
   }
 
-  // We now have two predicates, one for bucket 1 and one for bucket 2:
-
-  const auto table_wrapper_bucket_1 = std::make_shared<TableWrapper>(input_table);
-  const auto table_wrapper_bucket_2 = std::make_shared<TableWrapper>(input_table);
-  table_wrapper_bucket_1->execute();
-  table_wrapper_bucket_2->execute();
-
-  const auto table_scan_bucket_1 = std::make_shared<TableScan>(table_wrapper_bucket_1, predicate_bucket_1);
-  const auto table_scan_bucket_2 = std::make_shared<TableScan>(table_wrapper_bucket_2, predicate_bucket_2);
-
-  table_scan_bucket_1->execute();
-  table_scan_bucket_2->execute();
-
   // SPLIT END
 
-  // TODO(anyone): Make this run in threads.
-
-  auto left_contexts_per_column = ContextsPerColumn(_aggregates.size());
-  auto right_contexts_per_column = ContextsPerColumn(_aggregates.size());
-
-  auto left_input_table = table_scan_bucket_1->get_output();
-  auto right_input_table = table_scan_bucket_2->get_output();
-
   auto threads = std::vector<std::thread>{};
+  auto output_tables = std::vector<std::shared_ptr<Table>>();
+  output_tables.resize(thread_count);
 
-  threads.emplace_back([&]() {
-    _aggregate<AggregateKey>(left_contexts_per_column, left_input_table, left_expected_result_size);
-  });
+  for (auto thread_id = size_t{0}; thread_id < thread_count; ++thread_id) {
+    threads.emplace_back([&, thread_id]() {
+      const auto table_wrapper_bucket = std::make_shared<TableWrapper>(input_table);
+      table_wrapper_bucket->execute();
+      const auto table_scan_bucket = std::make_shared<TableScan>(table_wrapper_bucket, predicate_buckets[thread_id]);
+      table_scan_bucket->execute();
 
-  threads.emplace_back([&]() {
-    _aggregate<AggregateKey>(right_contexts_per_column, right_input_table, right_expected_result_size);
-  });
+      std::atomic_size_t expected_result_size;
+      auto contexts_per_column = ContextsPerColumn(aggregate_count);
+      auto input_table = table_scan_bucket->get_output();
+      _aggregate<AggregateKey>(contexts_per_column, input_table, expected_result_size);
+      output_tables[thread_id] = _create_output_table(contexts_per_column, input_table, expected_result_size);
+    });
+  }
 
   for (auto& thread : threads) {
     thread.join();
   }
 
-  auto left_output_table = _create_output_table(left_contexts_per_column, left_input_table, left_expected_result_size);
-  auto right_output_table =
-      _create_output_table(right_contexts_per_column, right_input_table, right_expected_result_size);
-
-  auto chunk_count = right_output_table->chunk_count();
+  auto chunk_count = output_tables[1]->chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; chunk_id++) {
-    auto chunk = right_output_table->get_chunk(chunk_id);
-    left_output_table->append_chunk(chunk->segments());
+    auto chunk = output_tables[1]->get_chunk(chunk_id);
+    output_tables[0]->append_chunk(chunk->segments());
   }
 
-  return left_output_table;
+  return output_tables[0];
 
   // TODO(anyone): check if this is still necessary
   // we just set this to some valid value to avoid edge cases where _aggregates is empty
