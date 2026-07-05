@@ -475,17 +475,28 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
   auto column_definitions = TableColumnDefinitions{};
   column_definitions.reserve(groupby_column_count + aggregate_count);
 
-  // The output schema is [group-by columns..., aggregate columns...]. The group-by output columns are already built by
-  // the grouping phase. The aggregate columns are appended below.
+  // The output schema is [group-by columns..., aggregate columns...]. Here we only define the columns; the group-by
+  // output segments are filled below (either from the fast path or via ticket-pass jobs) and the aggregate segments
+  // by their own jobs.
   for (const auto groupby_column_id : _groupby_column_ids) {
     column_definitions.emplace_back(input_table->column_name(groupby_column_id),
                                     input_table->column_data_type(groupby_column_id),
                                     input_table->column_is_nullable(groupby_column_id));
   }
-  auto output_segments = std::move(groups.groupby_segments);
-  // The group-by columns occupy the first `groupby_column_count` slots. Reserve one further slot per aggregate so each
-  // aggregate job can write its result into a fixed, disjoint slot without touching a shared, growing container.
-  output_segments.resize(groupby_column_count + aggregate_count);
+
+  // Output layout: the group-by columns occupy the first `groupby_column_count` slots, followed by one slot per
+  // aggregate. Every job writes a fixed, disjoint slot, so none of them touch a shared, growing container.
+  auto output_segments = pmr_vector<std::shared_ptr<AbstractSegment>>(groupby_column_count + aggregate_count);
+
+  // The single-column fast path already materialized its group-by column during grouping; drop it straight in. The
+  // byte-row path leaves `groupby_segments` empty and instead builds each group-by column below via a ticket-pass over
+  // the source data (one job per column), just like the aggregates.
+  const auto groupby_columns_prebuilt = !groups.groupby_segments.empty();
+  if (groupby_columns_prebuilt) {
+    for (auto groupby_index = size_t{0}; groupby_index < groupby_column_count; ++groupby_index) {
+      output_segments[groupby_index] = std::move(groups.groupby_segments[groupby_index]);
+    }
+  }
 
   // Build the aggregate column definitions serially (cheap metadata lookups). This must not run inside the
   // per-aggregate jobs below, as they would race on `column_definitions`.
@@ -611,17 +622,48 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
     });
   };
 
-  // One job per aggregate column. With a single aggregate we run inline to avoid the scheduling overhead.
-  if (aggregate_count < 2) {
-    for (auto aggregate_id = uint32_t{0}; aggregate_id < aggregate_count; ++aggregate_id) {
-      compute_aggregate(aggregate_id);
+  // Builds one group-by output column with a single pass over its source column, scattering each row's value into its
+  // group's slot (the first row seen per group wins; every row in a group carries the same group-by value). This is
+  // just the ANY aggregation applied to a group-by column, and it reads the source sequentially instead of chasing the
+  // scattered key rows in the hash table.
+  const auto build_groupby_column = [&](const uint32_t groupby_index) {
+    const auto groupby_column_id = _groupby_column_ids[groupby_index];
+    resolve_data_type(input_table->column_data_type(groupby_column_id), [&](const auto data_type_t) {
+      using ColumnDataType = typename decltype(data_type_t)::type;
+      auto [values, nulls] =
+          _any_grouped<ColumnDataType>(groups.tickets, group_count, input_table, groupby_column_id);
+      if (input_table->column_is_nullable(groupby_column_id)) {
+        output_segments[groupby_index] =
+            std::make_shared<ValueSegment<ColumnDataType>>(std::move(values), std::move(nulls));
+      } else {
+        output_segments[groupby_index] = std::make_shared<ValueSegment<ColumnDataType>>(std::move(values));
+      }
+    });
+  };
+
+  // One job per output column: build each not-yet-built group-by column and compute each aggregate. They all read the
+  // shared, read-only grouping structure and input table and write disjoint output slots, so there are no
+  // dependencies between them. With fewer than two units we run inline to avoid the scheduling overhead.
+  const auto groupby_job_count = groupby_columns_prebuilt ? size_t{0} : groupby_column_count;
+  const auto unit_count = groupby_job_count + aggregate_count;
+  const auto run_unit = [&](const size_t unit) {
+    if (unit < groupby_job_count) {
+      build_groupby_column(static_cast<uint32_t>(unit));
+    } else {
+      compute_aggregate(static_cast<uint32_t>(unit - groupby_job_count));
+    }
+  };
+
+  if (unit_count < 2) {
+    for (auto unit = size_t{0}; unit < unit_count; ++unit) {
+      run_unit(unit);
     }
   } else {
     auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
-    jobs.reserve(aggregate_count);
-    for (auto aggregate_id = uint32_t{0}; aggregate_id < aggregate_count; ++aggregate_id) {
-      jobs.emplace_back(std::make_shared<JobTask>([&compute_aggregate, aggregate_id]() {
-        compute_aggregate(aggregate_id);
+    jobs.reserve(unit_count);
+    for (auto unit = size_t{0}; unit < unit_count; ++unit) {
+      jobs.emplace_back(std::make_shared<JobTask>([&run_unit, unit]() {
+        run_unit(unit);
       }));
     }
     Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);

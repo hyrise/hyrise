@@ -24,73 +24,6 @@
 
 namespace hyrise {
 
-// Build the group-by output columns from  the distinct key rows of the byte-row path. Each output value is read back
-// out of its group's row.
-pmr_vector<std::shared_ptr<AbstractSegment>> _build_groupby_segments(const GroupKeyData& groups,
-                                                                     const std::vector<ColumnID>& groupby_column_ids,
-                                                                     const std::shared_ptr<const Table>& input_table) {
-  const auto& row_format = groups.row_format;
-  const auto group_count = groups.global_hash_table.size();
-  const auto group_by_column_count = groupby_column_ids.size();
-
-  auto output_segments = pmr_vector<std::shared_ptr<AbstractSegment>>{};
-  output_segments.reserve(group_by_column_count);
-
-  // Index of the current string column among the group-by columns. It selects which string-pointer slot to read.
-  auto string_col_index = size_t{0};
-  for (auto group_by_column_index = size_t{0}; group_by_column_index < group_by_column_count; ++group_by_column_index) {
-    const auto column_id = groupby_column_ids[group_by_column_index];
-    const auto data_type = input_table->column_data_type(column_id);
-    const auto column_is_nullable = input_table->column_is_nullable(column_id);
-    resolve_data_type(data_type, [&](const auto data_type_t) {
-      using ColumnDataType = typename decltype(data_type_t)::type;
-      auto values = pmr_vector<ColumnDataType>(group_count);
-      // Only nullable columns carry a null bitmap, so only they need a nulls vector.
-      auto nulls = column_is_nullable ? pmr_vector<bool>(group_count, false) : pmr_vector<bool>{};
-
-      const auto null_mask_bit = uint64_t{1} << group_by_column_index;
-      for (const auto& [group_key, ticket] : groups.global_hash_table) {
-        const auto row = RowView{group_key.row, row_format};
-
-        // Only nullable columns carry a null bitmap.
-        if (column_is_nullable) {
-          nulls[ticket] = (row.null_bitmap() & null_mask_bit) != 0;
-          if (nulls[ticket]) {
-            continue;
-          }
-        }
-
-        if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
-          // The string column is materialized as [length, prefix] inline. Strings up to PREFIX_LENGTH bytes are stored
-          // entirely in the prefix. Longer strings additionally store a heap pointer to the full value.
-          const auto str_length = row.string_length(group_by_column_index);
-          if (str_length <= PREFIX_LENGTH) {
-            values[ticket] = pmr_string{row.string_prefix(group_by_column_index), str_length};
-          } else {
-            // The string is copied into the segment, so the row owning the pointer can be freed afterwards.
-            values[ticket] = pmr_string{row.string_ptr(string_col_index)};
-          }
-        } else {
-          values[ticket] = row.read_value<ColumnDataType>(group_by_column_index);
-        }
-      }
-
-      if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
-        ++string_col_index;
-      }
-
-      // Match the output column's nullability.
-      if (column_is_nullable) {
-        output_segments.push_back(std::make_shared<ValueSegment<ColumnDataType>>(std::move(values), std::move(nulls)));
-      } else {
-        output_segments.push_back(std::make_shared<ValueSegment<ColumnDataType>>(std::move(values)));
-      }
-    });
-  }
-
-  return output_segments;
-}
-
 RowFormat _create_row_format(const TableColumnDefinitions& column_definitions,
                              const std::vector<ColumnID>& groupby_column_ids) {
   const auto group_by_column_count = groupby_column_ids.size();
@@ -158,9 +91,18 @@ void _materialize_string_column(const RowFormat& format, const AbstractSegment& 
   const auto write_inline = [&](const RowView& row, const char* const data, const size_t length) {
     auto* const inline_data = row.column_data(group_by_column_index);
     std::memcpy(inline_data, &length, sizeof(size_t));
-    const auto prefix_length = std::min(length, static_cast<size_t>(PREFIX_LENGTH));
-    std::memcpy(inline_data + sizeof(size_t), data, prefix_length);
-    return length > PREFIX_LENGTH;
+    const auto is_long = length > PREFIX_LENGTH;
+    // Task 1 experiment: skip the inline prefix for long strings. They carry a heap pointer, so equality falls back to
+    // the pointer fast-path + strcmp, and the value is reconstructed from the source column (not the prefix), so the
+    // prefix is dead weight for them. Short strings still need it: it holds the whole value and drives hash + equality.
+    // The prefix region stays zero (the row buffer is zero-initialized), so hashing/comparison remain consistent.
+    // To restore the previous behavior, replace the guarded copy below with the unconditional prefix write:
+    //   const auto prefix_length = std::min(length, static_cast<size_t>(PREFIX_LENGTH));
+    //   std::memcpy(inline_data + sizeof(size_t), data, prefix_length);
+    if (!is_long) {
+      std::memcpy(inline_data + sizeof(size_t), data, length);
+    }
+    return is_long;
   };
 
   // Writes a string that lives in stable memory (a value/dictionary segment owned by the input or by a
@@ -485,11 +427,11 @@ GroupingResult _compute_groups_byte_row(const std::vector<ColumnID>& groupby_col
     }
   }
 
-  // Build the group-by output columns while the key rows (and the arena backing their long strings) are still alive,
-  // then hand back only the slim result; `GroupKeyData` does not escape this function.
+  // The group-by output columns are built afterwards from `tickets` via a per-column pass over the source data (see
+  // `AggregateDYOD::_on_execute`), so we do not materialize them here. Leaving `groupby_segments` empty signals to the
+  // caller that it must build them; `GroupKeyData` (and its key rows) does not escape this function.
   auto result = GroupingResult{};
   result.group_count = global_hash_table.size();
-  result.groupby_segments = _build_groupby_segments(*group_key_data, groupby_column_ids, input_table);
   result.tickets = std::move(group_key_data->tickets);
   return result;
 }
