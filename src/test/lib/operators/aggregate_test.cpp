@@ -891,7 +891,10 @@ TYPED_TEST(OperatorsAggregateTest, StringVariations) {
                                              "anotherlongstring"};
 
   auto values_copy = values;
-  const auto value_segment = std::make_shared<ValueSegment<pmr_string>>(std::move(values_copy));
+  const auto value_segment =
+      std::make_shared<ValueSegment<pmr_string>>(std::move(values_copy), pmr_vector<bool>(values.size(), false));
+
+  Assert(value_segment->is_nullable(), "Table Definition requires nullable");
 
   const auto table_definitions = TableColumnDefinitions{{"a", DataType::String, true}};
   const auto table = std::make_shared<Table>(table_definitions, TableType::Data);
