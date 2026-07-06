@@ -63,12 +63,14 @@ const auto region_column_names = boost::hana::make_tuple("r_regionkey", "r_name"
 // clang-format on
 // NOLINTEND(whitespace/line_length)
 
-const std::unordered_map<TPCHTable, std::underlying_type_t<TPCHTable>> tpch_table_to_dbgen_id = {
+}  // namespace
+
+static const std::unordered_map<TPCHTable, std::underlying_type_t<TPCHTable>> tpch_table_to_dbgen_id = {
     {TPCHTable::Part, PART},    {TPCHTable::PartSupp, PSUPP}, {TPCHTable::Supplier, SUPP}, {TPCHTable::Customer, CUST},
     {TPCHTable::Orders, ORDER}, {TPCHTable::LineItem, LINE},  {TPCHTable::Nation, NATION}, {TPCHTable::Region, REGION}};
 
 template <typename DSSType, typename MKRetType, typename... Args>
-DSSType call_dbgen_mk(size_t idx, MKRetType (*mk_fn)(DSS_HUGE, DSSType* val, Args...), TPCHTable table, Args... args) {
+static DSSType call_dbgen_mk(size_t idx, MKRetType (*mk_fn)(DSS_HUGE, DSSType* val, Args...), TPCHTable table, Args... args) {
   /**
    * Preserve calling scheme (row_start(); mk...(); row_stop(); as in dbgen's gen_tbl())
    */
@@ -85,7 +87,7 @@ DSSType call_dbgen_mk(size_t idx, MKRetType (*mk_fn)(DSS_HUGE, DSSType* val, Arg
   return value;
 }
 
-float convert_money(DSS_HUGE cents) {
+static float convert_money(DSS_HUGE cents) {
   const auto dollars = cents / 100;
   cents %= 100;
   return static_cast<float>(dollars) + (static_cast<float>(cents) / 100.0f);
@@ -94,7 +96,7 @@ float convert_money(DSS_HUGE cents) {
 /**
  * Call this after using dbgen to avoid memory leaks.
  */
-void dbgen_cleanup() {
+static void dbgen_cleanup() {
   for (auto* distribution : {&nations,     &regions,        &o_priority_set, &l_instruct_set,
                              &l_smode_set, &l_category_set, &l_rflag_set,    &c_mseg_set,
                              &colors,      &p_types_set,    &p_cntr_set,     &articles,
@@ -118,8 +120,6 @@ void dbgen_cleanup() {
   }
   asc_date = nullptr;
 }
-
-}  // namespace
 
 namespace hyrise {
 

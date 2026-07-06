@@ -33,7 +33,7 @@ SecondTestPlugin::provided_user_executable_functions() {
            }}};
 }
 
-void SecondTestPlugin::a_user_executable_function() const {
+void SecondTestPlugin::a_user_executable_function() {
   auto column_definitions = TableColumnDefinitions{};
   column_definitions.emplace_back("col_A", DataType::Int, false);
   const auto table = std::make_shared<Table>(column_definitions, TableType::Data);
