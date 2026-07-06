@@ -276,75 +276,134 @@ void _materialize_rows(const RowFormat& format, const std::shared_ptr<const Chun
   }
 }
 
-// TODO(@Rob2U): this currently does not work with the concurrent_hash_map. So parallelize
+// To ensure contiguous assigment of tickets we first insert this placeholder and only the thread that inserts this
+// increments the global ticket counter
+constexpr auto PLACE_HOLDER_TICKET = std::numeric_limits<uint64_t>::max();
+
+// The number of threads to use for parallelization.
+constexpr auto THREAD_COUNT = 12;
+
+// TODO(@Rob2U): Use small local lookup table (direct-mapped here)
 // Fast path for a single non-string group-by column. Here the value is the key, so we do not need to materialize rows.
 // Like the byte-row path, ticketing is kept separate from building the output column: the hot loop only grows the
 // value->ticket map and emits tickets.
-// std::shared_ptr<GroupKeyData> _compute_groups_single_column(const ColumnID groupby_column_id,
-//                                                             const std::shared_ptr<const Table>& input_table) {
-//   // The single-column fast path carries no hash table (`has_hash_table` stays false), so `GroupKeyData` here is
-//   // only a tickets + group-count carrier and its `row_format`/`global_hash_table` stay unused.
-//   auto group_key_data = std::make_shared<GroupKeyData>(RowFormat{});
-//   auto& tickets = group_key_data->tickets;
-//   tickets.reserve(input_table->row_count());
+std::shared_ptr<GroupKeyData> _compute_groups_single_column(const ColumnID groupby_column_id,
+                                                            const std::shared_ptr<const Table>& input_table) {
+  // The single-column fast path carries no hash table (`has_hash_table` stays false), so `GroupKeyData` here is
+  // only a tickets + group-count carrier and its `row_format`/`global_hash_table` stay unused.
+  auto group_key_data = std::make_shared<GroupKeyData>(RowFormat{});
+  auto& tickets = group_key_data->tickets;
+  tickets.resize(input_table->row_count());
 
-//   const auto data_type = input_table->column_data_type(groupby_column_id);
-//   const auto chunk_count = input_table->chunk_count();
+  const auto data_type = input_table->column_data_type(groupby_column_id);
+  const auto chunk_count = input_table->chunk_count();
 
-//   resolve_data_type(data_type, [&](const auto data_type_t) {
-//     using ColumnDataType = typename decltype(data_type_t)::type;
-//     if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
-//       Fail("The single-column fast path is not used for string columns.");
-//     } else {
-//       auto value_to_ticket = boost::unordered_flat_map<ColumnDataType, uint64_t>{};
-//       value_to_ticket.reserve(TARGET_CHUNK_SIZE);
+  if (chunk_count == 0) {
+    group_key_data->group_count = 0;
+    group_key_data->has_hash_table = true;  // empty table, no groups, but the hash table is trivially built
+    return group_key_data;
+  }
 
-//       // Tickets are handed out densely in first-seen order across the NULL group and the value groups alike, so a
-//       // single counter suffices and no output vectors are touched in the hot loop.
-//       auto next_ticket = uint64_t{0};
-//       auto null_ticket = uint64_t{0};
-//       auto has_null = false;
+  resolve_data_type(data_type, [&](const auto data_type_t) {
+    using ColumnDataType = typename decltype(data_type_t)::type;
+    if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
+      Fail("The single-column fast path is not used for string columns.");
+    } else {
+      auto value_to_ticket = boost::concurrent_flat_map<ColumnDataType, uint64_t>{};
+      value_to_ticket.reserve(TARGET_CHUNK_SIZE);
 
-//       for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-//         const auto& chunk = input_table->get_chunk(chunk_id);
-//         const auto& segment = chunk->get_segment(groupby_column_id);
-//         auto ticket = uint64_t{0};
-//         segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
-//           if (position.is_null()) {
-//             if (!has_null) {
-//               has_null = true;
-//               null_ticket = next_ticket++;
-//             }
-//             ticket = null_ticket;
-//           } else {
-//             const auto [iter, inserted] = value_to_ticket.try_emplace(position.value(), next_ticket);
-//             if (inserted) {
-//               ++next_ticket;
-//             }
-//             ticket = iter->second;
-//           }
-//           tickets.push_back(ticket);
-//         });
+      // Tickets are handed out densely in first-seen order across the NULL group and the value groups alike, so a
+      // single counter suffices and no output vectors are touched in the hot loop.
+      auto next_ticket = std::atomic<uint64_t>{0};
+      auto null_ticket = std::atomic<uint64_t>{PLACE_HOLDER_TICKET};
+      auto has_null = std::atomic<bool>{false};
 
-//         // Adaptively reserve space in the hashmap just as in `_compute_groups_byte_row`.
-//         if (chunk_id == ChunkID{0} && chunk_count > 1) {
-//           const auto rows_seen = chunk->size();
-//           const auto groups_seen = value_to_ticket.size();
-//           if (rows_seen > 0) {
-//             const auto remaining_rows = input_table->row_count() - rows_seen;
-//             const auto estimated_groups =
-//                 std::min<size_t>(input_table->row_count(), groups_seen + remaining_rows * groups_seen / rows_seen);
-//             value_to_ticket.reserve(estimated_groups);
-//           }
-//         }
-//       }
+      // One reusable row buffer for the materialize step, allocated once and sized to the largest chunk.
+      auto max_chunk_size = size_t{0};
+      auto ticket_offsets = std::vector<uint64_t>(chunk_count, 0);
+      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count - 1; ++chunk_id) {
+        const auto chunk_size = input_table->get_chunk(chunk_id)->size();
+        ticket_offsets[chunk_id + 1] = ticket_offsets[chunk_id] + static_cast<uint64_t>(chunk_size);
+        max_chunk_size = std::max(max_chunk_size, static_cast<size_t>(chunk_size));
+      }
 
-//       group_key_data->group_count = size_t{next_ticket};
-//     }
-//   });
+      const auto process_chunk = [&](const ChunkID chunk_id) {
+        const auto& chunk = input_table->get_chunk(chunk_id);
+        const auto& segment = chunk->get_segment(groupby_column_id);
+        auto ticket = uint64_t{0};
+        const auto chunk_start = ticket_offsets[chunk_id];
+        segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
+          if (position.is_null()) {
+            auto current_has_null = has_null.load();
+            if (!current_has_null) {
+              if (has_null.compare_exchange_strong(current_has_null, true)) {
+                null_ticket = next_ticket++;
+              }
+              while (null_ticket == PLACE_HOLDER_TICKET) {
+                // Spin until the thread that inserts the NULL group has incremented `next_ticket` and set
+                // `null_ticket`.
+              }
+            }
+            ticket = null_ticket;
+          } else {
+            const auto value = position.value();
 
-//   return group_key_data;
-// }
+            // The placeholder forces the read-back below.
+            ticket = PLACE_HOLDER_TICKET;
+            if (value_to_ticket.try_emplace(value, PLACE_HOLDER_TICKET)) {
+              // NOW insert ticket.
+              ticket = next_ticket++;
+              value_to_ticket.insert_or_assign(value, ticket);
+            }
+
+            // The value already existed (inserted by us earlier or by another thread). Read its real ticket. If a
+            // concurrent inserter is still mid-insert the entry holds the placeholder, so spin until it is written.
+            while (ticket == PLACE_HOLDER_TICKET) {
+              value_to_ticket.cvisit(value, [&ticket](const auto& entry) {
+                ticket = entry.second;
+              });
+            }
+          }
+          tickets[chunk_start + position.chunk_offset()] = ticket;
+        });
+
+        // Adaptively reserve space in the hashmap just as in `_compute_groups_byte_row`.
+        if (chunk_id == ChunkID{0} && chunk_count > 1) {
+          const auto rows_seen = chunk->size();
+          const auto groups_seen = value_to_ticket.size();
+          if (rows_seen > 0) {
+            const auto remaining_rows = input_table->row_count() - rows_seen;
+            const auto estimated_groups =
+                std::min<size_t>(input_table->row_count(), groups_seen + remaining_rows * groups_seen / rows_seen);
+            value_to_ticket.reserve(estimated_groups);
+          }
+        }
+      };
+
+      // Process first chunk to estimate the group count and reserve in the value_to_ticket accordingly.
+      process_chunk(ChunkID{0});
+
+      const auto job_count = std::min<size_t>(THREAD_COUNT, chunk_count);
+      auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+      jobs.reserve(job_count);
+      for (auto job_id = uint32_t{0}; job_id < job_count; ++job_id) {
+        jobs.emplace_back(std::make_shared<JobTask>([&, job_id] {
+          for (auto chunk_id = ChunkID{job_id}; chunk_id < chunk_count; chunk_id += job_count) {
+            if (chunk_id == ChunkID{0}) {
+              continue;  // already processed
+            }
+            process_chunk(chunk_id);
+          }
+        }));
+      }
+      Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+
+      group_key_data->group_count = size_t{next_ticket};
+    }
+  });
+
+  return group_key_data;
+}
 
 // A single slot of the direct-mapped cache that sits in front of the global hash table.
 // `key.row == nullptr` marks an empty slot. Occupied slots store a *stable* key pointer into `GroupKeyData::key_arena`,
@@ -357,10 +416,6 @@ struct GroupCacheSlot {
 // Size of the direct-mapped cache. 4096 slots * sizeof(GroupCacheSlot) (24 B) -> 96 KiB
 constexpr auto GROUP_CACHE_SLOTS = size_t{1} << 12;
 constexpr auto GROUP_CACHE_MASK = GROUP_CACHE_SLOTS - 1;
-
-// To ensure contiguous assigment of tickets we first insert this placeholder and only the thread that inserts this
-// sincrements the global ticket counter
-const auto PLACE_HOLDER_TICKET = std::numeric_limits<uint64_t>::max();
 
 // Standard path: materialize each row's group-by key into a packed row format, hash it and probe a global hash table.
 std::shared_ptr<GroupKeyData> _compute_groups_byte_row(const std::vector<ColumnID>& groupby_column_ids,
@@ -448,7 +503,7 @@ std::shared_ptr<GroupKeyData> _compute_groups_byte_row(const std::vector<ColumnI
         const auto group_key = GroupKey{.row = row_copy, .hash = row_hash};
         global_group_key = group_key;
         // Try to claim this group's ticket by writing a PLACE_HOLDER_TICKET.
-        if (global_hash_table.insert_or_assign(group_key, PLACE_HOLDER_TICKET)) {
+        if (global_hash_table.try_emplace(group_key, PLACE_HOLDER_TICKET)) {
           // NOW insert ticket.
           ticket = current_ticket++;
           global_hash_table.insert_or_assign(group_key, ticket);
@@ -498,7 +553,6 @@ std::shared_ptr<GroupKeyData> _compute_groups_byte_row(const std::vector<ColumnI
   // Process first chunk to estimate the group count and reserve in the global_hash_table accordingly.
   process_chunk(ChunkID{0}, local_cache, materialized);
 
-  constexpr auto THREAD_COUNT = 48;
   const auto job_count = std::min<size_t>(THREAD_COUNT, chunk_count);
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   jobs.reserve(job_count);
@@ -533,10 +587,10 @@ std::shared_ptr<GroupKeyData> _compute_groups_byte_row(const std::vector<ColumnI
 
 std::shared_ptr<GroupKeyData> _compute_groups(const std::vector<ColumnID>& groupby_column_ids,
                                               const std::shared_ptr<const Table>& input_table) {
-  // if (groupby_column_ids.size() == 1 && input_table->column_data_type(groupby_column_ids[0]) != DataType::String) {
-  //   const auto column_id = groupby_column_ids[0];
-  //   return _compute_groups_single_column(column_id, input_table);
-  // }
+  if (groupby_column_ids.size() == 1 && input_table->column_data_type(groupby_column_ids[0]) != DataType::String) {
+    const auto column_id = groupby_column_ids[0];
+    return _compute_groups_single_column(column_id, input_table);
+  }
   return _compute_groups_byte_row(groupby_column_ids, input_table);
 }
 
