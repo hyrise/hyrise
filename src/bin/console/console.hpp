@@ -29,6 +29,7 @@ class Console : public Singleton<Console> {
   using CommandFunction = std::function<int(const std::string&)>;
   using RegisteredCommands = std::unordered_map<std::string, CommandFunction>;
 
+  // NOLINTNEXTLINE(cppcoreguidelines-use-enum-class)
   enum ReturnCode : int8_t { Multiline = -2, Quit = -1, Ok = 0, Error = 1 };
 
   /*
