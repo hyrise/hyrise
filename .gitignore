@@ -56,3 +56,7 @@ sftp*
 # Clangd files
 compile_commands.json
 .cache/
+
+# Nix / direnv
+.direnv/
+result
