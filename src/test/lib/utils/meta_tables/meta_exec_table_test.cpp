@@ -46,7 +46,7 @@ TEST_F(MetaExecTest, SelectUserExecutableFunctions) {
 
 TEST_F(MetaExecTest, CallUserExecutableFunctions) {
   auto& pm = Hyrise::get().plugin_manager;
-  auto& sm = Hyrise::get().storage_manager;
+  auto& storage_manager = Hyrise::get().storage_manager;
 
   pm.load_plugin(build_dylib_path("libhyriseTestPlugin"));
   pm.load_plugin(build_dylib_path("libhyriseSecondTestPlugin"));
