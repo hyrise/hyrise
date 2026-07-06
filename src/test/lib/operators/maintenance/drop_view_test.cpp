@@ -18,12 +18,12 @@ class DropViewTest : public BaseTest {
     auto& storage_manager = Hyrise::get().storage_manager;
     auto t1 = std::make_shared<Table>(TableColumnDefinitions{}, TableType::Data);
 
-    sm.add_table("first_table", t1);
+    storage_manager.add_table("first_table", t1);
 
     const auto view_lqp = StoredTableNode::make("first_table");
     const auto view = std::make_shared<LQPView>(view_lqp, std::unordered_map<ColumnID, std::string>{});
 
-    sm.add_view("view_name", view);
+    storage_manager.add_view("view_name", view);
   }
 };
 

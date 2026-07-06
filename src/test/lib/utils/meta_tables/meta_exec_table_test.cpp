@@ -57,10 +57,10 @@ TEST_F(MetaExecTest, CallUserExecutableFunctions) {
       "'OurFreelyChoosableFunctionName')";
   SQLPipelineBuilder{exec_query}.create_pipeline().get_result_table();
   // The test plugin creates the below table when the called function is executed
-  EXPECT_TRUE(sm.has_table("TableOfTestPlugin_0"));
+  EXPECT_TRUE(storage_manager.has_table("TableOfTestPlugin_0"));
 
   SQLPipelineBuilder{exec_query}.create_pipeline().get_result_table();
-  EXPECT_TRUE(sm.has_table("TableOfTestPlugin_1"));
+  EXPECT_TRUE(storage_manager.has_table("TableOfTestPlugin_1"));
 
   SQLPipelineBuilder{
       "INSERT INTO meta_exec (plugin_name, function_name) VALUES ('hyriseSecondTestPlugin', "
@@ -68,7 +68,7 @@ TEST_F(MetaExecTest, CallUserExecutableFunctions) {
       .create_pipeline()
       .get_result_table();
   // The second test plugin creates the below table when the called function is executed
-  EXPECT_TRUE(sm.has_table("TableOfSecondTestPlugin"));
+  EXPECT_TRUE(storage_manager.has_table("TableOfSecondTestPlugin"));
 }
 
 TEST_F(MetaExecTest, CallNotCallableUserExecutableFunctions) {
