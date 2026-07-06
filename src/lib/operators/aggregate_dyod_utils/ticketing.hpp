@@ -223,8 +223,10 @@ struct GroupKeyEqual {
 // for low-cardinality group-bys, instead of re-scanning the source columns.
 struct GroupKeyData {
   RowFormat row_format;
-  // Owns the copied distinct key rows and their long strings.
-  std::pmr::monotonic_buffer_resource key_arena;
+  // Owns the copied distinct key rows and their long strings. Each grouping thread copies into its own arena so the
+  // hot path needs no lock; the arenas are retained here for the whole lifetime of the result because the global hash
+  // table's keys point into them.
+  std::vector<std::unique_ptr<std::pmr::monotonic_buffer_resource>> key_arenas;
   boost::concurrent_flat_map<GroupKey, uint64_t, GroupKeyHash, GroupKeyEqual> global_hash_table;
 
   // PER ROW: the group index (ticket) of that input row. Used to scatter aggregate values into per-group slots.

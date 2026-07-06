@@ -406,8 +406,8 @@ std::shared_ptr<GroupKeyData> _compute_groups_single_column(const ColumnID group
 }
 
 // A single slot of the direct-mapped cache that sits in front of the global hash table.
-// `key.row == nullptr` marks an empty slot. Occupied slots store a *stable* key pointer into `GroupKeyData::key_arena`,
-// so entries stay valid across chunks.
+// `key.row == nullptr` marks an empty slot. Occupied slots store a *stable* key pointer into one of
+// `GroupKeyData::key_arenas`, so entries stay valid across chunks.
 struct GroupCacheSlot {
   GroupKey key{nullptr, 0};
   uint64_t ticket = 0;
@@ -435,10 +435,20 @@ std::shared_ptr<GroupKeyData> _compute_groups_byte_row(const std::vector<ColumnI
   // We let the first chunk grow the table naturally and then size it from the observed cardinality.
   auto& global_hash_table = group_key_data->global_hash_table;
   const auto& format = group_key_data->row_format;
-  auto& arena = group_key_data->key_arena;
 
   const auto key_equal = GroupKeyEqual{&format};
   auto current_ticket = std::atomic<uint64_t>{0};
+
+  // One monotonic arena per grouping thread (plus the main thread, which processes the first chunk before the jobs
+  // start and reuses arena 0). Because each thread only ever allocates from its own arena, copying newly seen group
+  // keys needs no locking. The arenas are owned by `group_key_data` and outlive this call because the global hash
+  // table's keys point into them.
+  const auto job_count = std::min<size_t>(THREAD_COUNT, chunk_count);
+  auto& arenas = group_key_data->key_arenas;
+  arenas.reserve(job_count);
+  for (auto arena_id = size_t{0}; arena_id < job_count; ++arena_id) {
+    arenas.emplace_back(std::make_unique<std::pmr::monotonic_buffer_resource>());
+  }
 
   // One reusable row buffer for the materialize step, allocated once and sized to the largest chunk.
   auto max_chunk_size = size_t{0};
@@ -453,7 +463,7 @@ std::shared_ptr<GroupKeyData> _compute_groups_byte_row(const std::vector<ColumnI
       std::max(max_chunk_size, static_cast<size_t>(input_table->get_chunk(ChunkID{chunk_count - 1})->size()));
 
   const auto process_chunk = [&](const ChunkID chunk_id, std::array<GroupCacheSlot, GROUP_CACHE_SLOTS>& local_cache,
-                                 MaterializedRows& materialized) {
+                                 MaterializedRows& materialized, std::pmr::monotonic_buffer_resource& arena) {
     const auto& chunk = input_table->get_chunk(chunk_id);
     _materialize_rows(format, chunk, groupby_column_ids, materialized);
 
@@ -479,9 +489,10 @@ std::shared_ptr<GroupKeyData> _compute_groups_byte_row(const std::vector<ColumnI
         ticket = entry.second;
       }) == 1;
       if (!exists) {
-        // First time we see this group so copy the key row into the arena so it outlives the "materialized"
+        // First time we see this group so copy the key row into this thread's arena so it outlives the "materialized"
         // buffer. Long strings that live in the per-chunk arena are copied alongside it.
         // Strings that already point at stable source memory (value/dictionary paths) are left as is.
+        // The arena belongs to this thread alone, so no synchronization is needed for the copies below.
         auto* const row_copy = static_cast<uint8_t*>(arena.allocate(format.row_size, alignof(uint64_t)));
         std::memcpy(row_copy, row_ptr, format.row_size);
 
@@ -547,31 +558,32 @@ std::shared_ptr<GroupKeyData> _compute_groups_byte_row(const std::vector<ColumnI
 
   // Direct-mapped cache in front of the global table indexed by the low bits of the row hash. It is
   // probed before the global table so that a recently seen group (within or across chunks) skips the often-cold global
-  // lookup and its string comparisons. Each occupied slot stores a stable key pointer into `key_arena`, so entries
-  // survive across chunks.
+  // lookup and its string comparisons. Each occupied slot stores a stable key pointer into one of the `key_arenas`, so
+  // entries survive across chunks.
   auto local_cache = std::array<GroupCacheSlot, GROUP_CACHE_SLOTS>{};
-  // Process first chunk to estimate the group count and reserve in the global_hash_table accordingly.
-  process_chunk(ChunkID{0}, local_cache, materialized);
+  // Process first chunk to estimate the group count and reserve in the global_hash_table accordingly. This runs before
+  // the jobs start, so it can safely reuse job 0's arena.
+  process_chunk(ChunkID{0}, local_cache, materialized, *arenas[0]);
 
-  const auto job_count = std::min<size_t>(THREAD_COUNT, chunk_count);
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   jobs.reserve(job_count);
   for (auto job_id = uint32_t{0}; job_id < job_count; ++job_id) {
     jobs.emplace_back(
-        std::make_shared<JobTask>([&process_chunk, &format, max_chunk_size, chunk_count, job_count, job_id]() {
+        std::make_shared<JobTask>([&process_chunk, &format, &arenas, max_chunk_size, chunk_count, job_count, job_id]() {
           auto materialized = MaterializedRows{};
           materialized.rows = std::make_unique<uint8_t[]>(max_chunk_size * format.row_size);
 
           // Direct-mapped cache in front of the global table indexed by the low bits of the row hash. It is
           // probed before the global table so that a recently seen group (within or across chunks) skips the
           // often-cold global lookup and its string comparisons. Each occupied slot stores a stable key pointer into
-          // `key_arena`, so entries survive across chunks.
+          // one of the `key_arenas`, so entries survive across chunks.
           auto local_cache = std::array<GroupCacheSlot, GROUP_CACHE_SLOTS>{};
+          auto& arena = *arenas[job_id];
           for (auto chunk_id = ChunkID{job_id}; chunk_id < chunk_count; chunk_id += job_count) {
             if (chunk_id == ChunkID{0}) {
               continue;
             }
-            process_chunk(chunk_id, local_cache, materialized);
+            process_chunk(chunk_id, local_cache, materialized, arena);
           }
         }));
   }
