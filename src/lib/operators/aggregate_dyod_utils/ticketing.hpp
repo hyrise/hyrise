@@ -168,8 +168,8 @@ struct MaterializedRows {
   std::vector<bool> string_pointer_needs_copy;
 };
 
-std::shared_ptr<MaterializedRows> _materialize_rows(const RowFormat& format, const std::shared_ptr<const Chunk>& chunk,
-                                                    const std::vector<ColumnID>& groupby_column_ids);
+void _materialize_rows(const RowFormat& format, const std::shared_ptr<const Chunk>& chunk,
+                       const std::vector<ColumnID>& groupby_column_ids, MaterializedRows& materialized);
 
 // Key into the global hash table. `row` points into the arena owned by `GroupKeyData`. `hash` is the precomputed row
 // hash, reused on every probe instead of recomputing it.

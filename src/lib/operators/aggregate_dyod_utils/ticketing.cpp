@@ -230,14 +230,16 @@ void _materialize_string_column(const RowFormat& format, const AbstractSegment& 
 }
 
 // TODO(@forUnity): think about alignment and padding, also sort string_columns to be last in groupby columns?
-std::shared_ptr<MaterializedRows> _materialize_rows(const RowFormat& format, const std::shared_ptr<const Chunk>& chunk,
-                                                    const std::vector<ColumnID>& groupby_column_ids) {
+void _materialize_rows(const RowFormat& format, const std::shared_ptr<const Chunk>& chunk,
+                       const std::vector<ColumnID>& groupby_column_ids, MaterializedRows& materialized) {
   const auto chunk_size = chunk->size();
 
-  auto materialized = std::make_shared<MaterializedRows>();
-  materialized->row_count = chunk_size;
-  materialized->rows = std::make_unique<uint8_t[]>(chunk_size * format.row_size);
-  auto* const rows = materialized->rows.get();
+  // The row buffer and string arena are owned by the caller and reused across chunks.
+  materialized.row_count = chunk_size;
+  materialized.string_pointer_needs_copy.clear();
+  materialized.string_arena.release();
+  auto* const rows = materialized.rows.get();
+  std::memset(rows, 0, static_cast<size_t>(chunk_size) * format.row_size);
 
   // Index of the current string column among the group-by columns. Selects which string-pointer slot to write.
   auto string_col_index = size_t{0};
@@ -252,7 +254,7 @@ std::shared_ptr<MaterializedRows> _materialize_rows(const RowFormat& format, con
 
       if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
         _materialize_string_column(format, *segment, group_by_column_index, string_col_index, null_mask_bit,
-                                   *materialized);
+                                   materialized);
         ++string_col_index;
       } else {
         auto chunk_offset = size_t{0};
@@ -268,8 +270,6 @@ std::shared_ptr<MaterializedRows> _materialize_rows(const RowFormat& format, con
       }
     });
   }
-
-  return materialized;
 }
 
 // Fast path for a single non-string group-by column. Here the value is the key, so we do not need to materialize rows.
@@ -374,12 +374,20 @@ std::shared_ptr<GroupKeyData> _compute_groups_byte_row(const std::vector<ColumnI
 
   const auto key_equal = GroupKeyEqual{&format};
 
+  // One reusable row buffer for the materialize step, allocated once and sized to the largest chunk.
+  auto max_chunk_size = size_t{0};
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+    max_chunk_size = std::max(max_chunk_size, static_cast<size_t>(input_table->get_chunk(chunk_id)->size()));
+  }
+  auto materialized = MaterializedRows{};
+  materialized.rows = std::make_unique<uint8_t[]>(max_chunk_size * format.row_size);
+
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto& chunk = input_table->get_chunk(chunk_id);
-    const auto materialized = _materialize_rows(format, chunk, groupby_column_ids);
+    _materialize_rows(format, chunk, groupby_column_ids, materialized);
 
-    auto* row_ptr = materialized->rows.get();
-    for (auto row_index = size_t{0}; row_index < materialized->row_count; ++row_index) {
+    auto* row_ptr = materialized.rows.get();
+    for (auto row_index = size_t{0}; row_index < materialized.row_count; ++row_index) {
       const auto row_view = RowView{row_ptr, format};
       const auto row_hash = compute_hash(row_view.key_bytes(), format.key_length);
       const auto probe_key = GroupKey{.row = row_ptr, .hash = row_hash};
@@ -403,7 +411,7 @@ std::shared_ptr<GroupKeyData> _compute_groups_byte_row(const std::vector<ColumnI
         const auto copy_view = RowView{row_copy, format};
         const auto string_col_count = copy_view.string_col_count();
         for (auto string_col_index = size_t{0}; string_col_index < string_col_count; ++string_col_index) {
-          if (!materialized->string_pointer_needs_copy[string_col_index]) {
+          if (!materialized.string_pointer_needs_copy[string_col_index]) {
             continue;
           }
           auto* const str_ptr = copy_view.string_ptr(string_col_index);
@@ -433,7 +441,7 @@ std::shared_ptr<GroupKeyData> _compute_groups_byte_row(const std::vector<ColumnI
     // low-cardinality group-by that already saw all its groups reserves almost nothing and stays cache-resident, while
     // a high-cardinality one reserves close to `row_count` and avoids repeated rehashing over the remaining chunks.
     if (chunk_id == ChunkID{0} && chunk_count > 1) {
-      const auto rows_seen = materialized->row_count;
+      const auto rows_seen = materialized.row_count;
       const auto groups_seen = global_hash_table.size();
       if (rows_seen > 0) {
         const auto remaining_rows = input_table->row_count() - rows_seen;
