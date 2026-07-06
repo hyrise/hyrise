@@ -582,8 +582,8 @@ void AggregateDYOD::_on_cleanup() {
 }
 
 /*
-Visitor context for the AggregateVisitor. The DYODAggregateResultContext can be used without knowing the AggregateKey, 
-the AggregateContext is the "full" version.
+Visitor context for the AggregateVisitor. The DYODAggregateResultContext can be used without knowing the AggregateKey,
+the DYODAggregateContext is the "full" version.
 */
 template <typename ColumnDataType, WindowFunction aggregate_function>
 struct DYODAggregateResultContext : DYODSegmentVisitorContext {
@@ -599,8 +599,8 @@ struct DYODAggregateResultContext : DYODSegmentVisitorContext {
 };
 
 template <typename ColumnDataType, WindowFunction aggregate_function, typename AggregateKey>
-struct AggregateContext : public DYODAggregateResultContext<ColumnDataType, aggregate_function> {
-  explicit AggregateContext(const size_t preallocated_size = 0)
+struct DYODAggregateContext : public DYODAggregateResultContext<ColumnDataType, aggregate_function> {
+  explicit DYODAggregateContext(const size_t preallocated_size = 0)
       : DYODAggregateResultContext<ColumnDataType, aggregate_function>(preallocated_size) {
     auto allocator = DYODAggregateResultIdMapAllocator<AggregateKey>{&this->buffer};
 
@@ -620,7 +620,7 @@ void AggregateDYOD::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, 
 
   auto aggregator = WindowFunctionBuilder<ColumnDataType, AggregateType, aggregate_function>().get_aggregate_function();
 
-  auto& context = *std::static_pointer_cast<AggregateContext<ColumnDataType, aggregate_function, AggregateKey>>(
+  auto& context = *std::static_pointer_cast<DYODAggregateContext<ColumnDataType, aggregate_function, AggregateKey>>(
       contexts_per_column[column_index]);
 
   auto& result_ids = *context.result_ids;
@@ -1162,13 +1162,14 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std
     one context with results. This is important later on when we write the group keys into the table. The template
     parameters (int32_t, WindowFunction::Min) do not matter, as we do not calculate an aggregate anyway.
     */
-    auto context = std::make_shared<AggregateContext<int32_t, WindowFunction::Min, AggregateKey>>(expected_result_size);
+    auto context =
+        std::make_shared<DYODAggregateContext<int32_t, WindowFunction::Min, AggregateKey>>(expected_result_size);
 
     contexts_per_column.push_back(context);
   }
 
   /**
-   * Create an AggregateContext for each column in the input table that a normal (i.e. non-DISTINCT) aggregate is
+   * Create an DYODAggregateContext for each column in the input table that a normal (i.e. non-DISTINCT) aggregate is
    * created on. We do this here, and not in the per-chunk-loop below, because there might be no Chunks in the input
    * and _write_aggregate_output() needs these contexts anyway.
    */
@@ -1182,7 +1183,7 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std
     if (input_column_id == INVALID_COLUMN_ID) {
       Assert(aggregate->window_function == WindowFunction::Count, "Only COUNT may have an invalid ColumnID.");
       // SELECT COUNT(*) - we know the template arguments, so we do not need a visitor.
-      auto context = std::make_shared<AggregateContext<CountColumnType, WindowFunction::Count, AggregateKey>>(
+      auto context = std::make_shared<DYODAggregateContext<CountColumnType, WindowFunction::Count, AggregateKey>>(
           expected_result_size);
 
       contexts_per_column[aggregate_idx] = context;
@@ -1215,8 +1216,9 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std
        * are the same as they are for a regular grouped aggregate.
        */
 
-      auto context = std::static_pointer_cast<AggregateContext<DistinctColumnType, WindowFunction::Min, AggregateKey>>(
-          contexts_per_column[0]);
+      auto context =
+          std::static_pointer_cast<DYODAggregateContext<DistinctColumnType, WindowFunction::Min, AggregateKey>>(
+              contexts_per_column[0]);
 
       auto& result_ids = *context->result_ids;
       auto& results = context->results;
@@ -1256,7 +1258,7 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std
         if (input_column_id == INVALID_COLUMN_ID) {
           Assert(aggregate->window_function == WindowFunction::Count, "Only COUNT may have an invalid ColumnID.");
           auto context =
-              std::static_pointer_cast<AggregateContext<CountColumnType, WindowFunction::Count, AggregateKey>>(
+              std::static_pointer_cast<DYODAggregateContext<CountColumnType, WindowFunction::Count, AggregateKey>>(
                   contexts_per_column[aggregate_idx]);
 
           auto& result_ids = *context->result_ids;
@@ -1667,30 +1669,30 @@ std::shared_ptr<DYODSegmentVisitorContext> AggregateDYOD::_create_aggregate_cont
     using ColumnDataType = typename decltype(type)::type;
     switch (aggregate_function) {
       case WindowFunction::Min:
-        context = std::make_shared<AggregateContext<ColumnDataType, WindowFunction::Min, AggregateKey>>(size);
+        context = std::make_shared<DYODAggregateContext<ColumnDataType, WindowFunction::Min, AggregateKey>>(size);
         break;
       case WindowFunction::Max:
-        context = std::make_shared<AggregateContext<ColumnDataType, WindowFunction::Max, AggregateKey>>(size);
+        context = std::make_shared<DYODAggregateContext<ColumnDataType, WindowFunction::Max, AggregateKey>>(size);
         break;
       case WindowFunction::Sum:
-        context = std::make_shared<AggregateContext<ColumnDataType, WindowFunction::Sum, AggregateKey>>(size);
+        context = std::make_shared<DYODAggregateContext<ColumnDataType, WindowFunction::Sum, AggregateKey>>(size);
         break;
       case WindowFunction::Avg:
-        context = std::make_shared<AggregateContext<ColumnDataType, WindowFunction::Avg, AggregateKey>>(size);
+        context = std::make_shared<DYODAggregateContext<ColumnDataType, WindowFunction::Avg, AggregateKey>>(size);
         break;
       case WindowFunction::Count:
-        context = std::make_shared<AggregateContext<ColumnDataType, WindowFunction::Count, AggregateKey>>(size);
+        context = std::make_shared<DYODAggregateContext<ColumnDataType, WindowFunction::Count, AggregateKey>>(size);
         break;
       case WindowFunction::CountDistinct:
-        context = std::make_shared<AggregateContext<ColumnDataType, WindowFunction::CountDistinct, AggregateKey>>(size);
+        context =
+            std::make_shared<DYODAggregateContext<ColumnDataType, WindowFunction::CountDistinct, AggregateKey>>(size);
         break;
       case WindowFunction::StandardDeviationSample:
-        context =
-            std::make_shared<AggregateContext<ColumnDataType, WindowFunction::StandardDeviationSample, AggregateKey>>(
-                size);
+        context = std::make_shared<
+            DYODAggregateContext<ColumnDataType, WindowFunction::StandardDeviationSample, AggregateKey>>(size);
         break;
       case WindowFunction::Any:
-        context = std::make_shared<AggregateContext<ColumnDataType, WindowFunction::Any, AggregateKey>>(size);
+        context = std::make_shared<DYODAggregateContext<ColumnDataType, WindowFunction::Any, AggregateKey>>(size);
         break;
       case WindowFunction::CumeDist:
       case WindowFunction::DenseRank:
