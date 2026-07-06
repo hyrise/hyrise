@@ -57,10 +57,12 @@ class StorageManagerTest : public BaseTest {
 
 TEST_F(StorageManagerTest, AddTableTwice) {
   auto& storage_manager = Hyrise::get().storage_manager;
-  EXPECT_THROW(storage_manager.add_table("first_table", std::make_shared<Table>(TableColumnDefinitions{}, TableType::Data)),
-               std::logic_error);
-  EXPECT_THROW(storage_manager.add_table("first_view", std::make_shared<Table>(TableColumnDefinitions{}, TableType::Data)),
-               std::logic_error);
+  EXPECT_THROW(
+      storage_manager.add_table("first_table", std::make_shared<Table>(TableColumnDefinitions{}, TableType::Data)),
+      std::logic_error);
+  EXPECT_THROW(
+      storage_manager.add_table("first_view", std::make_shared<Table>(TableColumnDefinitions{}, TableType::Data)),
+      std::logic_error);
 }
 
 TEST_F(StorageManagerTest, StatisticsCreationOnAddTable) {
