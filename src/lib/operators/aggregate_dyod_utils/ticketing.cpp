@@ -98,15 +98,17 @@ void _materialize_string_column(const RowFormat& format, const AbstractSegment& 
 
   // Writes a string that lives in stable memory (a value/dictionary segment owned by the input or by a
   // referenced table): the inline bytes, plus a direct pointer into that memory for long strings.
-  // NOTE(@Rob2U): We could actually do this for more segment types.
   const auto write_stable_string = [&](const RowView& row, const pmr_string& value) {
     if (write_inline(row, value.c_str(), value.size())) {
       row.set_string_ptr(string_col_index, const_cast<char*>(value.c_str()));
     }
   };
 
-  // Generic fallback: the iterator materializes a transient `pmr_string` per row, so long strings must be copied into
+  // Fallback: the iterator materializes a transient `pmr_string` per row, so long strings must be copied into
   // the per-chunk arena and promoted into the key arena when a group is first inserted.
+
+  // TODO(@Rob2U): We should write a specialization for FixedStringDictionarySegment and maybe think about a generic
+  // way.
   const auto materialize_via_iterator = [&] {
     materialized.string_pointer_needs_copy.push_back(true);
     auto chunk_offset = size_t{0};
@@ -129,8 +131,6 @@ void _materialize_string_column(const RowFormat& format, const AbstractSegment& 
   };
 
   if (const auto* const value_segment = dynamic_cast<const ValueSegment<pmr_string>*>(&segment)) {
-    // Value segment: the segment owns its strings for the whole query, so point long strings straight at them
-    // instead of copying.
     materialized.string_pointer_needs_copy.push_back(false);
     const auto& values = value_segment->values();
     if (value_segment->is_nullable()) {
@@ -149,9 +149,6 @@ void _materialize_string_column(const RowFormat& format, const AbstractSegment& 
       }
     }
   } else if (const auto* const dictionary_segment = dynamic_cast<const DictionarySegment<pmr_string>*>(&segment)) {
-    // Dictionary segment: pack each distinct dictionary entry's inline bytes once, then per row copy the packed
-    // bytes indexed by the row's value id. Long strings point straight at the dictionary entry (owned for the
-    // whole query), so no per-row or per-group string copy is needed.
     materialized.string_pointer_needs_copy.push_back(false);
     const auto& dictionary = *dictionary_segment->dictionary();
 
@@ -170,10 +167,6 @@ void _materialize_string_column(const RowFormat& format, const AbstractSegment& 
       }
     });
   } else if (const auto* const reference_segment = dynamic_cast<const ReferenceSegment*>(&segment)) {
-    // Reference segment: in the common case the pos-list references a single chunk of a stable referenced table,
-    // so we resolve that chunk's segment once and point long strings straight at its (value/dictionary) string
-    // storage, exactly like the direct value/dictionary paths. Anything else (multi-chunk pos-lists, other
-    // referenced encodings) uses the generic copying fallback.
     const auto& pos_list = reference_segment->pos_list();
     auto handled = false;
 
@@ -282,10 +275,13 @@ void _materialize_rows(const RowFormat& format, const std::shared_ptr<const Chun
 // Fast path for a single non-string group-by column. Here the value is the key, so we do not need to materialize rows.
 // Like the byte-row path, ticketing is kept separate from building the output column: the hot loop only grows the
 // value->ticket map and emits tickets.
-GroupingResult _compute_groups_single_column(const ColumnID groupby_column_id,
-                                             const std::shared_ptr<const Table>& input_table) {
-  auto result = GroupingResult{};
-  result.tickets.reserve(input_table->row_count());
+std::shared_ptr<GroupKeyData> _compute_groups_single_column(const ColumnID groupby_column_id,
+                                                            const std::shared_ptr<const Table>& input_table) {
+  // The single-column fast path carries no hash table (`has_hash_table` stays false), so `GroupKeyData` here is only a
+  // tickets + group-count carrier and its `row_format`/`global_hash_table` stay unused.
+  auto group_key_data = std::make_shared<GroupKeyData>(RowFormat{});
+  auto& tickets = group_key_data->tickets;
+  tickets.reserve(input_table->row_count());
 
   const auto data_type = input_table->column_data_type(groupby_column_id);
   const auto chunk_count = input_table->chunk_count();
@@ -296,7 +292,7 @@ GroupingResult _compute_groups_single_column(const ColumnID groupby_column_id,
       Fail("The single-column fast path is not used for string columns.");
     } else {
       auto value_to_ticket = boost::unordered_flat_map<ColumnDataType, uint64_t>{};
-      value_to_ticket.reserve(Chunk::DEFAULT_SIZE);
+      value_to_ticket.reserve(TARGET_CHUNK_SIZE);
 
       // Tickets are handed out densely in first-seen order across the NULL group and the value groups alike, so a
       // single counter suffices and no output vectors are touched in the hot loop.
@@ -322,7 +318,7 @@ GroupingResult _compute_groups_single_column(const ColumnID groupby_column_id,
             }
             ticket = iter->second;
           }
-          result.tickets.push_back(ticket);
+          tickets.push_back(ticket);
         });
 
         // Adaptively reserve space in the hashmap just as in `_compute_groups_byte_row`.
@@ -338,45 +334,42 @@ GroupingResult _compute_groups_single_column(const ColumnID groupby_column_id,
         }
       }
 
-      const auto group_count = size_t{next_ticket};
-      result.group_count = group_count;
+      group_key_data->group_count = size_t{next_ticket};
     }
   });
 
-  return result;
+  return group_key_data;
 }
 
 // A single slot of the direct-mapped cache that sits in front of the global hash table.
-// `key.row == nullptr` marks an empty slot; occupied slots store a *stable* key pointer into `GroupKeyData::key_arena`,
+// `key.row == nullptr` marks an empty slot. Occupied slots store a *stable* key pointer into `GroupKeyData::key_arena`,
 // so entries stay valid across chunks.
 struct GroupCacheSlot {
   GroupKey key{nullptr, 0};
   uint64_t ticket = 0;
 };
 
-// Size of the direct-mapped cache. 4096 slots * sizeof(GroupCacheSlot) (24 B) ~= 96 KiB, comfortably L2-resident.
+// Size of the direct-mapped cache. 4096 slots * sizeof(GroupCacheSlot) (24 B) -> 96 KiB
 constexpr auto GROUP_CACHE_SLOTS = size_t{1} << 12;
 constexpr auto GROUP_CACHE_MASK = GROUP_CACHE_SLOTS - 1;
 
 // Standard path: materialize each row's group-by key into a packed row format, hash it and probe a global hash table.
-GroupingResult _compute_groups_byte_row(const std::vector<ColumnID>& groupby_column_ids,
-                                        const std::shared_ptr<const Table>& input_table) {
+std::shared_ptr<GroupKeyData> _compute_groups_byte_row(const std::vector<ColumnID>& groupby_column_ids,
+                                                       const std::shared_ptr<const Table>& input_table) {
   const auto row_format = _create_row_format(input_table->column_definitions(), groupby_column_ids);
   auto group_key_data = std::make_shared<GroupKeyData>(row_format);
   group_key_data->tickets.reserve(input_table->row_count());
-  // The global hash table is intentionally NOT pre-reserved to `row_count`. That upper bound is only tight for
-  // high-cardinality group-bys; for low-cardinality ones it allocates a huge, sparse table whose every probe is a
-  // cache/TLB miss into cold memory. Instead we let the first chunk grow the table naturally and then size it from
-  // the observed group density (see below), keeping it compact and cache-resident when there are few groups.
+
+  // We let the first chunk grow the table naturally and then size it from the observed cardinality.
   auto& global_hash_table = group_key_data->global_hash_table;
   const auto& format = group_key_data->row_format;
   auto& arena = group_key_data->key_arena;
   const auto chunk_count = input_table->chunk_count();
 
-  // Direct-mapped cache in front of the global table: a fixed-size array indexed by the low bits of the row hash. It is
+  // Direct-mapped cache in front of the global table indexed by the low bits of the row hash. It is
   // probed before the global table so that a recently seen group (within or across chunks) skips the often-cold global
-  // lookup and its string comparisons. Each occupied slot stores a *stable* key pointer into `key_arena`, so entries
-  // survive across chunks; the fixed footprint keeps the cache cache-resident regardless of the total group count.
+  // lookup and its string comparisons. Each occupied slot stores a stable key pointer into `key_arena`, so entries
+  // survive across chunks.
   auto local_cache = std::array<GroupCacheSlot, GROUP_CACHE_SLOTS>{};
 
   const auto key_equal = GroupKeyEqual{&format};
@@ -399,9 +392,6 @@ GroupingResult _compute_groups_byte_row(const std::vector<ColumnID>& groupby_col
       const auto row_hash = compute_hash(row_view.key_bytes(), format.key_length);
       const auto probe_key = GroupKey{.row = row_ptr, .hash = row_hash};
 
-      // Probe the direct-mapped cache first. On a hit we already know this group's global ticket: the `hash` compare
-      // cheaply rejects a slot holding a different group, and `key_equal` then confirms the full key so a false hit is
-      // impossible. `slot` stays valid below because the global-table operations never touch `local_cache`.
       auto& slot = local_cache[row_hash & GROUP_CACHE_MASK];
       if (slot.key.row != nullptr && slot.key.hash == row_hash && key_equal(slot.key, probe_key)) {
         group_key_data->tickets.push_back(slot.ticket);
@@ -409,10 +399,10 @@ GroupingResult _compute_groups_byte_row(const std::vector<ColumnID>& groupby_col
         continue;
       }
 
-      // Cache miss: this group is not in the cache, so look it up in (or insert it into) the global table.
+      // This group is not in the cache, so look it up in (or insert it into) the global table.
       auto iter = global_hash_table.find(probe_key);
       if (iter == global_hash_table.end()) {
-        // First time we see this group: copy the key row into the arena so it outlives the per-chunk materialized
+        // First time we see this group so copy the key row into the arena so it outlives the "materialized"
         // buffer. Long strings that live in the per-chunk arena are copied alongside it.
         // Strings that already point at stable source memory (value/dictionary paths) are left as is.
         auto* const row_copy = static_cast<uint8_t*>(arena.allocate(format.row_size, alignof(uint64_t)));
@@ -436,7 +426,7 @@ GroupingResult _compute_groups_byte_row(const std::vector<ColumnID>& groupby_col
         const auto group_key = GroupKey{.row = row_copy, .hash = row_hash};
         iter = global_hash_table.emplace(group_key, static_cast<uint64_t>(global_hash_table.size())).first;
       }
-      // Fill the cache slot with the group's *stable* arena key (from the global entry, not the transient probe row) so
+      // Fill the cache slot with the group's stable arena key (from the global entry, not the transient probe row) so
       // later rows of this group, in this or a later chunk, hit above. This overwrites any group previously in the
       // slot.
       slot.key = GroupKey{.row = iter->first.row, .hash = row_hash};
@@ -463,18 +453,15 @@ GroupingResult _compute_groups_byte_row(const std::vector<ColumnID>& groupby_col
   }
 
   // The group-by output columns are built afterwards (see `AggregateDYOD::_on_execute`): either by scanning the source
-  // columns or, for low-cardinality group-bys, by reading each group's value from its key row. We therefore leave
-  // `groupby_segments` empty (signalling the caller must build them) and hand back `GroupKeyData` so its hash table and
-  // key-row arena outlive this function.
-  auto result = GroupingResult{};
-  result.group_count = global_hash_table.size();
-  result.tickets = std::move(group_key_data->tickets);
-  result.group_key_data = std::move(group_key_data);
-  return result;
+  // columns or, for low-cardinality group-bys, by reading each group's value from its key row. We therefore hand back
+  // `GroupKeyData` so its hash table and key-row arena outlive this function.
+  group_key_data->group_count = global_hash_table.size();
+  group_key_data->has_hash_table = true;
+  return group_key_data;
 }
 
-GroupingResult _compute_groups(const std::vector<ColumnID>& groupby_column_ids,
-                               const std::shared_ptr<const Table>& input_table) {
+std::shared_ptr<GroupKeyData> _compute_groups(const std::vector<ColumnID>& groupby_column_ids,
+                                              const std::shared_ptr<const Table>& input_table) {
   if (groupby_column_ids.size() == 1 && input_table->column_data_type(groupby_column_ids[0]) != DataType::String) {
     const auto column_id = groupby_column_ids[0];
     return _compute_groups_single_column(column_id, input_table);

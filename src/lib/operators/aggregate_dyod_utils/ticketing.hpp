@@ -33,7 +33,6 @@ inline std::uint64_t fmix64(std::uint64_t k) {
   return k;
 }
 
-// Single-lane MurmurHash3-x64 body, now with a 1–7 byte tail.
 inline std::uint64_t compute_hash(const void* key, std::size_t len, std::uint64_t seed = 0) {
   const unsigned char* p = static_cast<const unsigned char*>(key);
   const std::size_t nblocks = len / 8;
@@ -97,7 +96,6 @@ struct RowFormat {
 RowFormat _create_row_format(const TableColumnDefinitions& column_definitions,
                              const std::vector<ColumnID>& groupby_column_ids);
 
-// Non-owning view on a single materialized row. It helps interpreting the byte layout.
 struct RowView {
   uint8_t* base;
   const RowFormat& format;
@@ -148,7 +146,7 @@ struct RowView {
   }
 
   // The bytes that participate in hashing and equality: the null bitmap plus the inline key data (length + prefix
-  // for strings). Independent of the stored hash and the heap string pointers.
+  // for strings).
   const uint8_t* key_bytes() const {
     return reinterpret_cast<const uint8_t*>(base + format.null_bitmap_offset);
   }
@@ -219,33 +217,32 @@ struct GroupKeyEqual {
   }
 };
 
+// Outcome of the grouping phase. Carries only what the aggregate phase and the output table need: the per-input-row
+// tickets, the distinct group count, and the grouping hash table.
+// The hash table is kept alive so the aggregate phase can read each group's group-by values straight from its key row
+// for low-cardinality group-bys, instead of re-scanning the source columns.
 struct GroupKeyData {
   RowFormat row_format;
   // Owns the copied distinct key rows and their long strings.
   std::pmr::monotonic_buffer_resource key_arena;
   boost::unordered_flat_map<GroupKey, uint64_t, GroupKeyHash, GroupKeyEqual> global_hash_table;
 
-  // PER ROW: ticket for this specific group key (index into `keys` and the output vectors)
+  // PER ROW: the group index (ticket) of that input row. Used to scatter aggregate values into per-group slots.
   std::vector<uint64_t> tickets;
+
+  // Number of distinct groups, i.e. the number of output rows.
+  size_t group_count = 0;
+
+  // Whether `global_hash_table` is populated and can be read to recover each group's group-by values from its key row.
+  // Only the byte-row grouping path builds it; the single-column fast path leaves it empty.
+  bool has_hash_table = false;
 
   explicit GroupKeyData(const RowFormat& row_format)
       : row_format(row_format), global_hash_table(0, GroupKeyHash{}, GroupKeyEqual{&this->row_format}) {}
 };
 
-// Outcome of the grouping phase. Carries only what the aggregate phase and the output table need.
-struct GroupingResult {
-  // PER ROW: the group index (ticket) of that input row. Used to scatter aggregate values into per-group slots.
-  std::vector<uint64_t> tickets;
-
-  size_t group_count = 0;
-
-  // The grouping hash table and its distinct key rows (byte-row path only; null for the single-column fast path, which
-  // prebuilds `groupby_segments` instead). Kept alive so the aggregate phase can read each group's group-by values
-  // straight from its key row for low-cardinality group-bys, instead of re-scanning the source columns.
-  std::shared_ptr<GroupKeyData> group_key_data;
-};
-
-// Determines the distinct groups and builds the group-by output columns.
-GroupingResult _compute_groups(const std::vector<ColumnID>& groupby_column_ids,
-                               const std::shared_ptr<const Table>& input_table);
+// Determines the distinct groups. The returned hash table and key-row arena outlive this call so the aggregate phase
+// can read each group's group-by values from its key row for low-cardinality group-bys.
+std::shared_ptr<GroupKeyData> _compute_groups(const std::vector<ColumnID>& groupby_column_ids,
+                                              const std::shared_ptr<const Table>& input_table);
 }  // namespace hyrise
