@@ -60,14 +60,13 @@ def calculate_and_format_p_value(old_durations, new_durations):
         global add_note_for_insufficient_pvalue_runs
         add_note_for_insufficient_pvalue_runs = True
         return colored("˅", "yellow", attrs=["bold"])
+
     # The results for a query are considered to be statistically not significant if the runtime is unstable. In a normal
     # distribution, 68% of all values lie in an interval of `mean +/- standard deviation`. We do not want this interval
     # to be too wide. For now, we assume that this is the case if the standard deviation is higher than 15% of the mean
     # runtime, i.e., more than approximately one third of the measurements differs by more than 30% (compared to the
     # mean runtime).
-    elif old_deviation > max_deviation * np.mean(old_durations) or new_deviation > max_deviation * np.mean(
-        new_durations
-    ):
+    if old_deviation > max_deviation * np.mean(old_durations) or new_deviation > max_deviation * np.mean(new_durations):
         return "(deviation too high)"
 
     return colored(f"{p_value:.4f}", "white") if is_significant else colored(f"{p_value:.4f}", "yellow", attrs=["bold"])
