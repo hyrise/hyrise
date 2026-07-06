@@ -41,7 +41,7 @@
 #include "operators/import.hpp"
 #include "operators/print.hpp"
 #include "operators/table_wrapper.hpp"
-#include "optimizer/join_ordering/join_graph.hpp"
+// #include "optimizer/join_ordering/join_graph.hpp"
 #include "optimizer/optimizer.hpp"
 #include "pagination.hpp"
 #include "scheduler/immediate_execution_scheduler.hpp"
@@ -750,6 +750,7 @@ int Console::_visualize(const std::string& input) {
    */
 
   auto input_words = std::vector<std::string>{};
+  // NOLINTNEXTLINE(clang-analyzer-security.ArrayBound)
   boost::algorithm::split(input_words, input, boost::is_any_of(" \n"));
 
   constexpr auto EXEC = "exec";

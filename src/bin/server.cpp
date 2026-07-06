@@ -52,6 +52,7 @@ cxxopts::Options get_server_cli_options() {
 
 void generate_benchmark_data(std::string argument_string) {
   // Remove unnecessary whitespaces.
+  // NOLINTNEXTLINE(clang-analyzer-security.ArrayBound)
   boost::trim_if(argument_string, boost::is_any_of(":"));
 
   // Remove dashes and convert to lower case to unify different writings of benchmarks ("TPC-H", "tpch", or "tpc-h").
@@ -60,6 +61,7 @@ void generate_benchmark_data(std::string argument_string) {
 
   auto benchmark_data_config = std::vector<std::string>{};
   // Split benchmark name and scale factor.
+  // NOLINTNEXTLINE(clang-analyzer-security.ArrayBound)
   boost::split(benchmark_data_config, argument_string, boost::is_any_of(":"), boost::token_compress_on);
   Assert(benchmark_data_config.size() == 2,
          "Malformed input for benchmark data generation. Expecting <benchmark name>:<scale factor>.");
