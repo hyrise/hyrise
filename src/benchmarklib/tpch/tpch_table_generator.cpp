@@ -70,7 +70,8 @@ static const std::unordered_map<TPCHTable, std::underlying_type_t<TPCHTable>> tp
     {TPCHTable::Orders, ORDER}, {TPCHTable::LineItem, LINE},  {TPCHTable::Nation, NATION}, {TPCHTable::Region, REGION}};
 
 template <typename DSSType, typename MKRetType, typename... Args>
-static DSSType call_dbgen_mk(size_t idx, MKRetType (*mk_fn)(DSS_HUGE, DSSType* val, Args...), TPCHTable table, Args... args) {
+static DSSType call_dbgen_mk(size_t idx, MKRetType (*mk_fn)(DSS_HUGE, DSSType* val, Args...), TPCHTable table,
+                             Args... args) {
   /**
    * Preserve calling scheme (row_start(); mk...(); row_stop(); as in dbgen's gen_tbl())
    */
