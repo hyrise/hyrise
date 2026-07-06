@@ -27,7 +27,7 @@ namespace hyrise {
 class StorageManagerTest : public BaseTest {
  protected:
   void SetUp() override {
-    auto& sm = Hyrise::get().storage_manager;
+    auto& storage_manager = Hyrise::get().storage_manager;
     auto t1 = std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}}, TableType::Data);
     auto t2 =
         std::make_shared<Table>(TableColumnDefinitions{{"b", DataType::Int, false}}, TableType::Data, ChunkOffset{4});
@@ -56,7 +56,7 @@ class StorageManagerTest : public BaseTest {
 };
 
 TEST_F(StorageManagerTest, AddTableTwice) {
-  auto& sm = Hyrise::get().storage_manager;
+  auto& storage_manager = Hyrise::get().storage_manager;
   EXPECT_THROW(sm.add_table("first_table", std::make_shared<Table>(TableColumnDefinitions{}, TableType::Data)),
                std::logic_error);
   EXPECT_THROW(sm.add_table("first_view", std::make_shared<Table>(TableColumnDefinitions{}, TableType::Data)),
@@ -64,7 +64,7 @@ TEST_F(StorageManagerTest, AddTableTwice) {
 }
 
 TEST_F(StorageManagerTest, StatisticsCreationOnAddTable) {
-  auto& sm = Hyrise::get().storage_manager;
+  auto& storage_manager = Hyrise::get().storage_manager;
   sm.add_table("int_float", load_table("resources/test_data/tbl/int_float.tbl"));
 
   const auto table = sm.get_table("int_float");
@@ -90,22 +90,22 @@ TEST_F(StorageManagerTest, NoSuperfluousStatisticsGeneration) {
 }
 
 TEST_F(StorageManagerTest, TableNames) {
-  const auto& sm = Hyrise::get().storage_manager;
+  const auto& storage_manager = Hyrise::get().storage_manager;
   const auto names = std::vector<std::string>{"first_table", "second_table"};
-  const auto& sm_names = sm.table_names();
+  const auto& storage_manager_names = sm.table_names();
   EXPECT_TRUE(std::is_sorted(sm_names.cbegin(), sm_names.cend()));
   EXPECT_EQ(sm_names, names);
 }
 
 TEST_F(StorageManagerTest, GetTable) {
-  const auto& sm = Hyrise::get().storage_manager;
+  const auto& storage_manager = Hyrise::get().storage_manager;
   const auto t3 = sm.get_table("first_table");
   const auto t4 = sm.get_table("second_table");
   EXPECT_THROW(sm.get_table("third_table"), std::logic_error);
 }
 
 TEST_F(StorageManagerTest, DropTable) {
-  auto& sm = Hyrise::get().storage_manager;
+  auto& storage_manager = Hyrise::get().storage_manager;
   sm.drop_table("first_table");
   EXPECT_THROW(sm.get_table("first_table"), std::logic_error);
   EXPECT_THROW(sm.drop_table("first_table"), std::logic_error);
@@ -118,12 +118,12 @@ TEST_F(StorageManagerTest, DropTable) {
 }
 
 TEST_F(StorageManagerTest, DoesNotHaveTable) {
-  auto& sm = Hyrise::get().storage_manager;
+  auto& storage_manager = Hyrise::get().storage_manager;
   EXPECT_FALSE(sm.has_table("third_table"));
 }
 
 TEST_F(StorageManagerTest, HasTable) {
-  auto& sm = Hyrise::get().storage_manager;
+  auto& storage_manager = Hyrise::get().storage_manager;
   EXPECT_TRUE(sm.has_table("first_table"));
 }
 
@@ -131,20 +131,20 @@ TEST_F(StorageManagerTest, AddViewTwice) {
   const auto v1_lqp = StoredTableNode::make("first_table");
   const auto v1 = std::make_shared<LQPView>(v1_lqp, std::unordered_map<ColumnID, std::string>{});
 
-  auto& sm = Hyrise::get().storage_manager;
+  auto& storage_manager = Hyrise::get().storage_manager;
   EXPECT_THROW(sm.add_view("first_table", v1), std::logic_error);
   EXPECT_THROW(sm.add_view("first_view", v1), std::logic_error);
 }
 
 TEST_F(StorageManagerTest, GetView) {
-  auto& sm = Hyrise::get().storage_manager;
+  auto& storage_manager = Hyrise::get().storage_manager;
   auto v3 = sm.get_view("first_view");
   auto v4 = sm.get_view("second_view");
   EXPECT_THROW(sm.get_view("third_view"), std::logic_error);
 }
 
 TEST_F(StorageManagerTest, DropView) {
-  auto& sm = Hyrise::get().storage_manager;
+  auto& storage_manager = Hyrise::get().storage_manager;
   sm.drop_view("first_view");
   EXPECT_THROW(sm.get_view("first_view"), std::logic_error);
   EXPECT_THROW(sm.drop_view("first_view"), std::logic_error);
@@ -160,22 +160,22 @@ TEST_F(StorageManagerTest, DropView) {
 
 TEST_F(StorageManagerTest, ResetView) {
   Hyrise::reset();
-  auto& sm = Hyrise::get().storage_manager;
+  auto& storage_manager = Hyrise::get().storage_manager;
   EXPECT_THROW(sm.get_view("first_view"), std::logic_error);
 }
 
 TEST_F(StorageManagerTest, DoesNotHaveView) {
-  auto& sm = Hyrise::get().storage_manager;
+  auto& storage_manager = Hyrise::get().storage_manager;
   EXPECT_FALSE(sm.has_view("third_view"));
 }
 
 TEST_F(StorageManagerTest, HasView) {
-  auto& sm = Hyrise::get().storage_manager;
+  auto& storage_manager = Hyrise::get().storage_manager;
   EXPECT_TRUE(sm.has_view("first_view"));
 }
 
 TEST_F(StorageManagerTest, ListViewNames) {
-  auto& sm = Hyrise::get().storage_manager;
+  auto& storage_manager = Hyrise::get().storage_manager;
   const auto view_names = sm.view_names();
 
   EXPECT_EQ(view_names.size(), 2u);
@@ -185,7 +185,7 @@ TEST_F(StorageManagerTest, ListViewNames) {
 }
 
 TEST_F(StorageManagerTest, OutputToStream) {
-  auto& sm = Hyrise::get().storage_manager;
+  auto& storage_manager = Hyrise::get().storage_manager;
   sm.add_table("third_table", load_table("resources/test_data/tbl/int_int2.tbl", ChunkOffset{2}));
 
   std::ostringstream output;
@@ -204,7 +204,7 @@ TEST_F(StorageManagerTest, OutputToStream) {
 
 TEST_F(StorageManagerTest, ExportTables) {
   std::ostringstream output;
-  auto& sm = Hyrise::get().storage_manager;
+  auto& storage_manager = Hyrise::get().storage_manager;
 
   // first, we remove empty test tables
   sm.drop_table("first_table");
@@ -221,7 +221,7 @@ TEST_F(StorageManagerTest, ExportTables) {
 }
 
 TEST_F(StorageManagerTest, AddPreparedPlanTwice) {
-  auto& sm = Hyrise::get().storage_manager;
+  auto& storage_manager = Hyrise::get().storage_manager;
 
   const auto pp1_lqp = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "a");
   const auto pp1 = std::make_shared<PreparedPlan>(pp1_lqp, std::vector<ParameterID>{});
@@ -230,14 +230,14 @@ TEST_F(StorageManagerTest, AddPreparedPlanTwice) {
 }
 
 TEST_F(StorageManagerTest, GetPreparedPlan) {
-  auto& sm = Hyrise::get().storage_manager;
+  auto& storage_manager = Hyrise::get().storage_manager;
   auto pp3 = sm.get_prepared_plan("first_prepared_plan");
   auto pp4 = sm.get_prepared_plan("second_prepared_plan");
   EXPECT_THROW(sm.get_prepared_plan("third_prepared_plan"), std::logic_error);
 }
 
 TEST_F(StorageManagerTest, DropPreparedPlan) {
-  auto& sm = Hyrise::get().storage_manager;
+  auto& storage_manager = Hyrise::get().storage_manager;
   sm.drop_prepared_plan("first_prepared_plan");
   EXPECT_THROW(sm.get_prepared_plan("first_prepared_plan"), std::logic_error);
   EXPECT_THROW(sm.drop_prepared_plan("first_prepared_plan"), std::logic_error);
@@ -253,12 +253,12 @@ TEST_F(StorageManagerTest, DropPreparedPlan) {
 }
 
 TEST_F(StorageManagerTest, DoesNotHavePreparedPlan) {
-  auto& sm = Hyrise::get().storage_manager;
+  auto& storage_manager = Hyrise::get().storage_manager;
   EXPECT_FALSE(sm.has_prepared_plan("third_prepared_plan"));
 }
 
 TEST_F(StorageManagerTest, HasPreparedPlan) {
-  auto& sm = Hyrise::get().storage_manager;
+  auto& storage_manager = Hyrise::get().storage_manager;
   EXPECT_TRUE(sm.has_prepared_plan("first_prepared_plan"));
 }
 

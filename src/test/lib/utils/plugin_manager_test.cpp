@@ -32,7 +32,7 @@ class PluginManagerTest : public BaseTest {
 };
 
 TEST_F(PluginManagerTest, LoadUnloadPlugin) {
-  auto& sm = Hyrise::get().storage_manager;
+  auto& storage_manager = Hyrise::get().storage_manager;
   auto& pm = Hyrise::get().plugin_manager;
   auto& plugins = get_plugins();
 
@@ -56,7 +56,7 @@ TEST_F(PluginManagerTest, LoadUnloadPlugin) {
 
 // Plugins are unloaded when the PluginManager's destructor is called, this is simulated and tested here.
 TEST_F(PluginManagerTest, LoadPluginAutomaticUnload) {
-  auto& sm = Hyrise::get().storage_manager;
+  auto& storage_manager = Hyrise::get().storage_manager;
   auto& pm = Hyrise::get().plugin_manager;
   auto& plugins = get_plugins();
 
@@ -107,7 +107,7 @@ TEST_F(PluginManagerTest, LoadingUnloadingUserExecutableFunctions) {
 
 TEST_F(PluginManagerTest, CallUserExecutableFunctions) {
   auto& pm = Hyrise::get().plugin_manager;
-  auto& sm = Hyrise::get().storage_manager;
+  auto& storage_manager = Hyrise::get().storage_manager;
   auto& lm = Hyrise::get().log_manager;
 
   pm.load_plugin(build_dylib_path("libhyriseTestPlugin"));
@@ -184,7 +184,7 @@ TEST_F(PluginManagerTest, LoadingUnloadingBenchmarkHooks) {
 
 TEST_F(PluginManagerTest, CallBenchmarkHooks) {
   auto& pm = Hyrise::get().plugin_manager;
-  auto& sm = Hyrise::get().storage_manager;
+  auto& storage_manager = Hyrise::get().storage_manager;
   auto& lm = Hyrise::get().log_manager;
   const std::unique_ptr<AbstractBenchmarkItemRunner> benchmark_item_runner = std::make_unique<TPCHBenchmarkItemRunner>(
       std::make_shared<BenchmarkConfig>(), false, 1, ClusteringConfiguration::None);

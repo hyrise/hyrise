@@ -43,7 +43,7 @@ TEST_F(CreatePreparedPlanTest, DeepCopy) {
 TEST_F(CreatePreparedPlanTest, Execute) {
   EXPECT_FALSE(Hyrise::get().storage_manager.has_prepared_plan("prepared_plan_a"));
   create_prepared_plan->execute();
-  const auto& sm = Hyrise::get().storage_manager;
+  const auto& storage_manager = Hyrise::get().storage_manager;
   EXPECT_TRUE(sm.has_prepared_plan("prepared_plan_a"));
   EXPECT_EQ(sm.get_prepared_plan("prepared_plan_a"), prepared_plan);
 

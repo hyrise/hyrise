@@ -15,7 +15,7 @@ namespace hyrise {
 class DropViewTest : public BaseTest {
  protected:
   void SetUp() override {
-    auto& sm = Hyrise::get().storage_manager;
+    auto& storage_manager = Hyrise::get().storage_manager;
     auto t1 = std::make_shared<Table>(TableColumnDefinitions{}, TableType::Data);
 
     sm.add_table("first_table", t1);
