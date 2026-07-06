@@ -41,7 +41,7 @@
 #include "operators/import.hpp"
 #include "operators/print.hpp"
 #include "operators/table_wrapper.hpp"
-// #include "optimizer/join_ordering/join_graph.hpp"
+#include "optimizer/join_ordering/join_graph.hpp"
 #include "optimizer/optimizer.hpp"
 #include "pagination.hpp"
 #include "scheduler/immediate_execution_scheduler.hpp"
@@ -1061,6 +1061,7 @@ void Console::_rollback() {
 // GNU readline interface to our commands
 
 char** Console::_command_completion(const char* text, const int start, const int /*end*/) {
+  // NOLINTNEXTLINE(misc-const-correctness)
   char** completion_matches = nullptr;
 
   const auto input = std::string{rl_line_buffer};
