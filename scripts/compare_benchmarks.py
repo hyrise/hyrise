@@ -17,8 +17,7 @@ os.environ["FORCE_COLOR"] = "1"
 
 p_value_significance_threshold = 0.001
 min_iterations = 10
-min_runtime_ns = 59 * 1000 * 1000 * 1000
-min_iterations_disabling_min_runtime = 100
+max_deviation = 0.15
 
 
 def format_diff(diff):
@@ -51,30 +50,27 @@ def calculate_and_format_p_value(old_durations, new_durations):
     p_value = ttest_ind(old_durations, new_durations)[1]
     is_significant = p_value < p_value_significance_threshold
 
-    old_runtime = sum(runtime for runtime in old_durations)
-    new_runtime = sum(runtime for runtime in new_durations)
+    old_deviation = np.std(old_durations)
+    new_deviation = np.std(new_durations)
 
-    # The results for a query are considered to be statistically not significant if the runtime is too short. However,
-    # if the item has been executed > `min_iterations_disabling_min_runtime` times, it is considered significant.
-    if (old_runtime < min_runtime_ns or new_runtime < min_runtime_ns) and (
-        len(old_durations) < min_iterations_disabling_min_runtime
-        or len(new_durations) < min_iterations_disabling_min_runtime
-    ):
+    # If we cannot decide whether the change is significant due to an insufficient number of measurements, the
+    # `add_note_for_insufficient_pvalue_runs` flag it set, for which a note is later added to the table output.
+    if len(old_durations) < min_iterations or len(new_durations) < min_iterations:
         is_significant = False
-        return "(run time too short)"
-    elif len(old_durations) < min_iterations or len(new_durations) < min_iterations:
-        is_significant = False
-
-        # In case we cannot decide whether the change is significant due to an insufficient number of measurements, the
-        # add_note_for_insufficient_pvalue_runs flag it set, for which a note is later added to the table output.
         global add_note_for_insufficient_pvalue_runs
         add_note_for_insufficient_pvalue_runs = True
         return colored("˅", "yellow", attrs=["bold"])
-    else:
-        if is_significant:
-            return colored(f"{p_value:.4f}", "white")
-        else:
-            return colored(f"{p_value:.4f}", "yellow", attrs=["bold"])
+    # The results for a query are considered to be statistically not significant if the runtime is unstable. In a normal
+    # distribution, 68% of all values lie in an interval of `mean +/- standard deviation`. We do not want this interval
+    # to be too wide. For now, we assume that this is the case if the standard deviation is higher than 15% of the mean
+    # runtime, i.e., more than approximately one third of the measurements differs by more than 30% (compared to the
+    # mean runtime).
+    elif old_deviation > max_deviation * np.mean(old_durations) or new_deviation > max_deviation * np.mean(
+        new_durations
+    ):
+        return "(deviation too high)"
+
+    return colored(f"{p_value:.4f}", "white") if is_significant else colored(f"{p_value:.4f}", "yellow", attrs=["bold"])
 
 
 def create_context_overview(old_config, new_config, github_format):
