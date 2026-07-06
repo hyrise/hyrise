@@ -44,7 +44,7 @@ HistogramDomain<pmr_string>::IntegralType HistogramDomain<pmr_string>::string_to
   const auto string_length = string_value.size();
   const auto chars_to_consider = std::min(string_length, prefix_length);
   for (auto idx = size_t{0}; idx < chars_to_consider; ++idx) {
-    value += ((string_value[idx] - min_char)) * base + 1;
+    value += ((string_value[idx] - min_char) * base) + 1;
     base -= ipow(character_range_width(), prefix_length - idx - 1);
   }
 

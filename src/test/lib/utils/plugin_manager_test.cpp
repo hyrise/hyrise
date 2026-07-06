@@ -45,12 +45,12 @@ TEST_F(PluginManagerTest, LoadUnloadPlugin) {
   EXPECT_NE(plugins["hyriseTestPlugin"].plugin, nullptr);
 
   // The test plugin creates a dummy table when it is started
-  EXPECT_TRUE(sm.has_table("DummyTable"));
+  EXPECT_TRUE(storage_manager.has_table("DummyTable"));
 
   pm.unload_plugin("hyriseTestPlugin");
 
   // The test plugin removes the dummy table from the storage manager when it is unloaded
-  EXPECT_FALSE(sm.has_table("DummyTable"));
+  EXPECT_FALSE(storage_manager.has_table("DummyTable"));
   EXPECT_FALSE(plugins.contains("hyriseTestPlugin"));
 }
 
@@ -69,7 +69,7 @@ TEST_F(PluginManagerTest, LoadPluginAutomaticUnload) {
   EXPECT_NE(plugins["hyriseTestPlugin"].plugin, nullptr);
 
   // The test plugin creates a dummy table when it is started
-  EXPECT_TRUE(sm.has_table("DummyTable"));
+  EXPECT_TRUE(storage_manager.has_table("DummyTable"));
 
   // The PluginManager's destructor calls _clean_up(), we call it here explicitly to simulate the destructor
   // being called, which in turn should unload all loaded plugins.
@@ -77,7 +77,7 @@ TEST_F(PluginManagerTest, LoadPluginAutomaticUnload) {
 
   // The test plugin removes the dummy table from the storage manager when it is unloaded
   // (implicitly by the destructor of the PluginManager).
-  EXPECT_FALSE(sm.has_table("DummyTable"));
+  EXPECT_FALSE(storage_manager.has_table("DummyTable"));
 }
 
 TEST_F(PluginManagerTest, LoadingUnloadingUserExecutableFunctions) {
@@ -115,7 +115,7 @@ TEST_F(PluginManagerTest, CallUserExecutableFunctions) {
 
   pm.exec_user_function("hyriseTestPlugin", "OurFreelyChoosableFunctionName");
   // The test plugin creates the below table when the called function is executed
-  EXPECT_TRUE(sm.has_table("TableOfTestPlugin_0"));
+  EXPECT_TRUE(storage_manager.has_table("TableOfTestPlugin_0"));
 
   // The PluginManager adds log messages when user executable functions are called
   ASSERT_EQ(lm.log_entries().size(), 1);
@@ -130,7 +130,7 @@ TEST_F(PluginManagerTest, CallUserExecutableFunctions) {
 
   pm.exec_user_function("hyriseSecondTestPlugin", "OurFreelyChoosableFunctionName");
   // The second test plugin creates the below table when the called function is executed
-  EXPECT_TRUE(sm.has_table("TableOfSecondTestPlugin"));
+  EXPECT_TRUE(storage_manager.has_table("TableOfSecondTestPlugin"));
   ASSERT_EQ(lm.log_entries().size(), 2);
   {
     const auto& entry = lm.log_entries()[1];
@@ -193,8 +193,8 @@ TEST_F(PluginManagerTest, CallBenchmarkHooks) {
 
   pm.exec_pre_benchmark_hook("hyriseTestPlugin", *benchmark_item_runner);
   // The test plugin creates the below table when the hook is executed and adds a row for each benchmark item.
-  EXPECT_TRUE(sm.has_table("BenchmarkItems"));
-  EXPECT_EQ(sm.get_table("BenchmarkItems")->row_count(), 22);
+  EXPECT_TRUE(storage_manager.has_table("BenchmarkItems"));
+  EXPECT_EQ(storage_manager.get_table("BenchmarkItems")->row_count(), 22);
 
   // The PluginManager adds log messages when benchmark hooks are called.
   ASSERT_EQ(lm.log_entries().size(), 1);
@@ -208,7 +208,7 @@ TEST_F(PluginManagerTest, CallBenchmarkHooks) {
   auto report = nlohmann::json{};
   pm.exec_post_benchmark_hook("hyriseTestPlugin", report);
   // The test plugin drops the created table when the hook is executed.
-  EXPECT_FALSE(sm.has_table("BenchmarkItems"));
+  EXPECT_FALSE(storage_manager.has_table("BenchmarkItems"));
   // Also, it adds a dummy entry to the report.
   EXPECT_EQ(report["dummy"], 1);
 

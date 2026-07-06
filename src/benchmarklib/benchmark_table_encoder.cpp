@@ -20,6 +20,8 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
+namespace {
+
 using namespace hyrise;
 
 ChunkEncodingSpec get_chunk_encoding_spec(const Chunk& chunk) {
@@ -58,6 +60,8 @@ bool is_chunk_encoding_spec_satisfied(const ChunkEncodingSpec& expected_chunk_en
 
   return true;
 }
+
+}  // namespace
 
 namespace hyrise {
 

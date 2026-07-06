@@ -20,7 +20,7 @@ class CreateViewTest : public BaseTest {
     auto& storage_manager = Hyrise::get().storage_manager;
     auto t1 = std::make_shared<Table>(TableColumnDefinitions{}, TableType::Data);
 
-    sm.add_table("first_table", t1);
+    storage_manager.add_table("first_table", t1);
   }
 };
 
