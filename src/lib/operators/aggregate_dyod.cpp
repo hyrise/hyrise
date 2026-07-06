@@ -281,14 +281,14 @@ std::pair<pmr_vector<ColumnDataType>, pmr_vector<bool>> _groupby_from_hash_table
   auto nulls = pmr_vector<bool>(group_count, false);
   const auto null_mask_bit = uint64_t{1} << groupby_index;
 
-  for (auto iter = hash_table.cbegin(); iter != hash_table.cend(); ++iter) {
-    const auto row_view = RowView{iter->first.row, format};
-    const auto ticket = iter->second;
+  hash_table.cvisit_all([&](const auto& entry) {
+    const auto row_view = RowView{entry.first.row, format};
+    const auto ticket = entry.second;
 
     // `stores_nulls` is only false when no group-by column is nullable, so `null_bitmap()` is only read when present.
     if (format.stores_nulls && (row_view.null_bitmap() & null_mask_bit)) {
       nulls[ticket] = true;
-      continue;
+      return;
     }
 
     if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
@@ -303,7 +303,7 @@ std::pair<pmr_vector<ColumnDataType>, pmr_vector<bool>> _groupby_from_hash_table
     } else {
       values[ticket] = row_view.read_value<ColumnDataType>(groupby_index);
     }
-  }
+  });
 
   return {std::move(values), std::move(nulls)};
 }

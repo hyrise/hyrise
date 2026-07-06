@@ -6,7 +6,7 @@
 #include <memory_resource>
 #include <vector>
 
-#include <boost/unordered/unordered_flat_map.hpp>
+#include <boost/unordered/concurrent_flat_map.hpp>
 
 #include "storage/abstract_segment.hpp"
 #include "storage/chunk.hpp"
@@ -225,7 +225,7 @@ struct GroupKeyData {
   RowFormat row_format;
   // Owns the copied distinct key rows and their long strings.
   std::pmr::monotonic_buffer_resource key_arena;
-  boost::unordered_flat_map<GroupKey, uint64_t, GroupKeyHash, GroupKeyEqual> global_hash_table;
+  boost::concurrent_flat_map<GroupKey, uint64_t, GroupKeyHash, GroupKeyEqual> global_hash_table;
 
   // PER ROW: the group index (ticket) of that input row. Used to scatter aggregate values into per-group slots.
   std::vector<uint64_t> tickets;
