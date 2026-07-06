@@ -481,10 +481,12 @@ std::shared_ptr<GroupKeyData> _compute_groups_byte_row(const std::vector<ColumnI
         continue;
       }
 
-      // This group is not in the cache, so look it up in (or insert it into) the global table.
-      auto ticket = uint64_t{0};
+      // This group is not in the cache, so look it up in (or insert it into) the global table. `ticket` starts at the
+      // placeholder so the read-back spin below runs whenever we observe a group that another thread has claimed but
+      // not yet finished inserting (its entry still holds `PLACE_HOLDER_TICKET`).
+      auto ticket = PLACE_HOLDER_TICKET;
       auto global_group_key = GroupKey{nullptr, 0};
-      auto exists = global_hash_table.cvisit(probe_key, [&global_group_key, &ticket](const auto& entry) {
+      const auto exists = global_hash_table.cvisit(probe_key, [&global_group_key, &ticket](const auto& entry) {
         global_group_key = entry.first;
         ticket = entry.second;
       }) == 1;
@@ -515,17 +517,21 @@ std::shared_ptr<GroupKeyData> _compute_groups_byte_row(const std::vector<ColumnI
         global_group_key = group_key;
         // Try to claim this group's ticket by writing a PLACE_HOLDER_TICKET.
         if (global_hash_table.try_emplace(group_key, PLACE_HOLDER_TICKET)) {
-          // NOW insert ticket.
+          // We won the race, so NOW hand out the real ticket.
           ticket = current_ticket++;
           global_hash_table.insert_or_assign(group_key, ticket);
         }
+        // If we lost the race `try_emplace` returned false and `ticket` is still the placeholder; the spin below reads
+        // the winner's ticket once it is written.
+      }
 
-        // If another thread beat us to it, spin until the ticket is written into the table.
-        while (ticket == PLACE_HOLDER_TICKET) {
-          ticket = global_hash_table.cvisit(group_key, [](const auto& entry) {
-            return entry;
-          });
-        }
+      // Whether we found an entry mid-insert or lost the `try_emplace` race, `ticket` still holds the placeholder until
+      // the claiming thread writes the real ticket. Spin until it does. `cvisit` returns the number of matched entries
+      // (always 1 here); the ticket is delivered through the lambda, not the return value.
+      while (ticket == PLACE_HOLDER_TICKET) {
+        global_hash_table.cvisit(global_group_key, [&ticket](const auto& entry) {
+          ticket = entry.second;
+        });
       }
       // Fill the cache slot with the group's stable arena key (from the global entry, not the transient probe row) so
       // later rows of this group, in this or a later chunk, hit above. This overwrites any group previously in the
