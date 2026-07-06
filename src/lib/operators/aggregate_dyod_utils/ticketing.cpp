@@ -281,7 +281,7 @@ void _materialize_rows(const RowFormat& format, const std::shared_ptr<const Chun
 constexpr auto PLACE_HOLDER_TICKET = std::numeric_limits<uint64_t>::max();
 
 // The number of threads to use for parallelization.
-constexpr auto THREAD_COUNT = 12;
+const auto THREAD_COUNT = Hyrise::get().topology.num_cpus();
 
 // TODO(@Rob2U): Use small local lookup table (direct-mapped here)
 // Fast path for a single non-string group-by column. Here the value is the key, so we do not need to materialize rows.
