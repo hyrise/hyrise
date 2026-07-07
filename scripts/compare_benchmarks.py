@@ -17,7 +17,7 @@ os.environ["FORCE_COLOR"] = "1"
 
 p_value_significance_threshold = 0.001
 min_iterations = 10
-max_deviation = 0.15
+cv_significance_threshold = 0.1
 
 
 def format_diff(diff):
@@ -50,9 +50,6 @@ def calculate_and_format_p_value(old_durations, new_durations):
     p_value = ttest_ind(old_durations, new_durations)[1]
     is_significant = p_value < p_value_significance_threshold
 
-    old_deviation = np.std(old_durations)
-    new_deviation = np.std(new_durations)
-
     # If we cannot decide whether the change is significant due to an insufficient number of measurements, the
     # `add_note_for_insufficient_pvalue_runs` flag it set, for which a note is later added to the table output.
     if len(old_durations) < min_iterations or len(new_durations) < min_iterations:
@@ -61,13 +58,14 @@ def calculate_and_format_p_value(old_durations, new_durations):
         add_note_for_insufficient_pvalue_runs = True
         return colored("˅", "yellow", attrs=["bold"])
 
-    # The results for a query are considered to be statistically not significant if the runtime is unstable. In a normal
-    # distribution, 68% of all values lie in an interval of `mean +/- standard deviation`. We do not want this interval
-    # to be too wide. For now, we assume that this is the case if the standard deviation is higher than 15% of the mean
-    # runtime, i.e., more than approximately one third of the measurements differs by more than 30% (compared to the
-    # mean runtime).
-    if old_deviation > max_deviation * np.mean(old_durations) or new_deviation > max_deviation * np.mean(new_durations):
-        return "(deviation too high)"
+    # The results for a query are considered to be statistically not significant if the runtime is unstable. To assess
+    # the variance, we use the coefficient of variation (C.V.): `C.V = standard deviation / mean`. If that value is
+    # higher than 10% (which seems to be a common value), we do not trust the p-value.
+    # For details, see https://www.geeksforgeeks.org/data-science/coefficient-of-variation-meaning-formula-and-examples
+    old_cv = np.std(old_durations) / np.mean(old_durations)
+    new_cv = np.std(new_durations) / np.mean(new_durations)
+    if old_cv > cv_significance_threshold or new_cv > cv_significance_threshold:
+        return "(variance too high)"
 
     return colored(f"{p_value:.4f}", "white") if is_significant else colored(f"{p_value:.4f}", "yellow", attrs=["bold"])
 
