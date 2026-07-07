@@ -2,17 +2,10 @@
 
 #include <algorithm>
 #include <array>
-#include <atomic>
-#include <chrono>
-#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <format>
-#include <functional>
-#include <limits>
 #include <memory>
-#include <memory_resource>
-#include <numeric>
 #include <optional>
 #include <string>
 #include <type_traits>
@@ -270,20 +263,19 @@ std::pair<pmr_vector<ColumnDataType>, pmr_vector<bool>> _any_grouped(const std::
 //
 // `groupby_index` is the column's position among the group-by columns (its slot in the row's null bitmap and column
 // offsets); `string_col_index` is its position among the string group-by columns (its heap string-pointer slot).
-template <typename ColumnDataType>
-std::pair<pmr_vector<ColumnDataType>, pmr_vector<bool>> _groupby_from_hash_table(const GroupKeyData& group_key_data,
-                                                                                 const size_t group_count,
-                                                                                 const size_t groupby_index,
-                                                                                 const size_t string_col_index) {
+template <typename ColumnDataType, bool Concurrent>
+std::pair<pmr_vector<ColumnDataType>, pmr_vector<bool>> _groupby_from_hash_table(
+    const GroupKeyData<Concurrent>& group_key_data, const size_t group_count, const size_t groupby_index,
+    const size_t string_col_index) {
   const auto& format = group_key_data.row_format;
   const auto& hash_table = group_key_data.global_hash_table;
   auto values = pmr_vector<ColumnDataType>(group_count);
   auto nulls = pmr_vector<bool>(group_count, false);
   const auto null_mask_bit = uint64_t{1} << groupby_index;
 
-  hash_table.cvisit_all([&](const auto& entry) {
-    const auto row_view = RowView{entry.first.row, format};
-    const auto ticket = entry.second;
+  // Reads one group's representative value from its distinct key row into the output slot addressed by its ticket.
+  const auto process_entry = [&](const GroupKey& key, const uint64_t ticket) {
+    const auto row_view = RowView{key.row, format};
 
     // `stores_nulls` is only false when no group-by column is nullable, so `null_bitmap()` is only read when present.
     if (format.stores_nulls && (row_view.null_bitmap() & null_mask_bit)) {
@@ -303,7 +295,17 @@ std::pair<pmr_vector<ColumnDataType>, pmr_vector<bool>> _groupby_from_hash_table
     } else {
       values[ticket] = row_view.read_value<ColumnDataType>(groupby_index);
     }
-  });
+  };
+
+  if constexpr (Concurrent) {
+    // `ConcurrentTicketMap::for_each` hands the stored key and ticket directly (no `entry` pair). Called after the
+    // grouping jobs have joined, so a plain single-threaded pass is safe.
+    hash_table.for_each(process_entry);
+  } else {
+    for (auto it = hash_table.cbegin(); it != hash_table.cend(); ++it) {
+      process_entry(it->first, it->second);
+    }
+  }
 
   return {std::move(values), std::move(nulls)};
 }
@@ -520,7 +522,19 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
   const auto aggregate_count = _aggregates.size();
   const auto groupby_column_count = _groupby_column_ids.size();
 
-  auto groups = _compute_groups(_groupby_column_ids, input_table);
+  const auto THREAD_COUNT =
+      Hyrise::get().topology.num_cpus() - 1;  // TODO(@forUnity): decide this elsewhere and make sure this is correct
+  const auto CONCURRENT = THREAD_COUNT > 1;
+  std::shared_ptr<GroupKeyDataBase> groups;
+  std::shared_ptr<GroupKeyData<true>> concurrent_groups;
+  std::shared_ptr<GroupKeyData<false>> nonconcurrent_groups;
+  if (CONCURRENT) {
+    concurrent_groups = _compute_groups<true>(_groupby_column_ids, input_table);
+    groups = concurrent_groups;
+  } else {
+    nonconcurrent_groups = _compute_groups<false>(_groupby_column_ids, input_table);
+    groups = nonconcurrent_groups;
+  }
   const auto group_count = groups->group_count;
 
   auto column_definitions = TableColumnDefinitions{};
@@ -695,7 +709,13 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
             ++string_col_index;
           }
         }
-        return _groupby_from_hash_table<ColumnDataType>(*groups, group_count, groupby_index, string_col_index);
+        if (CONCURRENT) {
+          return _groupby_from_hash_table<ColumnDataType, true>(*concurrent_groups, group_count, groupby_index,
+                                                                string_col_index);
+        } else {
+          return _groupby_from_hash_table<ColumnDataType, false>(*nonconcurrent_groups, group_count, groupby_index,
+                                                                 string_col_index);
+        }
       }();
 
       if (input_table->column_is_nullable(groupby_column_id)) {

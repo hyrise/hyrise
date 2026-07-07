@@ -5,15 +5,11 @@
 #include <atomic>
 #include <cstdint>
 #include <cstring>
-#include <functional>
 #include <limits>
 #include <memory>
-#include <string_view>
 #include <type_traits>
 #include <utility>
 #include <vector>
-
-#include <boost/unordered/concurrent_flat_map.hpp>
 
 #include "hyrise.hpp"
 #include "operators/aggregate_dyod_utils/concurrent_ticket_map.hpp"
@@ -277,24 +273,20 @@ void _materialize_rows(const RowFormat& format, const std::shared_ptr<const Chun
   }
 }
 
-// To ensure contiguous assigment of tickets we first insert this placeholder and only the thread that inserts this
-// increments the global ticket counter
-constexpr auto PLACE_HOLDER_TICKET = std::numeric_limits<uint64_t>::max();
-
-// The number of threads to use for parallelization.
 const auto THREAD_COUNT = Hyrise::get().topology.num_cpus() - 1;  // leave one core for the scheduler
-// Fuzzy ticketing: 128 tickets per thread. Once range is full, the thread fights for the next range.
+
 constexpr auto TICKET_RANGE_LENGTH = uint64_t{1} << 10;  // 1024 tickets per thread
 
 // TODO(@Rob2U): Use small local lookup table (direct-mapped here)
 // Fast path for a single non-string group-by column. Here the value is the key, so we do not need to materialize rows.
 // Like the byte-row path, ticketing is kept separate from building the output column: the hot loop only grows the
 // value->ticket map and emits tickets.
-std::shared_ptr<GroupKeyData> _compute_groups_single_column(const ColumnID groupby_column_id,
-                                                            const std::shared_ptr<const Table>& input_table) {
+
+std::shared_ptr<GroupKeyData<true>> _compute_groups_single_column_concurrent(
+    const ColumnID groupby_column_id, const std::shared_ptr<const Table>& input_table) {
   // The single-column fast path carries no hash table (`has_hash_table` stays false), so `GroupKeyData` here is
   // only a tickets + group-count carrier and its `row_format`/`global_hash_table` stay unused.
-  auto group_key_data = std::make_shared<GroupKeyData>(RowFormat{});
+  auto group_key_data = std::make_shared<GroupKeyData<true>>(RowFormat{});
   auto& tickets = group_key_data->tickets;
   tickets.resize(input_table->row_count());
 
@@ -462,6 +454,85 @@ std::shared_ptr<GroupKeyData> _compute_groups_single_column(const ColumnID group
   return group_key_data;
 }
 
+std::shared_ptr<GroupKeyData<false>> _compute_groups_single_column_sequential(
+    const ColumnID groupby_column_id, const std::shared_ptr<const Table>& input_table) {
+  // Fast path for a single non-string group-by column. Here the value is the key, so we do not need to materialize
+  // rows. Like the byte-row path, ticketing is kept separate from building the output column: the hot loop only grows
+  // the value->ticket map and emits tickets.
+  // The single-column fast path carries no hash table (`has_hash_table` stays false), so `GroupKeyData` here is only a
+  // tickets + group-count carrier and its `row_format`/`global_hash_table` stay unused.
+  auto group_key_data = std::make_shared<GroupKeyData<false>>(RowFormat{});
+  auto& tickets = group_key_data->tickets;
+  tickets.reserve(input_table->row_count());
+
+  const auto data_type = input_table->column_data_type(groupby_column_id);
+  const auto chunk_count = input_table->chunk_count();
+
+  resolve_data_type(data_type, [&](const auto data_type_t) {
+    using ColumnDataType = typename decltype(data_type_t)::type;
+    if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
+      Fail("The single-column fast path is not used for string columns.");
+    } else {
+      auto value_to_ticket = boost::unordered_flat_map<ColumnDataType, uint64_t>{};
+      value_to_ticket.reserve(TARGET_CHUNK_SIZE);
+
+      // Tickets are handed out densely in first-seen order across the NULL group and the value groups alike, so a
+      // single counter suffices and no output vectors are touched in the hot loop.
+      auto next_ticket = uint64_t{0};
+      auto null_ticket = uint64_t{0};
+      auto has_null = false;
+
+      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+        const auto& chunk = input_table->get_chunk(chunk_id);
+        const auto& segment = chunk->get_segment(groupby_column_id);
+        auto ticket = uint64_t{0};
+        segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
+          if (position.is_null()) {
+            if (!has_null) {
+              has_null = true;
+              null_ticket = next_ticket++;
+            }
+            ticket = null_ticket;
+          } else {
+            const auto [iter, inserted] = value_to_ticket.try_emplace(position.value(), next_ticket);
+            if (inserted) {
+              ++next_ticket;
+            }
+            ticket = iter->second;
+          }
+          tickets.push_back(ticket);
+        });
+
+        // Adaptively reserve space in the hashmap just as in `_compute_groups_byte_row`.
+        if (chunk_id == ChunkID{0} && chunk_count > 1) {
+          const auto rows_seen = chunk->size();
+          const auto groups_seen = value_to_ticket.size();
+          if (rows_seen > 0) {
+            const auto remaining_rows = input_table->row_count() - rows_seen;
+            const auto estimated_groups =
+                std::min<size_t>(input_table->row_count(), groups_seen + remaining_rows * groups_seen / rows_seen);
+            value_to_ticket.reserve(estimated_groups);
+          }
+        }
+      }
+
+      group_key_data->group_count = size_t{next_ticket};
+    }
+  });
+
+  return group_key_data;
+}
+
+template <bool Concurrent>
+std::shared_ptr<GroupKeyData<Concurrent>> _compute_groups_single_column(
+    const ColumnID groupby_column_id, const std::shared_ptr<const Table>& input_table) {
+  if constexpr (Concurrent) {
+    return _compute_groups_single_column_concurrent(groupby_column_id, input_table);
+  } else {
+    return _compute_groups_single_column_sequential(groupby_column_id, input_table);
+  }
+}
+
 // A single slot of the direct-mapped cache that sits in front of the global hash table.
 // `key.row == nullptr` marks an empty slot. Occupied slots store a *stable* key pointer into one of
 // `GroupKeyData::key_arenas`, so entries stay valid across chunks.
@@ -474,13 +545,40 @@ struct GroupCacheSlot {
 constexpr auto GROUP_CACHE_SLOTS = size_t{1} << 12;
 constexpr auto GROUP_CACHE_MASK = GROUP_CACHE_SLOTS - 1;
 
-// Standard path: materialize each row's group-by key into a packed row format, hash it and probe a global hash table.
-std::shared_ptr<GroupKeyData> _compute_groups_byte_row(const std::vector<ColumnID>& groupby_column_ids,
-                                                       const std::shared_ptr<const Table>& input_table) {
+// Copies a materialized key row into `arena` so it outlives the transient materialize buffer. Long strings that still
+// live in the per-chunk arena are copied alongside it; strings that already point at stable source memory (value and
+// dictionary paths) are left as is. The arena belongs to a single thread, so no synchronization is needed here. Returns
+// a stable `GroupKey` for the copy.
+GroupKey _promote_key_row(const RowFormat& format, const uint8_t* const row_ptr, const uint64_t row_hash,
+                          const MaterializedRows& materialized, std::pmr::monotonic_buffer_resource& arena) {
+  auto* const row_copy = static_cast<uint8_t*>(arena.allocate(format.row_size, alignof(uint64_t)));
+  std::memcpy(row_copy, row_ptr, format.row_size);
+
+  const auto copy_view = RowView{row_copy, format};
+  const auto string_col_count = copy_view.string_col_count();
+  for (auto string_col_index = size_t{0}; string_col_index < string_col_count; ++string_col_index) {
+    if (!materialized.string_pointer_needs_copy[string_col_index]) {
+      continue;
+    }
+    auto* const str_ptr = copy_view.string_ptr(string_col_index);
+    if (str_ptr != nullptr) {
+      const auto length = std::strlen(str_ptr) + 1;
+      auto* const arena_str = static_cast<char*>(arena.allocate(length));
+      std::memcpy(arena_str, str_ptr, length);
+      copy_view.set_string_ptr(string_col_index, arena_str);
+    }
+  }
+  return GroupKey{.row = row_copy, .hash = row_hash};
+}
+
+// Sequential byte-row path: materialize each row's group-by key into a packed row format, hash it and probe a single
+// growable hash table, handing out dense tickets in first-seen order.
+std::shared_ptr<GroupKeyData<false>> _compute_groups_byte_row_sequential(
+    const std::vector<ColumnID>& groupby_column_ids, const std::shared_ptr<const Table>& input_table) {
   const auto row_format = _create_row_format(input_table->column_definitions(), groupby_column_ids);
   const auto chunk_count = input_table->chunk_count();
 
-  auto group_key_data = std::make_shared<GroupKeyData>(row_format);
+  auto group_key_data = std::make_shared<GroupKeyData<false>>(row_format);
   group_key_data->tickets.resize(input_table->row_count());
 
   if (chunk_count == 0) {
@@ -492,25 +590,13 @@ std::shared_ptr<GroupKeyData> _compute_groups_byte_row(const std::vector<ColumnI
   // We let the first chunk grow the table naturally and then size it from the observed cardinality.
   auto& global_hash_table = group_key_data->global_hash_table;
   const auto& format = group_key_data->row_format;
-
   const auto key_equal = GroupKeyEqual{&format};
-  auto current_ticket = std::atomic<uint64_t>{0};
+  auto current_ticket = uint64_t{0};
 
-  // One monotonic arena per grouping thread (plus the main thread, which processes the first chunk before the jobs
-  // start and reuses arena 0). Because each thread only ever allocates from its own arena, copying newly seen group
-  // keys needs no locking. The arenas are owned by `group_key_data` and outlive this call because the global hash
-  // table's keys point into them.
-  const auto job_count = std::min<size_t>(THREAD_COUNT, chunk_count);
-  auto& arenas = group_key_data->key_arenas;
-  arenas.reserve(job_count);
-  for (auto arena_id = size_t{0}; arena_id < job_count; ++arena_id) {
-    arenas.emplace_back(std::make_unique<std::pmr::monotonic_buffer_resource>());
-  }
-
-  // One reusable row buffer for the materialize step, allocated once and sized to the largest chunk.
+  // Row index of each chunk's first row, so `(chunk_id, chunk_offset)` maps into the flat `tickets` vector, plus the
+  // largest chunk size so the single reusable materialize buffer can be sized to it.
   auto max_chunk_size = size_t{0};
   auto ticket_offsets = std::vector<uint64_t>(chunk_count, 0);
-
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count - 1; ++chunk_id) {
     const auto chunk_size = input_table->get_chunk(chunk_id)->size();
     ticket_offsets[chunk_id + 1] = ticket_offsets[chunk_id] + static_cast<uint64_t>(chunk_size);
@@ -538,65 +624,25 @@ std::shared_ptr<GroupKeyData> _compute_groups_byte_row(const std::vector<ColumnI
         continue;
       }
 
-      // This group is not in the cache, so look it up in (or insert it into) the global table. `ticket` starts at the
-      // placeholder so the read-back spin below runs whenever we observe a group that another thread has claimed but
-      // not yet finished inserting (its entry still holds `PLACE_HOLDER_TICKET`).
-      auto ticket = PLACE_HOLDER_TICKET;
+      // This group is not in the cache, so look it up in (or insert it into) the global table.
+      auto ticket = uint64_t{0};
       auto global_group_key = GroupKey{nullptr, 0};
-      const auto exists = global_hash_table.cvisit(probe_key, [&global_group_key, &ticket](const auto& entry) {
-        global_group_key = entry.first;
-        ticket = entry.second;
-      }) == 1;
-      if (!exists) {
-        // First time we see this group so copy the key row into this thread's arena so it outlives the "materialized"
-        // buffer. Long strings that live in the per-chunk arena are copied alongside it.
-        // Strings that already point at stable source memory (value/dictionary paths) are left as is.
-        // The arena belongs to this thread alone, so no synchronization is needed for the copies below.
-        auto* const row_copy = static_cast<uint8_t*>(arena.allocate(format.row_size, alignof(uint64_t)));
-        std::memcpy(row_copy, row_ptr, format.row_size);
-
-        const auto copy_view = RowView{row_copy, format};
-        const auto string_col_count = copy_view.string_col_count();
-        for (auto string_col_index = size_t{0}; string_col_index < string_col_count; ++string_col_index) {
-          if (!materialized.string_pointer_needs_copy[string_col_index]) {
-            continue;
-          }
-          auto* const str_ptr = copy_view.string_ptr(string_col_index);
-          if (str_ptr != nullptr) {
-            const auto length = std::strlen(str_ptr) + 1;
-            auto* const arena_str = static_cast<char*>(arena.allocate(length));
-            std::memcpy(arena_str, str_ptr, length);
-            copy_view.set_string_ptr(string_col_index, arena_str);
-          }
-        }
-
-        const auto group_key = GroupKey{.row = row_copy, .hash = row_hash};
-        global_group_key = group_key;
-        // Try to claim this group's ticket by writing a PLACE_HOLDER_TICKET.
-        if (global_hash_table.try_emplace(group_key, PLACE_HOLDER_TICKET)) {
-          // We won the race, so NOW hand out the real ticket.
-          ticket = current_ticket++;
-          global_hash_table.insert_or_assign(group_key, ticket);
-        }
-        // If we lost the race `try_emplace` returned false and `ticket` is still the placeholder; the spin below reads
-        // the winner's ticket once it is written.
+      const auto it = global_hash_table.find(probe_key);
+      if (it != global_hash_table.end()) {
+        global_group_key = it->first;
+        ticket = it->second;
+      } else {
+        // First time we see this group: copy the key row into the arena so it outlives the materialize buffer.
+        global_group_key = _promote_key_row(format, row_ptr, row_hash, materialized, arena);
+        ticket = current_ticket++;
+        global_hash_table.emplace(global_group_key, ticket);
       }
 
-      // Whether we found an entry mid-insert or lost the `try_emplace` race, `ticket` still holds the placeholder until
-      // the claiming thread writes the real ticket. Spin until it does. `cvisit` returns the number of matched entries
-      // (always 1 here); the ticket is delivered through the lambda, not the return value.
-      while (ticket == PLACE_HOLDER_TICKET) {
-        global_hash_table.cvisit(global_group_key, [&ticket](const auto& entry) {
-          ticket = entry.second;
-        });
-      }
       // Fill the cache slot with the group's stable arena key (from the global entry, not the transient probe row) so
-      // later rows of this group, in this or a later chunk, hit above. This overwrites any group previously in the
-      // slot.
+      // later rows of this group, in this or a later chunk, hit above.
       slot.key = GroupKey{.row = global_group_key.row, .hash = row_hash};
       slot.ticket = ticket;
       group_key_data->tickets[chunk_start + chunk_offset] = ticket;
-
       row_ptr += format.row_size;
     }
 
@@ -619,38 +665,17 @@ std::shared_ptr<GroupKeyData> _compute_groups_byte_row(const std::vector<ColumnI
   auto materialized = MaterializedRows{};
   materialized.rows = std::make_unique<uint8_t[]>(max_chunk_size * format.row_size);
 
-  // Direct-mapped cache in front of the global table indexed by the low bits of the row hash. It is
-  // probed before the global table so that a recently seen group (within or across chunks) skips the often-cold global
-  // lookup and its string comparisons. Each occupied slot stores a stable key pointer into one of the `key_arenas`, so
-  // entries survive across chunks.
+  // Direct-mapped cache in front of the global table indexed by the low bits of the row hash. It is probed before the
+  // global table so that a recently seen group (within or across chunks) skips the often-cold global lookup and its
+  // string comparisons. Each occupied slot stores a stable key pointer into the arena, so entries survive across
+  // chunks.
   auto local_cache = std::array<GroupCacheSlot, GROUP_CACHE_SLOTS>{};
-  // Process first chunk to estimate the group count and reserve in the global_hash_table accordingly. This runs before
-  // the jobs start, so it can safely reuse job 0's arena.
-  process_chunk(ChunkID{0}, local_cache, materialized, *arenas[0]);
 
-  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
-  jobs.reserve(job_count);
-  for (auto job_id = uint32_t{0}; job_id < job_count; ++job_id) {
-    jobs.emplace_back(
-        std::make_shared<JobTask>([&process_chunk, &format, &arenas, max_chunk_size, chunk_count, job_count, job_id]() {
-          auto materialized = MaterializedRows{};
-          materialized.rows = std::make_unique<uint8_t[]>(max_chunk_size * format.row_size);
-
-          // Direct-mapped cache in front of the global table indexed by the low bits of the row hash. It is
-          // probed before the global table so that a recently seen group (within or across chunks) skips the
-          // often-cold global lookup and its string comparisons. Each occupied slot stores a stable key pointer into
-          // one of the `key_arenas`, so entries survive across chunks.
-          auto local_cache = std::array<GroupCacheSlot, GROUP_CACHE_SLOTS>{};
-          auto& arena = *arenas[job_id];
-          for (auto chunk_id = ChunkID{job_id}; chunk_id < chunk_count; chunk_id += job_count) {
-            if (chunk_id == ChunkID{0}) {
-              continue;
-            }
-            process_chunk(chunk_id, local_cache, materialized, arena);
-          }
-        }));
+  // Single-threaded path: process all chunks in the main thread, reusing the same arena for all chunks.
+  auto& arena = *group_key_data->key_arenas.emplace_back(std::make_unique<std::pmr::monotonic_buffer_resource>());
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+    process_chunk(chunk_id, local_cache, materialized, arena);
   }
-  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 
   // The group-by output columns are built afterwards (see `AggregateDYOD::_on_execute`): either by scanning the source
   // columns or, for low-cardinality group-bys, by reading each group's value from its key row. We therefore hand back
@@ -660,13 +685,234 @@ std::shared_ptr<GroupKeyData> _compute_groups_byte_row(const std::vector<ColumnI
   return group_key_data;
 }
 
-std::shared_ptr<GroupKeyData> _compute_groups(const std::vector<ColumnID>& groupby_column_ids,
-                                              const std::shared_ptr<const Table>& input_table) {
+// Concurrent byte-row path: materialize each row's group-by key into a packed row format, hash it and probe a shared,
+// lock-free `ConcurrentTicketMap`. Because that map is fixed-capacity, its size is estimated up front from the first
+// chunk. Ticketing follows the same fuzzy scheme as the single-column path: each thread hands out tickets from its own
+// claimed range, so the shared range cursor is contended once per range rather than once per group. The trailing unused
+// tickets of each thread's last range are compacted out afterwards - from both the per-row `tickets` and the map's
+// stored tickets - so the final tickets form a dense [0, group_count) range.
+std::shared_ptr<GroupKeyData<true>> _compute_groups_byte_row_concurrent(
+    const std::vector<ColumnID>& groupby_column_ids, const std::shared_ptr<const Table>& input_table) {
+  const auto row_format = _create_row_format(input_table->column_definitions(), groupby_column_ids);
+  const auto chunk_count = input_table->chunk_count();
+
+  auto group_key_data = std::make_shared<GroupKeyData<true>>(row_format);
+  group_key_data->tickets.resize(input_table->row_count());
+
+  if (chunk_count == 0) {
+    group_key_data->group_count = 0;
+    group_key_data->has_hash_table = true;
+    return group_key_data;
+  }
+
+  const auto& format = group_key_data->row_format;
+  const auto key_equal = GroupKeyEqual{&format};
+
+  // Row index of each chunk's first row, so `(chunk_id, chunk_offset)` maps into the flat `tickets` vector, plus the
+  // largest chunk size so each thread's reusable materialize buffer can be sized to it.
+  auto max_chunk_size = size_t{0};
+  auto ticket_offsets = std::vector<uint64_t>(chunk_count, 0);
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count - 1; ++chunk_id) {
+    const auto chunk_size = input_table->get_chunk(chunk_id)->size();
+    ticket_offsets[chunk_id + 1] = ticket_offsets[chunk_id] + static_cast<uint64_t>(chunk_size);
+    max_chunk_size = std::max(max_chunk_size, static_cast<size_t>(chunk_size));
+  }
+  max_chunk_size =
+      std::max(max_chunk_size, static_cast<size_t>(input_table->get_chunk(ChunkID{chunk_count - 1})->size()));
+
+  // The `ConcurrentTicketMap` never resizes, so its capacity is fixed up front. We materialize the first chunk once
+  // here, count its distinct groups and extrapolate that density linearly to the remaining rows (capped at `row_count`,
+  // a hard upper bound on the number of distinct groups). We assume this estimate is an upper bound: the map keeps
+  // ~1/load-factor headroom above it, but a gross undershoot would overfill the fixed table. The first chunk is
+  // materialized again in the parallel phase below - one extra chunk of work.
+  const auto first_chunk = input_table->get_chunk(ChunkID{0});
+  const auto first_chunk_size = size_t{first_chunk->size()};
+  auto estimated_groups = std::max<size_t>(first_chunk_size, 1);
+  {
+    auto estimate_materialized = MaterializedRows{};
+    estimate_materialized.rows = std::make_unique<uint8_t[]>(max_chunk_size * format.row_size);
+    _materialize_rows(format, first_chunk, groupby_column_ids, estimate_materialized);
+
+    auto estimate_map = boost::unordered_flat_map<GroupKey, uint8_t, GroupKeyHash, GroupKeyEqual>(
+        first_chunk_size, GroupKeyHash{}, GroupKeyEqual{&format});
+    auto* row_ptr = estimate_materialized.rows.get();
+    for (auto offset = size_t{0}; offset < estimate_materialized.row_count; ++offset) {
+      const auto row_hash = compute_hash(RowView{row_ptr, format}.key_bytes(), format.key_length);
+      estimate_map.try_emplace(GroupKey{.row = row_ptr, .hash = row_hash}, uint8_t{0});
+      row_ptr += format.row_size;
+    }
+
+    if (first_chunk_size > 0) {
+      const auto groups_seen = estimate_map.size();
+      const auto remaining_rows = input_table->row_count() - first_chunk_size;
+      estimated_groups = std::max<size_t>(
+          1, std::min<size_t>(input_table->row_count(), groups_seen + remaining_rows * groups_seen / first_chunk_size));
+    }
+  }
+
+  group_key_data->global_hash_table = ConcurrentTicketMap<GroupKey, GroupKeyHash, GroupKeyEqual>(
+      estimated_groups, GroupKeyHash{}, GroupKeyEqual{&format});
+  auto& global_hash_table = group_key_data->global_hash_table;
+
+  // Fuzzy ticketing: each thread claims a disjoint [n*TICKET_RANGE_LENGTH, (n+1)*TICKET_RANGE_LENGTH) range from this
+  // shared cursor and only touches it once per range, not once per group.
+  auto next_ticket_range_start = std::atomic<uint64_t>{0};
+
+  const auto process_chunk = [&](const ChunkID chunk_id, std::array<GroupCacheSlot, GROUP_CACHE_SLOTS>& local_cache,
+                                 MaterializedRows& materialized, std::pmr::monotonic_buffer_resource& arena,
+                                 uint64_t& next_ticket, uint64_t& ticket_range_end) {
+    const auto& chunk = input_table->get_chunk(chunk_id);
+    _materialize_rows(format, chunk, groupby_column_ids, materialized);
+
+    auto* row_ptr = materialized.rows.get();
+    const auto chunk_start = ticket_offsets[chunk_id];
+    for (auto chunk_offset = size_t{0}; chunk_offset < materialized.row_count; ++chunk_offset) {
+      const auto row_view = RowView{row_ptr, format};
+      const auto row_hash = compute_hash(row_view.key_bytes(), format.key_length);
+      const auto probe_key = GroupKey{.row = row_ptr, .hash = row_hash};
+
+      auto& slot = local_cache[row_hash & GROUP_CACHE_MASK];
+      if (slot.key.row != nullptr && slot.key.hash == row_hash && key_equal(slot.key, probe_key)) {
+        group_key_data->tickets[chunk_start + chunk_offset] = slot.ticket;
+        row_ptr += format.row_size;
+        continue;
+      }
+
+      // Not cached: copy the key row into this thread's arena up front (the map stores the key verbatim on insert and
+      // the probe row is transient), then offer the candidate ticket `next_ticket`. Because ticket ranges are disjoint
+      // across threads, the returned ticket equals `next_ticket` exactly when this call inserted, in which case we
+      // consume the candidate and refill the range when it runs out. On a hit the map keeps the winner's copy and ours
+      // is simply left unused in the arena.
+      const auto group_key = _promote_key_row(format, row_ptr, row_hash, materialized, arena);
+      const auto ticket = global_hash_table.try_emplace(group_key, next_ticket);
+      if (ticket == next_ticket) {
+        ++next_ticket;
+        if (next_ticket >= ticket_range_end) {
+          next_ticket = next_ticket_range_start.fetch_add(TICKET_RANGE_LENGTH);
+          ticket_range_end = next_ticket + TICKET_RANGE_LENGTH;
+        }
+      }
+
+      // Cache this group's stable arena key (our copy is durable even on a hit) so later rows of this group hit above.
+      slot.key = group_key;
+      slot.ticket = ticket;
+      group_key_data->tickets[chunk_start + chunk_offset] = ticket;
+      row_ptr += format.row_size;
+    }
+  };
+
+  // One monotonic arena per grouping thread. Because each thread only ever allocates from its own arena, copying newly
+  // seen group keys needs no locking. The arenas are owned by `group_key_data` and outlive this call because the global
+  // hash table's keys point into them.
+  const auto job_count = std::min<size_t>(THREAD_COUNT, chunk_count);
+  auto& arenas = group_key_data->key_arenas;
+  arenas.reserve(job_count);
+  for (auto arena_id = size_t{0}; arena_id < job_count; ++arena_id) {
+    arenas.emplace_back(std::make_unique<std::pmr::monotonic_buffer_resource>());
+  }
+
+  // When a thread stops it usually leaves a trailing gap [next_ticket, ticket_range_end) of unused tickets at the end
+  // of its last claimed range. We record these per-thread gaps here and compact them out below so the final tickets
+  // form a dense [0, group_count) range. The ranges tile the ticket space contiguously, so the only gaps are these
+  // trailing ones.
+  auto ticket_gaps = std::vector<std::pair<uint64_t, uint64_t>>(job_count);
+
+  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+  jobs.reserve(job_count);
+  for (auto job_id = uint32_t{0}; job_id < job_count; ++job_id) {
+    jobs.emplace_back(std::make_shared<JobTask>([&process_chunk, &format, &arenas, &next_ticket_range_start,
+                                                 &ticket_gaps, max_chunk_size, chunk_count, job_count, job_id]() {
+      auto materialized = MaterializedRows{};
+      materialized.rows = std::make_unique<uint8_t[]>(max_chunk_size * format.row_size);
+
+      // Direct-mapped cache in front of the global table indexed by the low bits of the row hash. It is probed before
+      // the global table so that a recently seen group (within or across chunks) skips the often-cold global lookup and
+      // its string comparisons. Each occupied slot stores a stable key pointer into one of the `key_arenas`, so entries
+      // survive across chunks.
+      auto local_cache = std::array<GroupCacheSlot, GROUP_CACHE_SLOTS>{};
+      auto& arena = *arenas[job_id];
+
+      auto next_ticket = next_ticket_range_start.fetch_add(TICKET_RANGE_LENGTH);
+      auto ticket_range_end = next_ticket + TICKET_RANGE_LENGTH;
+      for (auto chunk_id = ChunkID{job_id}; chunk_id < chunk_count; chunk_id += job_count) {
+        process_chunk(chunk_id, local_cache, materialized, arena, next_ticket, ticket_range_end);
+      }
+      ticket_gaps[job_id] = {next_ticket, ticket_range_end};
+    }));
+  }
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+
+  // Sort gaps to prefix-sum the unused ticket counts.
+  std::sort(ticket_gaps.begin(), ticket_gaps.end());
+  auto sorted_gap_starts = std::vector<uint64_t>(job_count);
+  // `unused_before_gap[i]` is the total number of unused tickets in all gaps ordered before gap `i`.
+  auto unused_before_gap = std::vector<uint64_t>(job_count + 1, 0);
+  for (auto gap_index = size_t{0}; gap_index < job_count; ++gap_index) {
+    sorted_gap_starts[gap_index] = ticket_gaps[gap_index].first;
+    unused_before_gap[gap_index + 1] =
+        unused_before_gap[gap_index] + (ticket_gaps[gap_index].second - ticket_gaps[gap_index].first);
+  }
+
+  // The number of distinct groups is the total claimed ticket space (the top of the highest range) minus the unused
+  // tickets in all trailing gaps. Unlike the single-column path there is no separate NULL group: NULLs are part of the
+  // row's null bitmap and hash into ordinary group keys.
+  group_key_data->group_count = next_ticket_range_start.load(std::memory_order_relaxed) - unused_before_gap[job_count];
+
+  // A used ticket never falls inside a gap, so it must be shifted down by the total size of all gaps lying entirely
+  // below it, which is simply how many gap starts precede it.
+  const auto compact = [&](const uint64_t ticket) {
+    const auto gaps_below = static_cast<size_t>(
+        std::lower_bound(sorted_gap_starts.begin(), sorted_gap_starts.end(), ticket) - sorted_gap_starts.begin());
+    return ticket - unused_before_gap[gaps_below];
+  };
+
+  // Compact the per-row tickets in parallel and the map's stored tickets (a single pass) with the same transform, so
+  // the tickets in `tickets` and in the hash table agree and both form a dense [0, group_count) range.
+  const auto row_count = input_table->row_count();
+  auto compaction_jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+  compaction_jobs.reserve(job_count);
+  const auto rows_per_job = row_count / job_count;
+  for (auto job_id = uint32_t{0}; job_id < job_count; ++job_id) {
+    compaction_jobs.emplace_back(std::make_shared<JobTask>([&, job_id] {
+      const auto start = job_id * rows_per_job;
+      const auto end = (job_id == job_count - 1) ? row_count : start + rows_per_job;
+      for (auto row_index = size_t{start}; row_index < end; ++row_index) {
+        group_key_data->tickets[row_index] = compact(group_key_data->tickets[row_index]);
+      }
+    }));
+  }
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(compaction_jobs);
+
+  global_hash_table.remap_tickets(compact);
+
+  group_key_data->has_hash_table = true;
+  return group_key_data;
+}
+
+template <bool Concurrent>
+std::shared_ptr<GroupKeyData<Concurrent>> _compute_groups_byte_row(const std::vector<ColumnID>& groupby_column_ids,
+                                                                   const std::shared_ptr<const Table>& input_table) {
+  if constexpr (Concurrent) {
+    return _compute_groups_byte_row_concurrent(groupby_column_ids, input_table);
+  } else {
+    return _compute_groups_byte_row_sequential(groupby_column_ids, input_table);
+  }
+}
+
+template <bool Concurrent>
+std::shared_ptr<GroupKeyData<Concurrent>> _compute_groups(const std::vector<ColumnID>& groupby_column_ids,
+                                                          const std::shared_ptr<const Table>& input_table) {
   if (groupby_column_ids.size() == 1 && input_table->column_data_type(groupby_column_ids[0]) != DataType::String) {
     const auto column_id = groupby_column_ids[0];
-    return _compute_groups_single_column(column_id, input_table);
+    return _compute_groups_single_column<Concurrent>(column_id, input_table);
   }
-  return _compute_groups_byte_row(groupby_column_ids, input_table);
+  return _compute_groups_byte_row<Concurrent>(groupby_column_ids, input_table);
 }
+
+// Explicitly instantiate the template for both concurrent and non-concurrent execution
+template std::shared_ptr<GroupKeyData<true>> _compute_groups<true>(const std::vector<ColumnID>& groupby_column_ids,
+                                                                   const std::shared_ptr<const Table>& input_table);
+template std::shared_ptr<GroupKeyData<false>> _compute_groups<false>(const std::vector<ColumnID>& groupby_column_ids,
+                                                                     const std::shared_ptr<const Table>& input_table);
 
 }  // namespace hyrise

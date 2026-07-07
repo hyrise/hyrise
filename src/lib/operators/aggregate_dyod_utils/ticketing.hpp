@@ -6,67 +6,13 @@
 #include <memory_resource>
 #include <vector>
 
-#include <boost/unordered/concurrent_flat_map.hpp>
+#include <boost/unordered/unordered_flat_map.hpp>
 
-#include "storage/abstract_segment.hpp"
+#include "operators/aggregate_dyod_utils/concurrent_ticket_map.hpp"
 #include "storage/chunk.hpp"
 #include "storage/table_column_definition.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
-
-inline std::uint64_t rotl(std::uint64_t x, int r) {
-  return (x << r) | (x >> (64 - r));
-}
-
-inline std::uint64_t read64(const unsigned char* p) {
-  std::uint64_t v;
-  std::memcpy(&v, p, sizeof v);  // single mov, no UB
-  return v;
-}
-
-inline std::uint64_t fmix64(std::uint64_t k) {
-  k ^= k >> 33;
-  k *= 0xff51afd7ed558ccdULL;
-  k ^= k >> 33;
-  k *= 0xc4ceb9fe1a85ec53ULL;
-  k ^= k >> 33;
-  return k;
-}
-
-inline std::uint64_t compute_hash(const void* key, std::size_t len, std::uint64_t seed = 0) {
-  const unsigned char* p = static_cast<const unsigned char*>(key);
-  const std::size_t nblocks = len / 8;
-
-  constexpr std::uint64_t c1 = 0x87c37b91114253d5ULL;
-  constexpr std::uint64_t c2 = 0x4cf5ad432745937fULL;
-
-  std::uint64_t h = seed;
-
-  // body: full 8-byte words
-  for (std::size_t i = 0; i < nblocks; ++i) {
-    std::uint64_t k = read64(p + i * 8);
-    k *= c1;
-    k = rotl(k, 31);
-    k *= c2;
-    h ^= k;
-    h = rotl(h, 27);
-    h = h * 5 + 0x52dce729ULL;
-  }
-
-  // tail: either nothing, or exactly 4 bytes
-  if (len & 4) {
-    std::uint32_t t;
-    std::memcpy(&t, p + nblocks * 8, 4);  // single 32-bit load, no UB
-    std::uint64_t k = t;
-    k *= c1;
-    k = rotl(k, 31);
-    k *= c2;
-    h ^= k;
-    // no h = rotl/h*5+const here, matching MurmurHash3's tail
-  }
-
-  return fmix64(h);  // avalanche
-}
 
 namespace hyrise {
 
@@ -83,14 +29,14 @@ constexpr uint64_t PREFIX_LENGTH = 8;
 // when at least one group-by column is nullable (`stores_nulls`). Otherwise it is omitted and the rows are 8 bytes
 // shorter. When it is absent, `null_bitmap_offset == data_offset`, so `key_bytes()` naturally starts at the data.
 struct RowFormat {
-  uint64_t row_size;                                             // Size of a single row in bytes
-  uint64_t null_bitmap_offset = 0;                               // Offset of the null bitmap in a single row
-  uint64_t data_offset = null_bitmap_offset + sizeof(uint64_t);  // Skip the null bitmap
-  uint64_t string_ptr_offset = data_offset;                      // Offsets of the string pointers at the end of the row
-  uint64_t key_length = string_ptr_offset - null_bitmap_offset;  // Bytes hashed/compared: null bitmap + inline key data
-  bool stores_nulls = true;                                      // Whether a null bitmap is present in each row
-  std::vector<uint64_t> col_offsets;                             // Offsets of the columns relative to `data_offset`
-  std::vector<uint8_t> column_is_nullable;                       // Per group-by column: 1 if nullable, else 0
+  uint64_t row_size;
+  uint64_t null_bitmap_offset = 0;
+  uint64_t data_offset = null_bitmap_offset + sizeof(uint64_t);
+  uint64_t string_ptr_offset = data_offset;
+  uint64_t key_length = string_ptr_offset - null_bitmap_offset;
+  bool stores_nulls = true;
+  std::vector<uint64_t> col_offsets;
+  std::vector<uint8_t> column_is_nullable;
 };
 
 RowFormat _create_row_format(const TableColumnDefinitions& column_definitions,
@@ -156,15 +102,12 @@ struct RowView {
   }
 };
 
-// All materialized rows of a single chunk, packed in `rows`. Long group-by strings referenced by those rows either
-// point directly into the (query-lifetime) source segment or, for the generic fallback path, live in `string_arena`.
+// All materialized rows of a single chunk, packed in `rows`.
 struct MaterializedRows {
   uint64_t row_count = 0;
   std::unique_ptr<uint8_t[]> rows;
   std::pmr::monotonic_buffer_resource string_arena;
-  // Per string group-by column (indexed by string-column order): whether its long-string pointers reference the
-  // transient per-chunk `string_arena` (true) and must therefore be copied into the key arena when a group is first
-  // inserted, or point at stable source memory (false) that outlives the whole grouping phase.
+  // Per string group-by column (indexed by string-column order).
   std::vector<bool> string_pointer_needs_copy;
 };
 
@@ -217,34 +160,36 @@ struct GroupKeyEqual {
   }
 };
 
-// Outcome of the grouping phase. Carries only what the aggregate phase and the output table need: the per-input-row
-// tickets, the distinct group count, and the grouping hash table.
-// The hash table is kept alive so the aggregate phase can read each group's group-by values straight from its key row
-// for low-cardinality group-bys, instead of re-scanning the source columns.
-struct GroupKeyData {
+struct GroupKeyDataBase {
   RowFormat row_format;
-  // Owns the copied distinct key rows and their long strings. Each grouping thread copies into its own arena so the
-  // hot path needs no lock; the arenas are retained here for the whole lifetime of the result because the global hash
-  // table's keys point into them.
   std::vector<std::unique_ptr<std::pmr::monotonic_buffer_resource>> key_arenas;
-  boost::concurrent_flat_map<GroupKey, uint64_t, GroupKeyHash, GroupKeyEqual> global_hash_table;
 
   // PER ROW: the group index (ticket) of that input row. Used to scatter aggregate values into per-group slots.
   std::vector<uint64_t> tickets;
-
-  // Number of distinct groups, i.e. the number of output rows.
   size_t group_count = 0;
 
   // Whether `global_hash_table` is populated and can be read to recover each group's group-by values from its key row.
-  // Only the byte-row grouping path builds it; the single-column fast path leaves it empty.
   bool has_hash_table = false;
 
-  explicit GroupKeyData(const RowFormat& row_format)
-      : row_format(row_format), global_hash_table(0, GroupKeyHash{}, GroupKeyEqual{&this->row_format}) {}
+  explicit GroupKeyDataBase(const RowFormat& _row_format) : row_format(_row_format) {}
 };
 
-// Determines the distinct groups. The returned hash table and key-row arena outlive this call so the aggregate phase
-// can read each group's group-by values from its key row for low-cardinality group-bys.
-std::shared_ptr<GroupKeyData> _compute_groups(const std::vector<ColumnID>& groupby_column_ids,
-                                              const std::shared_ptr<const Table>& input_table);
+template <bool Concurrent>
+struct GroupKeyData : GroupKeyDataBase {
+  using HashTableType = std::conditional_t<Concurrent, ConcurrentTicketMap<GroupKey, GroupKeyHash, GroupKeyEqual>,
+                                           boost::unordered_flat_map<GroupKey, uint64_t, GroupKeyHash, GroupKeyEqual>>;
+  HashTableType global_hash_table;
+
+  explicit GroupKeyData(const RowFormat& _row_format) : GroupKeyDataBase(_row_format) {
+    if constexpr (!Concurrent) {
+      global_hash_table = HashTableType(0, GroupKeyHash{}, GroupKeyEqual{&this->row_format});
+    }
+  }
+};
+
+// Determines the distinct groups. The returned hash table and key-row arena outlive this call.
+template <bool Concurrent>
+std::shared_ptr<GroupKeyData<Concurrent>> _compute_groups(const std::vector<ColumnID>& groupby_column_ids,
+                                                          const std::shared_ptr<const Table>& input_table);
+
 }  // namespace hyrise
