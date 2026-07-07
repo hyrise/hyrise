@@ -823,6 +823,10 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
             The ID 0 is reserved for NULL values. The combined IDs build an AggregateKey for each row.
             */
 
+            // TODO(anyone): CI compiler does not like that this is unused for some template parameters.
+            // Find a better way.
+            if (use_immediate_key_shortcut) {}
+
             // This time, we have no idea how much space we need, so we take some memory and then rely on the automatic
             // resizing. The size is quite random, but since single memory allocations do not cost too much, we rather
             // allocate a bit too much.
