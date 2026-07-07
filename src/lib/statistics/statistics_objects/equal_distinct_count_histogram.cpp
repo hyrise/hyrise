@@ -249,7 +249,7 @@ std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::
   // `min_value_idx` and `max_value_idx` are indices into the sorted vector `value_distribution` describing which range
   // of distinct values goes into a bin.
   auto min_value_idx = BinID{0};
-  for (BinID bin_idx = 0; bin_idx < bin_count; bin_idx++) {
+  for (auto bin_idx = BinID{0}; bin_idx < bin_count; bin_idx++) {
     auto max_value_idx = min_value_idx + distinct_count_per_bin - 1;
     if (bin_idx < bin_count_with_extra_value) {
       max_value_idx++;
