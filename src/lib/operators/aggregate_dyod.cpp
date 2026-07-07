@@ -271,10 +271,9 @@ std::pair<pmr_vector<ColumnDataType>, pmr_vector<bool>> _any_grouped(const std::
 // `groupby_index` is the column's position among the group-by columns (its slot in the row's null bitmap and column
 // offsets); `string_col_index` is its position among the string group-by columns (its heap string-pointer slot).
 template <typename ColumnDataType, bool Concurrent>
-std::pair<pmr_vector<ColumnDataType>, pmr_vector<bool>> _groupby_from_hash_table(const GroupKeyData<Concurrent>& group_key_data,
-                                                                                 const size_t group_count,
-                                                                                 const size_t groupby_index,
-                                                                                 const size_t string_col_index) {
+std::pair<pmr_vector<ColumnDataType>, pmr_vector<bool>> _groupby_from_hash_table(
+    const GroupKeyData<Concurrent>& group_key_data, const size_t group_count, const size_t groupby_index,
+    const size_t string_col_index) {
   const auto& format = group_key_data.row_format;
   const auto& hash_table = group_key_data.global_hash_table;
   auto values = pmr_vector<ColumnDataType>(group_count);
@@ -529,12 +528,13 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
   const auto aggregate_count = _aggregates.size();
   const auto groupby_column_count = _groupby_column_ids.size();
 
-  const auto THREAD_COUNT = Hyrise::get().topology.num_cpus() - 1;  // TODO: decide this elsewhere and make sure this is correct
-  const auto CONCURRENT = THREAD_COUNT > 1; 
+  const auto THREAD_COUNT =
+      Hyrise::get().topology.num_cpus() - 1;  // TODO: decide this elsewhere and make sure this is correct
+  const auto CONCURRENT = THREAD_COUNT > 1;
   std::shared_ptr<GroupKeyDataBase> groups;
   std::shared_ptr<GroupKeyData<true>> concurrent_groups;
   std::shared_ptr<GroupKeyData<false>> nonconcurrent_groups;
-  if(CONCURRENT) {
+  if (CONCURRENT) {
     concurrent_groups = _compute_groups<true>(_groupby_column_ids, input_table);
     groups = concurrent_groups;
   } else {

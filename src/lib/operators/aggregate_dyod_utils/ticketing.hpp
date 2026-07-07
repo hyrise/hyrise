@@ -229,10 +229,9 @@ struct GroupKeyDataBase {
   // table's keys point into them.
   std::vector<std::unique_ptr<std::pmr::monotonic_buffer_resource>> key_arenas;
 
-  
   // PER ROW: the group index (ticket) of that input row. Used to scatter aggregate values into per-group slots.
   std::vector<uint64_t> tickets;
-  
+
   // Number of distinct groups, i.e. the number of output rows.
   size_t group_count = 0;
 
@@ -240,24 +239,25 @@ struct GroupKeyDataBase {
   // Only the byte-row grouping path builds it; the single-column fast path leaves it empty.
   bool has_hash_table = false;
 
-  explicit GroupKeyDataBase(const RowFormat& _row_format)
-  : row_format(_row_format) {}
+  explicit GroupKeyDataBase(const RowFormat& _row_format) : row_format(_row_format) {}
 };
 
 template <bool Concurrent>
 struct GroupKeyData : GroupKeyDataBase {
   // these different maps have very different interfaces
-  using HashTableType = std::conditional_t<Concurrent, boost::concurrent_flat_map<GroupKey, uint64_t, GroupKeyHash, GroupKeyEqual>,
-                                       boost::unordered_flat_map<GroupKey, uint64_t, GroupKeyHash, GroupKeyEqual>>;
+  using HashTableType =
+      std::conditional_t<Concurrent, boost::concurrent_flat_map<GroupKey, uint64_t, GroupKeyHash, GroupKeyEqual>,
+                         boost::unordered_flat_map<GroupKey, uint64_t, GroupKeyHash, GroupKeyEqual>>;
   HashTableType global_hash_table;
 
-  explicit GroupKeyData(const RowFormat& _row_format) : GroupKeyDataBase(_row_format), global_hash_table(0, GroupKeyHash{}, GroupKeyEqual{&this->row_format}) {}
+  explicit GroupKeyData(const RowFormat& _row_format)
+      : GroupKeyDataBase(_row_format), global_hash_table(0, GroupKeyHash{}, GroupKeyEqual{&this->row_format}) {}
 };
 
 // Determines the distinct groups. The returned hash table and key-row arena outlive this call so the aggregate phase
 // can read each group's group-by values from its key row for low-cardinality group-bys.
 template <bool Concurrent>
 std::shared_ptr<GroupKeyData<Concurrent>> _compute_groups(const std::vector<ColumnID>& groupby_column_ids,
-                                              const std::shared_ptr<const Table>& input_table);
+                                                          const std::shared_ptr<const Table>& input_table);
 
 }  // namespace hyrise
