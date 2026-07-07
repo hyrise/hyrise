@@ -281,9 +281,9 @@ void _materialize_rows(const RowFormat& format, const std::shared_ptr<const Chun
 constexpr auto PLACE_HOLDER_TICKET = std::numeric_limits<uint64_t>::max();
 
 // The number of threads to use for parallelization.
-const auto THREAD_COUNT = Hyrise::get().topology.num_cpus();
+const auto THREAD_COUNT = Hyrise::get().topology.num_cpus() - 1;  // leave one core for the scheduler
 // Fuzzy ticketing: 128 tickets per thread. Once range is full, the thread fights for the next range.
-constexpr auto TICKET_RANGE_LENGTH = uint64_t{1} << 7;
+constexpr auto TICKET_RANGE_LENGTH = uint64_t{1} << 10;  // 1024 tickets per thread
 
 // TODO(@Rob2U): Use small local lookup table (direct-mapped here)
 // Fast path for a single non-string group-by column. Here the value is the key, so we do not need to materialize rows.
@@ -343,20 +343,17 @@ std::shared_ptr<GroupKeyData> _compute_groups_single_column(const ColumnID group
           } else {
             const auto value = position.value();
 
-            // The placeholder forces the read-back below.
-            current_ticket = PLACE_HOLDER_TICKET;
-            if (value_to_ticket.try_emplace(value, PLACE_HOLDER_TICKET)) {
-              // NOW insert ticket.
+            // Insert the candidate ticket (`next_ticket`) directly. `try_emplace_or_cvisit` performs the insert-or-read
+            // as a single locked operation: on a fresh group it emplaces the candidate, on an existing one it invokes
+            // the visitor under the group lock and hands back the already-written ticket. Because the real ticket is
+            // stored on insertion there is never a placeholder to spin on.
+            if (value_to_ticket.try_emplace_or_cvisit(value, next_ticket, [&current_ticket](const auto& entry) {
+                  current_ticket = entry.second;
+                })) {
+              // We won this group, so the candidate becomes its ticket and is consumed. A losing thread leaves
+              // `next_ticket` untouched and reuses the candidate for its next new group, so no ticket is wasted. Ticket
+              // ranges are disjoint across threads, so two racing inserters never propose the same candidate.
               current_ticket = next_ticket++;
-              value_to_ticket.insert_or_assign(value, current_ticket);
-            }
-
-            // The value already existed (inserted by us earlier or by another thread). Read its real ticket. If a
-            // concurrent inserter is still mid-insert the entry holds the placeholder, so spin until it is written.
-            while (current_ticket == PLACE_HOLDER_TICKET) {
-              value_to_ticket.cvisit(value, [&current_ticket](const auto& entry) {
-                current_ticket = entry.second;
-              });
             }
           }
           tickets[chunk_start + position.chunk_offset()] = current_ticket;
@@ -394,6 +391,7 @@ std::shared_ptr<GroupKeyData> _compute_groups_single_column(const ColumnID group
       // chunk's partial range is continued by the first job because the counter is reset above), so the only gaps are
       // these trailing ones.
       auto ticket_gaps = std::vector<std::pair<uint64_t, uint64_t>>(job_count);
+      auto next_chunk_id = std::atomic<uint32_t>{1};  // chunk 0 already processed above
 
       auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
       jobs.reserve(job_count);
@@ -401,11 +399,12 @@ std::shared_ptr<GroupKeyData> _compute_groups_single_column(const ColumnID group
         jobs.emplace_back(std::make_shared<JobTask>([&, job_id] {
           auto next_ticket = next_ticket_range_start.fetch_add(TICKET_RANGE_LENGTH);
           auto ticket_range_end = next_ticket + TICKET_RANGE_LENGTH;
-          for (auto chunk_id = ChunkID{job_id}; chunk_id < chunk_count; chunk_id += job_count) {
-            if (chunk_id == ChunkID{0}) {
-              continue;  // already processed
+          while (true) {
+            const auto chunk_id = next_chunk_id.fetch_add(1);
+            if (chunk_id >= chunk_count) {
+              break;
             }
-            process_chunk(chunk_id, next_ticket, ticket_range_end);
+            process_chunk(ChunkID{chunk_id}, next_ticket, ticket_range_end);
           }
           ticket_gaps[job_id] = {next_ticket, ticket_range_end};
         }));
@@ -431,16 +430,31 @@ std::shared_ptr<GroupKeyData> _compute_groups_single_column(const ColumnID group
       // total size of all gaps lying entirely below it. A used ticket never falls inside a gap, so the number of such
       // gaps is simply how many gap starts precede it.
       const auto row_count = input_table->row_count();
-      for (auto row_index = size_t{0}; row_index < row_count; ++row_index) {
-        const auto ticket = tickets[row_index];
-        if (ticket == null_ticket) {
-          tickets[row_index] = null_group_ticket;  // NULL groups are always last.
-          continue;
+
+      auto compact_range = [&](const size_t start, const size_t end) {
+        for (auto row_index = size_t{start}; row_index < end; ++row_index) {
+          const auto ticket = tickets[row_index];
+          if (ticket == null_ticket) {
+            tickets[row_index] = null_group_ticket;  // NULL groups are always last.
+            continue;
+          }
+          const auto gaps_below = static_cast<size_t>(
+              std::lower_bound(sorted_gap_starts.begin(), sorted_gap_starts.end(), ticket) - sorted_gap_starts.begin());
+          tickets[row_index] = ticket - unused_before_gap[gaps_below];
         }
-        const auto gaps_below = static_cast<size_t>(
-            std::lower_bound(sorted_gap_starts.begin(), sorted_gap_starts.end(), ticket) - sorted_gap_starts.begin());
-        tickets[row_index] = ticket - unused_before_gap[gaps_below];
+      };
+
+      auto jobs_compactions = std::vector<std::shared_ptr<AbstractTask>>{};
+      jobs_compactions.reserve(job_count);
+      auto ticket_chunk_size = row_count / job_count;
+      for (auto job_id = uint32_t{0}; job_id < job_count; ++job_id) {
+        jobs_compactions.emplace_back(std::make_shared<JobTask>([&, job_id] {
+          const auto start = job_id * ticket_chunk_size;
+          const auto end = (job_id == job_count - 1) ? row_count : start + ticket_chunk_size;
+          compact_range(start, end);
+        }));
       }
+      Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs_compactions);
     }
   });
 
