@@ -429,11 +429,11 @@ AggregateKey& dyod_get_aggregate_key([[maybe_unused]] KeysPerChunk<AggregateKey>
 }
 
 template <typename Results>
-void dyod_get_aggregate_key(const std::shared_ptr<const Table>& input_table,
-                            const std::vector<std::shared_ptr<WindowFunctionExpression>>& aggregates,
-                            const std::vector<ColumnID>& groupby_column_ids, const Results& results,
-                            TableColumnDefinitions& intermediate_result_column_definitions,
-                            std::vector<Segments>& intermediate_result) {
+void dyod_write_output_group_columns(const std::shared_ptr<const Table>& input_table,
+                                     const std::vector<std::shared_ptr<WindowFunctionExpression>>& aggregates,
+                                     const std::vector<ColumnID>& groupby_column_ids, const Results& results,
+                                     TableColumnDefinitions& intermediate_result_column_definitions,
+                                     std::vector<Segments>& intermediate_result) {
   DebugAssert(intermediate_result.empty(), "Expected output data structure to be empty.");
 
   // Mapping from input to output ColumnIDs for unaggregated columns (i.e., GROUP BY columns and ANY aggregates).
@@ -1316,8 +1316,8 @@ std::shared_ptr<Table> AggregateDYOD::_create_output_table(ContextsPerColumn& co
     auto context = std::static_pointer_cast<DYODAggregateResultContext<DistinctColumnType, WindowFunction::Min>>(
         contexts_per_column[0]);
     // auto groupby_columns_writing_timer = Timer{};
-    dyod_get_aggregate_key(input_table, _aggregates, _groupby_column_ids, context->results, output_column_definitions,
-                           intermediate_result);
+    dyod_write_output_group_columns(input_table, _aggregates, _groupby_column_ids, context->results,
+                                    output_column_definitions, intermediate_result);
     // DebugAssert(_groupby_columns_writing_duration == std::chrono::nanoseconds{0},
     // "_groupby_columns_writing_duration() was apparently called more than once.");
     // _groupby_columns_writing_duration = groupby_columns_writing_timer.lap();
@@ -1367,7 +1367,7 @@ std::shared_ptr<Table> AggregateDYOD::_create_output_table(ContextsPerColumn& co
               aggregate_idx, contexts_per_column, intermediate_result, input_table, output_column_definitions);
           break;
         case WindowFunction::Any:
-          // Pseudo-aggregates are written by dyod_get_aggregate_key.
+          // Pseudo-aggregates are written by dyod_write_output_group_columns.
           break;
         case WindowFunction::CumeDist:
         case WindowFunction::DenseRank:
@@ -1535,8 +1535,8 @@ void AggregateDYOD::_write_aggregate_output(ColumnID aggregate_index, ContextsPe
   // Before writing the first aggregate column, write all group keys into the respective columns.
   if (aggregate_index == 0) {
     // auto groupby_columns_writing_timer = Timer{};
-    dyod_get_aggregate_key(input_table, _aggregates, _groupby_column_ids, results, output_column_definitions,
-                           intermediate_result);
+    dyod_write_output_group_columns(input_table, _aggregates, _groupby_column_ids, results, output_column_definitions,
+                                    intermediate_result);
     // const auto groupby_columns_writing_runtime = groupby_columns_writing_timer.lap();
     // DebugAssert(_groupby_columns_writing_duration == std::chrono::nanoseconds{0},
     //             "_groupby_columns_writing_duration() was apparently called more than once.");
