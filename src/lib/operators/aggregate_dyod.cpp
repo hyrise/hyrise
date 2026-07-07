@@ -1078,10 +1078,12 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
     thread.join();
   }
 
-  auto chunk_count = output_tables[1]->chunk_count();
-  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; chunk_id++) {
-    auto chunk = output_tables[1]->get_chunk(chunk_id);
-    output_tables[0]->append_chunk(chunk->segments());
+  for (auto thread_id = size_t{1}; thread_id < thread_count; ++thread_id) {
+    const auto chunk_count = output_tables[1]->chunk_count();
+    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; chunk_id++) {
+      auto chunk = output_tables[1]->get_chunk(chunk_id);
+      output_tables[0]->append_chunk(chunk->segments());
+    }
   }
 
   return output_tables[0];
