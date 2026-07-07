@@ -1,13 +1,19 @@
 #pragma once
 
+#include <algorithm>
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <limits>
 #include <memory>
+#include <new>
 #include <type_traits>
+#include <vector>
 
+#include "hyrise.hpp"
+#include "scheduler/abstract_task.hpp"
+#include "scheduler/job_task.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
@@ -56,12 +62,42 @@ class ConcurrentTicketMap {
     }
     _capacity = capacity;
     _mask = capacity - 1;
-    _slots = std::make_unique<Slot[]>(capacity);
-    // Establish the EMPTY state for every slot before any inserter can observe it. Runs single-threaded at
-    // construction.
-    for (auto index = size_t{0}; index < capacity; ++index) {
-      _slots[index].state.store(EMPTY, std::memory_order_relaxed);
+
+    // Allocate raw, uninitialized storage rather than `make_unique<Slot[]>`. Value-initializing (or zeroing) the whole
+    // array is single-threaded work proportional to `capacity`, and for a large high-cardinality table it is dominated
+    // by first-touch page faults - a serial cost that does not scale and drags the build down at high thread counts. We
+    // instead set every slot to EMPTY in parallel below (partitioning the array across scheduler jobs) so the page
+    // faults spread across cores and land core-locally. `Slot` is trivially destructible, so the matching
+    // `::operator delete[]` in `SlotArrayDeleter` needs no per-element teardown.
+    _slots = SlotArray{static_cast<Slot*>(::operator new[](capacity * sizeof(Slot)))};
+
+    const auto initialize_slots = [slots = _slots.get()](const size_t begin, const size_t end) {
+      // Construct each slot in the EMPTY state (value-initialized `state == 0`). Completes before any inserter runs.
+      for (auto index = begin; index < end; ++index) {
+        ::new (static_cast<void*>(&slots[index])) Slot{};
+      }
+    };
+
+    // Only parallelize once the array is large enough that partitioning beats the scheduling overhead; otherwise the
+    // serial init below is cheaper. `max_jobs` also bounds the split so each job gets a worthwhile slice.
+    const auto max_jobs = capacity / PARALLEL_INIT_SLOTS;
+    if (max_jobs <= 1) {
+      initialize_slots(0, capacity);
+      return;
     }
+
+    const auto job_count = std::min<size_t>(Hyrise::get().topology.num_cpus(), max_jobs);
+    const auto slots_per_job = capacity / job_count;
+    auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+    jobs.reserve(job_count);
+    for (auto job_id = size_t{0}; job_id < job_count; ++job_id) {
+      const auto begin = job_id * slots_per_job;
+      const auto end = job_id + 1 == job_count ? capacity : begin + slots_per_job;
+      jobs.emplace_back(std::make_shared<JobTask>([initialize_slots, begin, end] {
+        initialize_slots(begin, end);
+      }));
+    }
+    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
   }
 
   // Returns the group's ticket. If `key` is new it is inserted with `ticket` and `ticket` is returned; otherwise the
@@ -135,6 +171,21 @@ class ConcurrentTicketMap {
     Key key{};
   };
 
+  static_assert(std::is_trivially_destructible_v<Slot>,
+                "Slots are freed via ::operator delete[] without per-element destruction.");
+  static_assert(alignof(Slot) <= __STDCPP_DEFAULT_NEW_ALIGNMENT__,
+                "Slot is over-aligned; its raw storage would need an aligned operator new[].");
+
+  // Frees the raw storage allocated with `::operator new[]`. Paired with raw allocation (not a `new Slot[]` array
+  // expression), so there is no array cookie and no per-element destructor to run.
+  struct SlotArrayDeleter {
+    void operator()(Slot* slots) const noexcept {
+      ::operator delete[](static_cast<void*>(slots));
+    }
+  };
+
+  using SlotArray = std::unique_ptr<Slot[], SlotArrayDeleter>;
+
   // Reserved `state` values; real tickets are stored biased by `TICKET_BIAS` so that 0 can mean EMPTY. `PLACE_HOLDER`
   // is the largest ticket that still stays clear of `uint64_t` overflow once biased - larger values are rejected.
   static constexpr auto EMPTY = uint64_t{0};
@@ -145,6 +196,9 @@ class ConcurrentTicketMap {
   static constexpr auto MIN_CAPACITY = size_t{16};
   // Keep the table below this fill so linear probing stays short and an empty slot always exists (probing terminates).
   static constexpr auto MAX_LOAD_PERCENT = size_t{70};
+  // Initialize the slot array in parallel once it reaches at least twice this many slots; smaller tables init inline.
+  // Also the minimum slice per init job, so we never spawn a job for a trivial amount of zeroing.
+  static constexpr auto PARALLEL_INIT_SLOTS = size_t{1} << 18;
 
   // Avalanches the user hash so the low bits used by `& _mask` are well distributed; `std::hash` for integers is
   // typically the identity, whose low bits alias badly under power-of-two masking. This is the fmix64 finalizer also
@@ -162,7 +216,7 @@ class ConcurrentTicketMap {
     return static_cast<size_t>(_mix(static_cast<uint64_t>(_hash(key)))) & _mask;
   }
 
-  std::unique_ptr<Slot[]> _slots;
+  SlotArray _slots;
   size_t _capacity = 0;
   size_t _mask = 0;
   Hash _hash{};
