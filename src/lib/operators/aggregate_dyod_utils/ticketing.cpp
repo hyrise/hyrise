@@ -466,9 +466,9 @@ std::shared_ptr<GroupKeyData<true>> _compute_groups_single_column_concurrent(
 
 std::shared_ptr<GroupKeyData<false>> _compute_groups_single_column_sequential(
     const ColumnID groupby_column_id, const std::shared_ptr<const Table>& input_table) {
-  // Fast path for a single non-string group-by column. Here the value is the key, so we do not need to materialize rows.
-  // Like the byte-row path, ticketing is kept separate from building the output column: the hot loop only grows the
-  // value->ticket map and emits tickets.
+  // Fast path for a single non-string group-by column. Here the value is the key, so we do not need to materialize
+  // rows. Like the byte-row path, ticketing is kept separate from building the output column: the hot loop only grows
+  // the value->ticket map and emits tickets.
   // The single-column fast path carries no hash table (`has_hash_table` stays false), so `GroupKeyData` here is only a
   // tickets + group-count carrier and its `row_format`/`global_hash_table` stay unused.
   auto group_key_data = std::make_shared<GroupKeyData<false>>(RowFormat{});
@@ -662,8 +662,8 @@ std::shared_ptr<GroupKeyData<Concurrent>> _compute_groups_byte_row(const std::ve
             ticket = current_ticket++;
             global_hash_table.insert_or_assign(group_key, ticket);
           }
-          // If we lost the race `try_emplace` returned false and `ticket` is still the placeholder; the spin below reads
-          // the winner's ticket once it is written.
+          // If we lost the race `try_emplace` returned false and `ticket` is still the placeholder; the spin below
+          // reads the winner's ticket once it is written.
         } else {
           ticket = current_ticket++;
           global_hash_table.emplace(group_key, ticket);
@@ -671,9 +671,9 @@ std::shared_ptr<GroupKeyData<Concurrent>> _compute_groups_byte_row(const std::ve
       }
 
       if constexpr (Concurrent) {
-        // Whether we found an entry mid-insert or lost the `try_emplace` race, `ticket` still holds the placeholder until
-        // the claiming thread writes the real ticket. Spin until it does. `cvisit` returns the number of matched entries
-        // (always 1 here); the ticket is delivered through the lambda, not the return value.
+        // Whether we found an entry mid-insert or lost the `try_emplace` race, `ticket` still holds the placeholder
+        // until the claiming thread writes the real ticket. Spin until it does. `cvisit` returns the number of matched
+        // entries (always 1 here); the ticket is delivered through the lambda, not the return value.
         while (ticket == PLACE_HOLDER_TICKET) {
           global_hash_table.cvisit(global_group_key, [&ticket](const auto& entry) {
             ticket = entry.second;
@@ -727,8 +727,8 @@ std::shared_ptr<GroupKeyData<Concurrent>> _compute_groups_byte_row(const std::ve
       arenas.emplace_back(std::make_unique<std::pmr::monotonic_buffer_resource>());
     }
 
-    // Process first chunk to estimate the group count and reserve in the global_hash_table accordingly. This runs before
-    // the jobs start, so it can safely reuse job 0's arena.
+    // Process first chunk to estimate the group count and reserve in the global_hash_table accordingly. This runs
+    // before the jobs start, so it can safely reuse job 0's arena.
     process_chunk(ChunkID{0}, local_cache, materialized, *arenas[0]);
 
     auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
@@ -781,7 +781,7 @@ std::shared_ptr<GroupKeyData<Concurrent>> _compute_groups(const std::vector<Colu
   return _compute_groups_byte_row<Concurrent>(groupby_column_ids, input_table);
 }
 
-//explicitly instantiate the template for both concurrent and non-concurrent execution
+// Explicitly instantiate the template for both concurrent and non-concurrent execution
 template std::shared_ptr<GroupKeyData<true>> _compute_groups<true>(const std::vector<ColumnID>& groupby_column_ids,
                                                                    const std::shared_ptr<const Table>& input_table);
 template std::shared_ptr<GroupKeyData<false>> _compute_groups<false>(const std::vector<ColumnID>& groupby_column_ids,

@@ -280,7 +280,7 @@ std::pair<pmr_vector<ColumnDataType>, pmr_vector<bool>> _groupby_from_hash_table
   auto nulls = pmr_vector<bool>(group_count, false);
   const auto null_mask_bit = uint64_t{1} << groupby_index;
 
-  // TODO: this may not compile because of auto& entry.
+  // TODO(@forUnity): this may not compile because of auto& entry.
   const auto process_iterator = [&](const auto& entry) {
     const auto row_view = RowView{entry.first.row, format};
     const auto ticket = entry.second;
@@ -529,7 +529,7 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
   const auto groupby_column_count = _groupby_column_ids.size();
 
   const auto THREAD_COUNT =
-      Hyrise::get().topology.num_cpus() - 1;  // TODO: decide this elsewhere and make sure this is correct
+      Hyrise::get().topology.num_cpus() - 1;  // TODO(@forUnity): decide this elsewhere and make sure this is correct
   const auto CONCURRENT = THREAD_COUNT > 1;
   std::shared_ptr<GroupKeyDataBase> groups;
   std::shared_ptr<GroupKeyData<true>> concurrent_groups;
