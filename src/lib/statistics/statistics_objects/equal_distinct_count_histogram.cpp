@@ -165,6 +165,12 @@ template <typename T>
 ValueDistributionVector<T> value_distribution_from_column(const Table& table, const ColumnID column_id,
                                                           const HistogramDomain<T>& domain) {
   const auto chunk_count = table.chunk_count();
+
+  auto result = ValueDistributionVector<T>{};
+  if (chunk_count == 0) {
+    return result;
+  }
+
   auto segments_to_process = std::vector<std::pair<ChunkID, std::shared_ptr<AbstractSegment>>>{};
   segments_to_process.reserve(chunk_count);
 
@@ -174,16 +180,11 @@ ValueDistributionVector<T> value_distribution_from_column(const Table& table, co
     segments_to_process.emplace_back(chunk_id, chunk->get_segment(column_id));
   }
 
-  auto result = ValueDistributionVector<T>{};
-  if (chunk_count == 0) {
-    return result;
-  }
-
-  // We determine the recursion steps (i.e., merge levels) that we want to parallelize. We try to create up to 2x the
-  // number of workers to fully utilize a system with a bit of straggler mitigation (thus 2x) while not overloading
-  // the scheduler. As the leaves of the created merge tree are single chunks, we would otherwise create tens of
-  // thousands of nested jobs for SF 100 TPC-H data. When the limit is reached, each worker executes the recursion on
-  // its own sequentially.
+  // We determine the recursion steps (i.e., merge levels) that we want to parallelize. We try to create up to
+  // 2 * #worker sto fully utilize a system with a bit of straggler mitigation (thus 2x) while not overloading the
+  // scheduler. As the leaves of the created merge tree are single chunks, we would otherwise create tens of thousands
+  // of nested jobs for SF 100 TPC-H data. When the limit is reached, each worker executes the recursion on its own
+  // sequentially.
   auto worker_count = size_t{1};
   if (const auto node_queue_scheduler = std::dynamic_pointer_cast<NodeQueueScheduler>(Hyrise::get().scheduler())) {
     worker_count = node_queue_scheduler->workers().size();
