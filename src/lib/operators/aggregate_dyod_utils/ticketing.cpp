@@ -420,8 +420,10 @@ std::shared_ptr<GroupKeyData> _compute_groups_single_column(const ColumnID group
         unused_before_gap[i + 1] = unused_before_gap[i] + (ticket_gaps[i].second - ticket_gaps[i].first);
       }
 
-      // The distinct non-NULL groups own tickets in first-seen order; the NULL group (if any) is appended last.
-      const auto null_group_ticket = sorted_gap_starts[job_count - 1] - unused_before_gap[job_count];
+      // The distinct non-NULL groups own tickets in first-seen order; the NULL group (if any) is appended last. The
+      // number of distinct groups is the total claimed ticket space (the top of the highest range) minus the unused
+      // tickets in all trailing gaps.
+      const auto null_group_ticket = next_ticket_range_start.load(std::memory_order_relaxed) - unused_before_gap[job_count];
       group_key_data->group_count = null_group_ticket + (has_null.load(std::memory_order_relaxed) ? 1 : 0);
 
       // Compact the tickets: every non-NULL ticket sits below its own range's gap, so it must be shifted down by the
