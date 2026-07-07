@@ -89,11 +89,15 @@ class ConcurrentTicketMap {
     }
     _capacity = capacity;
     _mask = capacity - 1;
-    _slots = SlotArray{new Slot[capacity]};
+    // Allocate uninitialized storage. Initializing the whole array is for a large high-cardinality table dominated by
+    // page faults. We therefore set every slot to EMPTY in parallel below (partitioning the array across scheduler
+    // jobs) so the page faults spread across cores and land core-locally. `Slot` is trivially destructible, so the
+    //  matching `::operator delete[]` in `SlotArrayDeleter` needs no per-element teardown.
+    _slots = SlotArray{static_cast<Slot*>(::operator new[](capacity * sizeof(Slot)))};
 
     const auto initialize_slots = [slots = _slots.get()](const size_t begin, const size_t end) {
       for (auto index = begin; index < end; ++index) {
-        slots[index].state.store(EMPTY);
+        ::new (static_cast<void*>(&slots[index])) Slot{};
       }
     };
 
@@ -181,7 +185,7 @@ class ConcurrentTicketMap {
 
   struct SlotArrayDeleter {
     void operator()(Slot* slots) const noexcept {
-      delete[] slots;
+      ::operator delete[](static_cast<void*>(slots));
     }
   };
 
