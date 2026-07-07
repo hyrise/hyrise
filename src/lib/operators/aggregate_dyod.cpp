@@ -967,27 +967,6 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
   return keys_per_chunk;
 }
 
-// template <typename ColumnDataType, WindowFunction aggregate_function>
-// void AggregateDYOD::_merge_contexts(ColumnID aggregate_index,
-//                                     const std::vector<ContextsPerColumn>& contexts_per_column_per_thread) {
-//   if (contexts_per_column_per_thread.size() < 1) {
-//     return;
-//   }
-//   auto target_context = std::static_pointer_cast<DYODAggregateResultContext<ColumnDataType, aggregate_function>>(
-//       _contexts_per_column[aggregate_index]);
-//   auto& target_results = target_context->results;
-//   const auto contexts_count = contexts_per_column_per_thread.size();
-//   for (auto context_index = size_t{0}; context_index < contexts_count; ++context_index) {
-//     auto other_context = std::static_pointer_cast<DYODAggregateResultContext<ColumnDataType, aggregate_function>>(
-//         contexts_per_column_per_thread[context_index][aggregate_index]);
-//     auto& other_results = other_context->results;
-//     auto results_count = other_results.size();
-//     for (auto result_id = DYODAggregateResultId{0}; result_id < results_count; ++result_id) {
-//       target_results.push_back(other_results[result_id]);
-//     }
-//   }
-// }
-
 template <typename AggregateKey>
 std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
   const auto aggregate_count = _aggregates.size();
@@ -1087,62 +1066,6 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
   }
 
   return output_tables[0];
-
-  // TODO(anyone): check if this is still necessary
-  // we just set this to some valid value to avoid edge cases where _aggregates is empty
-  // TODO(anyone): Join the two other contexts into _contexts_per_column (horrible, horrible templates)
-
-  // // TODO(anyone): better name?
-  // const auto contexts_per_column_per_thread = std::vector(1, right_contexts_per_column);
-
-  // const auto aggregate_count = _aggregates.size();
-  // for (auto aggregate_idx = ColumnID{0}; aggregate_idx < aggregate_count; ++aggregate_idx) {
-  //   const auto& aggregate = _aggregates[aggregate_idx];
-  //   const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
-  //   const auto input_column_id = pqp_column.column_id;
-
-  //   const auto data_type =
-  //       input_column_id == INVALID_COLUMN_ID ? DataType::Long : input_table->column_data_type(input_column_id);
-
-  // resolve_data_type(data_type, [&](auto type) {
-  //   using ColumnDataType = typename decltype(type)::type;
-
-  //   switch (aggregate->window_function) {
-  //     case WindowFunction::Min:
-  //       _merge_contexts<ColumnDataType, WindowFunction::Min>(aggregate_idx, contexts_per_column_per_thread);
-  //       break;
-  //     case WindowFunction::Max:
-  //       _merge_contexts<ColumnDataType, WindowFunction::Max>(aggregate_idx, contexts_per_column_per_thread);
-  //       break;
-  //     case WindowFunction::Sum:
-  //       _merge_contexts<ColumnDataType, WindowFunction::Sum>(aggregate_idx, contexts_per_column_per_thread);
-  //       break;
-  //     case WindowFunction::Avg:
-  //       _merge_contexts<ColumnDataType, WindowFunction::Avg>(aggregate_idx, contexts_per_column_per_thread);
-  //       break;
-  //     case WindowFunction::Count:
-  //       _merge_contexts<ColumnDataType, WindowFunction::Count>(aggregate_idx, contexts_per_column_per_thread);
-  //       break;
-  //     case WindowFunction::CountDistinct:
-  //     _merge_contexts<ColumnDataType, WindowFunction::CountDistinct>(aggregate_idx, contexts_per_column_per_thread);
-  //       break;
-  //     case WindowFunction::StandardDeviationSample:
-  //       _merge_contexts<ColumnDataType, WindowFunction::StandardDeviationSample>(aggregate_idx,
-  //                                                                                contexts_per_column_per_thread);
-  //       break;
-  //     case WindowFunction::Any:
-  //       _merge_contexts<ColumnDataType, WindowFunction::Any>(aggregate_idx, contexts_per_column_per_thread);
-  //       break;
-  //     case WindowFunction::CumeDist:
-  //     case WindowFunction::DenseRank:
-  //     case WindowFunction::PercentRank:
-  //     case WindowFunction::Rank:
-  //     case WindowFunction::RowNumber:
-  //       Fail(std::format("Unsupported aggregate function '{}'.",
-  //                        window_function_to_string.left.at(aggregate->window_function)));
-  //   }
-  // });
-  // }
 }
 
 template <typename AggregateKey>
