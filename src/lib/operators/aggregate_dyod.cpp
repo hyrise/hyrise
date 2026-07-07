@@ -2,17 +2,10 @@
 
 #include <algorithm>
 #include <array>
-#include <atomic>
-#include <chrono>
-#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <format>
-#include <functional>
-#include <limits>
 #include <memory>
-#include <memory_resource>
-#include <numeric>
 #include <optional>
 #include <string>
 #include <type_traits>
@@ -280,10 +273,9 @@ std::pair<pmr_vector<ColumnDataType>, pmr_vector<bool>> _groupby_from_hash_table
   auto nulls = pmr_vector<bool>(group_count, false);
   const auto null_mask_bit = uint64_t{1} << groupby_index;
 
-  // TODO(@forUnity): this may not compile because of auto& entry.
-  const auto process_iterator = [&](const auto& entry) {
-    const auto row_view = RowView{entry.first.row, format};
-    const auto ticket = entry.second;
+  // Reads one group's representative value from its distinct key row into the output slot addressed by its ticket.
+  const auto process_entry = [&](const GroupKey& key, const uint64_t ticket) {
+    const auto row_view = RowView{key.row, format};
 
     // `stores_nulls` is only false when no group-by column is nullable, so `null_bitmap()` is only read when present.
     if (format.stores_nulls && (row_view.null_bitmap() & null_mask_bit)) {
@@ -306,10 +298,12 @@ std::pair<pmr_vector<ColumnDataType>, pmr_vector<bool>> _groupby_from_hash_table
   };
 
   if constexpr (Concurrent) {
-    hash_table.cvisit_all(process_iterator);
+    // `ConcurrentTicketMap::for_each` hands the stored key and ticket directly (no `entry` pair). Called after the
+    // grouping jobs have joined, so a plain single-threaded pass is safe.
+    hash_table.for_each(process_entry);
   } else {
     for (auto it = hash_table.cbegin(); it != hash_table.cend(); ++it) {
-      process_iterator(*it);
+      process_entry(it->first, it->second);
     }
   }
 
