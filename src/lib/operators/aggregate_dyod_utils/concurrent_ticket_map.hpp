@@ -152,15 +152,6 @@ class ConcurrentTicketMap {
     }
   }
 
-  // Number of distinct groups inserted. O(capacity); call only after all inserting threads have joined.
-  size_t size() const {
-    auto count = size_t{0};
-    for (auto index = size_t{0}; index < _capacity; ++index) {
-      count += _slots[index].state.load(std::memory_order_relaxed) >= TICKET_BIAS ? 1 : 0;
-    }
-    return count;
-  }
-
   size_t capacity() const {
     return _capacity;
   }

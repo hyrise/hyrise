@@ -344,7 +344,7 @@ std::shared_ptr<GroupKeyData> _compute_groups_single_column(const ColumnID group
           }
         });
         if (first_chunk_size > 0) {
-          const auto groups_seen = estimate_map.size();
+          const auto groups_seen = counter;
           const auto remaining_rows = input_table->row_count() - first_chunk_size;
           estimated_groups =
               std::max<size_t>(1, std::min<size_t>(input_table->row_count(),
@@ -409,10 +409,6 @@ std::shared_ptr<GroupKeyData> _compute_groups_single_column(const ColumnID group
       }
       Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 
-      // The distinct non-NULL groups own tickets in first-seen order; the NULL group (if any) is appended last.
-      const auto null_group_ticket = value_to_ticket.size();
-      group_key_data->group_count = null_group_ticket + (has_null.load(std::memory_order_relaxed) ? 1 : 0);
-
       // Sort the gaps by their start so we can prefix-sum the unused ticket counts. `std::pair` orders by start first,
       // and because the gaps are disjoint this also orders them by end.
       std::sort(ticket_gaps.begin(), ticket_gaps.end());
@@ -423,6 +419,10 @@ std::shared_ptr<GroupKeyData> _compute_groups_single_column(const ColumnID group
         sorted_gap_starts[i] = ticket_gaps[i].first;
         unused_before_gap[i + 1] = unused_before_gap[i] + (ticket_gaps[i].second - ticket_gaps[i].first);
       }
+
+      // The distinct non-NULL groups own tickets in first-seen order; the NULL group (if any) is appended last.
+      const auto null_group_ticket = sorted_gap_starts[job_count - 1] - unused_before_gap[job_count];
+      group_key_data->group_count = null_group_ticket + (has_null.load(std::memory_order_relaxed) ? 1 : 0);
 
       // Compact the tickets: every non-NULL ticket sits below its own range's gap, so it must be shifted down by the
       // total size of all gaps lying entirely below it. A used ticket never falls inside a gap, so the number of such
