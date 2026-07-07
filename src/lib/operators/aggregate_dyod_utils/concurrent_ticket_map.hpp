@@ -84,7 +84,7 @@ class ConcurrentTicketMap {
                                const KeyEqual& key_equal = KeyEqual{})
       : _hash(hash), _key_equal(key_equal) {
     auto capacity = MIN_CAPACITY;
-    while (capacity * MAX_LOAD_FACTOR < (max_groups + 1)) {
+    while (static_cast<double>(capacity) * MAX_LOAD_FACTOR < static_cast<double>(max_groups + 1)) {
       capacity <<= 1;
     }
     _capacity = capacity;
@@ -104,7 +104,7 @@ class ConcurrentTicketMap {
     }
 
     // When `capacity` is larger than `PARALLEL_INIT_SLOTS`. We split the range into `PARALLEL_INIT_SLOTS`-sized chunks.
-    const auto max_jobs = ceil(static_cast<double>(capacity) / PARALLEL_INIT_SLOTS);
+    const auto max_jobs = (capacity + PARALLEL_INIT_SLOTS - 1) / PARALLEL_INIT_SLOTS;
     const auto job_count = std::min<size_t>(Hyrise::get().topology.num_cpus(), max_jobs);
     const auto slots_per_job = capacity / job_count;
     auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
