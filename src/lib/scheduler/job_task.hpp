@@ -36,6 +36,13 @@ class JobTask : public AbstractTask {
                    bool stealable = true)
       : AbstractTask{priority, stealable}, _fn{function} {}
 
+  /**
+   * @brief      Short-cut to execute a created JobTask directly from the calling thread.
+   */
+  void execute_directly() {
+    _fn();
+  }
+
  protected:
   void _on_execute() override;
 

@@ -424,7 +424,14 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& table, c
   bloom_filters.resize(group_count - 1);  // The first group uses the output bloom filter.
   output_bloom_filter.resize(BLOOM_FILTER_SIZE);
 
-  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+  if (table->row_count() < 4'000) {
+    for (const auto& job : jobs) {
+      auto job_job = std::dynamic_pointer_cast<JobTask>(job);
+      job_job->execute_directly();
+    }
+  } else {
+    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+  }
 
   for (const auto& bloom_filter : bloom_filters) {
     output_bloom_filter |= bloom_filter;
