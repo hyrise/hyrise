@@ -315,7 +315,7 @@ void dyod_prepare_output(std::vector<Segments>& output, const size_t chunk_count
   }
 }
 
-// `dyod_prepare_output` is called once per row when iterating over a column that is to be aggregated. The row's `key`
+// `visit_and_get_result` is called once per row when iterating over a column that is to be aggregated. The row's `key`
 // has been calculated as part of `_partition_by_groupby_keys`. We also pass in the `row_id` of that row. This row id
 // is stored in `Results` so that we can later use it to reconstruct the values in the GROUP BY columns. If the operator
 // calculates multiple aggregate functions, we only need to perform this lookup as part of the first aggregate function.
@@ -324,11 +324,11 @@ void dyod_prepare_output(std::vector<Segments>& output, const size_t chunk_count
 constexpr auto DYOD_CACHE_MASK = DYODAggregateKeyEntry{1} << uint8_t{63};  // See explanation below
 
 template <typename CacheResultIds, typename ResultIds, typename Results, typename AggregateKey>
-typename Results::reference dyod_prepare_output(CacheResultIds /*cache_result_ids*/, ResultIds& result_ids,
-                                                Results& results, AggregateKey& key, const RowID& row_id) {
+typename Results::reference visit_and_get_result(CacheResultIds /*cache_result_ids*/, ResultIds& result_ids,
+                                                 Results& results, AggregateKey& key, const RowID& row_id) {
   if constexpr (std::is_same_v<AggregateKey, DYODEmptyAggregateKey>) {
     // No GROUP BY columns are defined for this aggregate operator. We still want to keep most code paths similar and
-    // avoid special handling. Thus, dyod_prepare_output is still called, however, we always return the same result
+    // avoid special handling. Thus, visit_and_get_result is still called, however, we always return the same result
     // reference.
     if (results.empty()) {
       results.emplace_back();
@@ -628,12 +628,12 @@ void AggregateDYOD::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, 
 
   auto chunk_offset = ChunkOffset{0};
 
-  // CacheResultIds is a boolean type parameter that is forwarded to dyod_prepare_output, see the documentation over
+  // CacheResultIds is a boolean type parameter that is forwarded to visit_and_get_result, see the documentation over
   // there for details.
   const auto process_position = [&](const auto cache_result_ids, const auto& position) {
-    auto& result = dyod_prepare_output(cache_result_ids, result_ids, results,
-                                       dyod_get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
-                                       RowID{chunk_id, chunk_offset});
+    auto& result = visit_and_get_result(cache_result_ids, result_ids, results,
+                                        dyod_get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
+                                        RowID{chunk_id, chunk_offset});
 
     // If the value is NULL, the current aggregate value does not change.
     if (!position.is_null()) {
@@ -800,7 +800,7 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
 
                 // Rewrite the keys and (1) subtract min so that we can also handle consecutive keys that do not start
                 // at 1* and (2) set the first bit which indicates that the key is an immediate index into the result
-                // vector (see dyod_prepare_output).
+                // vector (see visit_and_get_result).
                 // *) Note: Because of int_to_uint above, the values do not start at 1, anyway.
 
                 for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
@@ -1154,22 +1154,22 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std
       auto& results = context->results;
 
       // Add value or combination of values is added to the list of distinct value(s). This is done by calling
-      // dyod_prepare_output, which adds the corresponding entry in the list of GROUP BY values.
+      // visit_and_get_result, which adds the corresponding entry in the list of GROUP BY values.
       if (use_immediate_key_shortcut) {
         for (auto chunk_offset = ChunkOffset{0}; chunk_offset < input_chunk_size; ++chunk_offset) {
           // We are able to use immediate keys, so pass true_type so that the combined caching/immediate key code path
-          // is enabled in dyod_prepare_output.
-          dyod_prepare_output(std::true_type{}, result_ids, results,
-                              dyod_get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
-                              RowID{chunk_id, chunk_offset});
+          // is enabled in visit_and_get_result.
+          visit_and_get_result(std::true_type{}, result_ids, results,
+                               dyod_get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
+                               RowID{chunk_id, chunk_offset});
         }
       } else {
         // Same as above, but we do not have immediate keys, so we disable that code path to reduce the complexity of
         // dyod_get_aggregate_key.
         for (auto chunk_offset = ChunkOffset{0}; chunk_offset < input_chunk_size; ++chunk_offset) {
-          dyod_prepare_output(std::false_type{}, result_ids, results,
-                              dyod_get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
-                              RowID{chunk_id, chunk_offset});
+          visit_and_get_result(std::false_type{}, result_ids, results,
+                               dyod_get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
+                               RowID{chunk_id, chunk_offset});
         }
       }
     } else {
@@ -1205,23 +1205,23 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std
             results[0].row_id = RowID{ChunkID{0}, ChunkOffset{0}};
           } else {
             // Count occurrences for each group key -  If we have more than one aggregate function (and thus more than
-            // one context), it makes sense to cache the results indexes, see dyod_prepare_output for details.
+            // one context), it makes sense to cache the results indexes, see visit_and_get_result for details.
             if (contexts_per_column.size() > 1 || use_immediate_key_shortcut) {
               for (auto chunk_offset = ChunkOffset{0}; chunk_offset < input_chunk_size; ++chunk_offset) {
                 // Use CacheResultIds==true_type if we have more than one group by column or if the cached result ids
                 // have been written by the immediate key shortcut
                 auto& result =
-                    dyod_prepare_output(std::true_type{}, result_ids, results,
-                                        dyod_get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
-                                        RowID{chunk_id, chunk_offset});
+                    visit_and_get_result(std::true_type{}, result_ids, results,
+                                         dyod_get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
+                                         RowID{chunk_id, chunk_offset});
                 ++result.aggregate_count;
               }
             } else {
               for (auto chunk_offset = ChunkOffset{0}; chunk_offset < input_chunk_size; ++chunk_offset) {
                 auto& result =
-                    dyod_prepare_output(std::false_type{}, result_ids, results,
-                                        dyod_get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
-                                        RowID{chunk_id, chunk_offset});
+                    visit_and_get_result(std::false_type{}, result_ids, results,
+                                         dyod_get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
+                                         RowID{chunk_id, chunk_offset});
                 ++result.aggregate_count;
               }
             }
@@ -1442,7 +1442,7 @@ std::shared_ptr<Table> AggregateDYOD::_create_output_table(ContextsPerColumn& co
     const auto output_table_chunk_count = intermediate_result.size();
     for (auto chunk_id = ChunkID{0}; chunk_id < output_table_chunk_count; ++chunk_id) {
       if (!intermediate_result[chunk_id][0]) {
-        // When vectors have been oversized (see dyod_prepare_output()), intermediate chunks might be completely empty.
+        // When vectors have been oversized (see visit_and_get_result()), intermediate chunks might be completely empty.
         continue;
       }
 
