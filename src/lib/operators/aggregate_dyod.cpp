@@ -23,6 +23,7 @@
 #include "operators/abstract_operator.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
+#include "scheduler/immediate_execution_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/abstract_segment.hpp"
 #include "storage/chunk.hpp"
@@ -524,7 +525,10 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
 
   const auto THREAD_COUNT =
       Hyrise::get().topology.num_cpus() - 1;  // TODO(@forUnity): decide this elsewhere and make sure this is correct
-  const auto CONCURRENT = THREAD_COUNT > 1;
+  const auto is_not_immediate_scheduler =
+      std::dynamic_pointer_cast<ImmediateExecutionScheduler>(Hyrise::get().scheduler()) == nullptr;
+  const auto CONCURRENT = THREAD_COUNT > 1 && is_not_immediate_scheduler;
+
   std::shared_ptr<GroupKeyDataBase> groups;
   std::shared_ptr<GroupKeyData<true>> concurrent_groups;
   std::shared_ptr<GroupKeyData<false>> nonconcurrent_groups;
