@@ -325,8 +325,8 @@ for line_number, line in enumerate(lines):
     table_string_reformatted += line + "\n"
 
 
-# In case the runs for the executed benchmark have been cut or the runs were insufficient for the p-value calcution, we
-# add notes to the end of the table.
+# In case the runs for the executed benchmark have been cut or the runs were insufficient for the p-value calculation,
+# we add notes to the end of the table.
 if any(add_note_for_capped_runs, add_note_for_insufficient_pvalue_runs, add_note_for_high_variance_runs):
     first_column_width = len(lines[1].split("|")[1])
     width_for_note = len(lines[0]) - first_column_width - 5  # 5 for seperators and spaces
