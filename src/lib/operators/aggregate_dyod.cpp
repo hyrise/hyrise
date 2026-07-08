@@ -760,6 +760,17 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
     Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
   }
 
+  if (CONCURRENT) {
+    auto cleanup_job =
+        std::make_shared<JobTask>([groups = std::move(groups), concurrent_groups = std::move(concurrent_groups),
+                                   nonconcurrent_groups = std::move(nonconcurrent_groups)]() mutable {
+          groups.reset();
+          concurrent_groups.reset();
+          nonconcurrent_groups.reset();
+        });
+    cleanup_job->schedule();
+  }
+
   auto result_table = std::make_shared<Table>(column_definitions, TableType::Data);
   if (group_count > 0) {
     // Each output column was accumulated as a single full-length segment. Split them into TARGET_CHUNK_SIZE-sized
