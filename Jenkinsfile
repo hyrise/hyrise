@@ -104,7 +104,7 @@ try {
             clang = '-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++'
             clang19 = '-DCMAKE_C_COMPILER=clang-19 -DCMAKE_CXX_COMPILER=clang++-19'
             gcc = '-DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++'
-            gcc13 = '-DCMAKE_C_COMPILER=gcc-14 -DCMAKE_CXX_COMPILER=g++-14'
+            gcc13 = '-DCMAKE_C_COMPILER=gcc-13 -DCMAKE_CXX_COMPILER=g++-13'
 
             debug = '-DCMAKE_BUILD_TYPE=Debug'
             release = '-DCMAKE_BUILD_TYPE=Release'
