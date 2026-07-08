@@ -23,6 +23,7 @@
 #include "operators/abstract_operator.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
+#include "scheduler/immediate_execution_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/abstract_segment.hpp"
 #include "storage/chunk.hpp"
@@ -141,7 +142,7 @@ int64_t _count_distinct_all_values(const std::shared_ptr<const Table>& input_tab
 // (non-NULL) value yields NULL, except COUNT which yields 0.
 template <typename ColumnDataType, typename AggregateType, WindowFunction window_function>
 std::pair<pmr_vector<AggregateType>, pmr_vector<bool>> _aggregate_grouped(
-    const std::vector<uint64_t>& tickets, const size_t group_count, const std::shared_ptr<const Table>& input_table,
+    const uint64_t* const tickets, const size_t group_count, const std::shared_ptr<const Table>& input_table,
     const ColumnID input_column_id) {
   const auto aggregate_function =
       WindowFunctionBuilder<ColumnDataType, AggregateType, window_function>().get_aggregate_function();
@@ -195,7 +196,7 @@ std::pair<pmr_vector<AggregateType>, pmr_vector<bool>> _aggregate_grouped(
 
 // COUNT(DISTINCT): number of distinct non-NULL values. Never NULL (0 for an all-NULL group).
 template <typename ColumnDataType>
-pmr_vector<int64_t> _count_distinct_grouped(const std::vector<uint64_t>& tickets, const size_t group_count,
+pmr_vector<int64_t> _count_distinct_grouped(const uint64_t* const tickets, const size_t group_count,
                                             const std::shared_ptr<const Table>& input_table,
                                             const ColumnID input_column_id) {
   auto distinct_values = std::vector<std::unordered_set<ColumnDataType>>(group_count);
@@ -225,7 +226,7 @@ pmr_vector<int64_t> _count_distinct_grouped(const std::vector<uint64_t>& tickets
 
 // ANY: the first value seen per group, NULL included (The value is passed through. All-NULL groups stay).
 template <typename ColumnDataType>
-std::pair<pmr_vector<ColumnDataType>, pmr_vector<bool>> _any_grouped(const std::vector<uint64_t>& tickets,
+std::pair<pmr_vector<ColumnDataType>, pmr_vector<bool>> _any_grouped(const uint64_t* const tickets,
                                                                      const size_t group_count,
                                                                      const std::shared_ptr<const Table>& input_table,
                                                                      const ColumnID input_column_id) {
@@ -313,7 +314,7 @@ std::pair<pmr_vector<ColumnDataType>, pmr_vector<bool>> _groupby_from_hash_table
 // STDDEV: NULL for groups with fewer than two contributing values.
 template <typename ColumnDataType>
 std::pair<pmr_vector<double>, pmr_vector<bool>> _standard_deviation_sample_grouped(
-    const std::vector<uint64_t>& tickets, const size_t group_count, const std::shared_ptr<const Table>& input_table,
+    const uint64_t* const tickets, const size_t group_count, const std::shared_ptr<const Table>& input_table,
     const ColumnID input_column_id) {
   static_assert(std::is_arithmetic_v<ColumnDataType>, "StandardDeviationSample is only defined on arithmetic types.");
   const auto aggregate_function =
@@ -524,7 +525,10 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
 
   const auto THREAD_COUNT =
       Hyrise::get().topology.num_cpus() - 1;  // TODO(@forUnity): decide this elsewhere and make sure this is correct
-  const auto CONCURRENT = THREAD_COUNT > 1;
+  const auto is_not_immediate_scheduler =
+      std::dynamic_pointer_cast<ImmediateExecutionScheduler>(Hyrise::get().scheduler()) == nullptr;
+  const auto CONCURRENT = THREAD_COUNT > 1 && is_not_immediate_scheduler;
+
   std::shared_ptr<GroupKeyDataBase> groups;
   std::shared_ptr<GroupKeyData<true>> concurrent_groups;
   std::shared_ptr<GroupKeyData<false>> nonconcurrent_groups;
@@ -592,8 +596,10 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
     // contributes its group's ticket exactly once, so the per-group count is just a histogram over the tickets.
     if (window_function == WindowFunction::Count && input_column_id == INVALID_COLUMN_ID) {
       auto values = pmr_vector<int64_t>(group_count, 0);
-      for (const auto ticket : groups->tickets) {
-        ++values[ticket];
+      const auto* const tickets = groups->tickets.get();
+      const auto row_count = input_table->row_count();
+      for (auto row_index = size_t{0}; row_index < row_count; ++row_index) {
+        ++values[tickets[row_index]];
       }
       output_segments[target_index] = std::make_shared<ValueSegment<int64_t>>(std::move(values));
       return;
@@ -606,7 +612,7 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
         case WindowFunction::Min: {
           using AggregateType = typename WindowFunctionTraits<ColumnDataType, WindowFunction::Min>::ReturnType;
           auto [values, nulls] = _aggregate_grouped<ColumnDataType, AggregateType, WindowFunction::Min>(
-              groups->tickets, group_count, input_table, input_column_id);
+              groups->tickets.get(), group_count, input_table, input_column_id);
           output_segments[target_index] =
               std::make_shared<ValueSegment<AggregateType>>(std::move(values), std::move(nulls));
           break;
@@ -614,7 +620,7 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
         case WindowFunction::Max: {
           using AggregateType = typename WindowFunctionTraits<ColumnDataType, WindowFunction::Max>::ReturnType;
           auto [values, nulls] = _aggregate_grouped<ColumnDataType, AggregateType, WindowFunction::Max>(
-              groups->tickets, group_count, input_table, input_column_id);
+              groups->tickets.get(), group_count, input_table, input_column_id);
           output_segments[target_index] =
               std::make_shared<ValueSegment<AggregateType>>(std::move(values), std::move(nulls));
           break;
@@ -622,7 +628,7 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
         case WindowFunction::Sum: {
           using AggregateType = typename WindowFunctionTraits<ColumnDataType, WindowFunction::Sum>::ReturnType;
           auto [values, nulls] = _aggregate_grouped<ColumnDataType, AggregateType, WindowFunction::Sum>(
-              groups->tickets, group_count, input_table, input_column_id);
+              groups->tickets.get(), group_count, input_table, input_column_id);
           output_segments[target_index] =
               std::make_shared<ValueSegment<AggregateType>>(std::move(values), std::move(nulls));
           break;
@@ -630,7 +636,7 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
         case WindowFunction::Avg: {
           using AggregateType = typename WindowFunctionTraits<ColumnDataType, WindowFunction::Avg>::ReturnType;
           auto [values, nulls] = _aggregate_grouped<ColumnDataType, AggregateType, WindowFunction::Avg>(
-              groups->tickets, group_count, input_table, input_column_id);
+              groups->tickets.get(), group_count, input_table, input_column_id);
           output_segments[target_index] =
               std::make_shared<ValueSegment<AggregateType>>(std::move(values), std::move(nulls));
           break;
@@ -638,21 +644,21 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
         case WindowFunction::Count: {
           using AggregateType = typename WindowFunctionTraits<ColumnDataType, WindowFunction::Count>::ReturnType;
           auto result = _aggregate_grouped<ColumnDataType, AggregateType, WindowFunction::Count>(
-              groups->tickets, group_count, input_table, input_column_id);
+              groups->tickets.get(), group_count, input_table, input_column_id);
           // COUNT never produces NULL.
           output_segments[target_index] = std::make_shared<ValueSegment<AggregateType>>(std::move(result.first));
           break;
         }
         case WindowFunction::CountDistinct: {
           auto values =
-              _count_distinct_grouped<ColumnDataType>(groups->tickets, group_count, input_table, input_column_id);
+              _count_distinct_grouped<ColumnDataType>(groups->tickets.get(), group_count, input_table, input_column_id);
           output_segments[target_index] = std::make_shared<ValueSegment<int64_t>>(std::move(values));
           break;
         }
         case WindowFunction::StandardDeviationSample: {
           if constexpr (std::is_arithmetic_v<ColumnDataType>) {
-            auto [values, nulls] = _standard_deviation_sample_grouped<ColumnDataType>(groups->tickets, group_count,
-                                                                                      input_table, input_column_id);
+            auto [values, nulls] = _standard_deviation_sample_grouped<ColumnDataType>(
+                groups->tickets.get(), group_count, input_table, input_column_id);
             output_segments[target_index] = std::make_shared<ValueSegment<double>>(std::move(values), std::move(nulls));
           } else {
             Fail("StandardDeviationSample is not available on non-arithmetic types.");
@@ -661,7 +667,7 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
         }
         case WindowFunction::Any: {
           auto [values, nulls] =
-              _any_grouped<ColumnDataType>(groups->tickets, group_count, input_table, input_column_id);
+              _any_grouped<ColumnDataType>(groups->tickets.get(), group_count, input_table, input_column_id);
           // ANY() passes the source column through, so the output keeps its nullability.
           if (input_table->column_is_nullable(input_column_id)) {
             output_segments[target_index] =
@@ -699,7 +705,7 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
       auto [values, nulls] = [&]() -> std::pair<pmr_vector<ColumnDataType>, pmr_vector<bool>> {
         if (!use_hash_table_for_groupby) {
           // High cardinality: a sequential scan of the source column beats chasing the scattered key rows.
-          return _any_grouped<ColumnDataType>(groups->tickets, group_count, input_table, groupby_column_id);
+          return _any_grouped<ColumnDataType>(groups->tickets.get(), group_count, input_table, groupby_column_id);
         }
         // Low cardinality: read each group's value straight from its hash-table key row. `string_col_index` locates
         // this column among the string group-by columns (see `RowView::string_ptr`).
@@ -752,6 +758,17 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
       }));
     }
     Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+  }
+
+  if (CONCURRENT) {
+    auto cleanup_job =
+        std::make_shared<JobTask>([groups = std::move(groups), concurrent_groups = std::move(concurrent_groups),
+                                   nonconcurrent_groups = std::move(nonconcurrent_groups)]() mutable {
+          groups.reset();
+          concurrent_groups.reset();
+          nonconcurrent_groups.reset();
+        });
+    cleanup_job->schedule();
   }
 
   auto result_table = std::make_shared<Table>(column_definitions, TableType::Data);
