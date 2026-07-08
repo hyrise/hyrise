@@ -134,7 +134,7 @@ ExcludeHeaderFilterRegex: 'third_party|version.hpp'
 #                                                           objects using shared pointers.
 # - portability-avoid-pragma-once                           See llvm-header-guard.
 # - llvm-prefer-static-over-anonymous-namespace             We use anonymous namespaces a lot. Contradicts with misc-use
-                                                            -anonymous-namespace, too.
+#                                                           -anonymous-namespace, too.
 
 CheckOptions:
   - { key: readability-identifier-naming.ClassCase, value: CamelCase }
