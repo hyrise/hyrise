@@ -65,7 +65,9 @@ def calculate_and_format_p_value(old_durations, new_durations):
     old_cv = np.std(old_durations) / np.mean(old_durations)
     new_cv = np.std(new_durations) / np.mean(new_durations)
     if old_cv > cv_significance_threshold or new_cv > cv_significance_threshold:
-        return "(variance too high)"
+        global add_note_for_high_variance_runs
+        add_note_for_high_variance_runs = True
+        return colored("*", "yellow", attrs=["bold"])
 
     return colored(f"{p_value:.4f}", "white") if is_significant else colored(f"{p_value:.4f}", "yellow", attrs=["bold"])
 
@@ -155,7 +157,8 @@ total_runtime_old = 0
 total_runtime_new = 0
 
 add_note_for_capped_runs = False  # Flag set when max query runs was set for benchmark run
-add_note_for_insufficient_pvalue_runs = False  # Flag set when runs was insufficient for p-value calculation
+add_note_for_insufficient_pvalue_runs = False  # Flag set when runs were insufficient for p-value calculation
+add_note_for_high_variance_runs = False  # Flag set when there was too much variance for p-value calculations
 
 
 # Create table header:
@@ -322,9 +325,9 @@ for line_number, line in enumerate(lines):
     table_string_reformatted += line + "\n"
 
 
-# In case the runs for the executed benchmark have been cut or the number of runs was insufficient for the p-value
-# calcution, we add notes to the end of the table.
-if add_note_for_capped_runs or add_note_for_insufficient_pvalue_runs:
+# In case the runs for the executed benchmark have been cut or the runs were insufficient for the p-value calcution, we
+# add notes to the end of the table.
+if any(add_note_for_capped_runs, add_note_for_insufficient_pvalue_runs, add_note_for_high_variance_runs):
     first_column_width = len(lines[1].split("|")[1])
     width_for_note = len(lines[0]) - first_column_width - 5  # 5 for seperators and spaces
     if add_note_for_capped_runs:
@@ -332,7 +335,10 @@ if add_note_for_capped_runs or add_note_for_insufficient_pvalue_runs:
         table_string_reformatted += "|" + (" Notes ".rjust(first_column_width, " "))
         table_string_reformatted += "|| " + note.ljust(width_for_note, " ") + "|\n"
     if add_note_for_insufficient_pvalue_runs:
-        note = "˅" + " Insufficient number of runs for p-value calculation"
+        note = "˅ Insufficient number of runs for p-value calculation"
+        table_string_reformatted += "|" + (" " * first_column_width) + "|| " + note.ljust(width_for_note, " ") + "|\n"
+    if add_note_for_high_variance_runs:
+        note = "* Variance of measurements is too high"
         table_string_reformatted += "|" + (" " * first_column_width) + "|| " + note.ljust(width_for_note, " ") + "|\n"
     table_string_reformatted += lines[-1] + "\n"
 
