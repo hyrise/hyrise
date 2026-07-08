@@ -165,12 +165,34 @@ class ConcurrentTicketMap {
 
   template <typename Fn>
   void remap_tickets(Fn&& fn) {
-    for (auto index = size_t{0}; index < _capacity; ++index) {
-      const auto state = _slots[index].state.load();
-      if (state >= TICKET_BIAS) {
-        _slots[index].state = fn(state - TICKET_BIAS) + TICKET_BIAS;
+    const auto remap_range = [this, &fn](const size_t begin, const size_t end) {
+      for (auto index = begin; index < end; ++index) {
+        const auto state = _slots[index].state.load(std::memory_order_relaxed);
+        if (state >= TICKET_BIAS) {
+          _slots[index].state.store(fn(state - TICKET_BIAS) + TICKET_BIAS, std::memory_order_relaxed);
+        }
       }
+    };
+
+    if (_capacity <= PARALLEL_INIT_SLOTS) {
+      remap_range(0, _capacity);
+      return;
     }
+
+    const auto max_jobs = (_capacity + PARALLEL_INIT_SLOTS - 1) / PARALLEL_INIT_SLOTS;
+    const auto job_count = std::min<size_t>(Hyrise::get().topology.num_cpus(), max_jobs);
+    const auto slots_per_job = _capacity / job_count;
+    auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+    jobs.reserve(job_count);
+
+    for (auto job_id = size_t{0}; job_id < job_count; ++job_id) {
+      const auto begin = job_id * slots_per_job;
+      const auto end = job_id + 1 == job_count ? _capacity : begin + slots_per_job;
+      jobs.emplace_back(std::make_shared<JobTask>([&remap_range, begin, end] {
+        remap_range(begin, end);
+      }));
+    }
+    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
   }
 
   size_t capacity() const {
