@@ -821,30 +821,29 @@ std::shared_ptr<GroupKeyData<true>> _compute_groups_byte_row_concurrent(
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   jobs.reserve(job_count);
   for (auto job_id = uint32_t{0}; job_id < job_count; ++job_id) {
-    jobs.emplace_back(
-        std::make_shared<JobTask>([&process_chunk, &format, &arenas, &next_ticket_range_start, &ticket_gaps,
-                                   max_chunk_size, chunk_count, &next_chunk_id, job_count, job_id]() {
-          auto materialized = MaterializedRows{};
-          materialized.rows = std::make_unique<uint8_t[]>(max_chunk_size * format.row_size);
+    jobs.emplace_back(std::make_shared<JobTask>([&process_chunk, &format, &arenas, &next_ticket_range_start,
+                                                 &ticket_gaps, max_chunk_size, chunk_count, &next_chunk_id, job_id]() {
+      auto materialized = MaterializedRows{};
+      materialized.rows = std::make_unique<uint8_t[]>(max_chunk_size * format.row_size);
 
-          // Direct-mapped cache in front of the global table indexed by the low bits of the row hash. It is probed
-          // before the global table so that a recently seen group (within or across chunks) skips the often-cold
-          // global lookup and its string comparisons. Each occupied slot stores a stable key pointer into one of the
-          // `key_arenas`, so entries survive across chunks.
-          auto local_cache = std::array<GroupCacheSlot, GROUP_CACHE_SLOTS>{};
-          auto& arena = *arenas[job_id];
+      // Direct-mapped cache in front of the global table indexed by the low bits of the row hash. It is probed
+      // before the global table so that a recently seen group (within or across chunks) skips the often-cold
+      // global lookup and its string comparisons. Each occupied slot stores a stable key pointer into one of the
+      // `key_arenas`, so entries survive across chunks.
+      auto local_cache = std::array<GroupCacheSlot, GROUP_CACHE_SLOTS>{};
+      auto& arena = *arenas[job_id];
 
-          auto next_ticket = next_ticket_range_start.fetch_add(TICKET_RANGE_LENGTH);
-          auto ticket_range_end = next_ticket + TICKET_RANGE_LENGTH;
-          while (true) {
-            const auto chunk_id = next_chunk_id.fetch_add(1);
-            if (chunk_id >= chunk_count) {
-              break;
-            }
-            process_chunk(ChunkID{chunk_id}, local_cache, materialized, arena, next_ticket, ticket_range_end);
-          }
-          ticket_gaps[job_id] = {next_ticket, ticket_range_end};
-        }));
+      auto next_ticket = next_ticket_range_start.fetch_add(TICKET_RANGE_LENGTH);
+      auto ticket_range_end = next_ticket + TICKET_RANGE_LENGTH;
+      while (true) {
+        const auto chunk_id = next_chunk_id.fetch_add(1);
+        if (chunk_id >= chunk_count) {
+          break;
+        }
+        process_chunk(ChunkID{chunk_id}, local_cache, materialized, arena, next_ticket, ticket_range_end);
+      }
+      ticket_gaps[job_id] = {next_ticket, ticket_range_end};
+    }));
   }
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 
