@@ -164,8 +164,8 @@ struct GroupKeyDataBase {
   RowFormat row_format;
   std::vector<std::unique_ptr<std::pmr::monotonic_buffer_resource>> key_arenas;
 
-  // PER ROW: the group index (ticket) of that input row. Used to scatter aggregate values into per-group slots.
-  std::vector<uint64_t> tickets;
+  // PER ROW: the group index (ticket) of that input row.
+  std::unique_ptr<uint64_t[]> tickets;
   size_t group_count = 0;
 
   // Whether `global_hash_table` is populated and can be read to recover each group's group-by values from its key row.

@@ -288,7 +288,7 @@ std::shared_ptr<GroupKeyData<true>> _compute_groups_single_column_concurrent(
   // only a tickets + group-count carrier and its `row_format`/`global_hash_table` stay unused.
   auto group_key_data = std::make_shared<GroupKeyData<true>>(RowFormat{});
   auto& tickets = group_key_data->tickets;
-  tickets.resize(input_table->row_count());
+  tickets = std::make_unique_for_overwrite<uint64_t[]>(input_table->row_count());
 
   const auto data_type = input_table->column_data_type(groupby_column_id);
   const auto chunk_count = input_table->chunk_count();
@@ -463,7 +463,7 @@ std::shared_ptr<GroupKeyData<false>> _compute_groups_single_column_sequential(
   // tickets + group-count carrier and its `row_format`/`global_hash_table` stay unused.
   auto group_key_data = std::make_shared<GroupKeyData<false>>(RowFormat{});
   auto& tickets = group_key_data->tickets;
-  tickets.reserve(input_table->row_count());
+  tickets = std::make_unique_for_overwrite<uint64_t[]>(input_table->row_count());
 
   const auto data_type = input_table->column_data_type(groupby_column_id);
   const auto chunk_count = input_table->chunk_count();
@@ -481,6 +481,7 @@ std::shared_ptr<GroupKeyData<false>> _compute_groups_single_column_sequential(
       auto next_ticket = uint64_t{0};
       auto null_ticket = uint64_t{0};
       auto has_null = false;
+      auto row_index = size_t{0};  // flat row index across chunks, matching the `tickets` layout
 
       for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
         const auto& chunk = input_table->get_chunk(chunk_id);
@@ -500,7 +501,7 @@ std::shared_ptr<GroupKeyData<false>> _compute_groups_single_column_sequential(
             }
             ticket = iter->second;
           }
-          tickets.push_back(ticket);
+          tickets[row_index++] = ticket;
         });
 
         // Adaptively reserve space in the hashmap just as in `_compute_groups_byte_row`.
@@ -579,7 +580,7 @@ std::shared_ptr<GroupKeyData<false>> _compute_groups_byte_row_sequential(
   const auto chunk_count = input_table->chunk_count();
 
   auto group_key_data = std::make_shared<GroupKeyData<false>>(row_format);
-  group_key_data->tickets.resize(input_table->row_count());
+  group_key_data->tickets = std::make_unique_for_overwrite<uint64_t[]>(input_table->row_count());
 
   if (chunk_count == 0) {
     group_key_data->group_count = 0;
@@ -697,7 +698,7 @@ std::shared_ptr<GroupKeyData<true>> _compute_groups_byte_row_concurrent(
   const auto chunk_count = input_table->chunk_count();
 
   auto group_key_data = std::make_shared<GroupKeyData<true>>(row_format);
-  group_key_data->tickets.resize(input_table->row_count());
+  group_key_data->tickets = std::make_unique_for_overwrite<uint64_t[]>(input_table->row_count());
 
   if (chunk_count == 0) {
     group_key_data->group_count = 0;
@@ -816,29 +817,34 @@ std::shared_ptr<GroupKeyData<true>> _compute_groups_byte_row_concurrent(
   // form a dense [0, group_count) range. The ranges tile the ticket space contiguously, so the only gaps are these
   // trailing ones.
   auto ticket_gaps = std::vector<std::pair<uint64_t, uint64_t>>(job_count);
-
+  auto next_chunk_id = std::atomic<uint32_t>{0};
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   jobs.reserve(job_count);
   for (auto job_id = uint32_t{0}; job_id < job_count; ++job_id) {
-    jobs.emplace_back(std::make_shared<JobTask>([&process_chunk, &format, &arenas, &next_ticket_range_start,
-                                                 &ticket_gaps, max_chunk_size, chunk_count, job_count, job_id]() {
-      auto materialized = MaterializedRows{};
-      materialized.rows = std::make_unique<uint8_t[]>(max_chunk_size * format.row_size);
+    jobs.emplace_back(
+        std::make_shared<JobTask>([&process_chunk, &format, &arenas, &next_ticket_range_start, &ticket_gaps,
+                                   max_chunk_size, chunk_count, &next_chunk_id, job_count, job_id]() {
+          auto materialized = MaterializedRows{};
+          materialized.rows = std::make_unique<uint8_t[]>(max_chunk_size * format.row_size);
 
-      // Direct-mapped cache in front of the global table indexed by the low bits of the row hash. It is probed before
-      // the global table so that a recently seen group (within or across chunks) skips the often-cold global lookup and
-      // its string comparisons. Each occupied slot stores a stable key pointer into one of the `key_arenas`, so entries
-      // survive across chunks.
-      auto local_cache = std::array<GroupCacheSlot, GROUP_CACHE_SLOTS>{};
-      auto& arena = *arenas[job_id];
+          // Direct-mapped cache in front of the global table indexed by the low bits of the row hash. It is probed
+          // before the global table so that a recently seen group (within or across chunks) skips the often-cold
+          // global lookup and its string comparisons. Each occupied slot stores a stable key pointer into one of the
+          // `key_arenas`, so entries survive across chunks.
+          auto local_cache = std::array<GroupCacheSlot, GROUP_CACHE_SLOTS>{};
+          auto& arena = *arenas[job_id];
 
-      auto next_ticket = next_ticket_range_start.fetch_add(TICKET_RANGE_LENGTH);
-      auto ticket_range_end = next_ticket + TICKET_RANGE_LENGTH;
-      for (auto chunk_id = ChunkID{job_id}; chunk_id < chunk_count; chunk_id += job_count) {
-        process_chunk(chunk_id, local_cache, materialized, arena, next_ticket, ticket_range_end);
-      }
-      ticket_gaps[job_id] = {next_ticket, ticket_range_end};
-    }));
+          auto next_ticket = next_ticket_range_start.fetch_add(TICKET_RANGE_LENGTH);
+          auto ticket_range_end = next_ticket + TICKET_RANGE_LENGTH;
+          while (true) {
+            const auto chunk_id = next_chunk_id.fetch_add(1);
+            if (chunk_id >= chunk_count) {
+              break;
+            }
+            process_chunk(ChunkID{chunk_id}, local_cache, materialized, arena, next_ticket, ticket_range_end);
+          }
+          ticket_gaps[job_id] = {next_ticket, ticket_range_end};
+        }));
   }
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 
