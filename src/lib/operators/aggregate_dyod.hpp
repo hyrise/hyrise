@@ -74,6 +74,7 @@ struct TypedAggregateVector : AbstractAggregateVector {
 
  protected:
   pmr_vector<AggregateDataType> _aggregates;
+  std::unordered_set<AggregateDataType> _distinct_count;
 };
 
 template <typename T>

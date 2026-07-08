@@ -121,6 +121,9 @@ void resolve_window_function(WindowFunction window_function, Functor&& functor) 
     case WindowFunction::Avg:
       functor(std::integral_constant<WindowFunction, WindowFunction::Avg>{});
       break;
+    case WindowFunction::CountDistinct:
+      functor(std::integral_constant<WindowFunction, WindowFunction::CountDistinct>{});
+      break;
     default:
       Fail("Unsupported aggregate function.");
   }
@@ -286,10 +289,17 @@ std::shared_ptr<AbstractSegment> AggregateDYOD::_write_aggregate_segment(size_t 
       return _write_count_aggregate_segment(aggregate_index, aggregate_vector);
     } else if constexpr (aggregate_function == WindowFunction::Avg) {
       return _write_avg_aggregate_segment(aggregate_index, aggregate_vector);
+    } else if constexpr (aggregate_function == WindowFunction::CountDistinct) {
+      return _write_count_distinct_aggregate_segment(aggregate_index, aggregate_vector);
     } else {
       return _write_default_aggregate_segment(aggregate_index, aggregate_vector);
     }
   }
+}
+
+template <typename AggregateDataType>
+std::shared_ptr<AbstractSegment> AggregateDYOD::_write_count_distinct_aggregate_segment(){
+
 }
 
 template <typename AggregateDataType>
@@ -443,13 +453,21 @@ void AggregateDYOD::_aggregate_segment(size_t aggregate_index, const AbstractSeg
       WindowFunctionBuilder<ColumnDataType, AggregateDataType, aggregate_function>().get_aggregate_function();
   auto& aggregate_vector = static_cast<TypedAggregateVector<AggregateDataType>&>(*_aggregate_vectors[aggregate_index]);
 
-  segment_iterate<ColumnDataType>(segment, [&](const auto& position) {
-    if (!position.is_null()) {
-      const auto group_id = group_ids[position.chunk_offset()];
-      aggregator(position.value(), aggregate_vector.count(group_id), aggregate_vector[group_id]);
-      aggregate_vector.increment_count(group_id);
-    }
-  });
+  if constexpr (aggregate_function == WindowFunction::CountDistinct) {
+    segment_iterate<ColumnDataType>(segment, [&] (const auto& position) {
+      if (!position.is_null()) {
+        _distinct_count.add();
+      }
+    });
+  } else {
+    segment_iterate<ColumnDataType>(segment, [&](const auto& position) {
+      if (!position.is_null()) {
+        const auto group_id = group_ids[position.chunk_offset()];
+        aggregator(position.value(), aggregate_vector.count(group_id), aggregate_vector[group_id]);
+        aggregate_vector.increment_count(group_id);
+      }
+    });
+  }
 }
 
 void AggregateDYOD::_aggregate_count_star(size_t aggregate_index, const std::vector<GroupID>& group_ids) {
