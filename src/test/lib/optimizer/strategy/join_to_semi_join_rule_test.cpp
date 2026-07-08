@@ -127,7 +127,7 @@ TEST_F(JoinToSemiJoinRuleTest, MultiPredicateInnerJoinToSemiJoinWithSingleEqui) 
 TEST_F(JoinToSemiJoinRuleTest, MultiPredicateInnerJoinToSemiJoinWithMultiEqui) {
   /**
    * Defines a multi-column UCC (column0, column1) and two inner join predicates of type Equals covering these two
-   * columns. We expect to see a semi join reformulation because the resulting unique column combination matches the
+   * columns. We expect to see a semi-join reformulation because the resulting unique column combination matches the
    * inner join's predicate expressions.
    */
   {
@@ -236,7 +236,7 @@ TEST_F(JoinToSemiJoinRuleTest, DoNotTouchInnerJoinWithoutMatchingUcc) {
    *
    * We define a multi-column UCC (column0, column1), but only a single Equals-predicate for the inner join
    * `(a == column0)`. Hence, the resulting unique column combination does not match the expressions of the single
-   * equals predicate and we should not see a semi join reformulation.
+   * equals predicate and we should not see a semi-join reformulation.
    */
 
   {

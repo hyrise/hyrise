@@ -150,8 +150,8 @@ void write_output_segments(Segments& output_segments, const std::shared_ptr<cons
         if (common_chunk_id && *common_chunk_id != INVALID_CHUNK_ID) {
           // Track the occuring chunk ids and set the single chunk guarantee if possible. Generally, this is the case
           // if both of the following are true: (1) The probe side input already had this guarantee and (2) no radix
-          // partitioning was used. If multiple small PosLists were merged (see MIN_SIZE in join_hash.cpp), this
-          // guarantee cannot be given.
+          // partitioning was used. If multiple small PosLists were merged (see MIN_SIZE), this guarantee cannot be
+          // given.
           new_pos_list->guarantee_single_chunk();
         }
 
@@ -252,8 +252,8 @@ std::vector<std::shared_ptr<Chunk>> write_output_chunks(
     // A lower number of output chunks reduces the overhead, especially when multi-threading is used. However,
     // merging chunks destroys a potential references_single_chunk property of the PosList that would have been
     // emitted otherwise. Search for guarantee_single_chunk in join_hash_steps.hpp for details.
-    constexpr auto MIN_SIZE = 500;
-    constexpr auto MAX_SIZE = MIN_SIZE * 2;
+    constexpr auto MIN_SIZE = 1000;
+    constexpr auto MAX_SIZE = MIN_SIZE * 4;
 
     // Moving the values into a shared PosList saves us some work in write_output_segments. We know that
     // left_side_pos_list and right_side_pos_list will not be used again.
@@ -274,7 +274,7 @@ std::vector<std::shared_ptr<Chunk>> write_output_chunks(
 
     if (allow_partition_merge) {
       // Checking the probe side's PosLists is sufficient. The PosLists from the build side have either the same size
-      // or are empty (in case of semi/anti joins).
+      // or are empty (in case of semi-/anti-joins).
       while (partition_id + 1 < pos_lists_right.size() && right_side_pos_list->size() < MIN_SIZE &&
              right_side_pos_list->size() + pos_lists_right[partition_id + 1].size() < MAX_SIZE) {
         // Copy entries from following PosList into the current working set (left_side_pos_list) and free the memory

@@ -35,7 +35,7 @@
 namespace hyrise {
 
 // For most join types, we are interested in retrieving the positions (i.e., the RowIDs) on the left and the right side.
-// For semi and anti joins, we only care whether a value exists or not, so there is no point in tracking the position
+// For semi-/anti-joins, we only care whether a value exists or not, so there is no point in tracking the position
 // in the input table of more than one occurrence of a value. However, if we have secondary predicates, we do need to
 // track all occurrences of a value as that first position might be disqualified later.
 enum class JoinHashBuildMode : uint8_t { AllPositions, ExistenceOnly };
@@ -123,7 +123,7 @@ class PosHashTable {
   }
 
   // For a value seen on the build side, add the value to the hash map.
-  // The row id is only added in the AllPositions mode. For ExistenceOnly, as used e.g., by semi joins, the actual
+  // The row id is only added in the AllPositions mode. For ExistenceOnly, as used e.g., by semi-joins, the actual
   // row id is irrelevant and is not stored.
   template <typename InputType>
   void emplace(const InputType& value, RowID row_id) {
@@ -207,7 +207,7 @@ class PosHashTable {
     return _offset_hash_table.size();
   }
 
-  // Return the number of positions stored in the hash table. For semi/anti joins, no positions are stored in the hash
+  // Return the number of positions stored in the hash table. For semi-/anti-joins, no positions are stored in the hash
   // table. For other join types, we return the size of the unified position list that is created in finalize().
   std::optional<size_t> position_count() const {
     if (_mode == JoinHashBuildMode::AllPositions) {
@@ -276,37 +276,30 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
                                     std::vector<std::vector<size_t>>& histograms, const size_t radix_bits,
                                     BloomFilter& output_bloom_filter,
                                     const BloomFilter& input_bloom_filter = all_true_bloom_filter) {
-  // Retrieve input chunk_count as it might change during execution if we work on a non-reference table
+  // Retrieve input chunk_count as it might change during execution if we work on a non-reference table.
   auto chunk_count = in_table->chunk_count();
 
-  const std::hash<HashedType> hash_function;
-  // List of all elements that will be partitioned
-  auto radix_container = RadixContainer<T>{};
-  radix_container.resize(chunk_count);
+  const auto hash_function = std::hash<HashedType>{};
+  // List of all elements that will be partitioned.
+  auto radix_container = RadixContainer<T>(chunk_count);
 
-  // Fan-out
+  // Determine fan-out (i.e., number of radix partitions to create).
   const auto num_radix_partitions = size_t{1} << radix_bits;
-
-  // Currently, we just do one pass
-  const auto pass = size_t{0};
-  const auto radix_mask = static_cast<size_t>(std::pow(2, radix_bits * (pass + 1)) - 1);
+  const auto radix_mask = static_cast<size_t>(std::pow(2, radix_bits) - 1);
 
   Assert(output_bloom_filter.empty(), "Unexpected non-empty output_bloom_filter.");
   output_bloom_filter.resize(BLOOM_FILTER_SIZE);
   auto output_bloom_filter_mutex = std::mutex{};
-
   Assert(input_bloom_filter.size() == BLOOM_FILTER_SIZE, "Invalid input_bloom_filter.");
 
-  // Create histograms per chunk
+  // Create histograms per chunk.
   histograms.resize(chunk_count);
 
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   jobs.reserve(chunk_count);
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk_in = in_table->get_chunk(chunk_id);
-    if (!chunk_in) {
-      continue;
-    }
+    Assert(chunk_in, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
     const auto num_rows = chunk_in->size();
 
@@ -317,11 +310,6 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
         // We cannot write to BloomFilter concurrently, so we build a local one first.
         local_output_bloom_filter = BloomFilter(BLOOM_FILTER_SIZE, false);
         used_output_bloom_filter = local_output_bloom_filter;
-      }
-
-      // Skip chunks that were physically deleted.
-      if (!chunk_in) {
-        return;
       }
 
       auto& elements = radix_container[chunk_id].elements;
@@ -335,7 +323,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
       auto elements_iter = elements.begin();
       [[maybe_unused]] auto null_values_iter = null_values.begin();
 
-      // prepare histogram
+      // Prepare histogram.
       auto histogram = std::vector<size_t>(num_radix_partitions);
 
       auto reference_chunk_offset = ChunkOffset{0};
@@ -370,14 +358,12 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
             }
 
             if (!skip) {
-              // Fill the corresponding slot in the bloom filter
+              // Fill the corresponding slot in the bloom filter.
               used_output_bloom_filter.get()[hashed_value & BLOOM_FILTER_MASK] = true;
 
-              /*
-              For ReferenceSegments we do not use the RowIDs from the referenced tables.
-              Instead, we use the index in the ReferenceSegment itself. This way we can later correctly dereference
-              values from different inputs (important for Multi Joins).
-              */
+              // For ReferenceSegments, we do not use the RowIDs from the referenced tables. Instead, we use the index
+              // in the ReferenceSegment itself. This way we can later correctly dereference values from different
+              // inputs (important for Multi Joins).
               if constexpr (is_reference_segment_iterable_v<IterableType>) {
                 *elements_iter = PartitionedElement<T>{RowID{chunk_id, reference_chunk_offset}, value.value()};
               } else {
@@ -400,7 +386,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
             }
           }
 
-          // reference_chunk_offset is only used for ReferenceSegments
+          // `reference_chunk_offset` is only used for ReferenceSegments.
           if constexpr (is_reference_segment_iterable_v<IterableType>) {
             ++reference_chunk_offset;
           }
@@ -409,8 +395,8 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
         }
       });
 
-      // elements was allocated with the size of the chunk. As we might have skipped NULL values, we need to resize the
-      // vector to the number of values actually written.
+      // `elements` was allocated with the size of the chunk. As we might have skipped NULL values, we need to resize
+      // the vector to the number of values actually written.
       elements.resize(std::distance(elements.begin(), elements_iter));
       null_values.resize(std::distance(null_values.begin(), null_values_iter));
 
@@ -534,14 +520,12 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
            "value information");
   }
 
-  const std::hash<HashedType> hash_function;
+  const auto hash_function = std::hash<HashedType>{};
 
   const auto input_partition_count = radix_container.size();
   const auto output_partition_count = size_t{1} << radix_bits;
 
-  // currently, we just do one pass
-  const size_t pass = 0;
-  const size_t radix_mask = static_cast<uint32_t>(std::pow(2, radix_bits * (pass + 1)) - 1);
+  const size_t radix_mask = static_cast<uint32_t>(std::pow(2, radix_bits) - 1);
 
   // allocate new (shared) output
   auto output = RadixContainer<T>(output_partition_count);
@@ -571,7 +555,7 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
     }
   }
 
-  std::vector<std::shared_ptr<AbstractTask>> jobs;
+  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   jobs.reserve(input_partition_count);
 
   for (auto input_partition_idx = ChunkID{0}; input_partition_idx < input_partition_count; ++input_partition_idx) {
@@ -766,7 +750,7 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
 
             } else {
               // We have not found matching items for the first predicate. Only continue for non-equi join modes.
-              // We use constexpr to prune this conditional for the equi-join implementation.
+              // We use constexpr to prune this conditional for the equi join implementation.
               // Note that the outer relation (i.e., left relation for LEFT OUTER JOINs) is the probing
               // relation since the relations are swapped upfront.
               if constexpr (keep_null_values) {
@@ -777,7 +761,7 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
           }
         } else {
           // When there is no hash table, we might still need to handle the values of the probe side for LEFT
-          // and RIGHT joins. We use constexpr to prune this conditional for the equi-join implementation.
+          // and RIGHT joins. We use constexpr to prune this conditional for the equi join implementation.
           if constexpr (keep_null_values) {
             // We assume that the relations have been swapped previously, so that the outer relation is the probing
             // relation.

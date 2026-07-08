@@ -232,7 +232,7 @@ TEST_F(OperatorPerformanceDataTest, JoinHashBloomFilterReductions) {
   EXPECT_EQ(inner_perf.hash_tables_position_count, 3);           // positions 1,2,3
   EXPECT_TRUE(inner_perf.left_input_is_build_side);
 
-  // Semi join case: We check that no positions are stored (see explanation for "AllPositions" mode in hash map).
+  // Semi-join case: We check that no positions are stored (see explanation for "AllPositions" mode in hash map).
   // Further, we force the larger input to be the build side. As we first materialize the smaller side (i.e., the probe
   // side in this case) and create the initial bloom filter with that, there will be no reduction due to bloom
   // filtering on the probe side.
@@ -395,21 +395,21 @@ TEST_F(OperatorPerformanceDataTest, OperatorPerformanceDataHasOutputMarkerSet) {
 }
 
 TEST_F(OperatorPerformanceDataTest, JoinHashPerformanceToOutputStream) {
-  OperatorPerformanceData<JoinHash::OperatorSteps> performance_data;
+  auto performance_data = OperatorPerformanceData<JoinHash::OperatorSteps>{};
   performance_data.set_step_runtime(JoinHash::OperatorSteps::BuildSideMaterializing, std::chrono::nanoseconds{17});
   performance_data.set_step_runtime(JoinHash::OperatorSteps::Probing, std::chrono::nanoseconds{17});
   performance_data.has_output = true;
-  performance_data.output_row_count = 1u;
-  performance_data.output_chunk_count = 1u;
+  performance_data.output_row_count = 1;
+  performance_data.output_chunk_count = 1;
 
   if constexpr (HYRISE_DEBUG) {
-    performance_data.walltime = std::chrono::nanoseconds{2u};
+    performance_data.walltime = std::chrono::nanoseconds{2};
     auto stringstream_throw = std::stringstream{};
     // output_to_stream() throws when cumulative step runtimes are larger than operator runtime.
     EXPECT_THROW(performance_data.output_to_stream(stringstream_throw, DescriptionMode::SingleLine), std::logic_error);
   }
 
-  performance_data.walltime = std::chrono::nanoseconds{35u};
+  performance_data.walltime = std::chrono::nanoseconds{35};
   auto stringstream = std::stringstream{};
   stringstream << performance_data;
   EXPECT_TRUE(
@@ -428,15 +428,15 @@ TEST_F(OperatorPerformanceDataTest, OutputToStream) {
   {
     auto stream = std::stringstream{};
     performance_data.has_output = true;
-    performance_data.output_row_count = 2u;
-    performance_data.output_chunk_count = 1u;
-    performance_data.walltime = std::chrono::nanoseconds{999u};
+    performance_data.output_row_count = 2;
+    performance_data.output_chunk_count = 1;
+    performance_data.walltime = std::chrono::nanoseconds{999};
     stream << performance_data;
     EXPECT_EQ(stream.str(), "Output: 2 rows in 1 chunk, 999 ns.");
 
     // Switch chunk/rows to test for plural.
-    performance_data.output_row_count = 1u;
-    performance_data.output_chunk_count = 2u;
+    performance_data.output_row_count = 1;
+    performance_data.output_chunk_count = 2;
     stream.str("");
     stream << performance_data;
     EXPECT_EQ(stream.str(), "Output: 1 row in 2 chunks, 999 ns.");

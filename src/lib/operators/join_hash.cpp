@@ -441,7 +441,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
 
     /**
      * 3. Build hash tables.
-     *    In the case of semi or anti joins, we do not need to track all rows on the hashed side, just one per value.
+     *    In the case of semi-/anti-joins, we do not need to track all rows on the hashed side, just one per value.
      *    value. However, if we have secondary predicates, those might fail on that single row. In that case, we DO need
      *    all rows.
      *    We use the probe side's Bloom filter to exclude values from the hash table that will not be accessed in the

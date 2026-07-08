@@ -456,8 +456,7 @@ TEST_F(ColumnPruningRuleTest, PruneInputsNotNeededByWindowNode) {
 
 TEST_F(ColumnPruningRuleTest, AnnotatePrunableJoinInput) {
   // Join inputs where no expressions are used later in the query plan should be marked as prunable to enable further
-  // optimization, such as Join to Semi-Join rewrite. We skip Semi- and Anti-Joins since their right input is always
-  // prunable.
+  // optimization, such as join to semi-join rewrite. Skip semi-/anti-joins since their right input is always prunable.
   for (const auto join_mode :
        {JoinMode::Inner, JoinMode::Left, JoinMode::Right, JoinMode::FullOuter, JoinMode::Cross}) {
     for (const auto prunable_input_side : {LQPInputSide::Left, LQPInputSide::Right}) {
