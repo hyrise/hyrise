@@ -280,6 +280,7 @@ set(
     operators/operator_performance_data.hpp
     operators/operator_scan_predicate.cpp
     operators/operator_scan_predicate.hpp
+    operators/operator_state.hpp
     operators/pqp_utils.cpp
     operators/pqp_utils.hpp
     operators/print.cpp
