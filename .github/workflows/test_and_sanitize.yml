@@ -35,7 +35,10 @@ jobs:
       - name: Build Project
         run: ninja -C ${build_dir}
 
-      - name: Run Tests
+     - name: Run Non-Grouping Aggregate Tests
+        run: ${build_dir}/hyriseTest --gtest_filter="*NoGroupbySingleAggregate*:-*StandardDeviationSample*"
+
+      - name: Run All Aggregate Tests
         run: ${build_dir}/hyriseTest --gtest_filter="*OperatorsAggregateTest*:-*StandardDeviationSample*"
 
       - name: Build and Run Tests with UBSan, ASan, and LSan
