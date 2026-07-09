@@ -15,6 +15,7 @@
 
 #include "all_type_variant.hpp"
 #include "hyrise.hpp"
+#include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "statistics/statistics_objects/abstract_histogram.hpp"
@@ -50,6 +51,14 @@ void process_segment(AbstractSegment& segment, ValueDistributionVector<T>& value
     }
 
     if constexpr (std::is_same_v<T, pmr_string>) {
+      // const auto opt = domain.adapted_string_to_domain(iterator_value.value());
+      // if (opt) {
+      //   std::cout << "$";
+      // }
+      // else {
+      //   std::cout << "%";
+      // }
+
       const auto current_string = domain.string_to_domain(iterator_value.value());
       ++value_distribution_map[current_string];
     } else {

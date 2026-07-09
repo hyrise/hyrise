@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <limits>
+#include <optional>
 #include <string>
 
 #include "types.hpp"
@@ -92,6 +93,12 @@ class HistogramDomain<pmr_string> {
    * @return a copy of @param string_value with all characters capped by [min_char, max_char]
    */
   pmr_string string_to_domain(const pmr_string& string_value) const;
+
+  /**
+   * @return an optinal storing either @param string_value with all characters capped by [min_char, max_char] or nullopt
+   * if no capping is necessary.
+   */
+  std::optional<pmr_string> adapted_string_to_domain(const pmr_string& string_value) const;
 
   /**
    * @param string_in_domain    A string for which contains(string_in_domain) holds

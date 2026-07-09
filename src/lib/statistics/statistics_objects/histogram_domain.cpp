@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <limits>
+#include <optional>
 
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -56,6 +57,20 @@ HistogramDomain<pmr_string>::IntegralType HistogramDomain<pmr_string>::string_to
 }
 
 pmr_string HistogramDomain<pmr_string>::string_to_domain(const pmr_string& string_value) const {
+  auto converted = string_value;
+  for (auto pos = size_t{0}; pos < converted.size(); ++pos) {
+    converted[pos] = std::min(max_char, std::max(min_char, converted[pos]));
+  }
+  return converted;
+}
+
+std::optional<pmr_string> HistogramDomain<pmr_string>::adapted_string_to_domain(const pmr_string& string_value) const {
+  if (contains(string_value)) {
+    // TODO(anyone): if very long strings become a performance bottleneck here, we could combine this check with a
+    // (lazy) adaption of the string in case adpations are necessary, avoiding two passes of the same string.
+    return std::nullopt;
+  }
+
   auto converted = string_value;
   for (auto pos = size_t{0}; pos < converted.size(); ++pos) {
     converted[pos] = std::min(max_char, std::max(min_char, converted[pos]));
