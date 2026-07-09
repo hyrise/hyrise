@@ -36,7 +36,7 @@ jobs:
         run: ninja -C ${build_dir}
 
       - name: Run Tests
-        run: ${build_dir}/hyriseTest --gtest_filter="*NoGroupbySingleAggregate*:-*StandardDeviationSample*"
+        run: ${build_dir}/hyriseTest --gtest_filter="*OperatorsAggregateTest*:-*StandardDeviationSample*"
 
       - name: Build and Run Tests with UBSan, ASan, and LSan
         if: contains(github.event.pull_request.labels.*.name, 'fullci')
