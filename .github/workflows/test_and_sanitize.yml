@@ -35,7 +35,7 @@ jobs:
       - name: Build Project
         run: ninja -C ${build_dir}
 
-     - name: Run Non-Grouping Aggregate Tests
+      - name: Run Non-Grouping Aggregate Tests
         run: ${build_dir}/hyriseTest --gtest_filter="*NoGroupbySingleAggregate*:-*StandardDeviationSample*"
 
       - name: Run All Aggregate Tests
