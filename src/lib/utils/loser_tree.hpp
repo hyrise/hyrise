@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <functional>
 #include <ranges>
 #include <vector>
@@ -9,16 +10,13 @@ namespace hyrise {
 template <typename T, typename CompareValues = std::greater<T>>
 class LoserTree {
  public:
-  using value_type = T;
-  using size_t = std::size_t;
-
   explicit LoserTree(std::size_t capacity) : _nodes(capacity) {}
 
   size_t champion_node_index() const {
     return _nodes[0]._slot;
   }
 
-  const value_type& peek() const {
+  const T& peek() const {
     return _nodes[0]._element;
   }
 
@@ -26,7 +24,7 @@ class LoserTree {
     return _nodes[0]._is_high_sentinel;
   }
 
-  void push_to_leaf(const value_type& value, const size_t slot) {
+  void push_to_leaf(const T& value, const size_t slot) {
     _update(value, slot, false, false, CompareOnElements{});
   }
 
@@ -43,14 +41,14 @@ class LoserTree {
 
  private:
   struct Node {
-    value_type _element{};
+    T _element{};
     size_t _slot{};
     bool _is_low_sentinel{};
     bool _is_high_sentinel{};
 
     Node() = default;
 
-    Node(const value_type& element, const size_t slot, const bool is_low_sentinel, const bool is_high_sentinel)
+    Node(const T& element, const size_t slot, const bool is_low_sentinel, const bool is_high_sentinel)
         : _element(element), _slot(slot), _is_low_sentinel(is_low_sentinel), _is_high_sentinel(is_high_sentinel) {}
   };
 
@@ -67,7 +65,7 @@ class LoserTree {
   };
 
   template <typename Compare>
-  void _update(const value_type& value, const size_t& slot, bool is_low_sentinel, bool is_high_sentinel, Compare comp) {
+  void _update(const T& value, const size_t& slot, bool is_low_sentinel, bool is_high_sentinel, Compare comp) {
     auto path_winner_node = Node(value, slot, is_low_sentinel, is_high_sentinel);
     auto parent = (_nodes.size() + slot) / 2;
     while (parent > 0) {
