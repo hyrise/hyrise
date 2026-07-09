@@ -216,7 +216,7 @@ bool AbstractTask::_try_transition_to(TaskState new_state) {
    * This function must be locked to prevent race conditions. A different thread might be able to change _state
    * successfully while this thread is still between the validity check and _state.exchange(new_state).
    */
-  const auto lock = std::scoped_lock<std::mutex>{_transition_to_mutex};
+  const auto lock = std::lock_guard<std::mutex>{_transition_to_mutex};
   switch (new_state) {
     case TaskState::Scheduled:
       if (_state >= TaskState::Scheduled) {
