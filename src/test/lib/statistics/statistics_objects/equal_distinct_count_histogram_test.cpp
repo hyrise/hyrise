@@ -65,4 +65,18 @@ TEST_F(EqualDistinctCountHistogramTest, FromColumnFloat) {
   EXPECT_EQ(hist->bin(BinID{2}), HistogramBin<float>(3.6f, 6.1f, 4, 3));
 }
 
+TEST_F(EqualDistinctCountHistogramTest, AllNullValues) {
+  auto column_definitions = TableColumnDefinitions{};
+  column_definitions.emplace_back("a", DataType::Int, true);
+
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{10});
+
+  for (auto index = size_t{0}; index < 129; ++index) {
+    table->append({NULL_VALUE});
+  }
+
+  const auto hist = EqualDistinctCountHistogram<int32_t>::from_column(*table, ColumnID{0}, 16);
+  ASSERT_FALSE(hist);
+}
+
 }  // namespace hyrise
