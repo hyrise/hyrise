@@ -10,13 +10,11 @@ namespace hyrise {
 class RunMergerTest : public BaseTest {};
 
 TEST_F(RunMergerTest, Sorted) {
-  using value_type = uint64_t;
-
   constexpr auto RUN_SIZE = 16;
   constexpr auto DATA_SIZE = RUN_SIZE * RUN_SIZE;
-  auto input_buffer = std::vector<value_type>(DATA_SIZE);
-  auto output_buffer = std::vector<value_type>(DATA_SIZE);
-  auto sorted_runs = std::vector<std::span<value_type>>();
+  auto input_buffer = std::vector<uint64_t>(DATA_SIZE);
+  auto output_buffer = std::vector<uint64_t>(DATA_SIZE);
+  auto sorted_runs = std::vector<std::span<uint64_t>>();
 
   // Fill input buffer with sorted data.
   std::ranges::iota(input_buffer, 0);
@@ -29,7 +27,7 @@ TEST_F(RunMergerTest, Sorted) {
   }
   EXPECT_EQ(sorted_runs.size(), DATA_SIZE / RUN_SIZE);
 
-  RunMerger<value_type, std::greater<value_type>>::merge(sorted_runs, output_buffer);
+  RunMerger<uint64_t>::merge(sorted_runs, output_buffer);
 
   EXPECT_TRUE(std::ranges::is_sorted(output_buffer));
   for (auto idx = size_t{0}; idx < DATA_SIZE; ++idx) {

@@ -640,7 +640,6 @@ set(
     utils/load_table.hpp
     utils/log_manager.cpp
     utils/log_manager.hpp
-    utils/loser_tree.cpp
     utils/loser_tree.hpp
     utils/lossless_predicate_cast.cpp
     utils/lossless_predicate_cast.hpp
@@ -686,7 +685,6 @@ set(
     utils/print_utils.hpp
     utils/pruning_utils.cpp
     utils/pruning_utils.hpp
-    utils/run_merger.cpp
     utils/run_merger.hpp
     utils/settings/abstract_setting.cpp
     utils/settings/abstract_setting.hpp

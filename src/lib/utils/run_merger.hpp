@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <functional>
 #include <memory>
 #include <utility>
 #include <vector>
@@ -9,7 +10,7 @@
 
 namespace hyrise {
 
-template <typename T, typename Compare>
+template <typename T, typename Compare = std::greater<T>>
 class RunMerger {
  public:
   using value_type = T;
@@ -28,7 +29,8 @@ class RunMerger {
 
     auto output_begin = merged_output.begin();
     const auto output_end = merged_output.end();
-    const auto fan_in = _next_power_of_two(num_runs);
+    // Compute next power of two.
+    const auto fan_in = std::bit_ceil(num_runs);
 
     auto merge_tree = LoserTree<value_type, Compare>(fan_in);
     merge_tree.reset();
@@ -45,7 +47,7 @@ class RunMerger {
       merge_tree.invalidate(run_idx);
     }
     while (output_begin < output_end && !merge_tree.empty()) {
-      auto element = merge_tree.peek();
+      const auto& element = merge_tree.peek();
       auto run_idx = merge_tree.champion_node_index();
       auto& [current_it, end] = runs[run_idx];
       *(output_begin++) = element;
@@ -58,11 +60,6 @@ class RunMerger {
     }
 
     DebugAssert(merge_tree.empty(), "Merge tree is not empty.");
-  }
-
- private:
-  [[nodiscard]] static auto _next_power_of_two(const uint64_t value) {
-    return std::bit_ceil(value);
   }
 };
 }  // namespace hyrise
