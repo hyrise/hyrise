@@ -404,7 +404,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
 
       if (Hyrise::get().is_multi_threaded()) {
         // Merge the local_output_bloom_filter into output_bloom_filter
-        const auto lock = std::scoped_lock<std::mutex>{output_bloom_filter_mutex};
+        const auto lock = std::lock_guard<std::mutex>{output_bloom_filter_mutex};
         output_bloom_filter |= local_output_bloom_filter;
       }
     };

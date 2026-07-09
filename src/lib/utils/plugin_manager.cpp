@@ -65,7 +65,7 @@ void PluginManager::load_plugin(const std::filesystem::path& path) {
 
   // Lock for dl* functions (see clang-tidy's "concurrency-mt-unsafe")
   static auto dl_mutex = std::mutex{};
-  auto lock = std::scoped_lock<std::mutex>{dl_mutex};
+  auto lock = std::lock_guard<std::mutex>{dl_mutex};
 
   PluginHandle plugin_handle = dlopen(path.c_str(), static_cast<uint8_t>(RTLD_NOW) | static_cast<uint8_t>(RTLD_LOCAL));
   // NOLINTNEXTLINE(concurrency-mt-unsafe): dlerror is not thread-safe, but it is guarded by dl_mutex.
