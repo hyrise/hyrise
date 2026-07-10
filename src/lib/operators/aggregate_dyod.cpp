@@ -967,6 +967,9 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
   return keys_per_chunk;
 }
 
+const auto RADIX_MASK = 0xff;
+const auto RADIX_SPLIT_MAX_BUCKETS = 256;
+
 template <typename AggregateKey>
 std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
   const auto aggregate_count = _aggregates.size();
@@ -990,7 +993,12 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
     return _create_output_table(contexts_per_column, input_table, expected_result_size);
   }
 
-  auto row_to_bucket = std::vector<unit8_t>{row_count};
+  // auto row_to_bucket = std::vector<unit8_t>{row_count};
+  auto pos_lists = std::vector<std::shared_ptr<RowIDPosList>>{};
+  pos_lists.reserve(RADIX_SPLIT_MAX_BUCKETS);
+  for (auto bucket_id = size_t{0}; bucket_id < RADIX_SPLIT_MAX_BUCKETS; ++bucket_id) {
+    pos_lists.emplace_back(std::make_shared<RowIDPosList>());
+  }
 
   // Plan:
   // 1. Durchgehen der Zeilen -> n bits nehmen = i -> diese Zeile in die pos_lists[i] hinzufügen
@@ -1004,15 +1012,27 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
   resolve_data_type(data_type, [&](auto type) {
     using ColumnDataType = typename decltype(type)::type;
 
-    auto row_id = size_t{0};
-    for (auto chunk_id = ChunkId{0}; chunk_id < chunk_count; ++chunk_id) {
-      const auto segment = input_table->get_chunk(chunk_id)->get_segment(groubpy_column_we_take_for_radix);
-      const auto value_segment = static_pointer_cast<ValueSegment<ColumnDataType>>(segment);
-      Assert(value_segment, "Implementation for other segments than ValueSegment missing");
+    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+      if (input_table->get_chunk(chunk_id)->size() > 0) {
+        const auto segment = input_table->get_chunk(chunk_id)->get_segment(groubpy_column_we_take_for_radix);
+        const auto value_segment = std::static_pointer_cast<ValueSegment<ColumnDataType>>(segment);
+        Assert(value_segment, "Implementation for other segments than ValueSegment missing");
 
-      const auto& values = value_segment->values();
-      for (auto value : values) {
-        row_to_bucket[row_id++] = value & 0xff;  // TODO(anyone): Change to hash maybe?
+        const auto& values = value_segment->values();
+
+        const auto values_size = values.size();
+        const auto hash_f = std::hash<ColumnDataType>{};
+        for (auto chunk_offset = ChunkOffset{0}; chunk_offset < values_size; ++chunk_offset) {
+          auto value = 0;
+          if (!value_segment->is_null(chunk_offset)) {
+            auto v = values.at(chunk_offset);
+            value = hash_f(v);
+          }
+
+          // const auto value = value_segment->is_null(chunk_offset) ? 0 : hash_f(v);
+          const auto key = value & RADIX_MASK;  // TODO(anyone): Change to hash maybe?
+          pos_lists[key]->push_back(RowID{chunk_id, chunk_offset});
+        }
       }
     }
   });
@@ -1026,13 +1046,26 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
 
   for (auto thread_id = size_t{0}; thread_id < thread_count; ++thread_id) {
     threads.emplace_back([&, thread_id]() {
-      const auto local_input_table =
-          std::make_shared<const Table>(input_table->column_definition, TableType::References);
-      local_input_table->const auto current_chunk_offset = ChunkOffset{0};
+      const auto pos_list = pos_lists[thread_id];
+      Assert(pos_list, "PosList does not exist");
+
+      if (pos_list->empty()) {
+        output_tables[thread_id] = std::make_shared<Table>(input_table->column_definitions(), TableType::References);
+        return;
+      }
+
+      const auto local_input_table = std::make_shared<Table>(input_table->column_definitions(), TableType::References);
+
+      const auto column_count = input_table->column_count();
+      auto segments = Segments{};
+      for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+        segments.push_back(std::make_shared<ReferenceSegment>(input_table, column_id, pos_list));
+      }
+
+      local_input_table->append_chunk(segments);
 
       std::atomic_size_t expected_result_size;
       auto contexts_per_column = ContextsPerColumn(aggregate_count);
-      const auto& local_input_table = table_scan_bucket->get_output();
       _aggregate<AggregateKey>(contexts_per_column, local_input_table, expected_result_size);
       const auto& output_table = _create_output_table(contexts_per_column, local_input_table, expected_result_size);
       output_tables[thread_id] = output_table;
@@ -1044,9 +1077,9 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
   }
 
   for (auto thread_id = size_t{1}; thread_id < thread_count; ++thread_id) {
-    const auto chunk_count = output_tables[1]->chunk_count();
+    const auto chunk_count = output_tables[thread_id]->chunk_count();
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; chunk_id++) {
-      auto chunk = output_tables[1]->get_chunk(chunk_id);
+      auto chunk = output_tables[thread_id]->get_chunk(chunk_id);
       output_tables[0]->append_chunk(chunk->segments());
     }
   }
@@ -1060,7 +1093,7 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std
   // auto& step_performance_data = dynamic_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
   // auto timer = Timer{};
 
-  /**
+  /**W
    * PARTITIONING STEP
    */
   bool use_immediate_key_shortcut = false;
