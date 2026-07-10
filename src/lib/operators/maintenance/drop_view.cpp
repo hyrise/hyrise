@@ -28,7 +28,7 @@ std::shared_ptr<AbstractOperator> DropView::_on_deep_copy(
   return std::make_shared<DropView>(view_name, if_exists);
 }
 
-void DropView::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
+void DropView::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& /*parameters*/) {}
 
 std::shared_ptr<const Table> DropView::_on_execute() {
   // If IF EXISTS is not set and the view is not found, StorageManager throws an exception.

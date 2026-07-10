@@ -154,6 +154,6 @@ std::shared_ptr<AbstractOperator> IndexScan::_on_deep_copy(
   return index_scan;
 }
 
-void IndexScan::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
+void IndexScan::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& /*parameters*/) {}
 
 }  // namespace hyrise

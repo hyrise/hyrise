@@ -177,7 +177,7 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
           if (column_specifications[column_index].null_ratio > 0) {
             null_values.resize(chunk_size, false);
 
-            const double step_size = 1.0 / column_specifications[column_index].null_ratio;
+            const double step_size = 1.0 / static_cast<double>(column_specifications[column_index].null_ratio);
             double current_row_offset = 0.0;
             while (current_row_offset < chunk_size) {
               null_values[static_cast<size_t>(std::round(current_row_offset))] = true;

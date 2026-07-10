@@ -78,6 +78,4 @@ std::ostream& operator<<(std::ostream& stream, const GenericHistogram<T>& histog
   return stream;
 }
 
-EXPLICITLY_DECLARE_DATA_TYPES(GenericHistogram);
-
 }  // namespace hyrise
