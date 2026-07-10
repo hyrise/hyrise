@@ -982,67 +982,53 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
 
   auto groupby_keys_count = _groupby_column_ids.size();
 
-  if (groupby_keys_count == 0 || input_table->row_count() == 0) {
+  const auto row_count = input_table->row_count();
+  if (groupby_keys_count == 0 || row_count == 0) {
     std::atomic_size_t expected_result_size;
     auto contexts_per_column = ContextsPerColumn(aggregate_count);
     _aggregate<AggregateKey>(contexts_per_column, input_table, expected_result_size);
     return _create_output_table(contexts_per_column, input_table, expected_result_size);
   }
 
-  const auto thread_count = size_t{2};
-  // Figure out a Pivot element:
-  // We take the first row, and use that combination of group by keys as the pivot element.
-  auto row = input_table->get_row(size_t{0});
+  auto row_to_bucket = std::vector<unit8_t>{row_count};
 
-  // Set predicate_buckets[0] and predicate_buckets[1] for the first groupby_column_id,
-  // then use and_ to build the other groupby_column_ids on top of that.
+  // Plan:
+  // 1. Durchgehen der Zeilen -> n bits nehmen = i -> diese Zeile in die pos_lists[i] hinzufügen
+  // 2. ???
+  // 3. Profit
 
-  auto predicate_buckets = std::vector<std::shared_ptr<AbstractExpression>>{};
-  predicate_buckets.resize(thread_count);
+  const auto groubpy_column_we_take_for_radix = _groupby_column_ids[0];
+  const auto chunk_count = input_table->chunk_count();
+  const auto data_type = input_table->column_data_type(groubpy_column_we_take_for_radix);
 
-  for (auto operand_index = size_t{0}; operand_index < groupby_keys_count; ++operand_index) {
-    auto column_id = _groupby_column_ids[operand_index];
-    auto operand_1 = PQPColumnExpression::from_table(*input_table, column_id);
-    auto operand_2 = PQPColumnExpression::from_table(*input_table, column_id);
-    auto variant = row[column_id];
+  resolve_data_type(data_type, [&](auto type) {
+    using ColumnDataType = typename decltype(type)::type;
 
-    std::shared_ptr<AbstractExpression> current_predicate_bucket_1, current_predicate_bucket_2;
+    auto row_id = size_t{0};
+    for (auto chunk_id = ChunkId{0}; chunk_id < chunk_count; ++chunk_id) {
+      const auto segment = input_table->get_chunk(chunk_id)->get_segment(groubpy_column_we_take_for_radix);
+      const auto value_segment = static_pointer_cast<ValueSegment<ColumnDataType>>(segment);
+      Assert(value_segment, "Implementation for other segments than ValueSegment missing");
 
-    if (variant_is_null(variant)) {
-      current_predicate_bucket_1 = is_null_(operand_1);
-      current_predicate_bucket_2 = is_not_null_(operand_2);
-    } else {
-      auto value = value_(variant);
-      current_predicate_bucket_1 = equals_(operand_1, value);
-      current_predicate_bucket_2 = not_equals_(operand_2, value);
-
-      if (input_table->column_is_nullable(column_id)) {
-        current_predicate_bucket_2 = or_(current_predicate_bucket_2, is_null_(operand_2));
+      const auto& values = value_segment->values();
+      for (auto value : values) {
+        row_to_bucket[row_id++] = value & 0xff;  // TODO(anyone): Change to hash maybe?
       }
     }
-
-    // TODO(anyone): HACK
-    if (operand_index == 0) {
-      predicate_buckets[0] = current_predicate_bucket_1;
-      predicate_buckets[1] = current_predicate_bucket_2;
-    } else {
-      predicate_buckets[0] = and_(predicate_buckets[0], current_predicate_bucket_1);
-      predicate_buckets[1] = or_(predicate_buckets[1], current_predicate_bucket_2);
-    }
-  }
+  });
 
   // SPLIT END
 
+  const auto thread_count = RADIX_SPLIT_MAX_BUCKETS;
   auto threads = std::vector<std::thread>{};
   auto output_tables = std::vector<std::shared_ptr<Table>>();
   output_tables.resize(thread_count);
 
   for (auto thread_id = size_t{0}; thread_id < thread_count; ++thread_id) {
     threads.emplace_back([&, thread_id]() {
-      const auto table_wrapper_bucket = std::make_shared<TableWrapper>(input_table);
-      table_wrapper_bucket->execute();
-      const auto table_scan_bucket = std::make_shared<TableScan>(table_wrapper_bucket, predicate_buckets[thread_id]);
-      table_scan_bucket->execute();
+      const auto local_input_table =
+          std::make_shared<const Table>(input_table->column_definition, TableType::References);
+      local_input_table->const auto current_chunk_offset = ChunkOffset{0};
 
       std::atomic_size_t expected_result_size;
       auto contexts_per_column = ContextsPerColumn(aggregate_count);
