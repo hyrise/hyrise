@@ -21,35 +21,40 @@ class LoserTree {
   }
 
   bool empty() const {
-    return _nodes[0]._is_high_sentinel;
+    return _nodes[0]._tag == Tag::HighSentinel;
   }
 
   void push_to_leaf(const T& value, const size_t slot) {
-    _update(value, slot, false, false, CompareOnElements{});
+    _update(Tag::Regular, value, slot, CompareOnElements{});
   }
 
   void invalidate(const size_t slot) {
-    _update({}, slot, false, true, CompareOnElements{});
+    _update(Tag::HighSentinel, {}, slot, CompareOnElements{});
   }
 
   void reset() {
     std::ranges::fill(_nodes, Node{});
     for (auto node_idx = size_t{0}; node_idx < _nodes.size(); ++node_idx) {
-      _update({}, node_idx, true, false, CompareOnSlots{});
+      _update(Tag::LowSentinel, {}, node_idx, CompareOnSlots{});
     }
   }
 
  private:
+  enum class Tag : uint8_t {
+    None = 0b00,
+    LowSentinel = 0b01,
+    Regular = 0b10,
+    HighSentinel = 0b11,
+  };
+
   struct Node {
+    Tag _tag{Tag::None};
     T _element{};
     size_t _slot{};
-    bool _is_low_sentinel{};
-    bool _is_high_sentinel{};
 
     Node() = default;
 
-    Node(const T& element, const size_t slot, const bool is_low_sentinel, const bool is_high_sentinel)
-        : _element(element), _slot(slot), _is_low_sentinel(is_low_sentinel), _is_high_sentinel(is_high_sentinel) {}
+    Node(const Tag tag, const T& element, const size_t slot) : _tag(tag), _element(element), _slot(slot) {}
   };
 
   struct CompareOnElements {
@@ -65,17 +70,14 @@ class LoserTree {
   };
 
   template <typename Compare>
-  void _update(const T& value, const size_t& slot, bool is_low_sentinel, bool is_high_sentinel, Compare comp) {
-    auto path_winner_node = Node(value, slot, is_low_sentinel, is_high_sentinel);
+  void _update(const Tag tag, const T& value, const size_t& slot, Compare comp) {
+    auto path_winner_node = Node(tag, value, slot);
     auto parent = (_nodes.size() + slot) / 2;
     while (parent > 0) {
       auto loser_node = _nodes[parent];
-      const auto must_swap_high_sen = path_winner_node._is_high_sentinel;
-      const auto must_swap_low_sen = loser_node._is_low_sentinel;
-      const auto must_swap_comp = !path_winner_node._is_low_sentinel && !path_winner_node._is_high_sentinel &&
-                                  !loser_node._is_low_sentinel && !loser_node._is_high_sentinel &&
-                                  comp(path_winner_node, loser_node);
-      if (must_swap_high_sen || must_swap_low_sen || must_swap_comp) {
+      auto winner_tag = std::to_underlying(path_winner_node._tag);
+      auto loser_tag = std::to_underlying(loser_node._tag);
+      if (winner_tag > loser_tag || (winner_tag == loser_tag ? comp(path_winner_node, loser_node) : false)) {
         _nodes[parent] = path_winner_node;
         path_winner_node = loser_node;
       }
