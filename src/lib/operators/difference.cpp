@@ -42,7 +42,7 @@ std::shared_ptr<AbstractOperator> Difference::_on_deep_copy(
   return std::make_shared<Difference>(copied_left_input, copied_right_input);
 }
 
-void Difference::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
+void Difference::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& /*parameters*/) {}
 
 std::shared_ptr<const Table> Difference::_on_execute() {
   DebugAssert(left_input_table()->column_definitions() == right_input_table()->column_definitions(),

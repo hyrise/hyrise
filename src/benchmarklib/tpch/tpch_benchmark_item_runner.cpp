@@ -297,7 +297,7 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
 
     case 11 - 1: {
       const auto* const nation = nations.list[nation_dist(random_engine)].text;
-      const auto fraction = 0.0001 / (_scale_factor > 0 ? _scale_factor : 1);
+      const auto fraction = 0.0001f / (_scale_factor > 0 ? _scale_factor : 1);
 
       parameters.emplace_back(std::format("'{}'", nation));
       parameters.emplace_back(std::to_string(fraction));
