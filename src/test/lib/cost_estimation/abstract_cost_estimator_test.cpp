@@ -29,7 +29,8 @@ class MockCostEstimator : public AbstractCostEstimator {
     Fail("Shouldn't be called");
   }
 
-  Cost estimate_node_cost(const std::shared_ptr<AbstractLQPNode>& node, const bool cacheable = true) const override {
+  Cost estimate_node_cost(const std::shared_ptr<AbstractLQPNode>& node,
+                          const bool /*cacheable*/ = true) const override {
     return mock_costs.at(node);
   }
 };

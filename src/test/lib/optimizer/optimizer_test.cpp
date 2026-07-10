@@ -299,8 +299,8 @@ TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
     size_t& counter;
 
    protected:
-    void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root,
-                                           OptimizationContext& optimization_context) const override {
+    void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& /*lqp_root*/,
+                                           OptimizationContext& /*optimization_context*/) const override {
       ++counter;
     }
   };
@@ -355,7 +355,7 @@ TEST_F(OptimizerTest, NonCacheabilityIsReflectedInOptimizationContext) {
     }
 
    protected:
-    void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root,
+    void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& /*lqp_root*/,
                                            OptimizationContext& optimization_context) const override {
       optimization_context.set_not_cacheable();
     }
@@ -390,7 +390,7 @@ TEST_F(OptimizerTest, PollutedCardinalityEstimationCache) {
     }
 
    protected:
-    void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root,
+    void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& /*lqp_root*/,
                                            OptimizationContext& /*optimization_context*/) const override {}
   };
 
