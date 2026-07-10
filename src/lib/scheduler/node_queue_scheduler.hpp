@@ -78,7 +78,7 @@ class NodeQueueScheduler final : public AbstractScheduler {
   friend class StressTest;
 
  public:
-  NodeQueueScheduler();
+  NodeQueueScheduler() = default;
   NodeQueueScheduler(const NodeQueueScheduler&) = delete;
   NodeQueueScheduler& operator=(const NodeQueueScheduler&) = delete;
   // These two need not be deleted, but they are for the same reason that std::atomic has them deleted
@@ -148,7 +148,6 @@ class NodeQueueScheduler final : public AbstractScheduler {
 
  private:
   std::atomic<TaskID::base_type> _task_counter{0};
-  std::shared_ptr<UidAllocator> _worker_id_allocator;
   std::vector<std::shared_ptr<TaskQueue>> _queues;
   std::vector<std::shared_ptr<Worker>> _workers;
   std::vector<NodeID> _active_nodes;
