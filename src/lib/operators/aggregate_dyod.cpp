@@ -967,8 +967,8 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
   return keys_per_chunk;
 }
 
-const auto RADIX_MASK = 0xff;
-const auto RADIX_SPLIT_MAX_BUCKETS = 256;
+constexpr auto RADIX_MASK = 0x1;
+constexpr auto RADIX_SPLIT_MAX_BUCKETS = RADIX_MASK + 1;
 
 template <typename AggregateKey>
 std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
@@ -1014,25 +1014,16 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
 
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
       if (input_table->get_chunk(chunk_id)->size() > 0) {
-        const auto segment = input_table->get_chunk(chunk_id)->get_segment(groubpy_column_we_take_for_radix);
-        const auto value_segment = std::static_pointer_cast<ValueSegment<ColumnDataType>>(segment);
-        Assert(value_segment, "Implementation for other segments than ValueSegment missing");
-
-        const auto& values = value_segment->values();
-
-        const auto values_size = values.size();
-        const auto hash_f = std::hash<ColumnDataType>{};
-        for (auto chunk_offset = ChunkOffset{0}; chunk_offset < values_size; ++chunk_offset) {
+        const auto abstract_segment = input_table->get_chunk(chunk_id)->get_segment(groubpy_column_we_take_for_radix);
+        segment_iterate<ColumnDataType>(*abstract_segment, [&](const auto& position) {
           auto value = 0;
-          if (!value_segment->is_null(chunk_offset)) {
-            auto v = values.at(chunk_offset);
-            value = hash_f(v);
+          if (!position.is_null()) {
+            value = std::hash<ColumnDataType>{}(position.value());
           }
 
-          // const auto value = value_segment->is_null(chunk_offset) ? 0 : hash_f(v);
-          const auto key = value & RADIX_MASK;  // TODO(anyone): Change to hash maybe?
-          pos_lists[key]->push_back(RowID{chunk_id, chunk_offset});
-        }
+          const auto key = value & RADIX_MASK;
+          pos_lists[key]->push_back(RowID{chunk_id, position.chunk_offset()});
+        });
       }
     }
   });
@@ -1093,7 +1084,7 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std
   // auto& step_performance_data = dynamic_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
   // auto timer = Timer{};
 
-  /**W
+  /**
    * PARTITIONING STEP
    */
   bool use_immediate_key_shortcut = false;
