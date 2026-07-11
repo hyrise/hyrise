@@ -626,11 +626,10 @@ void AggregateDYOD::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, 
   auto& result_ids = *context.result_ids;
   auto& results = context.results;
 
-  auto chunk_offset = ChunkOffset{0};
-
   // CacheResultIds is a boolean type parameter that is forwarded to visit_and_get_result, see the documentation over
   // there for details.
   const auto process_position = [&](const auto cache_result_ids, const auto& position) {
+    const auto chunk_offset = position.chunk_offset();
     auto& result = visit_and_get_result(cache_result_ids, result_ids, results,
                                         dyod_get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
                                         RowID{chunk_id, chunk_offset});
@@ -646,8 +645,6 @@ void AggregateDYOD::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, 
 
       ++result.aggregate_count;
     }
-
-    ++chunk_offset;
   };
 
   // Pass true_type into prepare_output to enable certain optimizations: If we have more than one aggregate function
@@ -744,9 +741,9 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
             for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
               const auto chunk_in = input_table->get_chunk(chunk_id);
               const auto abstract_segment = chunk_in->get_segment(groupby_column_id);
-              ChunkOffset chunk_offset{0};
               auto& keys = keys_per_chunk[chunk_id];
               segment_iterate<ColumnDataType>(*abstract_segment, [&](const auto& position) {
+                const auto chunk_offset = position.chunk_offset();
                 const auto int_to_uint = [](const int32_t value) {
                   // We need to convert a potentially negative int32_t value into the uint64_t space. We do not care
                   // about preserving the value, just its uniqueness. Subtract the minimum value in int32_t (which is
@@ -776,7 +773,6 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
                     keys[chunk_offset][group_column_index] = int_to_uint(position.value()) + 1;
                   }
                 }
-                ++chunk_offset;
               });
             }
 
@@ -853,8 +849,8 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
               auto& keys = keys_per_chunk[chunk_id];
 
               const auto abstract_segment = chunk_in->get_segment(groupby_column_id);
-              auto chunk_offset = ChunkOffset{0};
               segment_iterate<ColumnDataType>(*abstract_segment, [&](const auto& position) {
+                auto chunk_offset = position.chunk_offset();
                 if (position.is_null()) {
                   if constexpr (std::is_same_v<AggregateKey, DYODAggregateKeyEntry>) {
                     keys[chunk_offset] = 0;
@@ -939,8 +935,6 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
                     keys[chunk_offset][group_column_index] = value_id;
                   }
                 }
-
-                ++chunk_offset;
               });
             }
 
