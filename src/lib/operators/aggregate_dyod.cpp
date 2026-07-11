@@ -961,7 +961,7 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
   return keys_per_chunk;
 }
 
-constexpr auto RADIX_MASK = 0x1;
+constexpr auto RADIX_MASK = 0xf;
 constexpr auto RADIX_SPLIT_MAX_BUCKETS = RADIX_MASK + 1;
 
 template <typename AggregateKey>
@@ -1029,12 +1029,11 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
 
   // SPLIT END
 
-  const auto thread_count = RADIX_SPLIT_MAX_BUCKETS;
   auto threads = std::vector<std::thread>{};
   auto output_tables = std::vector<std::shared_ptr<Table>>();
-  output_tables.resize(thread_count);
+  output_tables.resize(RADIX_SPLIT_MAX_BUCKETS);
 
-  for (auto thread_id = size_t{0}; thread_id < thread_count; ++thread_id) {
+  for (auto thread_id = size_t{0}; thread_id < RADIX_SPLIT_MAX_BUCKETS; ++thread_id) {
     threads.emplace_back([&, thread_id]() {
       const auto pos_lists = pos_lists_per_thread[thread_id];
 
@@ -1062,6 +1061,7 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
         }
       } else {
         // This mostly copy pasta from table scan
+        // TODO(anyone):
         // REFERENCE START
         for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
           auto pos_list = pos_lists->at(chunk_id);
@@ -1132,7 +1132,7 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
     thread.join();
   }
 
-  for (auto thread_id = size_t{1}; thread_id < thread_count; ++thread_id) {
+  for (auto thread_id = size_t{1}; thread_id < RADIX_SPLIT_MAX_BUCKETS; ++thread_id) {
     const auto chunk_count = output_tables[thread_id]->chunk_count();
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; chunk_id++) {
       auto chunk = output_tables[thread_id]->get_chunk(chunk_id);
