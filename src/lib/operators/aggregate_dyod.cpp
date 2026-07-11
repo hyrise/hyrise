@@ -1006,7 +1006,6 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
   const auto groubpy_column_we_take_for_radix = _groupby_column_ids[0];
   const auto data_type = input_table->column_data_type(groubpy_column_we_take_for_radix);
   const auto is_reference_table = input_table->type() == TableType::References;
-  Assert(!is_reference_table, "Reference Table not yet implemented.");
 
   resolve_data_type(data_type, [&](auto type) {
     using ColumnDataType = typename decltype(type)::type;
@@ -1038,7 +1037,6 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
   for (auto thread_id = size_t{0}; thread_id < thread_count; ++thread_id) {
     threads.emplace_back([&, thread_id]() {
       const auto pos_lists = pos_lists_per_thread[thread_id];
-      Assert(pos_lists, "PosList does not exist");
 
       if (pos_lists->empty()) {
         output_tables[thread_id] = std::make_shared<Table>(input_table->column_definitions(), TableType::References);
@@ -1047,17 +1045,79 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
 
       const auto local_input_table = std::make_shared<Table>(input_table->column_definitions(), TableType::References);
 
+      // TODO(anyone): unify code branches
       const auto column_count = input_table->column_count();
-      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-        auto segments = Segments{};
-        auto pos_list = pos_lists->at(chunk_id);
-        if (pos_list->empty()) {
-          continue;
+      if (!is_reference_table) {
+        for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+          auto pos_list = pos_lists->at(chunk_id);
+          if (pos_list->empty()) {
+            continue;
+          }
+          auto segments = Segments{};
+          segments.reserve(column_count);
+          for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+            segments.push_back(std::make_shared<ReferenceSegment>(input_table, column_id, pos_list));
+          }
+          local_input_table->append_chunk(segments);
         }
-        for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
-          segments.push_back(std::make_shared<ReferenceSegment>(input_table, column_id, pos_list));
+      } else {
+        // This mostly copy pasta from table scan
+        // REFERENCE START
+        for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+          auto pos_list = pos_lists->at(chunk_id);
+          if (pos_list->empty()) {
+            continue;
+          }
+
+          const auto& chunk_in = input_table->get_chunk(chunk_id);
+
+          auto out_segments = Segments{};
+          out_segments.reserve(column_count);
+
+          if (pos_list->size() == chunk_in->size()) {
+            // Shortcut - the entire input reference segment matches, so we can simply forward that chunk
+            for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+              const auto segment_in = chunk_in->get_segment(column_id);
+              out_segments.emplace_back(segment_in);
+            }
+          } else {
+            auto filtered_pos_lists = std::map<std::shared_ptr<const AbstractPosList>, std::shared_ptr<RowIDPosList>>{};
+
+            for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+              const auto segment_in = chunk_in->get_segment(column_id);
+
+              auto ref_segment_in = std::dynamic_pointer_cast<const ReferenceSegment>(segment_in);
+              DebugAssert(ref_segment_in, "All segments should be of type ReferenceSegment.");
+
+              const auto pos_list_in = ref_segment_in->pos_list();
+
+              const auto table_out = ref_segment_in->referenced_table();
+              const auto column_id_out = ref_segment_in->referenced_column_id();
+
+              auto& filtered_pos_list = filtered_pos_lists[pos_list_in];
+
+              if (!filtered_pos_list) {
+                filtered_pos_list = std::make_shared<RowIDPosList>(pos_list->size());
+                if (pos_list_in->references_single_chunk()) {
+                  filtered_pos_list->guarantee_single_chunk();
+                }
+
+                auto offset = size_t{0};
+                for (const auto& match : *pos_list) {
+                  const auto row_id = (*pos_list_in)[match.chunk_offset];
+                  (*filtered_pos_list)[offset] = row_id;
+                  ++offset;
+                }
+              }
+
+              const auto ref_segment_out =
+                  std::make_shared<ReferenceSegment>(table_out, column_id_out, filtered_pos_list);
+              out_segments.push_back(ref_segment_out);
+            }
+          }
+
+          local_input_table->append_chunk(out_segments);
         }
-        local_input_table->append_chunk(segments);
       }
 
       std::atomic_size_t expected_result_size;
