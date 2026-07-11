@@ -10,6 +10,7 @@
 #include <format>
 #include <functional>
 #include <limits>
+#include <map>
 #include <memory>
 #include <memory_resource>
 #include <numeric>
