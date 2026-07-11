@@ -105,6 +105,9 @@ class StringSpillBuffer : private Noncopyable {
    * @pre Called by the owning worker only, between uses of the buffer (no live key may still point into it).
    */
   void clear();
+
+ private:
+  size_t _size{0};
 };
 
 // ------------------------------------------------------------------------------------------------------------
@@ -461,8 +464,8 @@ class NumericArbitraryKeySchema {
   static bool equals(const NumericArbitraryKeySchema& schema, const std::byte* a, const std::byte* b);
 
  private:
-  NumericKeyLanes _lanes;      // one lane per numeric group-by column, in schema order
-  uint32_t _packed_width{0};   // fixed packed width in bytes for this query, computed at build()
+  NumericKeyLanes _lanes;     // one lane per numeric group-by column, in schema order
+  uint32_t _packed_width{0};  // fixed packed width in bytes for this query, computed at build()
 };
 
 // ------------------------------------------------------------------------------------------------------------
@@ -626,8 +629,7 @@ class StringOnlyKeySchema {
    * @param output_row 0-based index of the output row being emitted.
    * @pre Runs in the merge phase, single-threaded per worker on that worker's own OutputColumns.
    */
-  static void unpack(const StringOnlyKeySchema& schema, const std::byte* key, OutputColumns& output,
-                     size_t output_row);
+  static void unpack(const StringOnlyKeySchema& schema, const std::byte* key, OutputColumns& output, size_t output_row);
   /**
    * Hash a packed key over its fixed part.
    *

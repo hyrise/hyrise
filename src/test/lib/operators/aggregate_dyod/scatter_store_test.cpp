@@ -5,44 +5,45 @@
 #include <vector>
 
 #include "base_test.hpp"
-
 #include "operators/aggregate_dyod/scatter_store.hpp"
+
+namespace {
+std::array<std::byte, hyrise::SWWC_LINE_BYTES> make_line(const uint8_t seed) {
+  auto line = std::array<std::byte, hyrise::SWWC_LINE_BYTES>{};
+  for (auto index = size_t{0}; index < hyrise::SWWC_LINE_BYTES; ++index) {
+    line[index] = static_cast<std::byte>(static_cast<uint8_t>(seed + index));
+  }
+  return line;
+}
+
+std::vector<std::byte> make_bytes(const size_t length, const uint8_t seed) {
+  auto bytes = std::vector<std::byte>(length);
+  for (auto index = size_t{0}; index < length; ++index) {
+    bytes[index] = static_cast<std::byte>(static_cast<uint8_t>(seed + index));
+  }
+  return bytes;
+}
+
+void expect_region_bytes(const hyrise::Region& region, const std::vector<std::byte>& expected) {
+  ASSERT_EQ(region.size(), expected.size());
+  if (!expected.empty()) {
+    EXPECT_EQ(std::memcmp(region.data(), expected.data(), expected.size()), 0);
+  }
+}
+
+std::vector<std::byte> concat(const std::vector<std::array<std::byte, hyrise::SWWC_LINE_BYTES>>& lines) {
+  auto bytes = std::vector<std::byte>{};
+  bytes.reserve(lines.size() * hyrise::SWWC_LINE_BYTES);
+  for (const auto& line : lines) {
+    bytes.insert(bytes.end(), line.begin(), line.end());
+  }
+  return bytes;
+}
+}  // namespace
 
 namespace hyrise {
 class RegionTest : public BaseTest {
-protected:
-  static std::array<std::byte, SWWC_LINE_BYTES> make_line(const uint8_t seed) {
-    auto line = std::array<std::byte, SWWC_LINE_BYTES>{};
-    for (auto index = size_t{0}; index < SWWC_LINE_BYTES; ++index) {
-      line[index] = static_cast<std::byte>(static_cast<uint8_t>(seed + index));
-    }
-    return line;
-  }
-
-  static std::vector<std::byte> make_bytes(const size_t length, const uint8_t seed) {
-    auto bytes = std::vector<std::byte>(length);
-    for (auto index = size_t{0}; index < length; ++index) {
-      bytes[index] = static_cast<std::byte>(static_cast<uint8_t>(seed + index));
-    }
-    return bytes;
-  }
-
-  static void expect_region_bytes(const Region& region, const std::vector<std::byte>& expected) {
-    ASSERT_EQ(region.size(), expected.size());
-    if (!expected.empty()) {
-      EXPECT_EQ(std::memcmp(region.data(), expected.data(), expected.size()), 0);
-    }
-  }
-
-  static std::vector<std::byte> concat(const std::vector<std::array<std::byte, SWWC_LINE_BYTES>>& lines) {
-    auto bytes = std::vector<std::byte>{};
-    bytes.reserve(lines.size() * SWWC_LINE_BYTES);
-    for (const auto& line : lines) {
-      bytes.insert(bytes.end(), line.begin(), line.end());
-    }
-    return bytes;
-  }
-
+ protected:
   Region _region{};
 };
 
@@ -55,7 +56,6 @@ TEST_F(RegionTest, PushSingleLineStoresBytesAndAdvancesSize) {
   EXPECT_EQ(reinterpret_cast<uintptr_t>(_region.data()) % 64, 0u);
   expect_region_bytes(_region, std::vector(line.begin(), line.end()));
 }
-
 
 TEST_F(RegionTest, PushMultipleLinesAccumulateInOrder) {
   auto lines = std::vector<std::array<std::byte, SWWC_LINE_BYTES>>{};
@@ -155,4 +155,61 @@ TEST_F(RegionTest, EmptyRegionHasZeroSize) {
   _region.clear();
   EXPECT_EQ(_region.size(), 0u);
 }
+
+class ScatterStoreTest : public BaseTest {};
+
+TEST_F(ScatterStoreTest, ConstructionAllocatesRegionsForFullSchema) {
+  constexpr auto value_widths = std::array<size_t, 2>{8, 4};
+  auto store = ScatterStore(PartitionCount{4}, 8, std::span<const size_t>(value_widths), 1, true);
+
+  for (auto partition = PartitionId{0}; partition < 4; ++partition) {
+    EXPECT_EQ(store.key_region(partition).size(), 0u);
+    EXPECT_EQ(store.value_region(partition, 0).size(), 0u);
+    EXPECT_EQ(store.value_region(partition, 1).size(), 0u);
+    EXPECT_EQ(store.value_null_bitmap_region(partition).size(), 0u);
+  }
 }
+
+class ScatterHeadsTest : public BaseTest {};
+
+TEST_F(ScatterHeadsTest, ScatterAndReconstruct) {
+  constexpr auto PARTITION_COUNT = uint32_t{4};
+  constexpr auto KEY_WIDTH = size_t{8};
+  constexpr auto VALUE_WIDTH = size_t{8};
+  static_assert(SWWC_LINE_BYTES % KEY_WIDTH == 0 && SWWC_LINE_BYTES % VALUE_WIDTH == 0);
+
+  constexpr auto value_widths = std::array{VALUE_WIDTH};
+  auto store =
+      ScatterStore(PartitionCount{PARTITION_COUNT}, KEY_WIDTH, std::span<const size_t>(value_widths), 0, false);
+  constexpr auto stream_widths = std::array{KEY_WIDTH, VALUE_WIDTH};
+  auto heads = ScatterHeads(PartitionCount{PARTITION_COUNT}, 2, std::span<const size_t>(stream_widths), false);
+
+  constexpr auto fields_per_line = SWWC_LINE_BYTES / KEY_WIDTH;
+  constexpr auto rows_per_partition = 2 * fields_per_line + 3;
+  constexpr auto row_count = size_t{PARTITION_COUNT} * rows_per_partition;
+
+  auto expected_keys = std::vector<std::vector<std::byte>>(PARTITION_COUNT);
+  auto expected_values = std::vector<std::vector<std::byte>>(PARTITION_COUNT);
+
+  for (auto row = size_t{0}; row < row_count; ++row) {
+    const auto partition = static_cast<PartitionId>(row % PARTITION_COUNT);
+    const auto key = make_bytes(KEY_WIDTH, static_cast<uint8_t>(row));
+    const auto value = make_bytes(VALUE_WIDTH, static_cast<uint8_t>(row + 128));
+
+    heads.push(store, 0, partition, key.data(), KEY_WIDTH);
+    heads.push(store, 1, partition, value.data(), VALUE_WIDTH);
+
+    expected_keys[partition].insert(expected_keys[partition].end(), key.begin(), key.end());
+    expected_values[partition].insert(expected_values[partition].end(), value.begin(), value.end());
+  }
+
+  heads.finish(store);
+
+  for (auto partition = PartitionId{0}; partition < PARTITION_COUNT; ++partition) {
+    EXPECT_EQ(store.key_region(partition).size() / KEY_WIDTH, store.value_region(partition, 0).size() / VALUE_WIDTH);
+    expect_region_bytes(store.key_region(partition), expected_keys[partition]);
+    expect_region_bytes(store.value_region(partition, 0), expected_values[partition]);
+  }
+}
+
+}  // namespace hyrise

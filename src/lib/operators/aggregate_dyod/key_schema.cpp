@@ -4,4 +4,8 @@
 // compile the header standalone (verifying it is self-contained) and to host the forthcoming out-of-line and
 // explicitly-instantiated template definitions.
 
-namespace hyrise {}  // namespace hyrise
+namespace hyrise {
+void StringSpillBuffer::clear() {
+  _size = 0;
+}
+}  // namespace hyrise

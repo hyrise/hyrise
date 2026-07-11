@@ -85,7 +85,7 @@ class Region : private Noncopyable {
 
   void grow();
 
-private:
+ private:
   std::unique_ptr<std::byte[], AlignedFree> _data{};
   size_t _size{0};
   size_t _capacity{0};
@@ -185,13 +185,13 @@ class ScatterStore : private Noncopyable {
   void clear();
 
  private:
-  PartitionCount _partition_count;                     // Radix partition count P; valid PartitionId range [0, P).
-  std::vector<Region> _key_regions;                    // One packed-key region per partition; indexed [partition].
-  std::vector<Region> _value_regions;                  // [partition * _value_stream_count + stream].
-  std::vector<Region> _value_null_bitmap_regions;      // Per partition; empty if no nullable value stream.
-  std::vector<StringSpillBuffer> _key_spill_buffers;   // Per partition; used only for string-involving key schemas.
-  std::vector<StringSpillBuffer> _value_arenas;        // Per partition; empty if no string value stream.
-  size_t _value_stream_count{0};                       // Distinct scattered value streams; the _value_regions stride.
+  PartitionCount _partition_count;                    // Radix partition count P; valid PartitionId range [0, P).
+  std::vector<Region> _key_regions;                   // One packed-key region per partition; indexed [partition].
+  std::vector<Region> _value_regions;                 // [partition * _value_stream_count + stream].
+  std::vector<Region> _value_null_bitmap_regions;     // Per partition; empty if no nullable value stream.
+  std::vector<StringSpillBuffer> _key_spill_buffers;  // Per partition; used only for string-involving key schemas.
+  std::vector<StringSpillBuffer> _value_arenas;       // Per partition; empty if no string value stream.
+  size_t _value_stream_count{0};                      // Distinct scattered value streams; the _value_regions stride.
 };
 
 /**
@@ -226,8 +226,10 @@ class ScatterHeads : private Noncopyable {
    * @param stream_count     Number of scatter streams (packed key + value streams + optional value-null-bitmap); must
    *   equal the number of streams the target ScatterStore was built for.
    * @param stream_widths    Per-row byte width of each stream, in stream order; borrowed for the duration of the call.
+   * @param has_value_null_bitmap
    */
-  ScatterHeads(PartitionCount partition_count, size_t stream_count, std::span<const size_t> stream_widths);
+  ScatterHeads(PartitionCount partition_count, size_t stream_count, std::span<const size_t> stream_widths,
+               bool has_value_null_bitmap);
 
   /**
    * Stage `width` bytes of one field into the (stream, partition) line, flushing a completed line into `store`.
@@ -258,6 +260,21 @@ class ScatterHeads : private Noncopyable {
    * Complexity: O(stream_count * partition_count) -- it visits every staging line once.
    */
   void finish(ScatterStore& store);
+
+ private:
+  size_t line_offset(const size_t stream, const size_t partition) const {
+    return (stream * _partition_count + partition) * SWWC_LINE_BYTES;
+  }
+
+  Region& region_for(ScatterStore& store, size_t stream, PartitionId partition) const;
+  void store_line_flush(ScatterStore& store, size_t stream, PartitionId partition, size_t line, size_t fill) const;
+
+  size_t _partition_count;
+  size_t _stream_count;
+  size_t _value_stream_count;
+  std::vector<size_t> _stream_widths;
+  std::vector<std::byte> _staging;
+  std::vector<size_t> _fill;
 };
 
 }  // namespace hyrise
