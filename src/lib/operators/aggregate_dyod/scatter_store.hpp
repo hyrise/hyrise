@@ -10,6 +10,12 @@
 
 namespace hyrise {
 
+struct AlignedFree {
+  void operator()(std::byte* ptr) const noexcept {
+    std::free(ptr);
+  }
+};
+
 /**
  * A growable, 64-byte-aligned byte buffer that holds one stream's scattered bytes for a single partition.
  *
@@ -76,6 +82,13 @@ class Region : private Noncopyable {
    * @post size() == 0; any pointer previously returned by data() is invalidated.
    */
   void clear();
+
+  void grow();
+
+private:
+  std::unique_ptr<std::byte[], AlignedFree> _data{};
+  size_t _size{0};
+  size_t _capacity{0};
 };
 
 /**
