@@ -987,20 +987,23 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
     return _create_output_table(contexts_per_column, input_table, expected_result_size);
   }
 
-  // auto row_to_bucket = std::vector<unit8_t>{row_count};
-  auto pos_lists = std::vector<std::shared_ptr<RowIDPosList>>{};
-  pos_lists.reserve(RADIX_SPLIT_MAX_BUCKETS);
+  const auto chunk_count = input_table->chunk_count();
+  auto pos_lists_per_thread = std::vector<std::shared_ptr<std::vector<std::shared_ptr<RowIDPosList>>>>{};
+  pos_lists_per_thread.reserve(RADIX_SPLIT_MAX_BUCKETS);
+
   for (auto bucket_id = size_t{0}; bucket_id < RADIX_SPLIT_MAX_BUCKETS; ++bucket_id) {
-    pos_lists.emplace_back(std::make_shared<RowIDPosList>());
+    pos_lists_per_thread.emplace_back(std::make_shared<std::vector<std::shared_ptr<RowIDPosList>>>());
+    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+      pos_lists_per_thread[bucket_id]->emplace_back(std::make_shared<RowIDPosList>());
+    }
   }
 
   // Plan:
-  // 1. Durchgehen der Zeilen -> n bits nehmen = i -> diese Zeile in die pos_lists[i] hinzufügen
+  // 1. Durchgehen der Zeilen -> n bits nehmen = i -> diese Zeile in die pos_lists_per_thread[i] hinzufügen
   // 2. ???
   // 3. Profit
 
   const auto groubpy_column_we_take_for_radix = _groupby_column_ids[0];
-  const auto chunk_count = input_table->chunk_count();
   const auto data_type = input_table->column_data_type(groubpy_column_we_take_for_radix);
   const auto is_reference_table = input_table->type() == TableType::References;
   Assert(!is_reference_table, "Reference Table not yet implemented.");
@@ -1019,7 +1022,7 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
           }
 
           const auto key = value & RADIX_MASK;
-          pos_lists[key]->push_back(RowID{chunk_id, position.chunk_offset()});
+          pos_lists_per_thread[key]->at(chunk_id)->push_back(RowID{chunk_id, position.chunk_offset()});
         });
       }
     }
@@ -1034,10 +1037,10 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
 
   for (auto thread_id = size_t{0}; thread_id < thread_count; ++thread_id) {
     threads.emplace_back([&, thread_id]() {
-      const auto pos_list = pos_lists[thread_id];
-      Assert(pos_list, "PosList does not exist");
+      const auto pos_lists = pos_lists_per_thread[thread_id];
+      Assert(pos_lists, "PosList does not exist");
 
-      if (pos_list->empty()) {
+      if (pos_lists->empty()) {
         output_tables[thread_id] = std::make_shared<Table>(input_table->column_definitions(), TableType::References);
         return;
       }
@@ -1045,12 +1048,17 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
       const auto local_input_table = std::make_shared<Table>(input_table->column_definitions(), TableType::References);
 
       const auto column_count = input_table->column_count();
-      auto segments = Segments{};
-      for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
-        segments.push_back(std::make_shared<ReferenceSegment>(input_table, column_id, pos_list));
+      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+        auto segments = Segments{};
+        auto pos_list = pos_lists->at(chunk_id);
+        if (pos_list->empty()) {
+          continue;
+        }
+        for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+          segments.push_back(std::make_shared<ReferenceSegment>(input_table, column_id, pos_list));
+        }
+        local_input_table->append_chunk(segments);
       }
-
-      local_input_table->append_chunk(segments);
 
       std::atomic_size_t expected_result_size;
       auto contexts_per_column = ContextsPerColumn(aggregate_count);
