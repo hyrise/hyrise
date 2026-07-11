@@ -962,7 +962,13 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
   return keys_per_chunk;
 }
 
-constexpr auto RADIX_MASK = 0xf;
+// TODO(anyone): adaptive radix mask. Possibilities include:
+//  (1) estimate distinct count and set mask accordingly.
+//  (2) adapt mask recursively based on partition size.
+//  (3) add low cardinality partitioning (all same key).
+
+// 64 threads
+constexpr auto RADIX_MASK = 0x3f;
 constexpr auto RADIX_SPLIT_MAX_BUCKETS = RADIX_MASK + 1;
 
 template <typename AggregateKey>
@@ -998,11 +1004,6 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
       pos_lists_per_thread[bucket_id]->emplace_back(std::make_shared<RowIDPosList>());
     }
   }
-
-  // Plan:
-  // 1. Durchgehen der Zeilen -> n bits nehmen = i -> diese Zeile in die pos_lists_per_thread[i] hinzufügen
-  // 2. ???
-  // 3. Profit
 
   const auto groubpy_column_we_take_for_radix = _groupby_column_ids[0];
   const auto data_type = input_table->column_data_type(groubpy_column_we_take_for_radix);
