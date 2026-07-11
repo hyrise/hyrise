@@ -994,6 +994,8 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
     return _create_output_table(contexts_per_column, input_table, expected_result_size);
   }
 
+  // TODO(anyone): for reference tables, we do not a PosList as we will create new a PosList for every chunk anyway.
+  // TODO(anyone): for data tables, consider whether we want one chunk per input chunk or one segment per column.
   const auto chunk_count = input_table->chunk_count();
   auto pos_lists_per_thread = std::vector<std::shared_ptr<std::vector<std::shared_ptr<RowIDPosList>>>>{};
   pos_lists_per_thread.reserve(RADIX_SPLIT_MAX_BUCKETS);
