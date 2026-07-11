@@ -1002,6 +1002,8 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
   const auto groubpy_column_we_take_for_radix = _groupby_column_ids[0];
   const auto chunk_count = input_table->chunk_count();
   const auto data_type = input_table->column_data_type(groubpy_column_we_take_for_radix);
+  const auto is_reference_table = input_table->type() == TableType::References;
+  auto referenced_table = input_table;
 
   resolve_data_type(data_type, [&](auto type) {
     using ColumnDataType = typename decltype(type)::type;
@@ -1009,15 +1011,34 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
       if (input_table->get_chunk(chunk_id)->size() > 0) {
         const auto abstract_segment = input_table->get_chunk(chunk_id)->get_segment(groubpy_column_we_take_for_radix);
-        segment_iterate<ColumnDataType>(*abstract_segment, [&](const auto& position) {
-          auto value = 0;
-          if (!position.is_null()) {
-            value = std::hash<ColumnDataType>{}(position.value());
-          }
 
-          const auto key = value & RADIX_MASK;
-          pos_lists[key]->push_back(RowID{chunk_id, position.chunk_offset()});
-        });
+        if (is_reference_table) {
+          auto ref_segment_in = std::dynamic_pointer_cast<const ReferenceSegment>(abstract_segment);
+          const auto pos_list_in = ref_segment_in->pos_list();
+
+          DebugAssert(ref_segment_in, "All segments should be of type ReferenceSegment.");
+
+          segment_iterate<ColumnDataType>(*abstract_segment, [&](const auto& position) {
+            auto value = 0;
+            if (!position.is_null()) {
+              value = std::hash<ColumnDataType>{}(position.value());
+            }
+
+            const auto key = value & RADIX_MASK;
+            pos_lists[key]->push_back((*pos_list_in)[position.chunk_offset()]);
+            referenced_table = ref_segment_in->referenced_table();
+          });
+        } else {
+          segment_iterate<ColumnDataType>(*abstract_segment, [&](const auto& position) {
+            auto value = 0;
+            if (!position.is_null()) {
+              value = std::hash<ColumnDataType>{}(position.value());
+            }
+
+            const auto key = value & RADIX_MASK;
+            pos_lists[key]->push_back(RowID{chunk_id, position.chunk_offset()});
+          });
+        }
       }
     }
   });
@@ -1044,7 +1065,7 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
       const auto column_count = input_table->column_count();
       auto segments = Segments{};
       for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
-        segments.push_back(std::make_shared<ReferenceSegment>(input_table, column_id, pos_list));
+        segments.push_back(std::make_shared<ReferenceSegment>(referenced_table, column_id, pos_list));
       }
 
       local_input_table->append_chunk(segments);
