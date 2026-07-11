@@ -1005,9 +1005,9 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
     }
   }
 
+  // TODO(anyone): think about doing radix on more than one column
   const auto groubpy_column_we_take_for_radix = _groupby_column_ids[0];
   const auto data_type = input_table->column_data_type(groubpy_column_we_take_for_radix);
-  const auto is_reference_table = input_table->type() == TableType::References;
 
   resolve_data_type(data_type, [&](auto type) {
     using ColumnDataType = typename decltype(type)::type;
@@ -1032,23 +1032,19 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
   // SPLIT END
 
   auto threads = std::vector<std::thread>{};
-  auto output_tables = std::vector<std::shared_ptr<Table>>();
-  output_tables.resize(RADIX_SPLIT_MAX_BUCKETS);
+  auto final_output_table = std::make_shared<Table>(input_table->column_definitions(), TableType::Data);
+
+  auto output_mutex = std::mutex{};
 
   for (auto thread_id = size_t{0}; thread_id < RADIX_SPLIT_MAX_BUCKETS; ++thread_id) {
     threads.emplace_back([&, thread_id]() {
       const auto pos_lists = pos_lists_per_thread[thread_id];
 
-      if (pos_lists->empty()) {
-        output_tables[thread_id] = std::make_shared<Table>(input_table->column_definitions(), TableType::References);
-        return;
-      }
-
       const auto local_input_table = std::make_shared<Table>(input_table->column_definitions(), TableType::References);
 
       // TODO(anyone): unify code branches
       const auto column_count = input_table->column_count();
-      if (!is_reference_table) {
+      if (input_table->type() == TableType::Data) {
         for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
           auto pos_list = pos_lists->at(chunk_id);
           if (pos_list->empty()) {
@@ -1063,8 +1059,6 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
         }
       } else {
         // This mostly copy pasta from table scan
-        // TODO(anyone):
-        // REFERENCE START
         for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
           auto pos_list = pos_lists->at(chunk_id);
           if (pos_list->empty()) {
@@ -1126,7 +1120,18 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
       auto contexts_per_column = ContextsPerColumn(aggregate_count);
       _aggregate<AggregateKey>(contexts_per_column, local_input_table, expected_result_size);
       const auto& output_table = _create_output_table(contexts_per_column, local_input_table, expected_result_size);
-      output_tables[thread_id] = output_table;
+      const auto lock = std::lock_guard<std::mutex>{output_mutex};
+      // we use TableType::Data as an indicator that the final output has not been set yet.
+      if (final_output_table->type() == TableType::Data) {
+        final_output_table = output_table;
+        return;
+      }
+
+      const auto chunk_count = output_table->chunk_count();
+      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; chunk_id++) {
+        auto chunk = output_table->get_chunk(chunk_id);
+        final_output_table->append_chunk(chunk->segments());
+      }
     });
   }
 
@@ -1134,15 +1139,7 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
     thread.join();
   }
 
-  for (auto thread_id = size_t{1}; thread_id < RADIX_SPLIT_MAX_BUCKETS; ++thread_id) {
-    const auto chunk_count = output_tables[thread_id]->chunk_count();
-    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; chunk_id++) {
-      auto chunk = output_tables[thread_id]->get_chunk(chunk_id);
-      output_tables[0]->append_chunk(chunk->segments());
-    }
-  }
-
-  return output_tables[0];
+  return final_output_table;
 }
 
 template <typename AggregateKey>
