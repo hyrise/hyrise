@@ -1,8 +1,13 @@
 #include "operators/aggregate_dyod/scatter_store.hpp"
 
 #include <algorithm>
+#include <atomic>
 #include <cstddef>
+#include <cstdlib>
+#include <cstring>
 #include <vector>
+
+#include "utils/assert.hpp"
 
 #if defined(__SSE2__) || defined(_M_X64) || (defined(_M_IX86_FP) && _M_IX86_FP >= 2)
 #include <emmintrin.h>
@@ -11,16 +16,10 @@
 #define REGION_STREAM_SSE2 0
 #endif
 
-#if defined(__aarch64__) || defined(__arm__)
-#include <arm_acle.h>
-#endif
-
 namespace {
 void sfence() noexcept {
 #if REGION_STREAM_SSE2
   _mm_sfence();
-#elif defined(__aarch64__) || defined(__arm__)
-  __dmb(0xE);
 #else
   std::atomic_thread_fence(std::memory_order_release);
 #endif
@@ -70,6 +69,8 @@ void Region::grow() {
 }
 
 void Region::push_line(const std::byte* line) {
+  DebugAssert(_size % SWWC_LINE_BYTES == 0, "_size has to be line aligned before push_line is called");
+
   if (_size + SWWC_LINE_BYTES > _capacity) {
     grow();
   }
@@ -216,12 +217,12 @@ Region& ScatterHeads::_region_for(ScatterStore& store, const size_t stream, cons
 }
 
 void ScatterHeads::_store_line_flush(ScatterStore& store, const size_t stream, const PartitionId partition,
-                                     const size_t line, const size_t fill) const {
+                                     const size_t line_offset, const size_t fill) const {
   Region& region = _region_for(store, stream, partition);
   if (fill == SWWC_LINE_BYTES) {
-    region.push_line(_staging.data() + line);
+    region.push_line(_staging.data() + line_offset);
   } else {
-    region.drain_partial(_staging.data() + line, fill);
+    region.drain_partial(_staging.data() + line_offset, fill);
   }
 }
 
@@ -231,14 +232,14 @@ void ScatterHeads::push(ScatterStore& store, const size_t stream, const Partitio
   DebugAssert(partition < _partition_count, "partition out of range");
   DebugAssert(width == _stream_widths[stream], "field width must match the stream's per-row width");
 
-  const auto line = _line_offset(stream, partition);
+  const auto line_offset = _line_offset(stream, partition);
   auto& fill = _fill[stream * _partition_count + static_cast<size_t>(partition)];
 
-  std::memcpy(_staging.data() + line + fill, bytes, width);
+  std::memcpy(_staging.data() + line_offset + fill, bytes, width);
   fill += width;
 
   if (fill == SWWC_LINE_BYTES) {
-    _store_line_flush(store, stream, partition, line, fill);
+    _store_line_flush(store, stream, partition, line_offset, fill);
     fill = 0;
   }
 }
