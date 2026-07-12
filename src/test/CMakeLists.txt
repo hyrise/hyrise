@@ -77,6 +77,7 @@ set(
     lib/memory/segments_using_allocators_test.cpp
     lib/memory/zero_allocator_test.cpp
     lib/null_value_test.cpp
+    lib/operators/aggregate_dyod/hyperloglog_test.cpp
     lib/operators/aggregate_sort_test.cpp
     lib/operators/aggregate_test.cpp
     lib/operators/alias_operator_test.cpp

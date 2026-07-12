@@ -46,6 +46,13 @@ TEST_F(HllSketchTest, SingleHashProducesSmallEstimate) {
   EXPECT_NEAR(static_cast<double>(sketch.estimate()), 1.0, 1.0);
 }
 
+TEST_F(HllSketchTest, ZeroHashProducesSmallEstimate) {
+  auto sketch = HllSketch{};
+  sketch.add(0);
+
+  EXPECT_NEAR(static_cast<double>(sketch.estimate()), 1.0, 1.0);
+}
+
 TEST_F(HllSketchTest, DuplicateHashesDoNotIncreaseEstimate) {
   auto sketch = HllSketch{};
   const auto hash = mix(17);
@@ -150,10 +157,7 @@ TEST_F(HllSketchTest, WorkerSketchesCanBeMerged) {
 }
 
 TEST_F(HllSketchTest, ChoosePartitionCountZeroEstimate) {
-  const auto partition_count = choose_partition_count(0, 1);
-
-  EXPECT_TRUE(is_power_of_two(partition_count));
-  EXPECT_GE(partition_count, PartitionCount{1});
+  EXPECT_EQ(choose_partition_count(0, 1), PartitionCount{1});
 }
 
 TEST_F(HllSketchTest, ChoosePartitionCountScalesWithKeysBudget) {
