@@ -973,6 +973,15 @@ constexpr auto RADIX_SPLIT_MAX_BUCKETS = RADIX_MASK + 1;
 
 template <typename AggregateKey>
 std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
+  if (left_input_table()->type() == TableType::Data) {
+    return _partition_and_aggregate<std::false_type, AggregateKey>();
+  } else {
+    return _partition_and_aggregate<std::true_type, AggregateKey>();
+  }
+}
+
+template <typename IsReferenceTable, typename AggregateKey>
+std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
   const auto aggregate_count = _aggregates.size();
   const auto& input_table = left_input_table();
   if constexpr (HYRISE_DEBUG) {
@@ -1041,37 +1050,23 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
   for (auto thread_id = size_t{0}; thread_id < RADIX_SPLIT_MAX_BUCKETS; ++thread_id) {
     threads.emplace_back([&, thread_id]() {
       const auto pos_lists = pos_lists_per_thread[thread_id];
-
       const auto local_input_table = std::make_shared<Table>(input_table->column_definitions(), TableType::References);
 
-      // TODO(anyone): unify code branches
       const auto column_count = input_table->column_count();
-      if (input_table->type() == TableType::Data) {
-        for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-          auto pos_list = pos_lists->at(chunk_id);
-          if (pos_list->empty()) {
-            continue;
-          }
-          auto segments = Segments{};
-          segments.reserve(column_count);
-          for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
-            segments.push_back(std::make_shared<ReferenceSegment>(input_table, column_id, pos_list));
-          }
-          local_input_table->append_chunk(segments);
+      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+        auto pos_list = pos_lists->at(chunk_id);
+        if (pos_list->empty()) {
+          continue;
         }
-      } else {
-        // This mostly copy pasta from table scan
-        for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-          auto pos_list = pos_lists->at(chunk_id);
-          if (pos_list->empty()) {
-            continue;
+        auto out_segments = Segments{};
+        out_segments.reserve(column_count);
+        if constexpr (std::is_same_v<IsReferenceTable, std::false_type>) {
+          for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+            out_segments.push_back(std::make_shared<ReferenceSegment>(input_table, column_id, pos_list));
           }
-
+        } else {
+          // This mostly copy pasta from table scan
           const auto& chunk_in = input_table->get_chunk(chunk_id);
-
-          auto out_segments = Segments{};
-          out_segments.reserve(column_count);
-
           if (pos_list->size() == chunk_in->size()) {
             // Shortcut - the entire input reference segment matches, so we can simply forward that chunk
             for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
@@ -1113,9 +1108,8 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
               out_segments.push_back(ref_segment_out);
             }
           }
-
-          local_input_table->append_chunk(out_segments);
         }
+        local_input_table->append_chunk(out_segments);
       }
 
       std::atomic_size_t expected_result_size;

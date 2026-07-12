@@ -167,6 +167,9 @@ class AggregateDYOD : public AbstractAggregateOperator {
   template <typename AggregateKey>
   std::shared_ptr<Table> _partition_and_aggregate();
 
+  template <typename IsReferenceTable, typename AggregateKey>
+  std::shared_ptr<Table> _partition_and_aggregate();
+
   std::shared_ptr<AbstractOperator> _on_deep_copy(
       const std::shared_ptr<AbstractOperator>& copied_left_input,
       const std::shared_ptr<AbstractOperator>& copied_right_input,
