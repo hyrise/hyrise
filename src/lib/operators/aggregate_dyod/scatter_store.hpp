@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <span>
 #include <vector>
 
@@ -86,7 +87,7 @@ class Region : private Noncopyable {
   void grow();
 
  private:
-  std::unique_ptr<std::byte[], AlignedFree> _data{};
+  std::unique_ptr<std::byte[], AlignedFree> _data;
   size_t _size{0};
   size_t _capacity{0};
 };
@@ -226,7 +227,7 @@ class ScatterHeads : private Noncopyable {
    * @param stream_count     Number of scatter streams (packed key + value streams + optional value-null-bitmap); must
    *   equal the number of streams the target ScatterStore was built for.
    * @param stream_widths    Per-row byte width of each stream, in stream order; borrowed for the duration of the call.
-   * @param has_value_null_bitmap
+   * @param has_value_null_bitmap Set if bitmap is present
    */
   ScatterHeads(PartitionCount partition_count, size_t stream_count, std::span<const size_t> stream_widths,
                bool has_value_null_bitmap);
@@ -262,12 +263,12 @@ class ScatterHeads : private Noncopyable {
   void finish(ScatterStore& store);
 
  private:
-  size_t line_offset(const size_t stream, const size_t partition) const {
+  size_t _line_offset(const size_t stream, const size_t partition) const {
     return (stream * _partition_count + partition) * SWWC_LINE_BYTES;
   }
 
-  Region& region_for(ScatterStore& store, size_t stream, PartitionId partition) const;
-  void store_line_flush(ScatterStore& store, size_t stream, PartitionId partition, size_t line, size_t fill) const;
+  Region& _region_for(ScatterStore& store, size_t stream, PartitionId partition) const;
+  void _store_line_flush(ScatterStore& store, size_t stream, PartitionId partition, size_t line, size_t fill) const;
 
   size_t _partition_count;
   size_t _stream_count;

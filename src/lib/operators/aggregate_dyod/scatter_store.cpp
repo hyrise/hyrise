@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <vector>
 
 #if defined(__SSE2__) || defined(_M_X64) || (defined(_M_IX86_FP) && _M_IX86_FP >= 2)
 #include <emmintrin.h>
@@ -41,8 +42,8 @@ void copy_line(std::byte* destination, const std::byte* source) {
 constexpr size_t REGION_INITIAL_LINES = 16;
 constexpr size_t REGION_INITIAL_CAPACITY = REGION_INITIAL_LINES * hyrise::SWWC_LINE_BYTES;
 
-constexpr size_t round_up_to_lines(const size_t n) noexcept {
-  return (n + hyrise::SWWC_LINE_BYTES - 1) / hyrise::SWWC_LINE_BYTES * hyrise::SWWC_LINE_BYTES;
+constexpr size_t round_up_to_lines(const size_t size) noexcept {
+  return (size + hyrise::SWWC_LINE_BYTES - 1) / hyrise::SWWC_LINE_BYTES * hyrise::SWWC_LINE_BYTES;
 }
 }  // namespace
 
@@ -51,7 +52,7 @@ namespace hyrise {
 void Region::grow() {
   const auto required = size_t{_size + SWWC_LINE_BYTES};
   const auto doubled = size_t{_capacity * 2};
-  const auto new_capacity = size_t{round_up_to_lines(std::max({required, doubled, REGION_INITIAL_CAPACITY}))};
+  const auto new_capacity = round_up_to_lines(std::max({required, doubled, REGION_INITIAL_CAPACITY}));
 
   auto* block = std::aligned_alloc(64, new_capacity);
   if (!block) {
@@ -203,7 +204,7 @@ ScatterHeads::ScatterHeads(PartitionCount partition_count, size_t stream_count, 
   _fill.assign(_stream_count * _partition_count, 0);
 }
 
-Region& ScatterHeads::region_for(ScatterStore& store, size_t stream, PartitionId partition) const {
+Region& ScatterHeads::_region_for(ScatterStore& store, size_t stream, PartitionId partition) const {
   DebugAssert(stream < _stream_count, "stream index out of range");
   if (stream == 0) {
     return store.key_region(partition);
@@ -214,9 +215,9 @@ Region& ScatterHeads::region_for(ScatterStore& store, size_t stream, PartitionId
   return store.value_null_bitmap_region(partition);
 }
 
-void ScatterHeads::store_line_flush(ScatterStore& store, const size_t stream, const PartitionId partition,
-                                    const size_t line, const size_t fill) const {
-  Region& region = region_for(store, stream, partition);
+void ScatterHeads::_store_line_flush(ScatterStore& store, size_t stream, PartitionId partition, size_t line,
+                                     size_t fill) const {
+  Region& region = _region_for(store, stream, partition);
   if (fill == SWWC_LINE_BYTES) {
     region.push_line(_staging.data() + line);
   } else {
@@ -230,14 +231,14 @@ void ScatterHeads::push(ScatterStore& store, size_t stream, PartitionId partitio
   DebugAssert(partition < _partition_count, "partition out of range");
   DebugAssert(width == _stream_widths[stream], "field width must match the stream's per-row width");
 
-  const auto line = line_offset(stream, partition);
+  const auto line = _line_offset(stream, partition);
   auto& fill = _fill[stream * _partition_count + static_cast<size_t>(partition)];
 
   std::memcpy(_staging.data() + line + fill, bytes, width);
   fill += width;
 
   if (fill == SWWC_LINE_BYTES) {
-    store_line_flush(store, stream, partition, line, fill);
+    _store_line_flush(store, stream, partition, line, fill);
     fill = 0;
   }
 }
@@ -246,7 +247,7 @@ void ScatterHeads::finish(ScatterStore& store) {
   for (auto stream = size_t{0}; stream < _stream_count; ++stream) {
     for (auto partition = size_t{0}; partition < _partition_count; ++partition) {
       if (auto& fill = _fill[stream * _partition_count + partition]; fill > 0) {
-        store_line_flush(store, stream, static_cast<PartitionId>(partition), line_offset(stream, partition), fill);
+        _store_line_flush(store, stream, static_cast<PartitionId>(partition), _line_offset(stream, partition), fill);
         fill = 0;
       }
     }
