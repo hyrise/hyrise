@@ -1053,8 +1053,8 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
   // SPLIT END
 
   auto threads = std::vector<std::thread>{};
+  threads.reserve(RADIX_SPLIT_MAX_BUCKETS);
   auto final_output_table = std::make_shared<Table>(input_table->column_definitions(), TableType::Data);
-
   auto output_mutex = std::mutex{};
 
   for (auto thread_id = size_t{0}; thread_id < RADIX_SPLIT_MAX_BUCKETS; ++thread_id) {
@@ -1075,28 +1075,22 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
             out_segments.push_back(std::make_shared<ReferenceSegment>(input_table, column_id, pos_list));
           }
         } else {
-          // This mostly copy pasta from table scan
+          // This mostly copy pasta from TableScan.
           const auto& chunk_in = input_table->get_chunk(chunk_id);
           if (pos_list->size() == chunk_in->size()) {
-            // Shortcut - the entire input reference segment matches, so we can simply forward that chunk
-            for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
-              const auto segment_in = chunk_in->get_segment(column_id);
-              out_segments.emplace_back(segment_in);
-            }
+            // Shortcut - the entire input reference segment matches, so we can simply forward that chunk.
+            local_input_table->append_chunk(chunk_in->segments());
+            continue;
           } else {
             auto filtered_pos_lists = std::map<std::shared_ptr<const AbstractPosList>, std::shared_ptr<RowIDPosList>>{};
 
             for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
               const auto segment_in = chunk_in->get_segment(column_id);
 
-              auto ref_segment_in = std::dynamic_pointer_cast<const ReferenceSegment>(segment_in);
+              const auto ref_segment_in = std::dynamic_pointer_cast<const ReferenceSegment>(segment_in);
               DebugAssert(ref_segment_in, "All segments should be of type ReferenceSegment.");
 
               const auto pos_list_in = ref_segment_in->pos_list();
-
-              const auto table_out = ref_segment_in->referenced_table();
-              const auto column_id_out = ref_segment_in->referenced_column_id();
-
               auto& filtered_pos_list = filtered_pos_lists[pos_list_in];
 
               if (!filtered_pos_list) {
@@ -1113,16 +1107,18 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
                 }
               }
 
+              const auto table_out = ref_segment_in->referenced_table();
+              const auto column_id_out = ref_segment_in->referenced_column_id();
               const auto ref_segment_out =
                   std::make_shared<ReferenceSegment>(table_out, column_id_out, filtered_pos_list);
-              out_segments.push_back(ref_segment_out);
+              out_segments.emplace_back(ref_segment_out);
             }
           }
         }
         local_input_table->append_chunk(out_segments);
       }
 
-      std::atomic_size_t expected_result_size;
+      auto expected_result_size = std::atomic_size_t{0};
       auto contexts_per_column = ContextsPerColumn(aggregate_count);
       _aggregate<AggregateKey>(contexts_per_column, local_input_table, expected_result_size);
       const auto& output_table = _create_output_table(contexts_per_column, local_input_table, expected_result_size);
