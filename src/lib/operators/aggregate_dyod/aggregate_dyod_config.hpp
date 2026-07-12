@@ -22,7 +22,7 @@ namespace hyrise {
  * governs how finely the key space is split: larger P means smaller per-partition merge maps.
  *
  * Invariants: P is a power of two, so a partition index is the low log2(P) bits of a key's hash; P lies in
- *   [max(worker_count, 1), MAX_PARTITION_COUNT].
+ *   [min(next_pow2(max(worker_count, 1)), MAX_PARTITION_COUNT), MAX_PARTITION_COUNT].
  *
  * Ownership/lifetime/threading: a plain value computed at the estimate barrier and thereafter read-only, so every
  *   worker shares it across the scatter and merge phases without synchronization.

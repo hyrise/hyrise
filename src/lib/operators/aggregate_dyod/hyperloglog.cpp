@@ -12,19 +12,6 @@ namespace {
 constexpr auto REGISTER_COUNT = size_t{1} << HLL_PRECISION;
 constexpr auto REMAINING_HASH_BITS = 64 - HLL_PRECISION;
 
-size_t next_power_of_two(const size_t value) {
-  if (value <= 1) {
-    return 1;
-  }
-
-  constexpr auto max_power_of_two = size_t{1} << (std::numeric_limits<size_t>::digits - 1);
-  if (value > max_power_of_two) {
-    return max_power_of_two;
-  }
-
-  return size_t{1} << (std::numeric_limits<size_t>::digits - std::countl_zero(value - 1));
-}
-
 size_t ceil_divide(const size_t dividend, const size_t divisor) {
   return (dividend / divisor) + (dividend % divisor == 0 ? 0 : 1);
 }
@@ -78,10 +65,10 @@ size_t HllSketch::estimate() const {
 
 PartitionCount choose_partition_count(const size_t cardinality_estimate, const size_t worker_count) {
   const auto maximum_partition_count = static_cast<size_t>(MAX_PARTITION_COUNT);
-  const auto minimum_partition_count = std::min(next_power_of_two(std::max(size_t{1}, worker_count)),
-                                                maximum_partition_count);
-  const auto target_partition_count = next_power_of_two(std::max(size_t{1}, ceil_divide(cardinality_estimate,
-                                                                                        KEYS_BUDGET)));
+  const auto minimum_partition_count =
+      std::bit_ceil(std::min(std::max(size_t{1}, worker_count), maximum_partition_count));
+  const auto target_partition_count =
+      std::bit_ceil(std::min(ceil_divide(cardinality_estimate, KEYS_BUDGET), maximum_partition_count));
   const auto partition_count = std::clamp(target_partition_count, minimum_partition_count, maximum_partition_count);
 
   return static_cast<PartitionCount>(partition_count);

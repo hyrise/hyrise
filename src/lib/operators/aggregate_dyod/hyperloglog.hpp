@@ -100,14 +100,13 @@ class HllSketch : private Noncopyable {
  * per-partition bookkeeping and the SWWC staging footprint.
  *
  * @param cardinality_estimate Estimated distinct group-by keys, from a merged HllSketch::estimate(). 0 is valid (empty
- *   input) and yields the floor rather than tripping undefined behavior in next_pow2's leading-zero intrinsic --
- *   next_pow2(0) is guarded.
+ *   input) and yields the floor.
  * @param worker_count Number of merge workers (scheduler CPUs); sets the lower bound via max(worker_count, 1), so a
  *   worker_count of 0 still yields at least one partition.
  * @return A power of two in [min(next_pow2(max(worker_count, 1)), MAX_PARTITION_COUNT), MAX_PARTITION_COUNT], so a
  *   partition index is the low log2(P) bits of a key's hash.
  * @note This is a total function: every input, including a 0 estimate, yields a valid P. Empty input is additionally
- *   short-circuited upstream; the guard is kept for totality.
+ *   short-circuited upstream.
  */
 PartitionCount choose_partition_count(size_t cardinality_estimate, size_t worker_count);
 
