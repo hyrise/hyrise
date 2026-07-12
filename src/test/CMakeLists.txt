@@ -77,6 +77,7 @@ set(
     lib/memory/segments_using_allocators_test.cpp
     lib/memory/zero_allocator_test.cpp
     lib/null_value_test.cpp
+    lib/operators/aggregate_dyod/scatter_store_test.cpp
     lib/operators/aggregate_sort_test.cpp
     lib/operators/aggregate_test.cpp
     lib/operators/alias_operator_test.cpp
@@ -254,7 +255,6 @@ set(
     testing_assert.cpp
     testing_assert.hpp
     utils/data_dependency_test_utils.hpp
-        lib/operators/aggregate_dyod_test.cpp
 )
 
 set (
@@ -273,7 +273,6 @@ set (
     lib/utils/plugin_test_utils.cpp
     lib/utils/plugin_test_utils.hpp
     plugins/mvcc_delete_plugin_system_test.cpp
-        lib/operators/aggregate_dyod/scatter_store_test.cpp
 )
 
 # Both hyriseTest and hyriseSystemTest link against these
