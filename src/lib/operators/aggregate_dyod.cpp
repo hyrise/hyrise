@@ -1003,16 +1003,21 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
     return _create_output_table(contexts_per_column, input_table, expected_result_size);
   }
 
-  // TODO(anyone): for reference tables, we do not a PosList as we will create new a PosList for every chunk anyway.
-  // TODO(anyone): for data tables, consider whether we want one chunk per input chunk or one segment per column.
-  const auto chunk_count = input_table->chunk_count();
-  auto pos_lists_per_thread = std::vector<std::shared_ptr<std::vector<std::shared_ptr<RowIDPosList>>>>{};
+  // If we have a Data table, we directly partion into PosLists and forward these to the thread-local input tables.
+  // For a Reference table, we only store the ChunkOffsets since we have to resolve the PosList anyway later.
+  // TODO(anyone): figure out how pmr_vector works and if we want to use that instead on std::vector.
+  using ReferenceList =
+      std::conditional_t<std::is_same_v<IsReferenceTable, std::true_type>, std::vector<ChunkOffset>, RowIDPosList>;
+  using PosLists = std::vector<std::shared_ptr<ReferenceList>>;
+
+  auto pos_lists_per_thread = std::vector<std::shared_ptr<PosLists>>{};
   pos_lists_per_thread.reserve(RADIX_SPLIT_MAX_BUCKETS);
 
+  const auto chunk_count = input_table->chunk_count();
   for (auto bucket_id = size_t{0}; bucket_id < RADIX_SPLIT_MAX_BUCKETS; ++bucket_id) {
-    pos_lists_per_thread.emplace_back(std::make_shared<std::vector<std::shared_ptr<RowIDPosList>>>());
+    pos_lists_per_thread.emplace_back(std::make_shared<PosLists>());
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-      pos_lists_per_thread[bucket_id]->emplace_back(std::make_shared<RowIDPosList>());
+      pos_lists_per_thread[bucket_id]->emplace_back(std::make_shared<ReferenceList>());
     }
   }
 
@@ -1034,7 +1039,12 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
           }
 
           const auto key = value & RADIX_MASK;
-          pos_lists_per_thread[key]->at(chunk_id)->push_back(RowID{chunk_id, position.chunk_offset()});
+          // see definition of pos_lists_per_thread
+          if constexpr (std::is_same_v<IsReferenceTable, std::true_type>) {
+            pos_lists_per_thread[key]->at(chunk_id)->push_back(position.chunk_offset());
+          } else {
+            pos_lists_per_thread[key]->at(chunk_id)->push_back(RowID{chunk_id, position.chunk_offset()});
+          }
         });
       }
     }
@@ -1097,7 +1107,7 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
 
                 auto offset = size_t{0};
                 for (const auto& match : *pos_list) {
-                  const auto row_id = (*pos_list_in)[match.chunk_offset];
+                  const auto row_id = (*pos_list_in)[match];
                   (*filtered_pos_list)[offset] = row_id;
                   ++offset;
                 }
