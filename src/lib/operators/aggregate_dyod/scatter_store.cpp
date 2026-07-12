@@ -106,9 +106,9 @@ void Region::clear() {
   _size = 0;
 }
 
-ScatterStore::ScatterStore(PartitionCount partition_count, size_t key_width,
-                           std::span<const size_t> value_stream_widths, size_t value_null_bitmap_width,
-                           bool needs_value_arena)
+ScatterStore::ScatterStore(const PartitionCount partition_count, const size_t key_width,
+                           const std::span<const size_t> value_stream_widths, const size_t value_null_bitmap_width,
+                           const bool needs_value_arena)
     : _partition_count(partition_count), _value_stream_count(value_stream_widths.size()) {
   const auto partition_count_value = static_cast<size_t>(partition_count);
   Assert(partition_count_value >= 1 && partition_count_value <= MAX_PARTITION_COUNT,
@@ -131,12 +131,12 @@ ScatterStore::ScatterStore(PartitionCount partition_count, size_t key_width,
   }
 }
 
-Region& ScatterStore::key_region(PartitionId partition) {
+Region& ScatterStore::key_region(const PartitionId partition) {
   DebugAssert(static_cast<size_t>(partition) < static_cast<size_t>(_partition_count), "partition id out of range");
   return _key_regions[partition];
 }
 
-Region& ScatterStore::value_region(PartitionId partition, size_t value_stream_index) {
+Region& ScatterStore::value_region(const PartitionId partition, const size_t value_stream_index) {
   DebugAssert(static_cast<size_t>(partition) < static_cast<size_t>(_partition_count), "partition id out of range");
   DebugAssert(value_stream_index < _value_stream_count, "value stream index out of range");
 
@@ -145,20 +145,20 @@ Region& ScatterStore::value_region(PartitionId partition, size_t value_stream_in
   return _value_regions[index];
 }
 
-Region& ScatterStore::value_null_bitmap_region(PartitionId partition) {
+Region& ScatterStore::value_null_bitmap_region(const PartitionId partition) {
   DebugAssert(static_cast<size_t>(partition) < static_cast<size_t>(_partition_count), "partition id out of range");
   DebugAssert(!_value_null_bitmap_regions.empty(), "no value-null-bitmap regions");
 
   return _value_null_bitmap_regions[partition];
 }
 
-StringSpillBuffer& ScatterStore::key_spill_buffer(PartitionId partition) {
+StringSpillBuffer& ScatterStore::key_spill_buffer(const PartitionId partition) {
   DebugAssert(static_cast<size_t>(partition) < static_cast<size_t>(_partition_count), "partition id out of range");
 
   return _key_spill_buffers[partition];
 }
 
-StringSpillBuffer& ScatterStore::value_arena(PartitionId partition) {
+StringSpillBuffer& ScatterStore::value_arena(const PartitionId partition) {
   DebugAssert(static_cast<size_t>(partition) < static_cast<size_t>(_partition_count), "partition id out of range");
   DebugAssert(!_value_arenas.empty(), "no value arenas");
 
@@ -183,8 +183,8 @@ void ScatterStore::clear() {
   }
 }
 
-ScatterHeads::ScatterHeads(PartitionCount partition_count, size_t stream_count, std::span<const size_t> stream_widths,
-                           bool has_value_null_bitmap)
+ScatterHeads::ScatterHeads(const PartitionCount partition_count, const size_t stream_count,
+                           std::span<const size_t> stream_widths, const bool has_value_null_bitmap)
     : _partition_count(partition_count),
       _stream_count(stream_count),
       _stream_widths(stream_widths.begin(), stream_widths.end()) {
@@ -204,7 +204,7 @@ ScatterHeads::ScatterHeads(PartitionCount partition_count, size_t stream_count, 
   _fill.assign(_stream_count * _partition_count, 0);
 }
 
-Region& ScatterHeads::_region_for(ScatterStore& store, size_t stream, PartitionId partition) const {
+Region& ScatterHeads::_region_for(ScatterStore& store, const size_t stream, const PartitionId partition) const {
   DebugAssert(stream < _stream_count, "stream index out of range");
   if (stream == 0) {
     return store.key_region(partition);
@@ -215,8 +215,8 @@ Region& ScatterHeads::_region_for(ScatterStore& store, size_t stream, PartitionI
   return store.value_null_bitmap_region(partition);
 }
 
-void ScatterHeads::_store_line_flush(ScatterStore& store, size_t stream, PartitionId partition, size_t line,
-                                     size_t fill) const {
+void ScatterHeads::_store_line_flush(ScatterStore& store, const size_t stream, const PartitionId partition,
+                                     const size_t line, const size_t fill) const {
   Region& region = _region_for(store, stream, partition);
   if (fill == SWWC_LINE_BYTES) {
     region.push_line(_staging.data() + line);
@@ -225,8 +225,8 @@ void ScatterHeads::_store_line_flush(ScatterStore& store, size_t stream, Partiti
   }
 }
 
-void ScatterHeads::push(ScatterStore& store, size_t stream, PartitionId partition, const std::byte* bytes,
-                        size_t width) {
+void ScatterHeads::push(ScatterStore& store, const size_t stream, const PartitionId partition, const std::byte* bytes,
+                        const size_t width) {
   DebugAssert(stream < _stream_count, "stream index out of range");
   DebugAssert(partition < _partition_count, "partition out of range");
   DebugAssert(width == _stream_widths[stream], "field width must match the stream's per-row width");
