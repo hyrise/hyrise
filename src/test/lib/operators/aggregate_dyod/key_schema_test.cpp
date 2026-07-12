@@ -579,6 +579,61 @@ TEST_F(AggregateDYODKeySchemaTest, StringKeysRoundTripThroughUnpack) {
   });
 }
 
+TEST_F(AggregateDYODKeySchemaTest, ColumnCountMatchesTheGroupByTuple) {
+  const auto numeric = make_pack_input({{"a", DataType::Int, false}, {"b", DataType::Long, false}}, {{1, int64_t{2}}});
+  EXPECT_EQ(NumericShortKeySchema<12>::build(numeric.column_ids, *numeric.table).column_count(), 2u);
+
+  const auto wide_definitions = TableColumnDefinitions{{"a", DataType::Int, false},
+                                                       {"b", DataType::Int, false},
+                                                       {"c", DataType::Int, false},
+                                                       {"d", DataType::Int, false},
+                                                       {"e", DataType::Int, false}};
+  const auto wide = make_pack_input(wide_definitions, {{1, 2, 3, 4, 5}});
+  EXPECT_EQ(NumericArbitraryKeySchema::build(wide.column_ids, *wide.table).column_count(), 5u);
+
+  const auto mixed =
+      make_pack_input({{"a", DataType::Int, false}, {"b", DataType::String, false}}, {{1, pmr_string{"x"}}});
+  EXPECT_EQ(MixedKeySchema<4>::build(mixed.column_ids, *mixed.table).column_count(), 2u);
+
+  const auto strings = make_pack_input({{"a", DataType::String, false}}, {{pmr_string{"x"}}});
+  EXPECT_EQ(StringOnlyKeySchema<4>::build(strings.column_ids, *strings.table).column_count(), 1u);
+}
+
+TEST_F(AggregateDYODKeySchemaTest, ReinternedSpilledKeysSurviveSpillBufferReuse) {
+  const auto long_string = pmr_string(3 * STRING_BLOB_BYTES_PER_COLUMN, 'r');
+  const auto definitions = TableColumnDefinitions{
+      {"a", DataType::Int, false}, {"b", DataType::String, true}, {"c", DataType::String, false}};
+  const auto rows = std::vector<std::vector<AllTypeVariant>>{{7, NullValue{}, long_string}};
+  const auto input = make_pack_input(definitions, rows);
+  const auto schema = MixedKeySchema<4>::build(input.column_ids, *input.table);
+
+  auto scatter_spill = StringSpillBuffer{};
+  auto merge_spill = StringSpillBuffer{};
+  auto key = pack_key(schema, input, 0, scatter_spill);
+  schema.reintern_spill(key.data(), merge_spill);
+
+  scatter_spill.clear();
+  const auto garbage = std::vector<std::byte>(long_string.size(), std::byte{'!'});
+  scatter_spill.append(garbage.data(), garbage.size());
+
+  auto other_spill = StringSpillBuffer{};
+  const auto reference = pack_key(schema, input, 0, other_spill);
+  expect_keys_equal(schema, key, reference);
+  expect_unpack_round_trip(schema, definitions, {key}, rows);
+}
+
+TEST_F(AggregateDYODKeySchemaTest, ReinternLeavesInlineKeysUntouched) {
+  const auto input = make_pack_input({{"a", DataType::String, false}}, {{pmr_string{"inline"}}});
+  const auto schema = StringOnlyKeySchema<4>::build(input.column_ids, *input.table);
+
+  auto spill = StringSpillBuffer{};
+  auto key = pack_key(schema, input, 0, spill);
+  const auto before = key;
+  schema.reintern_spill(key.data(), spill);
+
+  EXPECT_EQ(key, before);
+}
+
 TEST_F(AggregateDYODKeySchemaTest, MixedKeysRoundTripThroughUnpack) {
   const auto definitions =
       TableColumnDefinitions{{"a", DataType::Int, true}, {"b", DataType::String, false}, {"c", DataType::Long, false}};

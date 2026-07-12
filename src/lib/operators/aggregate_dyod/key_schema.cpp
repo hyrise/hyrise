@@ -372,6 +372,11 @@ size_t NumericShortKeySchema<PackedWidth>::packed_width() const {
 }
 
 template <size_t PackedWidth>
+size_t NumericShortKeySchema<PackedWidth>::column_count() const {
+  Fail("NumericShortKeySchema::column_count is not implemented yet.");
+}
+
+template <size_t PackedWidth>
 void NumericShortKeySchema<PackedWidth>::pack(const std::span<const AbstractSegment* const> group_by_segments,
                                               const ChunkOffset chunk_offset, std::byte* key_out,
                                               StringSpillBuffer& /*spill_buffer*/) const {
@@ -424,6 +429,10 @@ NumericArbitraryKeySchema NumericArbitraryKeySchema::build(const std::vector<Col
 
 size_t NumericArbitraryKeySchema::packed_width() const {
   return _packed_width;
+}
+
+size_t NumericArbitraryKeySchema::column_count() const {
+  Fail("NumericArbitraryKeySchema::column_count is not implemented yet.");
 }
 
 void NumericArbitraryKeySchema::pack(const std::span<const AbstractSegment* const> group_by_segments,
@@ -487,6 +496,11 @@ size_t MixedKeySchema<LenWidth>::fixed_part_width() const {
 }
 
 template <size_t LenWidth>
+size_t MixedKeySchema<LenWidth>::column_count() const {
+  Fail("MixedKeySchema::column_count is not implemented yet.");
+}
+
+template <size_t LenWidth>
 void MixedKeySchema<LenWidth>::pack(const std::span<const AbstractSegment* const> group_by_segments,
                                     const ChunkOffset chunk_offset, std::byte* key_out,
                                     StringSpillBuffer& spill_buffer) const {
@@ -516,6 +530,15 @@ uint64_t MixedKeySchema<LenWidth>::hash(const std::byte* key) const {
 template <size_t LenWidth>
 bool MixedKeySchema<LenWidth>::equals(const std::byte* a, const std::byte* b) const {
   return equals_string_keys(_string_columns, LenWidth, _fixed_part_width, a, b);
+}
+
+// reintern_spill is a Fail() stub so its tests compile and link; the implementation is added test-driven in a
+// subsequent step. A Fail()-only void body trips -Wmissing-noreturn; the real implementation will return.
+#pragma clang diagnostic ignored "-Wmissing-noreturn"
+
+template <size_t LenWidth>
+void MixedKeySchema<LenWidth>::reintern_spill(std::byte* /*key*/, StringSpillBuffer& /*spill_buffer*/) const {
+  Fail("MixedKeySchema::reintern_spill is not implemented yet.");
 }
 
 template class MixedKeySchema<4>;
@@ -550,6 +573,11 @@ size_t StringOnlyKeySchema<LenWidth>::fixed_part_width() const {
 }
 
 template <size_t LenWidth>
+size_t StringOnlyKeySchema<LenWidth>::column_count() const {
+  Fail("StringOnlyKeySchema::column_count is not implemented yet.");
+}
+
+template <size_t LenWidth>
 void StringOnlyKeySchema<LenWidth>::pack(const std::span<const AbstractSegment* const> group_by_segments,
                                          const ChunkOffset chunk_offset, std::byte* key_out,
                                          StringSpillBuffer& spill_buffer) const {
@@ -572,6 +600,11 @@ uint64_t StringOnlyKeySchema<LenWidth>::hash(const std::byte* key) const {
 template <size_t LenWidth>
 bool StringOnlyKeySchema<LenWidth>::equals(const std::byte* a, const std::byte* b) const {
   return equals_string_keys(_string_columns, LenWidth, _fixed_part_width, a, b);
+}
+
+template <size_t LenWidth>
+void StringOnlyKeySchema<LenWidth>::reintern_spill(std::byte* /*key*/, StringSpillBuffer& /*spill_buffer*/) const {
+  Fail("StringOnlyKeySchema::reintern_spill is not implemented yet.");
 }
 
 template class StringOnlyKeySchema<4>;
