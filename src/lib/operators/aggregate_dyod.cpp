@@ -1072,6 +1072,7 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
         out_segments.reserve(column_count);
         if constexpr (std::is_same_v<IsReferenceTable, std::false_type>) {
           for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+            pos_list->guarantee_single_chunk();
             out_segments.push_back(std::make_shared<ReferenceSegment>(input_table, column_id, pos_list));
           }
         } else {
