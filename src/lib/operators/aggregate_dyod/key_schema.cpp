@@ -287,6 +287,22 @@ bool equals_string_keys(const StringKeyColumns& string_columns, const size_t len
                      total_length) == 0;
 }
 
+void reintern_spilled_key(const StringKeyColumns& string_columns, const size_t length_field_width,
+                          const size_t fixed_part_width, std::byte* key, StringSpillBuffer& spill_buffer) {
+  const auto pointer_value = read_spill_pointer(key, fixed_part_width);
+  if (pointer_value == 0) {
+    return;
+  }
+
+  auto total_length = size_t{0};
+  for (const auto& column : string_columns) {
+    total_length += read_length_field(key, column.length_field_offset, length_field_width);
+  }
+  const auto* interned = spill_buffer.append(reinterpret_cast<const std::byte*>(pointer_value), total_length);
+  const auto new_pointer = reinterpret_cast<uintptr_t>(interned);
+  std::memcpy(key + fixed_part_width, &new_pointer, sizeof(new_pointer));
+}
+
 }  // namespace
 
 namespace hyrise {
@@ -373,7 +389,7 @@ size_t NumericShortKeySchema<PackedWidth>::packed_width() const {
 
 template <size_t PackedWidth>
 size_t NumericShortKeySchema<PackedWidth>::column_count() const {
-  Fail("NumericShortKeySchema::column_count is not implemented yet.");
+  return _lanes.size();
 }
 
 template <size_t PackedWidth>
@@ -432,7 +448,7 @@ size_t NumericArbitraryKeySchema::packed_width() const {
 }
 
 size_t NumericArbitraryKeySchema::column_count() const {
-  Fail("NumericArbitraryKeySchema::column_count is not implemented yet.");
+  return _lanes.size();
 }
 
 void NumericArbitraryKeySchema::pack(const std::span<const AbstractSegment* const> group_by_segments,
@@ -497,7 +513,7 @@ size_t MixedKeySchema<LenWidth>::fixed_part_width() const {
 
 template <size_t LenWidth>
 size_t MixedKeySchema<LenWidth>::column_count() const {
-  Fail("MixedKeySchema::column_count is not implemented yet.");
+  return _numeric_lanes.size() + _string_columns.size();
 }
 
 template <size_t LenWidth>
@@ -532,13 +548,9 @@ bool MixedKeySchema<LenWidth>::equals(const std::byte* a, const std::byte* b) co
   return equals_string_keys(_string_columns, LenWidth, _fixed_part_width, a, b);
 }
 
-// reintern_spill is a Fail() stub so its tests compile and link; the implementation is added test-driven in a
-// subsequent step. A Fail()-only void body trips -Wmissing-noreturn; the real implementation will return.
-#pragma clang diagnostic ignored "-Wmissing-noreturn"
-
 template <size_t LenWidth>
-void MixedKeySchema<LenWidth>::reintern_spill(std::byte* /*key*/, StringSpillBuffer& /*spill_buffer*/) const {
-  Fail("MixedKeySchema::reintern_spill is not implemented yet.");
+void MixedKeySchema<LenWidth>::reintern_spill(std::byte* key, StringSpillBuffer& spill_buffer) const {
+  reintern_spilled_key(_string_columns, LenWidth, _fixed_part_width, key, spill_buffer);
 }
 
 template class MixedKeySchema<4>;
@@ -574,7 +586,7 @@ size_t StringOnlyKeySchema<LenWidth>::fixed_part_width() const {
 
 template <size_t LenWidth>
 size_t StringOnlyKeySchema<LenWidth>::column_count() const {
-  Fail("StringOnlyKeySchema::column_count is not implemented yet.");
+  return _string_columns.size();
 }
 
 template <size_t LenWidth>
@@ -603,8 +615,8 @@ bool StringOnlyKeySchema<LenWidth>::equals(const std::byte* a, const std::byte* 
 }
 
 template <size_t LenWidth>
-void StringOnlyKeySchema<LenWidth>::reintern_spill(std::byte* /*key*/, StringSpillBuffer& /*spill_buffer*/) const {
-  Fail("StringOnlyKeySchema::reintern_spill is not implemented yet.");
+void StringOnlyKeySchema<LenWidth>::reintern_spill(std::byte* key, StringSpillBuffer& spill_buffer) const {
+  reintern_spilled_key(_string_columns, LenWidth, _fixed_part_width, key, spill_buffer);
 }
 
 template class StringOnlyKeySchema<4>;
