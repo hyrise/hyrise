@@ -86,6 +86,15 @@ TEST_F(HllSketchTest, EstimatesLargeCardinality) {
               static_cast<double>(actual_count) * 0.05);
 }
 
+TEST_F(HllSketchTest, SaturatedSketchClampsEstimate) {
+  auto sketch = HllSketch{};
+  for (auto register_index = uint64_t{0}; register_index < (uint64_t{1} << HLL_PRECISION); ++register_index) {
+    sketch.add(register_index << (64 - HLL_PRECISION));
+  }
+
+  EXPECT_EQ(sketch.estimate(), std::numeric_limits<size_t>::max());
+}
+
 TEST_F(HllSketchTest, MergeMatchesSingleSketch) {
   constexpr auto actual_count = size_t{100000};
 
@@ -170,6 +179,7 @@ TEST_F(HllSketchTest, ChoosePartitionCountScalesWithKeysBudget) {
 TEST_F(HllSketchTest, ChoosePartitionCountClampsToWorkerCount) {
   EXPECT_EQ(choose_partition_count(1, 3), PartitionCount{4});
   EXPECT_EQ(choose_partition_count(1, 8), PartitionCount{8});
+  EXPECT_EQ(choose_partition_count(1, static_cast<size_t>(MAX_PARTITION_COUNT)), MAX_PARTITION_COUNT);
 }
 
 TEST_F(HllSketchTest, ChoosePartitionCountClampsToMax) {
