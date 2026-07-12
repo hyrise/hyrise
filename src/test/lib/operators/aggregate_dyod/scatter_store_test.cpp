@@ -2,6 +2,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <span>
 #include <vector>
 
 #include "base_test.hpp"
@@ -170,6 +171,26 @@ TEST_F(ScatterStoreTest, ConstructionAllocatesRegionsForFullSchema) {
   }
 }
 
+TEST_F(ScatterStoreTest, ClearResetsAllRegions) {
+  constexpr auto value_widths = std::array<size_t, 1>{8};
+  auto store = ScatterStore(PartitionCount{2}, 8, std::span<const size_t>(value_widths), 1, true);
+
+  const auto line = make_line(0x50);
+  for (auto partition = PartitionId{0}; partition < 2; ++partition) {
+    store.key_region(partition).push_line(line.data());
+    store.value_region(partition, 0).push_line(line.data());
+    store.value_null_bitmap_region(partition).push_line(line.data());
+  }
+
+  store.clear();
+
+  for (auto partition = PartitionId{0}; partition < 2; ++partition) {
+    EXPECT_EQ(store.key_region(partition).size(), 0u);
+    EXPECT_EQ(store.value_region(partition, 0).size(), 0u);
+    EXPECT_EQ(store.value_null_bitmap_region(partition).size(), 0u);
+  }
+}
+
 class ScatterHeadsTest : public BaseTest {};
 
 TEST_F(ScatterHeadsTest, ScatterAndReconstruct) {
@@ -209,6 +230,46 @@ TEST_F(ScatterHeadsTest, ScatterAndReconstruct) {
     EXPECT_EQ(store.key_region(partition).size() / KEY_WIDTH, store.value_region(partition, 0).size() / VALUE_WIDTH);
     expect_region_bytes(store.key_region(partition), expected_keys[partition]);
     expect_region_bytes(store.value_region(partition, 0), expected_values[partition]);
+  }
+}
+
+TEST_F(ScatterHeadsTest, ScatterWithNullBitmapStream) {
+  constexpr auto PARTITION_COUNT = uint32_t{2};
+  constexpr auto KEY_WIDTH = size_t{8};
+  constexpr auto VALUE_WIDTH = size_t{8};
+  constexpr auto BITMAP_WIDTH = size_t{1};
+
+  constexpr auto value_widths = std::array{VALUE_WIDTH};
+  auto store = ScatterStore(PartitionCount{PARTITION_COUNT}, KEY_WIDTH, std::span<const size_t>(value_widths),
+                            BITMAP_WIDTH, false);
+  constexpr auto stream_widths = std::array{KEY_WIDTH, VALUE_WIDTH, BITMAP_WIDTH};
+  auto heads = ScatterHeads(PartitionCount{PARTITION_COUNT}, 3, std::span<const size_t>(stream_widths), true);
+
+  constexpr auto fields_per_line = SWWC_LINE_BYTES / KEY_WIDTH;
+  constexpr auto rows_per_partition = 2 * fields_per_line + 3;
+  constexpr auto row_count = size_t{PARTITION_COUNT} * rows_per_partition;
+  auto expected_keys = std::vector<std::vector<std::byte>>(PARTITION_COUNT);
+  auto expected_bitmaps = std::vector<std::vector<std::byte>>(PARTITION_COUNT);
+
+  for (auto row = size_t{0}; row < row_count; ++row) {
+    const auto partition = static_cast<PartitionId>(row % PARTITION_COUNT);
+    const auto key = make_bytes(KEY_WIDTH, static_cast<uint8_t>(row));
+    const auto value = make_bytes(VALUE_WIDTH, static_cast<uint8_t>(row + 64));
+    const auto bitmap = static_cast<std::byte>(row % 2);
+
+    heads.push(store, 0, partition, key.data(), KEY_WIDTH);
+    heads.push(store, 1, partition, value.data(), VALUE_WIDTH);
+    heads.push(store, 2, partition, &bitmap, BITMAP_WIDTH);
+
+    expected_keys[partition].insert(expected_keys[partition].end(), key.begin(), key.end());
+    expected_bitmaps[partition].push_back(bitmap);
+  }
+
+  heads.finish(store);
+
+  for (auto partition = PartitionId{0}; partition < PARTITION_COUNT; ++partition) {
+    expect_region_bytes(store.key_region(partition), expected_keys[partition]);
+    expect_region_bytes(store.value_null_bitmap_region(partition), expected_bitmaps[partition]);
   }
 }
 
