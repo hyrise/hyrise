@@ -10,6 +10,7 @@
 
 #include "operators/aggregate_dyod/aggregate_dyod_config.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
@@ -24,7 +25,7 @@ class OutputColumns;
 // no Key class -- a packed key is just raw bytes living in a scatter store, a merge-map slot, or an output row. All
 // behavior lives on a *schema*: a per-query object, built once from the group-by column definitions, that knows how to
 // pack a row into key bytes, unpack key bytes back into typed output values, hash a key, and test two keys for
-// equality. Everything the hot loops need is a static method on the schema taking raw byte pointers.
+// equality. Everything the hot loops need is a const method on the schema instance taking raw byte pointers.
 //
 // Monomorphization. The schema type is selected once per query by resolve_key_schema() (below), which inspects the
 // group-by columns and dispatches to one of a bounded set of concrete schema types; the scatter and merge pipelines are
@@ -303,8 +304,7 @@ using StringKeyColumns =
  *
  * Selected by resolve_key_schema when every group-by column is numeric and the packed width (null bitmap + numeric
  * prefix) is one of {4,8,12,16} bytes; one template instantiation per bucket. Because the width is known at compile
- * time, hash() and equals() are fixed-size and branch-free, while pack()/unpack() loop the resolved lanes. All methods
- * are static and take the schema explicitly.
+ * time, hash() and equals() are fixed-size and branch-free, while pack()/unpack() loop the resolved lanes.
  *
  * Invariants: packed_width() == PackedWidth for every key; keys carry no string blob or spill pointer.
  *
@@ -337,7 +337,6 @@ class NumericShortKeySchema {
   /**
    * Pack one input row's group-by tuple into a key buffer.
    *
-   * @param schema The schema whose lanes drive the packing; borrowed, read only.
    * @param group_by_segments Segments for the group-by columns of the current chunk, in schema order; borrowed, read
    *   only.
    * @param chunk_offset Row within those segments to pack.
@@ -346,39 +345,35 @@ class NumericShortKeySchema {
    *   across schema variants.
    * @pre Runs in the scatter phase, single-threaded per worker on that worker's own store.
    */
-  static void pack(const NumericShortKeySchema& schema, std::span<const AbstractSegment* const> group_by_segments,
-                   ChunkOffset chunk_offset, std::byte* key_out, StringSpillBuffer& spill_buffer);
+  void pack(std::span<const AbstractSegment* const> group_by_segments, ChunkOffset chunk_offset, std::byte* key_out,
+            StringSpillBuffer& spill_buffer) const;
   /**
    * Unpack a packed key back into typed output values, one appended cell per group-by column.
    *
-   * @param schema The schema whose lanes drive the unpacking; borrowed, read only.
    * @param key Packed key to decode; borrowed, read only. Must be at least PackedWidth bytes.
    * @param output Destination columns for the emitting worker; borrowed, written. Thread-local, single writer.
    * @param output_row 0-based index of the output row being emitted.
    * @pre Runs in the merge phase, single-threaded per worker on that worker's own OutputColumns.
    */
-  static void unpack(const NumericShortKeySchema& schema, const std::byte* key, OutputColumns& output,
-                     size_t output_row);
+  void unpack(const std::byte* key, OutputColumns& output, size_t output_row) const;
   /**
    * Hash a packed key over its full fixed width.
    *
-   * @param schema The schema; borrowed, read only.
    * @param key Packed key to hash; borrowed, read only. Must be at least PackedWidth bytes.
    * @return 64-bit hash of the PackedWidth key bytes. Equal keys always hash equal (whole-buffer byte-equality).
    * Complexity: O(PackedWidth), fixed-size and branch-free.
    */
-  static uint64_t hash(const NumericShortKeySchema& schema, const std::byte* key);
+  uint64_t hash(const std::byte* key) const;
   /**
    * Test two packed keys for equality by comparing their full fixed width.
    *
-   * @param schema The schema; borrowed, read only.
    * @param a First packed key; borrowed, read only. Must be at least PackedWidth bytes.
    * @param b Second packed key; borrowed, read only. Must be at least PackedWidth bytes.
    * @return true iff the PackedWidth bytes of `a` and `b` are identical (a plain memcmp; NULLs and the lane value
    *   transforms already make byte-equality match value-equality).
    * Complexity: O(PackedWidth), fixed-size.
    */
-  static bool equals(const NumericShortKeySchema& schema, const std::byte* a, const std::byte* b);
+  bool equals(const std::byte* a, const std::byte* b) const;
 
  private:
   NumericKeyLanes _lanes;  // one lane per numeric group-by column, in schema order
@@ -419,7 +414,6 @@ class NumericArbitraryKeySchema {
   /**
    * Pack one input row's group-by tuple into a key buffer.
    *
-   * @param schema The schema whose lanes drive the packing; borrowed, read only.
    * @param group_by_segments Segments for the group-by columns of the current chunk, in schema order; borrowed, read
    *   only.
    * @param chunk_offset Row within those segments to pack.
@@ -427,42 +421,38 @@ class NumericArbitraryKeySchema {
    * @param spill_buffer Unused for numeric-only keys; present only for a uniform call site across schema variants.
    * @pre Runs in the scatter phase, single-threaded per worker on that worker's own store.
    */
-  static void pack(const NumericArbitraryKeySchema& schema, std::span<const AbstractSegment* const> group_by_segments,
-                   ChunkOffset chunk_offset, std::byte* key_out, StringSpillBuffer& spill_buffer);
+  void pack(std::span<const AbstractSegment* const> group_by_segments, ChunkOffset chunk_offset, std::byte* key_out,
+            StringSpillBuffer& spill_buffer) const;
   /**
    * Unpack a packed key back into typed output values, one appended cell per group-by column.
    *
-   * @param schema The schema whose lanes drive the unpacking; borrowed, read only.
    * @param key Packed key to decode; borrowed, read only. Must be at least packed_width() bytes.
    * @param output Destination columns for the emitting worker; borrowed, written. Thread-local, single writer.
    * @param output_row 0-based index of the output row being emitted.
    * @pre Runs in the merge phase, single-threaded per worker on that worker's own OutputColumns.
    */
-  static void unpack(const NumericArbitraryKeySchema& schema, const std::byte* key, OutputColumns& output,
-                     size_t output_row);
+  void unpack(const std::byte* key, OutputColumns& output, size_t output_row) const;
   /**
    * Hash a packed key over its full runtime width.
    *
-   * @param schema The schema; borrowed, read only. Supplies packed_width().
    * @param key Packed key to hash; borrowed, read only. Must be at least packed_width() bytes.
    * @return 64-bit hash of the packed_width() key bytes. Equal keys always hash equal.
    * Complexity: O(packed_width()).
    */
-  static uint64_t hash(const NumericArbitraryKeySchema& schema, const std::byte* key);
+  uint64_t hash(const std::byte* key) const;
   /**
    * Test two packed keys for equality by comparing their full runtime width.
    *
-   * @param schema The schema; borrowed, read only. Supplies packed_width().
    * @param a First packed key; borrowed, read only. Must be at least packed_width() bytes.
    * @param b Second packed key; borrowed, read only. Must be at least packed_width() bytes.
    * @return true iff the packed_width() bytes of `a` and `b` are identical (a plain memcmp).
    * Complexity: O(packed_width()).
    */
-  static bool equals(const NumericArbitraryKeySchema& schema, const std::byte* a, const std::byte* b);
+  bool equals(const std::byte* a, const std::byte* b) const;
 
  private:
-  NumericKeyLanes _lanes;      // one lane per numeric group-by column, in schema order
-  uint32_t _packed_width{0};   // fixed packed width in bytes for this query, computed at build()
+  NumericKeyLanes _lanes;     // one lane per numeric group-by column, in schema order
+  uint32_t _packed_width{0};  // fixed packed width in bytes for this query, computed at build()
 };
 
 // ------------------------------------------------------------------------------------------------------------
@@ -521,7 +511,6 @@ class MixedKeySchema {
   /**
    * Pack one input row's group-by tuple into a key buffer, spilling overlong strings as needed.
    *
-   * @param schema The schema driving the packing; borrowed, read only.
    * @param group_by_segments Segments for the group-by columns of the current chunk, in schema order; borrowed, read
    *   only.
    * @param chunk_offset Row within those segments to pack.
@@ -530,38 +519,35 @@ class MixedKeySchema {
    *   may be appended to. Must be the buffer owned by the calling worker/partition.
    * @pre Runs in the scatter phase, single-threaded per worker on that worker's own store and spill buffer.
    */
-  static void pack(const MixedKeySchema& schema, std::span<const AbstractSegment* const> group_by_segments,
-                   ChunkOffset chunk_offset, std::byte* key_out, StringSpillBuffer& spill_buffer);
+  void pack(std::span<const AbstractSegment* const> group_by_segments, ChunkOffset chunk_offset, std::byte* key_out,
+            StringSpillBuffer& spill_buffer) const;
   /**
    * Unpack a packed key back into typed output values, one appended cell per group-by column.
    *
-   * @param schema The schema driving the unpacking; borrowed, read only.
    * @param key Packed key to decode; borrowed, read only. Any spilled string content it points to must still be live.
    * @param output Destination columns for the emitting worker; borrowed, written. Thread-local, single writer.
    * @param output_row 0-based index of the output row being emitted.
    * @pre Runs in the merge phase, single-threaded per worker on that worker's own OutputColumns.
    */
-  static void unpack(const MixedKeySchema& schema, const std::byte* key, OutputColumns& output, size_t output_row);
+  void unpack(const std::byte* key, OutputColumns& output, size_t output_row) const;
   /**
    * Hash a packed key over its fixed part.
    *
-   * @param schema The schema; borrowed, read only. Supplies fixed_part_width().
    * @param key Packed key to hash; borrowed, read only.
    * @return 64-bit hash derived from the fixed part's inline fields (raw string bytes hashed, or the stored
    *   content-hash reused). Equal keys always hash equal because equal keys are always same-mode.
    * Complexity: O(fixed_part_width()).
    */
-  static uint64_t hash(const MixedKeySchema& schema, const std::byte* key);
+  uint64_t hash(const std::byte* key) const;
   /**
    * Test two packed keys for equality using the four-step spill-mode-aware protocol documented on the class.
    *
-   * @param schema The schema; borrowed, read only. Supplies fixed_part_width().
    * @param a First packed key; borrowed, read only. Spilled content it points to must be live.
    * @param b Second packed key; borrowed, read only. Spilled content it points to must be live.
    * @return true iff the keys are equal: same spill mode, matching fixed part, and (when spilled) matching deep bytes.
    * Complexity: O(fixed_part_width()) inline, plus O(string length) for the deep compare when both keys are spilled.
    */
-  static bool equals(const MixedKeySchema& schema, const std::byte* a, const std::byte* b);
+  bool equals(const std::byte* a, const std::byte* b) const;
 
  private:
   NumericKeyLanes _numeric_lanes;    // one lane per non-string group-by column, in schema order
@@ -606,7 +592,6 @@ class StringOnlyKeySchema {
   /**
    * Pack one input row's group-by tuple into a key buffer, spilling overlong strings as needed.
    *
-   * @param schema The schema driving the packing; borrowed, read only.
    * @param group_by_segments Segments for the group-by columns of the current chunk, in schema order; borrowed, read
    *   only.
    * @param chunk_offset Row within those segments to pack.
@@ -615,39 +600,35 @@ class StringOnlyKeySchema {
    *   may be appended to. Must be the buffer owned by the calling worker/partition.
    * @pre Runs in the scatter phase, single-threaded per worker on that worker's own store and spill buffer.
    */
-  static void pack(const StringOnlyKeySchema& schema, std::span<const AbstractSegment* const> group_by_segments,
-                   ChunkOffset chunk_offset, std::byte* key_out, StringSpillBuffer& spill_buffer);
+  void pack(std::span<const AbstractSegment* const> group_by_segments, ChunkOffset chunk_offset, std::byte* key_out,
+            StringSpillBuffer& spill_buffer) const;
   /**
    * Unpack a packed key back into typed output values, one appended string per group-by column.
    *
-   * @param schema The schema driving the unpacking; borrowed, read only.
    * @param key Packed key to decode; borrowed, read only. Any spilled string content it points to must still be live.
    * @param output Destination columns for the emitting worker; borrowed, written. Thread-local, single writer.
    * @param output_row 0-based index of the output row being emitted.
    * @pre Runs in the merge phase, single-threaded per worker on that worker's own OutputColumns.
    */
-  static void unpack(const StringOnlyKeySchema& schema, const std::byte* key, OutputColumns& output,
-                     size_t output_row);
+  void unpack(const std::byte* key, OutputColumns& output, size_t output_row) const;
   /**
    * Hash a packed key over its fixed part.
    *
-   * @param schema The schema; borrowed, read only. Supplies fixed_part_width().
    * @param key Packed key to hash; borrowed, read only.
    * @return 64-bit hash derived from the inline string fields (raw bytes hashed, or the stored content-hash reused).
    *   Equal keys always hash equal.
    * Complexity: O(fixed_part_width()).
    */
-  static uint64_t hash(const StringOnlyKeySchema& schema, const std::byte* key);
+  uint64_t hash(const std::byte* key) const;
   /**
    * Test two packed keys for equality using the same spill-mode-aware protocol as MixedKeySchema.
    *
-   * @param schema The schema; borrowed, read only. Supplies fixed_part_width().
    * @param a First packed key; borrowed, read only. Spilled content it points to must be live.
    * @param b Second packed key; borrowed, read only. Spilled content it points to must be live.
    * @return true iff the keys are equal: same spill mode, matching fixed part, and (when spilled) matching deep bytes.
    * Complexity: O(fixed_part_width()) inline, plus O(string length) for the deep compare when both keys are spilled.
    */
-  static bool equals(const StringOnlyKeySchema& schema, const std::byte* a, const std::byte* b);
+  bool equals(const std::byte* a, const std::byte* b) const;
 
  private:
   StringKeyColumns _string_columns;  // one handler per string group-by column, in schema order
@@ -672,7 +653,9 @@ class StringOnlyKeySchema {
  *   instantiation must be visible at the call site.
  */
 template <typename Functor>
-void resolve_key_schema(const std::vector<ColumnID>& group_by_column_ids, const Table& input_table,
-                        const Functor& functor);
+void resolve_key_schema(const std::vector<ColumnID>& /*group_by_column_ids*/, const Table& /*input_table*/,
+                        const Functor& /*functor*/) {
+  Fail("resolve_key_schema is not implemented yet.");
+}
 
 }  // namespace hyrise
