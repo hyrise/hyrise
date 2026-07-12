@@ -1,8 +1,12 @@
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <cstring>
 #include <limits>
 #include <memory>
+#include <span>
+#include <stdexcept>
 #include <string>
 #include <type_traits>
 #include <vector>
@@ -46,7 +50,7 @@ PackInput make_pack_input(const TableColumnDefinitions& definitions,
   return input;
 }
 
-// The key buffer is prefilled with garbage so the equality/hash assertions catch bytes pack() left uninitialized.
+// Prefilled with garbage so pack() has to overwrite every byte.
 template <typename KeySchema>
 std::vector<std::byte> pack_key(const KeySchema& schema, const PackInput& input, uint32_t row,
                                 StringSpillBuffer& spill_buffer) {
@@ -155,6 +159,11 @@ TEST_F(AggregateDYODKeySchemaTest, SpillBufferIsReusableAfterClear) {
   EXPECT_EQ(std::memcmp(interned, second.data(), second.size()), 0);
 }
 
+TEST_F(AggregateDYODKeySchemaTest, ResolvingWithoutGroupByColumnsThrows) {
+  const auto input = make_pack_input({{"a", DataType::Int, false}}, {{1}});
+  EXPECT_THROW(resolve_key_schema({}, *input.table, [](const auto& /*schema*/) {}), std::logic_error);
+}
+
 TEST_F(AggregateDYODKeySchemaTest, ResolvesSingleIntToFourByteShortSchema) {
   const auto input = make_pack_input({{"a", DataType::Int, false}}, {{1}});
   auto resolved = false;
@@ -246,7 +255,12 @@ TEST_F(AggregateDYODKeySchemaTest, ResolvesStringPlusNumericToMixedSchema) {
 TEST_F(AggregateDYODKeySchemaTest, StringSchemaPackedWidthIsFixedPartPlusSpillPointer) {
   const auto input = make_pack_input({{"a", DataType::String, false}}, {{pmr_string{"x"}}});
   resolve_key_schema(input.column_ids, *input.table, [&](const auto& schema) {
-    EXPECT_EQ(schema.packed_width(), schema.fixed_part_width() + 8u);
+    using SchemaType = std::decay_t<decltype(schema)>;
+    if constexpr (SchemaType::HAS_STRINGS) {
+      EXPECT_EQ(schema.packed_width(), schema.fixed_part_width() + 8u);
+    } else {
+      FAIL() << "Expected a string-involving schema.";
+    }
   });
 }
 
@@ -279,7 +293,6 @@ TEST_F(AggregateDYODKeySchemaTest, DistinguishesFullIntRange) {
 }
 
 TEST_F(AggregateDYODKeySchemaTest, TreatsNullAsDistinctFromEveryValue) {
-  // 0 and the type extremes are the values an in-band NULL sentinel scheme would collide with.
   const auto min = std::numeric_limits<int32_t>::min();
   const auto max = std::numeric_limits<int32_t>::max();
   const auto input = make_pack_input({{"a", DataType::Int, true}}, {{NullValue{}}, {NullValue{}}, {0}, {min}, {max}});
@@ -330,7 +343,6 @@ TEST_F(AggregateDYODKeySchemaTest, ArbitraryWidthSchemaComparesTheFullKey) {
                                                   {"c", DataType::Int, false},
                                                   {"d", DataType::Int, false},
                                                   {"e", DataType::Int, false}};
-  // The last column lies past the 16-byte short-schema extent, so a prefix-only compare would group rows 0 and 2.
   const auto input = make_pack_input(definitions, {{1, 2, 3, 4, 5}, {1, 2, 3, 4, 5}, {1, 2, 3, 4, 6}});
   const auto schema = NumericArbitraryKeySchema::build(input.column_ids, *input.table);
   EXPECT_EQ(schema.packed_width(), 20u);
@@ -368,6 +380,27 @@ TEST_F(AggregateDYODKeySchemaTest, FloatAndDoubleKeysRoundTripThroughUnpack) {
   };
   const auto input = make_pack_input(definitions, rows);
   const auto schema = NumericShortKeySchema<12>::build(input.column_ids, *input.table);
+
+  auto spill = StringSpillBuffer{};
+  const auto keys = pack_all_keys(schema, input, spill);
+
+  expect_unpack_round_trip(schema, definitions, keys, rows);
+}
+
+TEST_F(AggregateDYODKeySchemaTest, ArbitraryWidthKeysRoundTripThroughUnpack) {
+  const auto definitions = TableColumnDefinitions{{"a", DataType::Int, true},
+                                                  {"b", DataType::Int, false},
+                                                  {"c", DataType::Int, false},
+                                                  {"d", DataType::Int, false},
+                                                  {"e", DataType::Int, false}};
+  const auto rows = std::vector<std::vector<AllTypeVariant>>{
+      {NullValue{}, 2, 3, 4, 5},
+      {1, 2, 3, 4, 5},
+      {std::numeric_limits<int32_t>::min(), std::numeric_limits<int32_t>::max(), 0, -1, 1},
+  };
+  const auto input = make_pack_input(definitions, rows);
+  const auto schema = NumericArbitraryKeySchema::build(input.column_ids, *input.table);
+  EXPECT_EQ(schema.packed_width(), 24u);
 
   auto spill = StringSpillBuffer{};
   const auto keys = pack_all_keys(schema, input, spill);
@@ -418,7 +451,7 @@ TEST_F(AggregateDYODKeySchemaTest, EmbeddedNulBytesDoNotTruncateStringKeys) {
 }
 
 TEST_F(AggregateDYODKeySchemaTest, AdjacentStringColumnsDoNotBleedIntoEachOther) {
-  // ("ab", "c") and ("a", "bc") concatenate to the same bytes; the length prefixes must keep them apart.
+  // Both rows concatenate to "abc".
   const auto input = make_pack_input(
       {{"a", DataType::String, false}, {"b", DataType::String, false}},
       {{pmr_string{"ab"}, pmr_string{"c"}}, {pmr_string{"a"}, pmr_string{"bc"}}, {pmr_string{"ab"}, pmr_string{"c"}}});
@@ -448,6 +481,66 @@ TEST_F(AggregateDYODKeySchemaTest, SpilledStringsCompareByContentAcrossSpillBuff
     expect_keys_equal(schema, key_a, key_b);
     expect_keys_not_equal(schema, key_a, key_c);
     expect_keys_not_equal(schema, key_a, key_short);
+  });
+}
+
+TEST_F(AggregateDYODKeySchemaTest, StringsAtTheBlobCapacityBoundaryStayComparable) {
+  const auto exact_fit = pmr_string(STRING_BLOB_BYTES_PER_COLUMN, 'e');
+  const auto one_past = pmr_string(STRING_BLOB_BYTES_PER_COLUMN + 1, 'p');
+  auto exact_fit_other = exact_fit;
+  exact_fit_other.back() = 'f';
+  const auto definitions = TableColumnDefinitions{{"a", DataType::String, false}};
+  const auto rows =
+      std::vector<std::vector<AllTypeVariant>>{{exact_fit}, {exact_fit}, {one_past}, {one_past}, {exact_fit_other}};
+  const auto input = make_pack_input(definitions, rows);
+  resolve_key_schema(input.column_ids, *input.table, [&](const auto& schema) {
+    auto spill_a = StringSpillBuffer{};
+    auto spill_b = StringSpillBuffer{};
+    const auto keys_a = pack_all_keys(schema, input, spill_a);
+    const auto key_one_past_b = pack_key(schema, input, 3, spill_b);
+
+    expect_keys_equal(schema, keys_a[0], keys_a[1]);
+    expect_keys_equal(schema, keys_a[2], key_one_past_b);
+    expect_keys_not_equal(schema, keys_a[0], keys_a[2]);
+    expect_keys_not_equal(schema, keys_a[0], keys_a[4]);
+
+    expect_unpack_round_trip(schema, definitions, keys_a, rows);
+  });
+}
+
+TEST_F(AggregateDYODKeySchemaTest, NullStringBesideSpilledContentIsPreserved) {
+  const auto long_string = pmr_string(3 * STRING_BLOB_BYTES_PER_COLUMN, 's');
+  const auto definitions = TableColumnDefinitions{{"a", DataType::String, true}, {"b", DataType::String, false}};
+  const auto rows = std::vector<std::vector<AllTypeVariant>>{
+      {NullValue{}, long_string}, {NullValue{}, long_string}, {pmr_string{"x"}, long_string}};
+  const auto input = make_pack_input(definitions, rows);
+  resolve_key_schema(input.column_ids, *input.table, [&](const auto& schema) {
+    auto spill_a = StringSpillBuffer{};
+    auto spill_b = StringSpillBuffer{};
+    const auto keys = pack_all_keys(schema, input, spill_a);
+    const auto key_null_b = pack_key(schema, input, 1, spill_b);
+
+    expect_keys_equal(schema, keys[0], key_null_b);
+    expect_keys_not_equal(schema, keys[0], keys[2]);
+
+    expect_unpack_round_trip(schema, definitions, keys, rows);
+  });
+}
+
+TEST_F(AggregateDYODKeySchemaTest, MixedSchemaCarriesFloatAndDoubleLanes) {
+  const auto definitions = TableColumnDefinitions{
+      {"a", DataType::Float, false}, {"b", DataType::Double, false}, {"c", DataType::String, false}};
+  const auto rows = std::vector<std::vector<AllTypeVariant>>{
+      {1.5f, -0.0, pmr_string{"a"}}, {1.5f, 0.0, pmr_string{"a"}}, {2.5f, 0.0, pmr_string{"a"}}};
+  const auto input = make_pack_input(definitions, rows);
+  resolve_key_schema(input.column_ids, *input.table, [&](const auto& schema) {
+    auto spill = StringSpillBuffer{};
+    const auto keys = pack_all_keys(schema, input, spill);
+
+    expect_keys_equal(schema, keys[0], keys[1]);
+    expect_keys_not_equal(schema, keys[0], keys[2]);
+
+    expect_unpack_round_trip(schema, definitions, keys, rows);
   });
 }
 
