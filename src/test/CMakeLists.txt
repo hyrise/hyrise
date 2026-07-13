@@ -204,6 +204,7 @@ set(
     lib/storage/index/multi_segment_index_test.cpp
     lib/storage/index/partial_hash/partial_hash_index_test.cpp
     lib/storage/index/single_segment_index_test.cpp
+    lib/storage/index/table_index_statistics_test.cpp
     lib/storage/iterables_test.cpp
     lib/storage/lz4_segment_test.cpp
     lib/storage/materialize_test.cpp
@@ -219,6 +220,7 @@ set(
     lib/storage/table_test.cpp
     lib/storage/value_segment_test.cpp
     lib/tasks/chunk_compression_task_test.cpp
+    lib/types_test.cpp
     lib/utils/atomic_max_test.cpp
     lib/utils/check_table_equal_test.cpp
     lib/utils/pruning_utils_test.cpp
