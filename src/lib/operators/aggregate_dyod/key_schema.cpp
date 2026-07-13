@@ -27,18 +27,6 @@ namespace {
 
 using namespace hyrise;
 
-constexpr auto FNV_OFFSET_BASIS = uint64_t{14695981039346656037ull};
-constexpr auto FNV_PRIME = uint64_t{1099511628211ull};
-
-uint64_t hash_bytes(const std::byte* data, const size_t length) {
-  auto hash = FNV_OFFSET_BASIS;
-  for (auto index = size_t{0}; index < length; ++index) {
-    hash ^= static_cast<uint64_t>(data[index]);
-    hash *= FNV_PRIME;
-  }
-  return hash;
-}
-
 void set_null_bit(std::byte* null_bitmap, const uint32_t bit_index) {
   null_bitmap[bit_index / 8] |= std::byte{1} << (bit_index % 8);
 }
@@ -69,24 +57,11 @@ uint64_t encode_lane_value(const int64_t value) {
 }
 
 uint32_t encode_lane_value(const float value) {
-  auto canonical = value;
-  if (std::isnan(canonical)) {
-    canonical = std::numeric_limits<float>::quiet_NaN();
-  } else if (canonical == 0.0f) {
-    // Rewrites -0.0 to +0.0.
-    canonical = 0.0f;
-  }
-  return std::bit_cast<uint32_t>(canonical);
+  return std::bit_cast<uint32_t>(canonicalize(value));
 }
 
 uint64_t encode_lane_value(const double value) {
-  auto canonical = value;
-  if (std::isnan(canonical)) {
-    canonical = std::numeric_limits<double>::quiet_NaN();
-  } else if (canonical == 0.0) {
-    canonical = 0.0;
-  }
-  return std::bit_cast<uint64_t>(canonical);
+  return std::bit_cast<uint64_t>(canonicalize(value));
 }
 
 template <typename T>
@@ -306,6 +281,42 @@ void reintern_spilled_key(const StringKeyColumns& string_columns, const size_t l
 }  // namespace
 
 namespace hyrise {
+
+float canonicalize(const float value) {
+  if (std::isnan(value)) {
+    return std::numeric_limits<float>::quiet_NaN();
+  }
+  if (value == 0.0f) {
+    // Rewrites -0.0 to +0.0.
+    return 0.0f;
+  }
+  return value;
+}
+
+double canonicalize(const double value) {
+  if (std::isnan(value)) {
+    return std::numeric_limits<double>::quiet_NaN();
+  }
+  if (value == 0.0) {
+    return 0.0;
+  }
+  return value;
+}
+
+uint64_t hash_bytes(const std::byte* data, const size_t length) {
+  constexpr auto FNV_OFFSET_BASIS = uint64_t{14695981039346656037ull};
+  return hash_bytes(data, length, FNV_OFFSET_BASIS);
+}
+
+uint64_t hash_bytes(const std::byte* data, const size_t length, const uint64_t seed) {
+  constexpr auto FNV_PRIME = uint64_t{1099511628211ull};
+  auto hash = seed;
+  for (auto index = size_t{0}; index < length; ++index) {
+    hash ^= static_cast<uint64_t>(data[index]);
+    hash *= FNV_PRIME;
+  }
+  return hash;
+}
 
 const std::byte* StringSpillBuffer::append(const std::byte* content, const size_t length) {
   while (_current_block < _blocks.size() && _blocks[_current_block].used + length > _blocks[_current_block].capacity) {

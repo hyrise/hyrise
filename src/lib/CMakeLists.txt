@@ -225,6 +225,8 @@ set(
     operators/aggregate_dyod/accumulator_column.cpp
     operators/aggregate_dyod/accumulator_column.hpp
     operators/aggregate_dyod/aggregate_dyod_config.hpp
+    operators/aggregate_dyod/distinct_set.cpp
+    operators/aggregate_dyod/distinct_set.hpp
     operators/aggregate_dyod/hyperloglog.cpp
     operators/aggregate_dyod/hyperloglog.hpp
     operators/aggregate_dyod/key_schema.cpp

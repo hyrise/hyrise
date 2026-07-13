@@ -130,6 +130,29 @@ TEST_F(OperatorsAggregateDYODTest, AnyOnGroupByColumns) {
                               {ColumnID{0}, ColumnID{1}});
 }
 
+TEST_F(OperatorsAggregateDYODTest, CountDistinctManyGroups) {
+  const auto input = make_input(120'000);
+  compare_with_aggregate_hash(
+      input, {{ColumnID{2}, WindowFunction::CountDistinct}, {ColumnID{3}, WindowFunction::CountDistinct}},
+      {ColumnID{0}});
+}
+
+TEST_F(OperatorsAggregateDYODTest, CountDistinctOnStrings) {
+  const auto input = make_input(30'000);
+  compare_with_aggregate_hash(
+      input, {{ColumnID{1}, WindowFunction::CountDistinct}, {ColumnID{4}, WindowFunction::CountDistinct}},
+      {ColumnID{2}});
+}
+
+TEST_F(OperatorsAggregateDYODTest, CountDistinctWithoutGroupBy) {
+  const auto input = make_input(30'000);
+  compare_with_aggregate_hash(input,
+                              {{ColumnID{2}, WindowFunction::CountDistinct},
+                               {ColumnID{1}, WindowFunction::CountDistinct},
+                               {ColumnID{3}, WindowFunction::CountDistinct}},
+                              {});
+}
+
 TEST_F(OperatorsAggregateDYODTest, EmptyInput) {
   const auto input = make_input(0);
   compare_with_aggregate_hash(input, {{ColumnID{2}, WindowFunction::Sum}, {INVALID_COLUMN_ID, WindowFunction::Count}},

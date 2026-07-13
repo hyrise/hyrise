@@ -78,6 +78,7 @@ set(
     lib/memory/zero_allocator_test.cpp
     lib/null_value_test.cpp
     lib/operators/aggregate_dyod/accumulator_column_test.cpp
+    lib/operators/aggregate_dyod/distinct_set_test.cpp
     lib/operators/aggregate_dyod/hyperloglog_test.cpp
     lib/operators/aggregate_dyod/key_schema_test.cpp
     lib/operators/aggregate_dyod/merge_map_test.cpp

@@ -83,10 +83,11 @@ TEST_F(AggregateDYODAccumulatorColumnTest, BuildResolvesResultTypes) {
       make_aggregate(WindowFunction::Count, *table, ColumnID{2}),
       make_aggregate(WindowFunction::Count, *table, INVALID_COLUMN_ID),
       make_aggregate(WindowFunction::Any, *table, ColumnID{2}),
+      make_aggregate(WindowFunction::CountDistinct, *table, ColumnID{2}),
   };
   const auto schema = AggregateSchema::build(aggregates, *table);
 
-  EXPECT_EQ(schema.aggregate_count(), 8u);
+  EXPECT_EQ(schema.aggregate_count(), 9u);
   EXPECT_EQ(schema.result_type(0), DataType::Long);
   EXPECT_EQ(schema.result_type(1), DataType::Double);
   EXPECT_EQ(schema.result_type(2), DataType::Double);
@@ -95,6 +96,7 @@ TEST_F(AggregateDYODAccumulatorColumnTest, BuildResolvesResultTypes) {
   EXPECT_EQ(schema.result_type(5), DataType::Long);
   EXPECT_EQ(schema.result_type(6), DataType::Long);
   EXPECT_EQ(schema.result_type(7), DataType::String);
+  EXPECT_EQ(schema.result_type(8), DataType::Long);
 }
 
 TEST_F(AggregateDYODAccumulatorColumnTest, BuildSharesValueStreamsAcrossAggregates) {
@@ -115,11 +117,9 @@ TEST_F(AggregateDYODAccumulatorColumnTest, BuildSharesValueStreamsAcrossAggregat
 
 TEST_F(AggregateDYODAccumulatorColumnTest, BuildRejectsOutOfScopeFunctions) {
   const auto table = make_input_table({{"a", DataType::Int, false}}, {});
-  for (const auto function : {WindowFunction::CountDistinct, WindowFunction::StandardDeviationSample}) {
-    const auto aggregates =
-        std::vector<std::shared_ptr<WindowFunctionExpression>>{make_aggregate(function, *table, ColumnID{0})};
-    EXPECT_THROW(AggregateSchema::build(aggregates, *table), std::logic_error);
-  }
+  const auto aggregates = std::vector<std::shared_ptr<WindowFunctionExpression>>{
+      make_aggregate(WindowFunction::StandardDeviationSample, *table, ColumnID{0})};
+  EXPECT_THROW(AggregateSchema::build(aggregates, *table), std::logic_error);
 
   auto frame_description = FrameDescription{FrameType::Range, FrameBound{0, FrameBoundType::Preceding, true},
                                             FrameBound{0, FrameBoundType::CurrentRow, false}};
@@ -315,6 +315,52 @@ TEST_F(AggregateDYODAccumulatorColumnTest, AnyGathersRepresentativeRows) {
   const auto results = finalize_slots(column, 0, 2, DataType::Int);
   EXPECT_EQ(results[0], AllTypeVariant{42});
   EXPECT_TRUE(variant_is_null(results[1]));
+}
+
+TEST_F(AggregateDYODAccumulatorColumnTest, CountDistinctCountsDistinctNonNullValues) {
+  const auto table = make_input_table({{"a", DataType::Int, true}}, {});
+  const auto aggregates = std::vector<std::shared_ptr<WindowFunctionExpression>>{
+      make_aggregate(WindowFunction::CountDistinct, *table, ColumnID{0})};
+  const auto columns = AggregateSchema::build(aggregates, *table).make_accumulator_columns();
+  auto& column = *columns[0];
+
+  column.grow_to(3);
+  const auto slots = std::vector<uint32_t>{0, 0, 0, 1, 1, 0};
+  const auto null_bitmap = std::vector<std::byte>{std::byte{0b010000}};
+  column.fold(slots, pack_values<int32_t>({5, 5, 7, 5, 999, 5}), null_bitmap);
+
+  const auto results = finalize_slots(column, 0, 3, DataType::Long);
+  EXPECT_EQ(results[0], AllTypeVariant{int64_t{2}});
+  EXPECT_EQ(results[1], AllTypeVariant{int64_t{1}});
+  EXPECT_EQ(results[2], AllTypeVariant{int64_t{0}});
+}
+
+TEST_F(AggregateDYODAccumulatorColumnTest, CountDistinctDedupesStringsAcrossTiles) {
+  const auto table =
+      make_input_table({{"a", DataType::String, true}},
+                       {{pmr_string{"pear"}}, {pmr_string{"apple"}}, {NullValue{}}, {pmr_string{"pear"}}});
+  const auto segment = table->get_chunk(ChunkID{0})->get_segment(ColumnID{0});
+  const auto aggregates = std::vector<std::shared_ptr<WindowFunctionExpression>>{
+      make_aggregate(WindowFunction::CountDistinct, *table, ColumnID{0})};
+  const auto schema = AggregateSchema::build(aggregates, *table);
+  const auto columns = schema.make_accumulator_columns();
+  auto& column = *columns[0];
+
+  const auto& stream = schema.value_stream(0);
+  auto arena = StringSpillBuffer{};
+  auto values = std::vector<std::byte>(4 * stream.element_width());
+  auto null_bitmap = std::vector<std::byte>{std::byte{0}};
+  for (auto row = uint32_t{0}; row < 4; ++row) {
+    stream.pack(*segment, ChunkOffset{row}, values.data() + row * stream.element_width(), null_bitmap.data(), row,
+                arena);
+  }
+
+  const auto slots = std::vector<uint32_t>{0, 0, 0, 0};
+  column.grow_to(1);
+  column.fold(slots, values, null_bitmap);
+  column.fold(slots, values, null_bitmap);
+
+  EXPECT_EQ(finalize_slots(column, 0, 1, DataType::Long)[0], AllTypeVariant{int64_t{2}});
 }
 
 TEST_F(AggregateDYODAccumulatorColumnTest, MinMaxTrackExtremes) {
