@@ -58,6 +58,9 @@ DataType resolve_result_type(const DataType input_type, const WindowFunction fun
       case WindowFunction::Count:
         result_type = WindowFunctionTraits<ColumnDataType, WindowFunction::Count>::RESULT_TYPE;
         break;
+      case WindowFunction::CountDistinct:
+        result_type = WindowFunctionTraits<ColumnDataType, WindowFunction::CountDistinct>::RESULT_TYPE;
+        break;
       case WindowFunction::Any:
         result_type = WindowFunctionTraits<ColumnDataType, WindowFunction::Any>::RESULT_TYPE;
         break;
@@ -298,6 +301,57 @@ void AnyAccumulatorColumn<ColumnType>::finalize_into(const size_t first_slot, co
   }
 }
 
+template <typename ColumnType>
+void DistinctAccumulatorColumn<ColumnType>::grow_to(const size_t slot_count) {
+  DebugAssert(slot_count >= _counts.size(), "Dense accumulator state only grows.");
+  _counts.resize(slot_count, 0);
+}
+
+template <typename ColumnType>
+void DistinctAccumulatorColumn<ColumnType>::fold(std::span<const uint32_t> slots,
+                                                 std::span<const std::byte> value_bytes,
+                                                 std::span<const std::byte> value_null_bitmap) {
+  const auto row_count = slots.size();
+  DebugAssert(value_null_bitmap.empty() || value_null_bitmap.size() * 8 >= row_count,
+              "Value-null bitmap does not cover the tile.");
+  constexpr auto VALUE_WIDTH =
+      std::is_same_v<ColumnType, pmr_string> ? sizeof(StringValueReference) : sizeof(ColumnType);
+  DebugAssert(value_bytes.size() == row_count * VALUE_WIDTH, "Value tile does not match the slot tile.");
+
+  for (auto row = size_t{0}; row < row_count; ++row) {
+    if (!value_null_bitmap.empty() && null_bit_set(value_null_bitmap.data(), row)) {
+      continue;
+    }
+    const auto slot = slots[row];
+    if constexpr (std::is_same_v<ColumnType, pmr_string>) {
+      auto reference = StringValueReference{};
+      std::memcpy(&reference, value_bytes.data() + row * sizeof(reference), sizeof(reference));
+      const auto value = std::string_view{reinterpret_cast<const char*>(reference.data), reference.length};
+      _counts[slot] += _distinct.insert(slot, value) ? 1 : 0;
+    } else {
+      auto value = ColumnType{};
+      std::memcpy(&value, value_bytes.data() + row * sizeof(value), sizeof(value));
+      _counts[slot] += _distinct.insert(slot, value) ? 1 : 0;
+    }
+  }
+}
+
+template <typename ColumnType>
+void DistinctAccumulatorColumn<ColumnType>::clear() {
+  _counts.clear();
+  _distinct.clear();
+}
+
+template <typename ColumnType>
+void DistinctAccumulatorColumn<ColumnType>::finalize_into(const size_t first_slot, const size_t last_slot,
+                                                          const size_t output_column_index,
+                                                          OutputColumns& output) const {
+  auto& output_column = static_cast<TypedOutputColumn<int64_t>&>(output.column(output_column_index));
+  for (auto slot = first_slot; slot < last_slot; ++slot) {
+    output_column.append(_counts[slot]);
+  }
+}
+
 AggregateSchema AggregateSchema::build(const std::vector<std::shared_ptr<WindowFunctionExpression>>& aggregates,
                                        const Table& input_table) {
   auto schema = AggregateSchema{};
@@ -438,6 +492,9 @@ std::vector<std::unique_ptr<AbstractAccumulatorColumn>> AggregateSchema::make_ac
           break;
         case WindowFunction::Count:
           columns.emplace_back(std::make_unique<TypedAccumulatorColumn<ColumnDataType, WindowFunction::Count>>());
+          break;
+        case WindowFunction::CountDistinct:
+          columns.emplace_back(std::make_unique<DistinctAccumulatorColumn<ColumnDataType>>());
           break;
         case WindowFunction::Sum:
           if constexpr (std::is_arithmetic_v<ColumnDataType>) {

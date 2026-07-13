@@ -12,6 +12,7 @@
 #include "expression/window_function_expression.hpp"
 #include "operators/aggregate/window_function_traits.hpp"
 #include "operators/aggregate_dyod/aggregate_dyod_config.hpp"
+#include "operators/aggregate_dyod/distinct_set.hpp"
 #include "types.hpp"
 
 namespace hyrise {
@@ -208,9 +209,9 @@ class AbstractAccumulatorColumn {
    * Append the finalized results for dense slots [first_slot, last_slot) as one contiguous run of output rows.
    *
    * Applies per-aggregate finalization: AVG divides its running sum by the non-null count; a group with zero non-null
-   * contributions emits NULL (for SUM/MIN/MAX/AVG alike); string MIN/MAX appends the accumulated extremum string; ANY
-   * reads its representative row's cell from the input table, NULL included. Exactly one value (possibly NULL) is
-   * appended per slot to output column output_column_index.
+   * contributions emits NULL (for SUM/MIN/MAX/AVG alike, while COUNT and COUNT(DISTINCT) emit 0); string MIN/MAX
+   * appends the accumulated extremum string; ANY reads its representative row's cell from the input table, NULL
+   * included. Exactly one value (possibly NULL) is appended per slot to output column output_column_index.
    *
    * @param first_slot inclusive start of the dense slot range to emit.
    * @param last_slot exclusive end of the range; must satisfy first_slot <= last_slot <= the current slot count.
@@ -229,9 +230,10 @@ class AbstractAccumulatorColumn {
  * Concrete accumulator column, monomorphized over the input column type and the window function.
  *
  * Instantiated only for the (type, function) pairs WindowFunctionTraits marks valid: SUM/AVG on arithmetic types;
- * MIN/MAX/COUNT on any type, including lexicographic MIN/MAX over strings (ANY lives in AnyAccumulatorColumn
- * instead). AccumulatorType is WindowFunctionTraits<ColumnType, Function>::ReturnType, except AVG, which carries a
- * running {sum, non-null count} and divides at finalize.
+ * MIN/MAX/COUNT on any type, including lexicographic MIN/MAX over strings (ANY and COUNT(DISTINCT) live in
+ * AnyAccumulatorColumn and DistinctAccumulatorColumn instead). AccumulatorType is
+ * WindowFunctionTraits<ColumnType, Function>::ReturnType, except AVG, which carries a running {sum, non-null count}
+ * and divides at finalize.
  *
  * String MIN/MAX hold the running extremum as a self-owning pmr_string per slot (AccumulatorType == pmr_string): fold
  * decodes the incoming value from the value arena, compares, and copies in a new extremum only when it wins. There is
@@ -285,6 +287,25 @@ class AnyAccumulatorColumn : public AbstractAccumulatorColumn {
 };
 
 /**
+ * Accumulator for COUNT(DISTINCT): bumps a slot's count only when its DistinctSet reports a first sighting. A group
+ * with no non-NULL contributions counts 0, never NULL.
+ */
+template <typename ColumnType>
+class DistinctAccumulatorColumn : public AbstractAccumulatorColumn {
+ public:
+  void grow_to(size_t slot_count) override;
+  void fold(std::span<const uint32_t> slots, std::span<const std::byte> value_bytes,
+            std::span<const std::byte> value_null_bitmap) override;
+  void clear() override;
+  void finalize_into(size_t first_slot, size_t last_slot, size_t output_column_index,
+                     OutputColumns& output) const override;
+
+ private:
+  DistinctSet<ColumnType> _distinct;
+  std::vector<int64_t> _counts;  // first sightings per dense slot, as reported by _distinct
+};
+
+/**
  * Per-query description of the requested aggregates and the value streams they read.
  *
  * Built once from the query's WindowFunctionExpressions and validated against WindowFunctionTraits, so invalid
@@ -308,8 +329,9 @@ class AggregateSchema {
    * @param aggregates requested window-function expressions; each is validated against WindowFunctionTraits. Borrowed.
    * @param input_table the operator's input, used to resolve source column data types and nullability. Borrowed.
    * @return a fully resolved schema owning one value-scatter column per distinct source column.
-   * @throws std::logic_error (via Hyrise Assert/Fail) if an aggregate is unsupported (only SUM/MIN/MAX/AVG/COUNT/ANY
-   *   exist) or its (type, function) combination is invalid -- e.g. SUM(string), whose result type is DataType::Null.
+   * @throws std::logic_error (via Hyrise Assert/Fail) if an aggregate is unsupported (only
+   *   SUM/MIN/MAX/AVG/COUNT/COUNT_DISTINCT/ANY exist) or its (type, function) combination is invalid -- e.g.
+   *   SUM(string), whose result type is DataType::Null.
    */
   static AggregateSchema build(const std::vector<std::shared_ptr<WindowFunctionExpression>>& aggregates,
                                const Table& input_table);
@@ -380,7 +402,7 @@ class AggregateSchema {
   // Passive per-aggregate configuration resolved at build time; no behavior of its own.
   struct AggregateEntry {
     ColumnID source_column;     // source column to aggregate; INVALID_COLUMN_ID for COUNT(*)
-    WindowFunction function;    // requested aggregate function (SUM/MIN/MAX/AVG/COUNT/ANY)
+    WindowFunction function;    // requested aggregate function (SUM/MIN/MAX/AVG/COUNT/COUNT_DISTINCT/ANY)
     DataType input_type;        // data type of source_column, the value folded into the accumulator
     DataType result_type;       // output data type of this aggregate, from WindowFunctionTraits
     size_t value_stream_index;  // index into the value streams, or NO_VALUE_STREAM for COUNT(*) and ANY

@@ -30,6 +30,7 @@
 #include "operators/abstract_operator.hpp"
 #include "operators/aggregate_dyod/accumulator_column.hpp"
 #include "operators/aggregate_dyod/aggregate_dyod_config.hpp"
+#include "operators/aggregate_dyod/distinct_set.hpp"
 #include "operators/aggregate_dyod/hyperloglog.hpp"
 #include "operators/aggregate_dyod/key_schema.hpp"
 #include "operators/aggregate_dyod/merge_map.hpp"
@@ -292,6 +293,50 @@ class CountColumnAggregator : public AbstractAggregator {
   size_t _final{0};
 };
 
+template <typename ColumnDataType>
+class CountDistinctAggregator : public AbstractAggregator {
+  struct alignas(64) PaddedState {
+    DistinctSet<ColumnDataType> set;
+  };
+
+ public:
+  CountDistinctAggregator(std::string output_name, const ColumnID column_id)
+      : _output_name{std::move(output_name)}, _column_id{column_id} {}
+
+  void set_worker_count(const size_t worker_count) override {
+    _states = std::vector<PaddedState>(worker_count);
+  }
+
+  void accumulate(const size_t worker_id, const Chunk& chunk) override {
+    auto& set = _states[worker_id].set;
+    segment_iterate<ColumnDataType>(*chunk.get_segment(_column_id), [&](const auto& position) {
+      if (position.is_null()) {
+        return;
+      }
+      set.insert(0, position.value());
+    });
+  }
+
+  void merge() override {
+    for (auto worker_id = size_t{1}; worker_id < _states.size(); ++worker_id) {
+      _states.front().set.merge(_states[worker_id].set);
+    }
+  }
+
+  std::shared_ptr<AbstractSegment> build_segment() const override {
+    return std::make_shared<ValueSegment<int64_t>>(pmr_vector{static_cast<int64_t>(_states.front().set.size())});
+  }
+
+  TableColumnDefinition output_column_definition() const override {
+    return TableColumnDefinition{_output_name, DataType::Long, false};
+  }
+
+ private:
+  std::string _output_name;
+  ColumnID _column_id;
+  std::vector<PaddedState> _states;
+};
+
 std::unique_ptr<AbstractAggregator> make_aggregator(const Table& input_table, const WindowFunctionExpression& aggregate,
                                                     const ColumnID column_id) {
   const auto window_function = aggregate.window_function;
@@ -327,6 +372,9 @@ std::unique_ptr<AbstractAggregator> make_aggregator(const Table& input_table, co
         break;
       case WindowFunction::Count:
         aggregator = std::make_unique<CountColumnAggregator<ColumnDataType>>(std::move(output_name), column_id);
+        break;
+      case WindowFunction::CountDistinct:
+        aggregator = std::make_unique<CountDistinctAggregator<ColumnDataType>>(std::move(output_name), column_id);
         break;
       case WindowFunction::Any:
         aggregator = std::make_unique<AnyAggregator<ColumnDataType>>(std::move(output_name), column_id,
@@ -399,7 +447,7 @@ AggregateSchema AggregateDYOD::_prepare(const Table& input_table) {
     const auto function = aggregate->window_function;
     Assert(function == WindowFunction::Sum || function == WindowFunction::Min || function == WindowFunction::Max ||
                function == WindowFunction::Avg || function == WindowFunction::Count ||
-               function == WindowFunction::Any,
+               function == WindowFunction::CountDistinct || function == WindowFunction::Any,
            "WindowFunction not yet supported");
   }
   return AggregateSchema::build(_aggregates, input_table);
@@ -595,17 +643,18 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate(const KeySchema& key_schema, co
                                            input_table.column_is_nullable(column_id));
   }
   for (auto aggregate_index = size_t{0}; aggregate_index < aggregate_count; ++aggregate_index) {
+    const auto function = aggregate_schema.function(aggregate_index);
     // ANY keeps the input column's name and nullability.
-    if (aggregate_schema.function(aggregate_index) == WindowFunction::Any) {
+    if (function == WindowFunction::Any) {
       const auto source_column = aggregate_schema.source_column(aggregate_index);
       output_column_definitions.emplace_back(input_table.column_name(source_column),
                                              aggregate_schema.result_type(aggregate_index),
                                              input_table.column_is_nullable(source_column));
       continue;
     }
-    output_column_definitions.emplace_back(_aggregates[aggregate_index]->as_column_name(),
-                                           aggregate_schema.result_type(aggregate_index),
-                                           _aggregates[aggregate_index]->window_function != WindowFunction::Count);
+    output_column_definitions.emplace_back(
+        _aggregates[aggregate_index]->as_column_name(), aggregate_schema.result_type(aggregate_index),
+        function != WindowFunction::Count && function != WindowFunction::CountDistinct);
   }
 
   // Merge: workers claim partitions and fold every store's rows for that partition through a dense MergeMap.

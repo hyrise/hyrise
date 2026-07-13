@@ -42,8 +42,8 @@ class AbstractAggregator;
  * (no partitioning) that always emits exactly one row.
  *
  * Invariants: the chosen P is a power of two in [max(worker_count, 1), MAX_PARTITION_COUNT]. Supported aggregates are
- * SUM/MIN/MAX/AVG/COUNT/ANY over the numeric and string paths the key/accumulator schemas cover; CountDistinct and
- * StandardDeviationSample are out of scope and rejected during _prepare. description() is inherited from
+ * SUM/MIN/MAX/AVG/COUNT/COUNT_DISTINCT/ANY over the numeric and string paths the key/accumulator schemas cover;
+ * StandardDeviationSample is out of scope and rejected during _prepare. description() is inherited from
  * AbstractAggregateOperator (it already emits the "GroupBy {...} FUNC(col)" format); only name() is overridden.
  *
  * Ownership/lifetime/threading: the operator instance is single-threaded until _on_execute fans out the JobTasks.
@@ -144,8 +144,8 @@ class AggregateDYOD : public AbstractAggregateOperator {
    *
    * The output columns are the group-by columns first, then one result column per aggregate. Validation reuses the base
    * AbstractAggregateOperator::_validate_aggregates() for the standard checks (e.g. SUM/AVG/STDDEV on a string column,
-   * whose WindowFunctionTraits result type is DataType::Null) and adds a Fail() for the out-of-scope functions
-   * (CountDistinct and StandardDeviationSample).
+   * whose WindowFunctionTraits result type is DataType::Null) and adds a Fail() for the out-of-scope
+   * StandardDeviationSample.
    *
    * @param input_table  The materialized input table, used to resolve group-by and aggregate column data types;
    *   borrowed for the duration of the call.
