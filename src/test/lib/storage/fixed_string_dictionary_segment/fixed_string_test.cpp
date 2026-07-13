@@ -121,4 +121,27 @@ TEST_F(FixedStringTest, OutputToStream) {
   EXPECT_EQ(sstream.str().find("foo"), 0u);
 }
 
+TEST_F(FixedStringTest, MoveWithOwnsMemory) {
+  auto fixed_string = FixedString(fixed_string1);
+  auto new_fixed_string = FixedString(fixed_string2);
+  new_fixed_string = std::move(fixed_string);
+
+  EXPECT_EQ(new_fixed_string, fixed_string1);
+  // The maximum_length being set correctly implies that the move operator was successful.
+  EXPECT_EQ(new_fixed_string.maximum_length(), fixed_string1.maximum_length());
+}
+
+TEST_F(FixedStringTest, SwapFixedString) {
+  std::vector<char> char_vector = {'b', 'a', 'r'};
+  auto fixed_string = FixedString(&char_vector[0], 3u);
+
+  fixed_string.swap(fixed_string1);
+  EXPECT_EQ(fixed_string1.string(), "bar");
+  EXPECT_EQ(fixed_string.string(), "foo");
+
+  swap(fixed_string, fixed_string1);
+  EXPECT_EQ(fixed_string1.string(), "bar");
+  EXPECT_EQ(fixed_string.string(), "foo");
+}
+
 }  // namespace hyrise
