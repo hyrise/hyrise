@@ -1,5 +1,7 @@
 #include "aggregate_dyod.hpp"
 
+#include <valgrind/callgrind.h>
+
 #include <algorithm>
 #include <array>
 #include <atomic>
@@ -967,7 +969,7 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
 //  (2) adapt mask recursively based on partition size.
 //  (3) add low cardinality partitioning (all same key).
 
-// 16 threads
+// 16 tasks
 constexpr auto RADIX_MASK = 0xf;
 constexpr auto RADIX_SPLIT_MAX_BUCKETS = RADIX_MASK + 1;
 
@@ -1003,21 +1005,21 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
     return _create_output_table(contexts_per_column, input_table, expected_result_size);
   }
 
-  // If we have a Data table, we directly partion into PosLists and forward these to the thread-local input tables.
+  // If we have a Data table, we directly partion into PosLists and forward these to the task-local input tables.
   // For a Reference table, we only store the ChunkOffsets since we have to resolve the PosList anyway later.
   // TODO(anyone): figure out how pmr_vector works and if we want to use that instead on std::vector.
   using ReferenceList =
       std::conditional_t<std::is_same_v<IsReferenceTable, std::true_type>, std::vector<ChunkOffset>, RowIDPosList>;
   using PosLists = std::vector<std::shared_ptr<ReferenceList>>;
 
-  auto pos_lists_per_thread = std::vector<std::shared_ptr<PosLists>>{};
-  pos_lists_per_thread.reserve(RADIX_SPLIT_MAX_BUCKETS);
+  auto pos_lists_per_task = std::vector<std::shared_ptr<PosLists>>{};
+  pos_lists_per_task.reserve(RADIX_SPLIT_MAX_BUCKETS);
 
   const auto chunk_count = input_table->chunk_count();
   for (auto bucket_id = size_t{0}; bucket_id < RADIX_SPLIT_MAX_BUCKETS; ++bucket_id) {
-    pos_lists_per_thread.emplace_back(std::make_shared<PosLists>());
+    pos_lists_per_task.emplace_back(std::make_shared<PosLists>());
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-      pos_lists_per_thread[bucket_id]->emplace_back(std::make_shared<ReferenceList>());
+      pos_lists_per_task[bucket_id]->emplace_back(std::make_shared<ReferenceList>());
     }
   }
 
@@ -1039,11 +1041,11 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
           }
 
           const auto key = value & RADIX_MASK;
-          // see definition of pos_lists_per_thread
+          // see definition of pos_lists_per_task
           if constexpr (std::is_same_v<IsReferenceTable, std::true_type>) {
-            pos_lists_per_thread[key]->at(chunk_id)->push_back(position.chunk_offset());
+            pos_lists_per_task[key]->at(chunk_id)->push_back(position.chunk_offset());
           } else {
-            pos_lists_per_thread[key]->at(chunk_id)->push_back(RowID{chunk_id, position.chunk_offset()});
+            pos_lists_per_task[key]->at(chunk_id)->push_back(RowID{chunk_id, position.chunk_offset()});
           }
         });
       }
@@ -1052,14 +1054,14 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
 
   // SPLIT END
 
-  auto threads = std::vector<std::thread>{};
-  threads.reserve(RADIX_SPLIT_MAX_BUCKETS);
+  auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
+  tasks.reserve(RADIX_SPLIT_MAX_BUCKETS);
   auto final_output_table = std::make_shared<Table>(input_table->column_definitions(), TableType::Data);
   auto output_mutex = std::mutex{};
 
-  for (auto thread_id = size_t{0}; thread_id < RADIX_SPLIT_MAX_BUCKETS; ++thread_id) {
-    threads.emplace_back([&, thread_id]() {
-      const auto pos_lists = pos_lists_per_thread[thread_id];
+  for (auto task_id = size_t{0}; task_id < RADIX_SPLIT_MAX_BUCKETS; ++task_id) {
+    const auto task = [&, task_id]() {
+      const auto pos_lists = pos_lists_per_task[task_id];
       const auto local_input_table = std::make_shared<Table>(input_table->column_definitions(), TableType::References);
 
       const auto column_count = input_table->column_count();
@@ -1135,13 +1137,11 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
         auto chunk = output_table->get_chunk(chunk_id);
         final_output_table->append_chunk(chunk->segments());
       }
-    });
+    };
+    tasks.emplace_back(std::make_shared<JobTask>(task));
   }
 
-  for (auto& thread : threads) {
-    thread.join();
-  }
-
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
   return final_output_table;
 }
 
