@@ -140,6 +140,39 @@ TEST_F(AggregateSortTest, SingleAggregateAvgSorted) {
   }
 }
 
+TEST_F(AggregateSortTest, SingleAggregateCountStarSorted) {
+  for (const auto& sort_by_column_id : {ColumnID{0}, ColumnID{1}}) {
+    const auto sort = std::make_shared<Sort>(
+        this->_table_wrapper_1, std::vector<SortColumnDefinition>{SortColumnDefinition{sort_by_column_id}});
+    sort->execute();
+    test_aggregate_output(sort, {{INVALID_COLUMN_ID, WindowFunction::Count}}, {ColumnID{0}},
+                          "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/count_star.tbl");
+  }
+}
+
+TEST_F(AggregateSortTest, MultiChunkSingleAggregateCountStarSorted) {
+  const auto aggregate_expressions =
+      std::vector<std::shared_ptr<WindowFunctionExpression>>{std::make_shared<WindowFunctionExpression>(
+          WindowFunction::Count, pqp_column_(INVALID_COLUMN_ID, DataType::Long, "*"))};
+  const auto groupby_column_ids = std::vector<ColumnID>{ColumnID{0}};
+
+  // NOTE: `table_1` contains values 12, 123, and 12345 (2 times) in column 0. It has a `target_chunk_size` of 2, so
+  // the first chunk contains 12 and 123, while the second chunk contains the two rows with 12345. It is already set
+  // and marked as sorted and clustered. So the `group_boundaries` will be `{RowID{0, 1}, RowID{1, 0}}`. Therefore, the
+  // second group will span two chunks.
+  const auto sorted_aggregate =
+      std::make_shared<AggregateSort>(_table_wrapper_1, aggregate_expressions, groupby_column_ids);
+
+  const auto expected_table = std::make_shared<Table>(
+      TableColumnDefinitions{{"a", DataType::Int, false}, {"COUNT(*)", DataType::Long, false}}, TableType::Data);
+  expected_table->append({AllTypeVariant{12}, AllTypeVariant{int64_t{1}}});
+  expected_table->append({AllTypeVariant{123}, AllTypeVariant{int64_t{1}}});
+  expected_table->append({AllTypeVariant{12345}, AllTypeVariant{int64_t{2}}});
+
+  sorted_aggregate->execute();
+  EXPECT_TABLE_EQ_UNORDERED(sorted_aggregate->get_output(), expected_table);
+}
+
 TEST_F(AggregateSortTest, AggregateMaxMultiColumnSorted) {
   // Test for sorted by each column.
   const auto input_table = this->_table_wrapper_multi_columns->get_output();
