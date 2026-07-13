@@ -911,4 +911,52 @@ TYPED_TEST(OperatorsAggregateTest, StringVariations) {
   EXPECT_EQ(values_sorted, result_values_sorted);
 }
 
+TYPED_TEST(OperatorsAggregateTest, SingleAggregateMaxWithOnlyNullValuesInGroup) {
+  auto group_values = pmr_vector<int>{1, 1, 2};
+  auto aggregate_values = pmr_vector<int>{0, 0, 5};
+  auto aggregate_null_values = pmr_vector<bool>{true, true, false};
+
+  const auto group_segment = std::make_shared<ValueSegment<int>>(std::move(group_values));
+  const auto aggregate_segment =
+      std::make_shared<ValueSegment<int>>(std::move(aggregate_values), std::move(aggregate_null_values));
+
+  const auto table_definitions = TableColumnDefinitions{{"a", DataType::Int, false}, {"b", DataType::Int, true}};
+  const auto table = std::make_shared<Table>(table_definitions, TableType::Data);
+  table->append_chunk({group_segment, aggregate_segment});
+
+  const auto table_wrapper = std::make_shared<TableWrapper>(table);
+  table_wrapper->execute();
+
+  const auto aggregate_expressions = std::vector<std::shared_ptr<WindowFunctionExpression>>{
+      max_(pqp_column_(ColumnID{1}, table->column_data_type(ColumnID{1}), table->column_name(ColumnID{1})))};
+  const auto aggregate =
+      std::make_shared<TypeParam>(table_wrapper, aggregate_expressions, std::vector<ColumnID>{ColumnID{0}});
+  aggregate->execute();
+
+  const auto output = aggregate->get_output();
+  ASSERT_EQ(output->row_count(), 2u);
+
+  auto saw_group_with_only_null_values = false;
+  auto saw_group_with_non_null_value = false;
+
+  for (auto row_id = size_t{0}; row_id < output->row_count(); ++row_id) {
+    const auto group_value = output->template get_value<int>(ColumnID{0}, row_id);
+    ASSERT_TRUE(group_value);
+
+    const auto aggregate_value = output->template get_value<int>(ColumnID{1}, row_id);
+    if (*group_value == 1) {
+      EXPECT_FALSE(aggregate_value);
+      saw_group_with_only_null_values = true;
+    } else if (*group_value == 2) {
+      EXPECT_EQ(aggregate_value, 5);
+      saw_group_with_non_null_value = true;
+    } else {
+      FAIL() << "Unexpected group value: " << *group_value;
+    }
+  }
+
+  EXPECT_TRUE(saw_group_with_only_null_values);
+  EXPECT_TRUE(saw_group_with_non_null_value);
+}
+
 }  // namespace hyrise
