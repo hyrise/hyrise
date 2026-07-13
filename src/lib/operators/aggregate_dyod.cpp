@@ -138,20 +138,64 @@ int64_t _count_distinct_all_values(const std::shared_ptr<const Table>& input_tab
   return static_cast<int64_t>(distinct_values.size());
 }
 
+// An output column for all groups, stored as TARGET_CHUNK_SIZE-sized pieces from the start. Tickets are dense in
+// [0, group_count), so group `g` lives in piece `g / TARGET_CHUNK_SIZE` at offset `g % TARGET_CHUNK_SIZE` and the
+// aggregation loops can address it by ticket like a flat vector. Each piece is later moved into a `ValueSegment`
+// (`_emit_output_column`), so the finished column is never copied.
+template <typename T>
+struct ChunkedVector {
+  static constexpr auto CHUNK_SIZE = static_cast<size_t>(TARGET_CHUNK_SIZE);
+
+  ChunkedVector() = default;
+
+  explicit ChunkedVector(const size_t size, const T initial_value = T{}) {
+    chunks.reserve((size + CHUNK_SIZE - 1) / CHUNK_SIZE);
+    for (auto begin = size_t{0}; begin < size; begin += CHUNK_SIZE) {
+      chunks.emplace_back(std::min(CHUNK_SIZE, size - begin), initial_value);
+    }
+  }
+
+  // `decltype(auto)` so `ChunkedVector<bool>` hands out the underlying bit-reference proxy.
+  decltype(auto) operator[](const size_t index) {
+    return chunks[index / CHUNK_SIZE][index % CHUNK_SIZE];
+  }
+
+  std::vector<pmr_vector<T>> chunks;
+};
+
+// Moves the pieces of one finished output column into its fixed `column_index` slot of every output chunk. Runs at the
+// end of the job that produced the column, so the segments are built by the thread that owns the data. Columns emitted
+// with `nullable == false` (COUNT, and pass-through of non-nullable source columns) drop their null pieces to match
+// the non-nullable column definition.
+template <typename T>
+void _emit_output_column(ChunkedVector<T>&& values, ChunkedVector<bool>&& nulls, const bool nullable,
+                         std::vector<Segments>& output_chunks, const size_t column_index) {
+  const auto chunk_count = values.chunks.size();
+  for (auto chunk_index = size_t{0}; chunk_index < chunk_count; ++chunk_index) {
+    if (nullable) {
+      output_chunks[chunk_index][column_index] = std::make_shared<ValueSegment<T>>(
+          std::move(values.chunks[chunk_index]), std::move(nulls.chunks[chunk_index]));
+    } else {
+      output_chunks[chunk_index][column_index] =
+          std::make_shared<ValueSegment<T>>(std::move(values.chunks[chunk_index]));
+    }
+  }
+}
+
 // Incrementally computable aggregates (MIN/MAX/SUM/AVG/COUNT), indexed per group. A group with no contributing
 // (non-NULL) value yields NULL, except COUNT which yields 0.
 template <typename ColumnDataType, typename AggregateType, WindowFunction window_function>
-std::pair<pmr_vector<AggregateType>, pmr_vector<bool>> _aggregate_grouped(
+std::pair<ChunkedVector<AggregateType>, ChunkedVector<bool>> _aggregate_grouped(
     const uint64_t* const tickets, const size_t group_count, const std::shared_ptr<const Table>& input_table,
     const ColumnID input_column_id) {
   const auto aggregate_function =
       WindowFunctionBuilder<ColumnDataType, AggregateType, window_function>().get_aggregate_function();
-  auto values = pmr_vector<AggregateType>(group_count);
+  auto values = ChunkedVector<AggregateType>(group_count);
 
   // Only AVG needs a per-group count of contributing (non-NULL) values, for its final division. MIN/MAX/SUM detect
   // their first contributing value via `nulls`, and COUNT accumulates directly into `values`, so neither allocates it.
   auto value_counts = std::vector<size_t>(window_function == WindowFunction::Avg ? group_count : 0, 0);
-  auto nulls = pmr_vector<bool>(group_count, window_function != WindowFunction::Count);
+  auto nulls = ChunkedVector<bool>(group_count, window_function != WindowFunction::Count);
 
   const auto chunk_count = input_table->chunk_count();
   auto row_index = uint32_t{0};  // global row index across chunks, used to look up the group ticket in `tickets`
@@ -196,9 +240,9 @@ std::pair<pmr_vector<AggregateType>, pmr_vector<bool>> _aggregate_grouped(
 
 // COUNT(DISTINCT): number of distinct non-NULL values. Never NULL (0 for an all-NULL group).
 template <typename ColumnDataType>
-pmr_vector<int64_t> _count_distinct_grouped(const uint64_t* const tickets, const size_t group_count,
-                                            const std::shared_ptr<const Table>& input_table,
-                                            const ColumnID input_column_id) {
+ChunkedVector<int64_t> _count_distinct_grouped(const uint64_t* const tickets, const size_t group_count,
+                                               const std::shared_ptr<const Table>& input_table,
+                                               const ColumnID input_column_id) {
   auto distinct_values = std::vector<std::unordered_set<ColumnDataType>>(group_count);
 
   const auto chunk_count = input_table->chunk_count();
@@ -217,7 +261,7 @@ pmr_vector<int64_t> _count_distinct_grouped(const uint64_t* const tickets, const
     });
   }
 
-  auto values = pmr_vector<int64_t>(group_count);
+  auto values = ChunkedVector<int64_t>(group_count);
   for (auto i = size_t{0}; i < group_count; ++i) {
     values[i] = static_cast<int64_t>(distinct_values[i].size());
   }
@@ -226,13 +270,12 @@ pmr_vector<int64_t> _count_distinct_grouped(const uint64_t* const tickets, const
 
 // ANY: the first value seen per group, NULL included (The value is passed through. All-NULL groups stay).
 template <typename ColumnDataType>
-std::pair<pmr_vector<ColumnDataType>, pmr_vector<bool>> _any_grouped(const uint64_t* const tickets,
-                                                                     const size_t group_count,
-                                                                     const std::shared_ptr<const Table>& input_table,
-                                                                     const ColumnID input_column_id) {
+std::pair<ChunkedVector<ColumnDataType>, ChunkedVector<bool>> _any_grouped(
+    const uint64_t* const tickets, const size_t group_count, const std::shared_ptr<const Table>& input_table,
+    const ColumnID input_column_id) {
   auto seen = std::vector<bool>(group_count, false);
-  auto values = pmr_vector<ColumnDataType>(group_count);
-  auto nulls = pmr_vector<bool>(group_count, false);
+  auto values = ChunkedVector<ColumnDataType>(group_count);
+  auto nulls = ChunkedVector<bool>(group_count, false);
 
   const auto chunk_count = input_table->chunk_count();
   auto row_index = uint32_t{0};  // global row index across chunks, used to look up the group ticket in `tickets`
@@ -265,13 +308,13 @@ std::pair<pmr_vector<ColumnDataType>, pmr_vector<bool>> _any_grouped(const uint6
 // `groupby_index` is the column's position among the group-by columns (its slot in the row's null bitmap and column
 // offsets); `string_col_index` is its position among the string group-by columns (its heap string-pointer slot).
 template <typename ColumnDataType, bool Concurrent>
-std::pair<pmr_vector<ColumnDataType>, pmr_vector<bool>> _groupby_from_hash_table(
+std::pair<ChunkedVector<ColumnDataType>, ChunkedVector<bool>> _groupby_from_hash_table(
     const GroupKeyData<Concurrent>& group_key_data, const size_t group_count, const size_t groupby_index,
     const size_t string_col_index) {
   const auto& format = group_key_data.row_format;
   const auto& hash_table = group_key_data.global_hash_table;
-  auto values = pmr_vector<ColumnDataType>(group_count);
-  auto nulls = pmr_vector<bool>(group_count, false);
+  auto values = ChunkedVector<ColumnDataType>(group_count);
+  auto nulls = ChunkedVector<bool>(group_count, false);
   const auto null_mask_bit = uint64_t{1} << groupby_index;
 
   // Reads one group's representative value from its distinct key row into the output slot addressed by its ticket.
@@ -313,7 +356,7 @@ std::pair<pmr_vector<ColumnDataType>, pmr_vector<bool>> _groupby_from_hash_table
 
 // STDDEV: NULL for groups with fewer than two contributing values.
 template <typename ColumnDataType>
-std::pair<pmr_vector<double>, pmr_vector<bool>> _standard_deviation_sample_grouped(
+std::pair<ChunkedVector<double>, ChunkedVector<bool>> _standard_deviation_sample_grouped(
     const uint64_t* const tickets, const size_t group_count, const std::shared_ptr<const Table>& input_table,
     const ColumnID input_column_id) {
   static_assert(std::is_arithmetic_v<ColumnDataType>, "StandardDeviationSample is only defined on arithmetic types.");
@@ -337,8 +380,8 @@ std::pair<pmr_vector<double>, pmr_vector<bool>> _standard_deviation_sample_group
     });
   }
 
-  auto values = pmr_vector<double>(group_count);
-  auto nulls = pmr_vector<bool>(group_count, false);
+  auto values = ChunkedVector<double>(group_count);
+  auto nulls = ChunkedVector<bool>(group_count, false);
   for (auto i = size_t{0}; i < group_count; ++i) {
     if (accumulators[i][0] < 2) {
       nulls[i] = true;
@@ -347,56 +390,6 @@ std::pair<pmr_vector<double>, pmr_vector<bool>> _standard_deviation_sample_group
     }
   }
   return {std::move(values), std::move(nulls)};
-}
-
-// Copies the half-open group range [begin, begin + length) of a full-length output column (one `ValueSegment` holding
-// every group) into a new, chunk-sized `ValueSegment` of the same data type and nullability. The source range is read
-// only, so slices of the same column for different chunks are independent.
-std::shared_ptr<AbstractSegment> _slice_column(const AbstractSegment& column, const size_t begin, const size_t length) {
-  auto slice = std::shared_ptr<AbstractSegment>{};
-  resolve_data_type(column.data_type(), [&](const auto data_type_t) {
-    using ColumnDataType = typename decltype(data_type_t)::type;
-    const auto& value_segment = static_cast<const ValueSegment<ColumnDataType>&>(column);
-
-    const auto& values = value_segment.values();
-    auto chunk_values = pmr_vector<ColumnDataType>(values.begin() + begin, values.begin() + begin + length);
-
-    if (value_segment.is_nullable()) {
-      const auto& nulls = value_segment.null_values();
-      auto chunk_nulls = pmr_vector<bool>(nulls.begin() + begin, nulls.begin() + begin + length);
-      slice = std::make_shared<ValueSegment<ColumnDataType>>(std::move(chunk_values), std::move(chunk_nulls));
-    } else {
-      slice = std::make_shared<ValueSegment<ColumnDataType>>(std::move(chunk_values));
-    }
-  });
-  return slice;
-}
-
-// Splits the full-length output columns (one `ValueSegment` per column, each holding all `group_count` groups) into
-// TARGET_CHUNK_SIZE-sized chunks, returning one segment list per output chunk ready for `Table::append_chunk`.
-//
-// Every (chunk, column) slice is produced from a disjoint, read-only input range and written to its own output slot, so
-// the nested loop carries no cross-iteration dependencies: once we go multi-threaded it can be dispatched to a
-// threadpool over output chunks (the outer loop) without any synchronization.
-std::vector<pmr_vector<std::shared_ptr<AbstractSegment>>> _split_into_chunks(
-    const pmr_vector<std::shared_ptr<AbstractSegment>>& columns, const size_t group_count) {
-  const auto column_count = columns.size();
-  const auto output_chunk_count = (group_count + TARGET_CHUNK_SIZE - 1) / TARGET_CHUNK_SIZE;
-
-  auto output_chunks = std::vector<pmr_vector<std::shared_ptr<AbstractSegment>>>(
-      output_chunk_count, pmr_vector<std::shared_ptr<AbstractSegment>>(column_count));
-
-  // Parallelization point: this outer loop over output chunks is embarrassingly parallel.
-  for (auto chunk_index = size_t{0}; chunk_index < output_chunk_count; ++chunk_index) {
-    const auto begin = chunk_index * TARGET_CHUNK_SIZE;
-    const auto this_chunk_size = std::min(static_cast<size_t>(TARGET_CHUNK_SIZE), group_count - begin);
-
-    for (auto column_index = size_t{0}; column_index < column_count; ++column_index) {
-      output_chunks[chunk_index][column_index] = _slice_column(*columns[column_index], begin, this_chunk_size);
-    }
-  }
-
-  return output_chunks;
 }
 
 std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
@@ -553,9 +546,12 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
                                     input_table->column_is_nullable(groupby_column_id));
   }
 
-  // Output layout: the group-by columns occupy the first `groupby_column_count` slots, followed by one slot per
-  // aggregate. Every job writes a fixed, disjoint slot, so none of them touch a shared, growing container.
-  auto output_segments = pmr_vector<std::shared_ptr<AbstractSegment>>(groupby_column_count + aggregate_count);
+  // Output layout: `output_chunks[chunk][column]`, where the group-by columns occupy the first `groupby_column_count`
+  // column slots, followed by one slot per aggregate. Every job produces its column directly as chunk-sized pieces
+  // (`ChunkedVector`) and emits them into its fixed column slot of every chunk (`_emit_output_column`), so none of
+  // them touch a shared, growing container and the final table assembly is move-only.
+  const auto output_chunk_count = (group_count + TARGET_CHUNK_SIZE - 1) / TARGET_CHUNK_SIZE;
+  auto output_chunks = std::vector<Segments>(output_chunk_count, Segments(groupby_column_count + aggregate_count));
 
   // Build the aggregate column definitions serially (cheap metadata lookups). This must not run inside the
   // per-aggregate jobs below, as they would race on `column_definitions`.
@@ -582,8 +578,8 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
   }
 
   // Each aggregate column is computed independently from the shared grouping structure (`groups->tickets`) and
-  // input table, and writes into its own `output_segments` slot. There are no cross-column dependencies, so we compute
-  // one aggregate per job.
+  // input table, and writes into its own `output_chunks` column slot. There are no cross-column dependencies, so we
+  // compute one aggregate per job.
   const auto compute_aggregate = [&](const uint32_t aggregate_id) {
     const auto& aggregate = _aggregates[aggregate_id];
     const auto window_function = aggregate->window_function;
@@ -595,13 +591,13 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
     // COUNT(*) does not reference an input column. It counts all rows per group (NULLs included). Every input row
     // contributes its group's ticket exactly once, so the per-group count is just a histogram over the tickets.
     if (window_function == WindowFunction::Count && input_column_id == INVALID_COLUMN_ID) {
-      auto values = pmr_vector<int64_t>(group_count, 0);
+      auto values = ChunkedVector<int64_t>(group_count, 0);
       const auto* const tickets = groups->tickets.get();
       const auto row_count = input_table->row_count();
       for (auto row_index = size_t{0}; row_index < row_count; ++row_index) {
         ++values[tickets[row_index]];
       }
-      output_segments[target_index] = std::make_shared<ValueSegment<int64_t>>(std::move(values));
+      _emit_output_column(std::move(values), {}, false, output_chunks, target_index);
       return;
     }
 
@@ -613,53 +609,49 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
           using AggregateType = typename WindowFunctionTraits<ColumnDataType, WindowFunction::Min>::ReturnType;
           auto [values, nulls] = _aggregate_grouped<ColumnDataType, AggregateType, WindowFunction::Min>(
               groups->tickets.get(), group_count, input_table, input_column_id);
-          output_segments[target_index] =
-              std::make_shared<ValueSegment<AggregateType>>(std::move(values), std::move(nulls));
+          _emit_output_column(std::move(values), std::move(nulls), true, output_chunks, target_index);
           break;
         }
         case WindowFunction::Max: {
           using AggregateType = typename WindowFunctionTraits<ColumnDataType, WindowFunction::Max>::ReturnType;
           auto [values, nulls] = _aggregate_grouped<ColumnDataType, AggregateType, WindowFunction::Max>(
               groups->tickets.get(), group_count, input_table, input_column_id);
-          output_segments[target_index] =
-              std::make_shared<ValueSegment<AggregateType>>(std::move(values), std::move(nulls));
+          _emit_output_column(std::move(values), std::move(nulls), true, output_chunks, target_index);
           break;
         }
         case WindowFunction::Sum: {
           using AggregateType = typename WindowFunctionTraits<ColumnDataType, WindowFunction::Sum>::ReturnType;
           auto [values, nulls] = _aggregate_grouped<ColumnDataType, AggregateType, WindowFunction::Sum>(
               groups->tickets.get(), group_count, input_table, input_column_id);
-          output_segments[target_index] =
-              std::make_shared<ValueSegment<AggregateType>>(std::move(values), std::move(nulls));
+          _emit_output_column(std::move(values), std::move(nulls), true, output_chunks, target_index);
           break;
         }
         case WindowFunction::Avg: {
           using AggregateType = typename WindowFunctionTraits<ColumnDataType, WindowFunction::Avg>::ReturnType;
           auto [values, nulls] = _aggregate_grouped<ColumnDataType, AggregateType, WindowFunction::Avg>(
               groups->tickets.get(), group_count, input_table, input_column_id);
-          output_segments[target_index] =
-              std::make_shared<ValueSegment<AggregateType>>(std::move(values), std::move(nulls));
+          _emit_output_column(std::move(values), std::move(nulls), true, output_chunks, target_index);
           break;
         }
         case WindowFunction::Count: {
           using AggregateType = typename WindowFunctionTraits<ColumnDataType, WindowFunction::Count>::ReturnType;
-          auto result = _aggregate_grouped<ColumnDataType, AggregateType, WindowFunction::Count>(
+          auto [values, nulls] = _aggregate_grouped<ColumnDataType, AggregateType, WindowFunction::Count>(
               groups->tickets.get(), group_count, input_table, input_column_id);
           // COUNT never produces NULL.
-          output_segments[target_index] = std::make_shared<ValueSegment<AggregateType>>(std::move(result.first));
+          _emit_output_column(std::move(values), std::move(nulls), false, output_chunks, target_index);
           break;
         }
         case WindowFunction::CountDistinct: {
           auto values =
               _count_distinct_grouped<ColumnDataType>(groups->tickets.get(), group_count, input_table, input_column_id);
-          output_segments[target_index] = std::make_shared<ValueSegment<int64_t>>(std::move(values));
+          _emit_output_column(std::move(values), {}, false, output_chunks, target_index);
           break;
         }
         case WindowFunction::StandardDeviationSample: {
           if constexpr (std::is_arithmetic_v<ColumnDataType>) {
             auto [values, nulls] = _standard_deviation_sample_grouped<ColumnDataType>(
                 groups->tickets.get(), group_count, input_table, input_column_id);
-            output_segments[target_index] = std::make_shared<ValueSegment<double>>(std::move(values), std::move(nulls));
+            _emit_output_column(std::move(values), std::move(nulls), true, output_chunks, target_index);
           } else {
             Fail("StandardDeviationSample is not available on non-arithmetic types.");
           }
@@ -669,12 +661,8 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
           auto [values, nulls] =
               _any_grouped<ColumnDataType>(groups->tickets.get(), group_count, input_table, input_column_id);
           // ANY() passes the source column through, so the output keeps its nullability.
-          if (input_table->column_is_nullable(input_column_id)) {
-            output_segments[target_index] =
-                std::make_shared<ValueSegment<ColumnDataType>>(std::move(values), std::move(nulls));
-          } else {
-            output_segments[target_index] = std::make_shared<ValueSegment<ColumnDataType>>(std::move(values));
-          }
+          _emit_output_column(std::move(values), std::move(nulls), input_table->column_is_nullable(input_column_id),
+                              output_chunks, target_index);
           break;
         }
         default:
@@ -702,7 +690,7 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
     resolve_data_type(input_table->column_data_type(groupby_column_id), [&](const auto data_type_t) {
       using ColumnDataType = typename decltype(data_type_t)::type;
 
-      auto [values, nulls] = [&]() -> std::pair<pmr_vector<ColumnDataType>, pmr_vector<bool>> {
+      auto [values, nulls] = [&]() -> std::pair<ChunkedVector<ColumnDataType>, ChunkedVector<bool>> {
         if (!use_hash_table_for_groupby) {
           // High cardinality: a sequential scan of the source column beats chasing the scattered key rows.
           return _any_grouped<ColumnDataType>(groups->tickets.get(), group_count, input_table, groupby_column_id);
@@ -724,12 +712,8 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
         }
       }();
 
-      if (input_table->column_is_nullable(groupby_column_id)) {
-        output_segments[groupby_index] =
-            std::make_shared<ValueSegment<ColumnDataType>>(std::move(values), std::move(nulls));
-      } else {
-        output_segments[groupby_index] = std::make_shared<ValueSegment<ColumnDataType>>(std::move(values));
-      }
+      _emit_output_column(std::move(values), std::move(nulls), input_table->column_is_nullable(groupby_column_id),
+                          output_chunks, groupby_index);
     });
   };
 
@@ -771,14 +755,11 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
     cleanup_job->schedule();
   }
 
+  // Every output column was already produced as chunk-sized segments by its own job, so assembling the result table
+  // is move-only: no values are copied here.
   auto result_table = std::make_shared<Table>(column_definitions, TableType::Data);
-  if (group_count > 0) {
-    // Each output column was accumulated as a single full-length segment. Split them into TARGET_CHUNK_SIZE-sized
-    // chunks in one final pass (`_split_into_chunks` is structured so this can later run on a threadpool).
-    auto output_chunks = _split_into_chunks(output_segments, group_count);
-    for (auto& chunk_segments : output_chunks) {
-      result_table->append_chunk(std::move(chunk_segments));
-    }
+  for (auto& chunk_segments : output_chunks) {
+    result_table->append_chunk(std::move(chunk_segments));
   }
   return result_table;
 }
