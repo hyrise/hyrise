@@ -17,8 +17,7 @@ os.environ["FORCE_COLOR"] = "1"
 
 p_value_significance_threshold = 0.001
 min_iterations = 10
-min_runtime_ns = 59 * 1000 * 1000 * 1000
-min_iterations_disabling_min_runtime = 100
+cv_significance_threshold = 0.1
 
 
 def format_diff(diff):
@@ -51,30 +50,26 @@ def calculate_and_format_p_value(old_durations, new_durations):
     p_value = ttest_ind(old_durations, new_durations)[1]
     is_significant = p_value < p_value_significance_threshold
 
-    old_runtime = sum(runtime for runtime in old_durations)
-    new_runtime = sum(runtime for runtime in new_durations)
-
-    # The results for a query are considered to be statistically not significant if the runtime is too short. However,
-    # if the item has been executed > `min_iterations_disabling_min_runtime` times, it is considered significant.
-    if (old_runtime < min_runtime_ns or new_runtime < min_runtime_ns) and (
-        len(old_durations) < min_iterations_disabling_min_runtime
-        or len(new_durations) < min_iterations_disabling_min_runtime
-    ):
+    # If we cannot decide whether the change is significant due to an insufficient number of measurements, the
+    # `add_note_for_insufficient_pvalue_runs` flag it set, for which a note is later added to the table output.
+    if len(old_durations) < min_iterations or len(new_durations) < min_iterations:
         is_significant = False
-        return "(run time too short)"
-    elif len(old_durations) < min_iterations or len(new_durations) < min_iterations:
-        is_significant = False
-
-        # In case we cannot decide whether the change is significant due to an insufficient number of measurements, the
-        # add_note_for_insufficient_pvalue_runs flag it set, for which a note is later added to the table output.
         global add_note_for_insufficient_pvalue_runs
         add_note_for_insufficient_pvalue_runs = True
         return colored("˅", "yellow", attrs=["bold"])
-    else:
-        if is_significant:
-            return colored(f"{p_value:.4f}", "white")
-        else:
-            return colored(f"{p_value:.4f}", "yellow", attrs=["bold"])
+
+    # The results for a query are considered to be statistically not significant if the runtime is unstable. To assess
+    # the variance, we use the coefficient of variation (C.V.): `C.V = standard deviation / mean`. If that value is
+    # higher than 10% (which seems to be a common value), we do not trust the p-value.
+    # For details, see https://www.geeksforgeeks.org/data-science/coefficient-of-variation-meaning-formula-and-examples
+    old_cv = np.std(old_durations) / np.mean(old_durations)
+    new_cv = np.std(new_durations) / np.mean(new_durations)
+    if old_cv > cv_significance_threshold or new_cv > cv_significance_threshold:
+        global add_note_for_high_variance_runs
+        add_note_for_high_variance_runs = True
+        return colored("*", "yellow", attrs=["bold"])
+
+    return colored(f"{p_value:.4f}", "white") if is_significant else colored(f"{p_value:.4f}", "yellow", attrs=["bold"])
 
 
 def create_context_overview(old_config, new_config, github_format):
@@ -162,7 +157,8 @@ total_runtime_old = 0
 total_runtime_new = 0
 
 add_note_for_capped_runs = False  # Flag set when max query runs was set for benchmark run
-add_note_for_insufficient_pvalue_runs = False  # Flag set when runs was insufficient for p-value calculation
+add_note_for_insufficient_pvalue_runs = False  # Flag set when runs were insufficient for p-value calculation
+add_note_for_high_variance_runs = False  # Flag set when there was too much variance for p-value calculations
 
 
 # Create table header:
@@ -329,9 +325,9 @@ for line_number, line in enumerate(lines):
     table_string_reformatted += line + "\n"
 
 
-# In case the runs for the executed benchmark have been cut or the number of runs was insufficient for the p-value
-# calcution, we add notes to the end of the table.
-if add_note_for_capped_runs or add_note_for_insufficient_pvalue_runs:
+# In case the runs for the executed benchmark have been cut or the runs were insufficient for the p-value calculation,
+# we add notes to the end of the table.
+if any(add_note_for_capped_runs, add_note_for_insufficient_pvalue_runs, add_note_for_high_variance_runs):
     first_column_width = len(lines[1].split("|")[1])
     width_for_note = len(lines[0]) - first_column_width - 5  # 5 for seperators and spaces
     if add_note_for_capped_runs:
@@ -339,7 +335,10 @@ if add_note_for_capped_runs or add_note_for_insufficient_pvalue_runs:
         table_string_reformatted += "|" + (" Notes ".rjust(first_column_width, " "))
         table_string_reformatted += "|| " + note.ljust(width_for_note, " ") + "|\n"
     if add_note_for_insufficient_pvalue_runs:
-        note = "˅" + " Insufficient number of runs for p-value calculation"
+        note = "˅ Insufficient number of runs for p-value calculation"
+        table_string_reformatted += "|" + (" " * first_column_width) + "|| " + note.ljust(width_for_note, " ") + "|\n"
+    if add_note_for_high_variance_runs:
+        note = "* Variance of measurements is too high"
         table_string_reformatted += "|" + (" " * first_column_width) + "|| " + note.ljust(width_for_note, " ") + "|\n"
     table_string_reformatted += lines[-1] + "\n"
 
