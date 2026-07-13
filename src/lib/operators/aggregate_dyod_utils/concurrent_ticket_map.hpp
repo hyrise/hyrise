@@ -97,7 +97,7 @@ class ConcurrentTicketMap {
 
     const auto initialize_slots = [slots = _slots.get()](const size_t begin, const size_t end) {
       for (auto index = begin; index < end; ++index) {
-        ::new (static_cast<void*>(&slots[index])) Slot{};
+        slots[index].state = EMPTY;
       }
     };
 
