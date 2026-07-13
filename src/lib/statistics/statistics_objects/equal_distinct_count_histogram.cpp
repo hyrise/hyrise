@@ -1,6 +1,9 @@
 #include "equal_distinct_count_histogram.hpp"
 
+#include <algorithm>
+#include <bit>
 #include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <numeric>
 #include <string>
@@ -11,6 +14,10 @@
 #include <boost/unordered/unordered_flat_map.hpp>
 
 #include "all_type_variant.hpp"
+#include "hyrise.hpp"
+#include "scheduler/abstract_task.hpp"
+#include "scheduler/job_task.hpp"
+#include "scheduler/node_queue_scheduler.hpp"
 #include "statistics/statistics_objects/abstract_histogram.hpp"
 #include "statistics/statistics_objects/histogram_domain.hpp"
 #include "storage/abstract_segment.hpp"
@@ -27,53 +34,169 @@ using namespace hyrise;
 // so reduces the cost of rehashing at the cost of slightly higher memory consumption. We only do it for strings,
 // where hashing is somewhat expensive.
 template <typename T>
-using ValueDistributionMap = boost::unordered_flat_map<T, HistogramCountType>;
+using ValueDistributionMap = boost::unordered_flat_map<T, size_t>;
 
 template <typename T>
-void add_segment_to_value_distribution(const AbstractSegment& segment, ValueDistributionMap<T>& value_distribution,
-                                       const HistogramDomain<T>& domain) {
+using ValueDistributionVector = std::vector<std::pair<T, size_t>>;
+
+template <typename T>
+void process_segment(AbstractSegment& segment, ValueDistributionVector<T>& value_distribution_vector,
+                     const HistogramDomain<T>& domain) {
+  auto value_distribution_map = ValueDistributionMap<T>{};
+  value_distribution_map.reserve(segment.size());
+
   segment_iterate<T>(segment, [&](const auto& iterator_value) {
     if (iterator_value.is_null()) {
       return;
     }
 
     if constexpr (std::is_same_v<T, pmr_string>) {
-      // Do "contains()" check first to avoid the string copy incurred by string_to_domain() where possible
-      if (domain.contains(iterator_value.value())) {
-        ++value_distribution[iterator_value.value()];
-      } else {
-        ++value_distribution[domain.string_to_domain(iterator_value.value())];
-      }
+      const auto current_string = domain.string_to_domain(iterator_value.value());
+      ++value_distribution_map[current_string];
     } else {
-      ++value_distribution[iterator_value.value()];
+      ++value_distribution_map[iterator_value.value()];
     }
   });
+
+  value_distribution_vector.insert(value_distribution_vector.begin(), value_distribution_map.cbegin(),
+                                   value_distribution_map.cend());
 }
 
 template <typename T>
-std::vector<std::pair<T, HistogramCountType>> value_distribution_from_column(const Table& table,
-                                                                             const ColumnID column_id,
-                                                                             const HistogramDomain<T>& domain) {
-  auto value_distribution_map = ValueDistributionMap<T>{};
-  const auto chunk_count = table.chunk_count();
-  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-    const auto chunk = table.get_chunk(chunk_id);
-    if (!chunk) {
+ValueDistributionVector<T> add_segment_to_value_distribution(const size_t max_parallel_level, const size_t level,
+                                                             auto segment_iterator_begin, auto segment_iterator_end,
+                                                             const HistogramDomain<T>& domain) {
+  if (std::distance(segment_iterator_begin, segment_iterator_end) == 1) {
+    // Final recursive step.
+    const auto [chunk_id, segment] = *segment_iterator_begin;
+
+    auto value_distribution_vector = ValueDistributionVector<T>{};
+
+    // From a performance perspective, `process_segment` should be specialized for strings as they are expensive to
+    // handle and we already use some form of aggregation (distinct sorted dictionaries) to store string columns.
+    process_segment<T>(*segment, value_distribution_vector, domain);
+
+    boost::sort::pdqsort(value_distribution_vector.begin(), value_distribution_vector.end(),
+                         [&](const auto& lhs, const auto& rhs) {
+                           return lhs.first < rhs.first;
+                         });
+
+    return value_distribution_vector;
+  }
+
+  auto left = ValueDistributionVector<T>{};
+  auto right = ValueDistributionVector<T>{};
+
+  auto middle = segment_iterator_begin + (std::distance(segment_iterator_begin, segment_iterator_end) / 2);
+
+  auto left_task = [&]() {
+    left = add_segment_to_value_distribution(max_parallel_level, level + 1, segment_iterator_begin, middle, domain);
+  };
+  auto right_task = [&]() {
+    right = add_segment_to_value_distribution(max_parallel_level, level + 1, middle, segment_iterator_end, domain);
+  };
+
+  if (level < max_parallel_level) {
+    auto tasks = std::vector<std::shared_ptr<AbstractTask>>{std::make_shared<JobTask>(left_task),
+                                                            std::make_shared<JobTask>(right_task)};
+    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
+  } else {
+    left_task();
+    right_task();
+  }
+
+  auto result = ValueDistributionVector<T>{};
+  result.reserve(left.size() + right.size());
+
+  auto left_iter = left.begin();
+  auto right_iter = right.begin();
+
+  if constexpr (HYRISE_DEBUG) {
+    const auto validate_uniqueness = [](const auto& value_distribution_vector) {
+      // We expect sorted and unique vectors.
+      Assert(std::ranges::is_sorted(value_distribution_vector,
+                                    [&](const auto& lhs, const auto& rhs) {
+                                      return lhs.first < rhs.first;
+                                    }),
+             "Expected vector to be sorted by key.");
+      Assert(std::ranges::adjacent_find(value_distribution_vector,
+                                        [&](const auto& lhs, const auto& rhs) {
+                                          return lhs.first == rhs.first;
+                                        }) == value_distribution_vector.cend(),
+             "Expected keys of vector (first element of pairs) to be unique.");
+    };
+
+    validate_uniqueness(left);
+    validate_uniqueness(right);
+  }
+
+  // We manually merge instead of using std::merge as we aggregate along the way. When we see two elements with the same
+  // value, we add the counts and emit the result (no run contains a key more than once).
+  while (left_iter != left.end() || right_iter != right.end()) {
+    if (left_iter == left.end()) {
+      result.emplace_back(*right_iter);
+      ++right_iter;
       continue;
     }
 
-    add_segment_to_value_distribution<T>(*chunk->get_segment(column_id), value_distribution_map, domain);
+    if (right_iter == right.end()) {
+      result.emplace_back(*left_iter);
+      ++left_iter;
+      continue;
+    }
+
+    if (left_iter->first == right_iter->first) {
+      result.emplace_back(left_iter->first, left_iter->second + right_iter->second);
+      ++left_iter;
+      ++right_iter;
+    } else if (left_iter->first < right_iter->first) {
+      result.emplace_back(*left_iter);
+      ++left_iter;
+    } else {
+      result.emplace_back(*right_iter);
+      ++right_iter;
+    }
   }
 
-  auto value_distribution =
-      std::vector<std::pair<T, HistogramCountType>>{value_distribution_map.begin(), value_distribution_map.end()};
-  value_distribution_map.clear();  // Maps can be large and sorting slow. Free space early.
-  boost::sort::pdqsort(value_distribution.begin(), value_distribution.end(), [&](const auto& lhs, const auto& rhs) {
-    return lhs.first < rhs.first;
-  });
-
-  return value_distribution;
+  DebugAssert(std::is_sorted(result.begin(), result.end()), "Result should be sorted.");
+  return result;
 }
+
+template <typename T>
+ValueDistributionVector<T> value_distribution_from_column(const Table& table, const ColumnID column_id,
+                                                          const HistogramDomain<T>& domain) {
+  const auto chunk_count = table.chunk_count();
+
+  auto result = ValueDistributionVector<T>{};
+  if (chunk_count == 0) {
+    return result;
+  }
+
+  auto segments_to_process = std::vector<std::pair<ChunkID, std::shared_ptr<AbstractSegment>>>{};
+  segments_to_process.reserve(chunk_count);
+
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+    const auto chunk = table.get_chunk(chunk_id);
+    Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
+    segments_to_process.emplace_back(chunk_id, chunk->get_segment(column_id));
+  }
+
+  // We determine the recursion steps (i.e., merge levels) that we want to parallelize. We try to create up to
+  // 2 * #worker sto fully utilize a system with a bit of straggler mitigation (thus 2x) while not overloading the
+  // scheduler. As the leaves of the created merge tree are single chunks, we would otherwise create tens of thousands
+  // of nested jobs for SF 100 TPC-H data. When the limit is reached, each worker executes the recursion on its own
+  // sequentially.
+  auto worker_count = size_t{1};
+  if (const auto node_queue_scheduler = std::dynamic_pointer_cast<NodeQueueScheduler>(Hyrise::get().scheduler())) {
+    worker_count = node_queue_scheduler->workers().size();
+  }
+  const auto max_parallel_levels = std::bit_width(worker_count) + 1;
+  result = add_segment_to_value_distribution<T>(max_parallel_levels, 0, segments_to_process.begin(),
+                                                segments_to_process.end(), domain);
+
+  return result;
+}
+
 }  // namespace
 
 namespace hyrise {
@@ -121,14 +244,14 @@ std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::
   const auto distinct_count_per_bin = static_cast<size_t>(value_distribution.size() / bin_count);
   const BinID bin_count_with_extra_value = value_distribution.size() % bin_count;
 
-  std::vector<T> bin_minima(bin_count);
-  std::vector<T> bin_maxima(bin_count);
-  std::vector<HistogramCountType> bin_heights(bin_count);
+  auto bin_minima = std::vector<T>(bin_count);
+  auto bin_maxima = std::vector<T>(bin_count);
+  auto bin_heights = std::vector<HistogramCountType>(bin_count);
 
-  // `min_value_idx` and `max_value_idx` are indices into the sorted vector `value_distribution`
-  // describing which range of distinct values goes into a bin
+  // `min_value_idx` and `max_value_idx` are indices into the sorted vector `value_distribution` describing which range
+  // of distinct values goes into a bin.
   auto min_value_idx = BinID{0};
-  for (BinID bin_idx = 0; bin_idx < bin_count; bin_idx++) {
+  for (auto bin_idx = BinID{0}; bin_idx < bin_count; bin_idx++) {
     auto max_value_idx = min_value_idx + distinct_count_per_bin - 1;
     if (bin_idx < bin_count_with_extra_value) {
       max_value_idx++;
@@ -145,9 +268,8 @@ std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::
 
     bin_heights[bin_idx] =
         std::accumulate(value_distribution.cbegin() + min_value_idx, value_distribution.cbegin() + max_value_idx + 1,
-                        HistogramCountType{0},
-                        [](HistogramCountType bin_height, const std::pair<T, HistogramCountType>& value_and_count) {
-                          return bin_height + value_and_count.second;
+                        HistogramCountType{0}, [](HistogramCountType bin_height, const auto& value_and_count) {
+                          return bin_height + static_cast<HistogramCountType>(value_and_count.second);
                         });
 
     min_value_idx = max_value_idx + 1;
@@ -156,6 +278,14 @@ std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::
   return std::make_shared<EqualDistinctCountHistogram<T>>(
       std::move(bin_minima), std::move(bin_maxima), std::move(bin_heights),
       static_cast<HistogramCountType>(distinct_count_per_bin), bin_count_with_extra_value);
+}
+
+template <typename T>
+uint16_t EqualDistinctCountHistogram<T>::determine_bin_count(size_t table_row_count) {
+  // Determine bin count, within mostly arbitrarily chosen bounds: 16 (for tables with <= 16 000 rows) up to 128 bins
+  // (for tables with >= 256 000 rows) are created. If the table does not have a high number of distinct values, the
+  // EqualDistinctCountHistogram automatically uses fewer bins.
+  return static_cast<uint16_t>(std::min<size_t>(128, std::max<size_t>(16, table_row_count / 2'000)));
 }
 
 template <typename T>
