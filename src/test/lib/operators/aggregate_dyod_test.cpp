@@ -124,6 +124,12 @@ TEST_F(OperatorsAggregateDYODTest, MixedGroupByWithNulls) {
                               {ColumnID{0}, ColumnID{1}});
 }
 
+TEST_F(OperatorsAggregateDYODTest, AnyOnGroupByColumns) {
+  const auto input = make_input(30'000);
+  compare_with_aggregate_hash(input, {{ColumnID{0}, WindowFunction::Any}, {ColumnID{1}, WindowFunction::Any}},
+                              {ColumnID{0}, ColumnID{1}});
+}
+
 TEST_F(OperatorsAggregateDYODTest, EmptyInput) {
   const auto input = make_input(0);
   compare_with_aggregate_hash(input, {{ColumnID{2}, WindowFunction::Sum}, {INVALID_COLUMN_ID, WindowFunction::Count}},
