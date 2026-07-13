@@ -146,14 +146,14 @@ ValueDistributionVector<T> add_segment_to_value_distribution(const size_t max_pa
     }
 
     if (left_iter->first == right_iter->first) {
-      result.emplace_back(std::move(left_iter->first), left_iter->second + right_iter->second);
+      result.emplace_back(left_iter->first, left_iter->second + right_iter->second);
       ++left_iter;
       ++right_iter;
     } else if (left_iter->first < right_iter->first) {
-      result.emplace_back(std::move(*left_iter));
+      result.emplace_back(*left_iter);
       ++left_iter;
     } else {
-      result.emplace_back(std::move(*right_iter));
+      result.emplace_back(*right_iter);
       ++right_iter;
     }
   }
