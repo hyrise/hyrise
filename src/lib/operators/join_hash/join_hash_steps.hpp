@@ -26,6 +26,7 @@
 #include "storage/segment_iterate.hpp"
 #include "type_comparison.hpp"
 #include "types.hpp"
+#include "utils/scheduling_utils.hpp"
 
 /*
   This file includes the functions that cover the main steps of our hash join implementation
@@ -262,7 +263,7 @@ using BloomFilter = boost::dynamic_bitset<>;
 // it where needed. Having a Bloom filter that always returns true avoids a branch in the hot loop.
 static const auto all_true_bloom_filter = ~BloomFilter(BLOOM_FILTER_SIZE);
 
-// @param in_table             Table to materialize
+// @param table                Table to materialize
 // @param column_id            Column within that table to materialize
 // @param histograms           Out: If radix_bits > 0, contains one histogram per chunk where each histogram contains
 //                             1 << radix_bits slots
@@ -272,63 +273,70 @@ static const auto all_true_bloom_filter = ~BloomFilter(BLOOM_FILTER_SIZE);
 // @param input_bloom_filter   Optional: Materialization is skipped for each value where the corresponding slot in the
 //                             Bloom filter is false
 template <typename T, typename HashedType, bool keep_null_values>
-RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
+RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& table, const ColumnID column_id,
                                     std::vector<std::vector<size_t>>& histograms, const size_t radix_bits,
                                     BloomFilter& output_bloom_filter,
                                     const BloomFilter& input_bloom_filter = all_true_bloom_filter) {
-  // Retrieve input chunk_count as it might change during execution if we work on a non-reference table.
-  auto chunk_count = in_table->chunk_count();
-
   const auto hash_function = std::hash<HashedType>{};
   // List of all elements that will be partitioned.
-  auto radix_container = RadixContainer<T>(chunk_count);
+  auto radix_container = RadixContainer<T>{};
 
   // Determine fan-out (i.e., number of radix partitions to create).
   const auto num_radix_partitions = size_t{1} << radix_bits;
   const auto radix_mask = static_cast<size_t>(std::pow(2, radix_bits) - 1);
 
   Assert(output_bloom_filter.empty(), "Unexpected non-empty output_bloom_filter.");
-  output_bloom_filter.resize(BLOOM_FILTER_SIZE);
-  auto output_bloom_filter_mutex = std::mutex{};
   Assert(input_bloom_filter.size() == BLOOM_FILTER_SIZE, "Invalid input_bloom_filter.");
 
-  // Create histograms per chunk.
-  histograms.resize(chunk_count);
+  if (table->chunk_count() == 0) {
+    output_bloom_filter.resize(BLOOM_FILTER_SIZE);
+    return radix_container;
+  }
 
-  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
-  jobs.reserve(chunk_count);
-  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-    const auto chunk_in = in_table->get_chunk(chunk_id);
-    Assert(chunk_in, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
+  auto bloom_filters = std::vector<BloomFilter>{};
 
-    const auto num_rows = chunk_in->size();
+  const auto [jobs, _] = batch_chunks_for_scheduling(table, [&](size_t group_id, const std::span<ChunkID> chunk_ids) {
+    // For the first group (the only one when single-threaded), we directly use the output filter. For all other groups,
+    // we use local ones that are later merged into the output filter.
+    auto& local_bloom_filter = (group_id == 0) ? output_bloom_filter : bloom_filters[group_id - 1];
+    local_bloom_filter.resize(BLOOM_FILTER_SIZE);
 
-    const auto materialize = [&, chunk_in, chunk_id, num_rows]() {
-      auto local_output_bloom_filter = BloomFilter{};
-      std::reference_wrapper<BloomFilter> used_output_bloom_filter = output_bloom_filter;
-      if (Hyrise::get().is_multi_threaded()) {
-        // We cannot write to BloomFilter concurrently, so we build a local one first.
-        local_output_bloom_filter = BloomFilter(BLOOM_FILTER_SIZE, false);
-        used_output_bloom_filter = local_output_bloom_filter;
+    // Gather shared pointers to chunks (ensure their lifetime) and overall row count for chunks to process.
+    auto row_count = int64_t{0};
+    auto chunks = std::vector<std::pair<ChunkID, std::shared_ptr<const Chunk>>>{};
+    chunks.reserve(chunk_ids.size());
+    for (const auto chunk_id : chunk_ids) {
+      auto chunk = table->get_chunk(chunk_id);
+      // Skip chunks that were physically deleted.
+      if (!chunk) {
+        continue;
       }
 
-      auto& elements = radix_container[chunk_id].elements;
-      auto& null_values = radix_container[chunk_id].null_values;
+      row_count += chunk->size();
+      chunks.emplace_back(chunk_id, std::move(chunk));
+    }
 
-      elements.resize(num_rows);
-      if constexpr (keep_null_values) {
-        null_values.resize(num_rows);
-      }
+    auto& elements = radix_container[group_id].elements;
+    auto& null_values = radix_container[group_id].null_values;
 
-      auto elements_iter = elements.begin();
-      [[maybe_unused]] auto null_values_iter = null_values.begin();
+    elements.resize(row_count);
+    if constexpr (keep_null_values) {
+      null_values.resize(row_count);
+    }
 
-      // Prepare histogram.
-      auto histogram = std::vector<size_t>(num_radix_partitions);
+    auto elements_iter = elements.begin();
+    [[maybe_unused]] auto null_values_iter = null_values.begin();
 
+    // Prepare histogram.
+    auto histogram = std::vector<size_t>(num_radix_partitions);
+
+    // auto group_row_count = size_t{0};
+    for (const auto& [chunk_id, chunk] : chunks) {
+      // group_row_count += chunk->size();
+      const auto chunk_size = chunk->size();
       auto reference_chunk_offset = ChunkOffset{0};
 
-      const auto segment = chunk_in->get_segment(column_id);
+      const auto segment = chunk->get_segment(column_id);
       segment_with_iterators<T>(*segment, [&](auto iter, auto end) {
         using IterableType = typename decltype(iter)::IterableType;
 
@@ -336,10 +344,10 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
           // The last chunk might have changed its size since we allocated elements. This would be due to concurrent
           // inserts into that chunk. In any case, those inserts will not be visible to our current transaction, so we
           // can ignore them.
-          const auto inserted_rows = (end - iter) - num_rows;
+          const auto inserted_rows = (end - iter) - chunk_size;
           end -= inserted_rows;
         } else {
-          Assert(end - iter == num_rows, "Non-ValueSegment changed size while being accessed.");
+          Assert(end - iter == chunk_size, "Non-ValueSegment changed size while being accessed.");
         }
 
         while (iter != end) {
@@ -353,13 +361,13 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
 
             auto skip = false;
             if (!value.is_null() && !input_bloom_filter[hashed_value & BLOOM_FILTER_MASK] && !keep_null_values) {
-              // Value in not present in input bloom filter and can be skipped
+              // Value in not present in input bloom filter and can be skipped.
               skip = true;
             }
 
             if (!skip) {
               // Fill the corresponding slot in the bloom filter.
-              used_output_bloom_filter.get()[hashed_value & BLOOM_FILTER_MASK] = true;
+              local_bloom_filter[hashed_value & BLOOM_FILTER_MASK] = true;
 
               // For ReferenceSegments, we do not use the RowIDs from the referenced tables. Instead, we use the index
               // in the ReferenceSegment itself. This way we can later correctly dereference values from different
@@ -394,27 +402,40 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
           ++iter;
         }
       });
-
-      // `elements` was allocated with the size of the chunk. As we might have skipped NULL values, we need to resize
-      // the vector to the number of values actually written.
-      elements.resize(std::distance(elements.begin(), elements_iter));
-      null_values.resize(std::distance(null_values.begin(), null_values_iter));
-
-      histograms[chunk_id] = std::move(histogram);
-
-      if (Hyrise::get().is_multi_threaded()) {
-        // Merge the local_output_bloom_filter into output_bloom_filter
-        const auto lock = std::lock_guard<std::mutex>{output_bloom_filter_mutex};
-        output_bloom_filter |= local_output_bloom_filter;
-      }
-    };
-    if (JoinHash::JOB_SPAWN_THRESHOLD > num_rows) {
-      materialize();
-    } else {
-      jobs.emplace_back(std::make_shared<JobTask>(materialize));
     }
+
+    // std::cerr << std::format("Job {}: group row count {}\n", group_id, group_row_count);
+
+    // `elements` was allocated with the size of the processed chunks. As we might have skipped NULL values, we need to
+    // resize the vector to the number of values actually written.
+    elements.resize(std::distance(elements.begin(), elements_iter));
+    null_values.resize(std::distance(null_values.begin(), null_values_iter));
+
+    histograms[group_id] = std::move(histogram);
+  });
+
+  const auto group_count = jobs.size();
+
+  // Create histograms and radix container per group (i.e., a group of chunks). As we need to merge histograms later in
+  // the radix partitining phase, we want to lower the merging overhead by grouping while still having a sufficiently
+  // large number of jobs to keep all workers busy.
+  histograms.resize(group_count);
+  radix_container.resize(group_count);
+  bloom_filters.resize(group_count - 1);  // The first group uses the output bloom filter.
+  output_bloom_filter.resize(BLOOM_FILTER_SIZE);
+
+  if (table->row_count() < 4'000) {
+    for (const auto& job : jobs) {
+      auto job_job = std::dynamic_pointer_cast<JobTask>(job);
+      job_job->execute_directly();
+    }
+  } else {
+    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
   }
-  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+
+  for (const auto& bloom_filter : bloom_filters) {
+    output_bloom_filter |= bloom_filter;
+  }
 
   return radix_container;
 }
@@ -427,7 +448,7 @@ template <typename BuildColumnType, typename HashedType>
 std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<BuildColumnType>& radix_container,
                                                            const JoinHashBuildMode mode, const size_t radix_bits,
                                                            const BloomFilter& input_bloom_filter) {
-  Assert(input_bloom_filter.size() == BLOOM_FILTER_SIZE, "invalid input_bloom_filter");
+  Assert(input_bloom_filter.size() == BLOOM_FILTER_SIZE, "Invalid input_bloom_filter.");
 
   if (radix_container.empty()) {
     return {};

@@ -53,7 +53,7 @@ TEST_F(AliasOperatorTest, ForwardSortedByFlag) {
   alias_operator->execute();
   const auto result_table_unsorted = alias_operator->get_output();
 
-  for (ChunkID chunk_id{0}; chunk_id < result_table_unsorted->chunk_count(); ++chunk_id) {
+  for (auto chunk_id = ChunkID{0}; chunk_id < result_table_unsorted->chunk_count(); ++chunk_id) {
     const auto& sorted_by = result_table_unsorted->get_chunk(chunk_id)->individually_sorted_by();
     EXPECT_TRUE(sorted_by.empty());
   }
@@ -67,7 +67,7 @@ TEST_F(AliasOperatorTest, ForwardSortedByFlag) {
   alias_operator_sorted->execute();
 
   const auto result_table_sorted = alias_operator_sorted->get_output();
-  for (ChunkID chunk_id{0}; chunk_id < result_table_sorted->chunk_count(); ++chunk_id) {
+  for (auto chunk_id = ChunkID{0}; chunk_id < result_table_sorted->chunk_count(); ++chunk_id) {
     const auto& sorted_by = result_table_sorted->get_chunk(chunk_id)->individually_sorted_by();
     ASSERT_EQ(sorted_by.size(), 1);
     EXPECT_EQ(sorted_by.front().column, ColumnID{1});

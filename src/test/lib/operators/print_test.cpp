@@ -28,7 +28,7 @@ namespace hyrise {
 class OperatorsPrintTest : public BaseTest {
  protected:
   void SetUp() override {
-    TableColumnDefinitions column_definitions;
+    auto column_definitions = TableColumnDefinitions{};
     column_definitions.emplace_back("column_1", DataType::Int, true);
     column_definitions.emplace_back("column_2", DataType::String, false);
     _t = std::make_shared<Table>(column_definitions, TableType::Data, _chunk_size);
@@ -79,7 +79,7 @@ TEST_F(OperatorsPrintTest, TableColumnDefinitions) {
   auto pr = std::make_shared<Print>(_gt, PrintFlags::None, output);
   pr->execute();
 
-  // check if table is correctly passed
+  // Check if table is correctly passed.
   EXPECT_EQ(pr->get_output(), _gt->get_output());
 
   auto output_string = output.str();
@@ -92,9 +92,9 @@ TEST_F(OperatorsPrintTest, TableColumnDefinitions) {
 }
 
 TEST_F(OperatorsPrintTest, FilledTable) {
-  const size_t chunk_count = 117;
+  const auto chunk_count = size_t{117};
   auto tab = Hyrise::get().storage_manager.get_table(_table_name);
-  for (size_t i = 0; i < _chunk_size * chunk_count; i++) {
+  for (auto i = size_t{0}; i < _chunk_size * chunk_count; i++) {
     // char 97 is an 'a'. Modulo 26 to stay within the alphabet.
     tab->append({static_cast<int>(i % _chunk_size), pmr_string(1, 97 + static_cast<int>(i / _chunk_size) % 26)});
   }
@@ -128,8 +128,8 @@ TEST_F(OperatorsPrintTest, FilledTable) {
 }
 
 TEST_F(OperatorsPrintTest, GetColumnWidths) {
-  uint16_t min = 8;
-  uint16_t max = 20;
+  auto min = uint16_t{8};
+  auto max = uint16_t{20};
 
   auto tab = Hyrise::get().storage_manager.get_table(_table_name);
 
@@ -144,7 +144,7 @@ TEST_F(OperatorsPrintTest, GetColumnWidths) {
     EXPECT_EQ(print_lengths.at(1), static_cast<size_t>(min));
   }
 
-  int ten_digits_ints = 1234567890;
+  auto ten_digits_ints = int32_t{1234567890};
   tab->append({ten_digits_ints, "quite a long string with more than $max chars"});
 
   {
@@ -183,15 +183,15 @@ TEST_F(OperatorsPrintTest, TruncateLongValueInOutput) {
   auto print_wrap = std::make_shared<PrintWrapper>(_gt);
   auto tab = Hyrise::get().storage_manager.get_table(_table_name);
 
-  pmr_string cell_string = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz";
+  auto cell_string = pmr_string{"abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz"};
   auto input = AllTypeVariant{cell_string};
 
   tab->append({0, input});
 
   auto substr_length = std::min(static_cast<int>(cell_string.length()), print_wrap->get_max_cell_width() - 3);
 
-  std::string manual_substring = "|";
-  for (uint16_t i = 0; i < substr_length; i++) {
+  auto manual_substring = std::string{"|"};
+  for (auto i = uint16_t{0}; i < substr_length; i++) {
     manual_substring += cell_string.at(i);
   }
   manual_substring += "...|";
@@ -223,8 +223,7 @@ TEST_F(OperatorsPrintTest, MVCCFlag) {
 TEST_F(OperatorsPrintTest, MVCCTableLoad) {
   // Per default, MVCC data is created when loading tables.
   // This test passes the flag for printing MVCC information, which is not printed by default.
-  std::shared_ptr<TableWrapper> table =
-      std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float.tbl", ChunkOffset{2}));
+  auto table = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float.tbl", ChunkOffset{2}));
   table->execute();
 
   Print::print(table, PrintFlags::Mvcc, output);
@@ -245,8 +244,7 @@ TEST_F(OperatorsPrintTest, MVCCTableLoad) {
 }
 
 TEST_F(OperatorsPrintTest, PrintFlagsIgnoreChunkBoundaries) {
-  std::shared_ptr<TableWrapper> table =
-      std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float.tbl", ChunkOffset{2}));
+  auto table = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float.tbl", ChunkOffset{2}));
   table->execute();
 
   Print::print(table, PrintFlags::IgnoreChunkBoundaries, output);
@@ -270,17 +268,17 @@ TEST_F(OperatorsPrintTest, DirectInstantiations) {
       "|     int|  string|\n"
       "|    null|not null|\n";
 
-  std::ostringstream output_ss_op_inst;
+  auto output_ss_op_inst = std::ostringstream{};
   Print::print(_gt, PrintFlags::None, output_ss_op_inst);
   EXPECT_EQ(output_ss_op_inst.str(), expected_output);
 
-  std::ostringstream output_ss_tab_inst;
+  auto output_ss_tab_inst = std::ostringstream{};
   Print::print(_t, PrintFlags::None, output_ss_tab_inst);
   EXPECT_EQ(output_ss_tab_inst.str(), expected_output);
 }
 
 TEST_F(OperatorsPrintTest, NullableColumnPrinting) {
-  TableColumnDefinitions nullable_column_definitions;
+  auto nullable_column_definitions = TableColumnDefinitions{};
   nullable_column_definitions.emplace_back("l_returnflag", DataType::String, false);
   nullable_column_definitions.emplace_back("l_linestatus", DataType::String, false);
   nullable_column_definitions.emplace_back("sum_qty", DataType::Double, true);
@@ -348,7 +346,7 @@ TEST_F(OperatorsPrintTest, EmptyTable) {
   auto wrap = std::make_shared<TableWrapper>(tab);
   wrap->execute();
 
-  std::ostringstream output;
+  auto output = std::ostringstream{};
   auto wrapper = PrintWrapper(wrap, PrintFlags::None, output);
   wrapper.execute();
 
