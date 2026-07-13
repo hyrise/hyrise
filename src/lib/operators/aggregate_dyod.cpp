@@ -35,6 +35,42 @@
 
 namespace hyrise {
 
+template <typename T>
+struct ChunkedVector {
+  static constexpr auto CHUNK_SIZE = static_cast<size_t>(TARGET_CHUNK_SIZE);
+
+  ChunkedVector() = default;
+
+  explicit ChunkedVector(const size_t size, const T initial_value = T{}) {
+    chunks.reserve((size + CHUNK_SIZE - 1) / CHUNK_SIZE);
+    for (auto begin = size_t{0}; begin < size; begin += CHUNK_SIZE) {
+      chunks.emplace_back(std::min(CHUNK_SIZE, size - begin), initial_value);
+    }
+  }
+
+  // This will normally retunr T& but not if T is bool. There bit packing makes it return a proxy object.
+  decltype(auto) operator[](const size_t index) {
+    return chunks[index / CHUNK_SIZE][index % CHUNK_SIZE];
+  }
+
+  std::vector<pmr_vector<T>> chunks;
+};
+
+template <typename T>
+void _emit_output_column(ChunkedVector<T>&& values, ChunkedVector<bool>&& nulls, const bool nullable,
+                         std::vector<Segments>& output_chunks, const size_t column_index) {
+  const auto chunk_count = values.chunks.size();
+  for (auto chunk_index = size_t{0}; chunk_index < chunk_count; ++chunk_index) {
+    if (nullable) {
+      output_chunks[chunk_index][column_index] = std::make_shared<ValueSegment<T>>(
+          std::move(values.chunks[chunk_index]), std::move(nulls.chunks[chunk_index]));
+    } else {
+      output_chunks[chunk_index][column_index] =
+          std::make_shared<ValueSegment<T>>(std::move(values.chunks[chunk_index]));
+    }
+  }
+}
+
 // Threshold that decides how the group-by output columns are built. When the input has at least this many rows per
 // group (low cardinality), each group-by column is materialized by reading every group's value once from its distinct
 // key row in the grouping hash table; below it (high cardinality), a sequential scan of the source column is cheaper.
@@ -136,50 +172,6 @@ int64_t _count_distinct_all_values(const std::shared_ptr<const Table>& input_tab
     });
   }
   return static_cast<int64_t>(distinct_values.size());
-}
-
-// An output column for all groups, stored as TARGET_CHUNK_SIZE-sized pieces from the start. Tickets are dense in
-// [0, group_count), so group `g` lives in piece `g / TARGET_CHUNK_SIZE` at offset `g % TARGET_CHUNK_SIZE` and the
-// aggregation loops can address it by ticket like a flat vector. Each piece is later moved into a `ValueSegment`
-// (`_emit_output_column`), so the finished column is never copied.
-template <typename T>
-struct ChunkedVector {
-  static constexpr auto CHUNK_SIZE = static_cast<size_t>(TARGET_CHUNK_SIZE);
-
-  ChunkedVector() = default;
-
-  explicit ChunkedVector(const size_t size, const T initial_value = T{}) {
-    chunks.reserve((size + CHUNK_SIZE - 1) / CHUNK_SIZE);
-    for (auto begin = size_t{0}; begin < size; begin += CHUNK_SIZE) {
-      chunks.emplace_back(std::min(CHUNK_SIZE, size - begin), initial_value);
-    }
-  }
-
-  // `decltype(auto)` so `ChunkedVector<bool>` hands out the underlying bit-reference proxy.
-  decltype(auto) operator[](const size_t index) {
-    return chunks[index / CHUNK_SIZE][index % CHUNK_SIZE];
-  }
-
-  std::vector<pmr_vector<T>> chunks;
-};
-
-// Moves the pieces of one finished output column into its fixed `column_index` slot of every output chunk. Runs at the
-// end of the job that produced the column, so the segments are built by the thread that owns the data. Columns emitted
-// with `nullable == false` (COUNT, and pass-through of non-nullable source columns) drop their null pieces to match
-// the non-nullable column definition.
-template <typename T>
-void _emit_output_column(ChunkedVector<T>&& values, ChunkedVector<bool>&& nulls, const bool nullable,
-                         std::vector<Segments>& output_chunks, const size_t column_index) {
-  const auto chunk_count = values.chunks.size();
-  for (auto chunk_index = size_t{0}; chunk_index < chunk_count; ++chunk_index) {
-    if (nullable) {
-      output_chunks[chunk_index][column_index] = std::make_shared<ValueSegment<T>>(
-          std::move(values.chunks[chunk_index]), std::move(nulls.chunks[chunk_index]));
-    } else {
-      output_chunks[chunk_index][column_index] =
-          std::make_shared<ValueSegment<T>>(std::move(values.chunks[chunk_index]));
-    }
-  }
 }
 
 // Incrementally computable aggregates (MIN/MAX/SUM/AVG/COUNT), indexed per group. A group with no contributing
