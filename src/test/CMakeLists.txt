@@ -83,6 +83,7 @@ set(
     lib/operators/aggregate_dyod/merge_map_test.cpp
     lib/operators/aggregate_dyod/output_columns_test.cpp
     lib/operators/aggregate_dyod/scatter_store_test.cpp
+    lib/operators/aggregate_dyod_test.cpp
     lib/operators/aggregate_sort_test.cpp
     lib/operators/aggregate_test.cpp
     lib/operators/alias_operator_test.cpp
