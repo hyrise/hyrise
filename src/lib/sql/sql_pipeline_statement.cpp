@@ -143,6 +143,10 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
 
   auto unoptimized_lqp = get_unoptimized_logical_plan();
 
+  if (_parsed_sql_statement->getStatements()[0]->isType(hsql::kStmtExecute)) {
+    _optimizer = Optimizer::create_execute_statement_optimizer();
+  }
+
   const auto started = std::chrono::steady_clock::now();
 
   // The optimizer works on the original unoptimized LQP nodes. After optimizing, the unoptimized version is also

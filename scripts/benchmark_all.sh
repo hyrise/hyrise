@@ -11,7 +11,7 @@ then
   exit 1
 fi
 
-benchmarks='hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkTPCC hyriseBenchmarkJoinOrder hyriseBenchmarkStarSchema'
+benchmarks='hyriseBenchmarkTPCC'
 # Set to 1 because even a single warmup run of a query makes the observed runtimes much more stable. See discussion in
 # #2405 for some preliminary reasoning.
 warmup_seconds=1
@@ -120,6 +120,7 @@ do
       echo "Running $benchmark for $commit... (single-threaded)"
       # Warming up does not make sense/much of a difference for TPCC.
       ( "${build_folder}"/"$benchmark" -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st.log"
+      ( "${build_folder}"/"$benchmark" -o --pipeline_metrics "${build_folder}/benchmark_all_results/${benchmark}_${commit}_metrics_st.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_metrics_st.log"
     else
       echo "Running $benchmark for $commit... (single-threaded)"
       ( "${build_folder}"/"$benchmark" -r ${runs} -w ${warmup_seconds} -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st.log"

@@ -1,12 +1,15 @@
 #include "tpcc_benchmark_item_runner.hpp"
 
 #include <memory>
+#include <span>
 #include <string>
 #include <vector>
 
 #include "abstract_benchmark_item_runner.hpp"
 #include "benchmark_config.hpp"
 #include "benchmark_sql_executor.hpp"
+#include "sql/sql_pipeline_builder.hpp"
+#include "sql/sql_pipeline_statement.hpp"
 #include "tpcc/procedures/tpcc_delivery.hpp"
 #include "tpcc/procedures/tpcc_new_order.hpp"
 #include "tpcc/procedures/tpcc_order_status.hpp"
@@ -19,6 +22,20 @@ namespace hyrise {
 TPCCBenchmarkItemRunner::TPCCBenchmarkItemRunner(const std::shared_ptr<BenchmarkConfig>& config, int num_warehouses)
     : AbstractBenchmarkItemRunner(config), _num_warehouses(num_warehouses) {}
 
+void TPCCBenchmarkItemRunner::on_tables_loaded() {
+  using string_span = std::span<const char* const>;
+  const auto all_statements = {
+      string_span(TPCCDelivery::PREPARED_STATEMENTS), string_span(TPCCNewOrder::PREPARED_STATEMENTS),
+      string_span(TPCCOrderStatus::PREPARED_STATEMENTS), string_span(TPCCPayment::PREPARED_STATEMENTS),
+      string_span(TPCCStockLevel::PREPARED_STATEMENTS)};
+  for (const auto statements : all_statements) {
+    for (const auto* const sql : statements) {
+      const auto [status, table] = SQLPipelineBuilder{sql}.create_pipeline().get_result_table();
+      Assert(status == SQLPipelineStatus::Success, "Prepared statements should always be created");
+    }
+  }
+}
+
 const std::vector<BenchmarkItemID>& TPCCBenchmarkItemRunner::items() const {
   static const auto items = std::vector<BenchmarkItemID>{BenchmarkItemID{0}, BenchmarkItemID{1}, BenchmarkItemID{2},
                                                          BenchmarkItemID{3}, BenchmarkItemID{4}};
@@ -26,6 +43,7 @@ const std::vector<BenchmarkItemID>& TPCCBenchmarkItemRunner::items() const {
 }
 
 bool TPCCBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor) {
+  Assert(!_sqlite_wrapper, "sqlite3 verification currently does not work with prepared statements");
   auto successful = false;
   switch (item_id) {
     case 0:
