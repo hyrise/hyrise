@@ -58,6 +58,9 @@ DataType resolve_result_type(const DataType input_type, const WindowFunction fun
       case WindowFunction::Count:
         result_type = WindowFunctionTraits<ColumnDataType, WindowFunction::Count>::RESULT_TYPE;
         break;
+      case WindowFunction::Any:
+        result_type = WindowFunctionTraits<ColumnDataType, WindowFunction::Any>::RESULT_TYPE;
+        break;
       default:
         Fail("Unsupported aggregate function.");
     }
@@ -244,9 +247,61 @@ void TypedAccumulatorColumn<ColumnType, Function>::finalize_into(const size_t fi
   }
 }
 
+template <typename ColumnType>
+AnyAccumulatorColumn<ColumnType>::AnyAccumulatorColumn(const Table& input_table, const ColumnID source_column)
+    : _input_table{&input_table}, _source_column{source_column} {}
+
+template <typename ColumnType>
+void AnyAccumulatorColumn<ColumnType>::grow_to(const size_t slot_count) {
+  DebugAssert(slot_count >= _row_ids.size(), "Dense accumulator state only grows.");
+  _row_ids.resize(slot_count, NULL_ROW_ID);
+}
+
+template <typename ColumnType>
+void AnyAccumulatorColumn<ColumnType>::fold(std::span<const uint32_t> slots, std::span<const std::byte> value_bytes,
+                                            std::span<const std::byte> /*value_null_bitmap*/) {
+  const auto row_count = slots.size();
+  DebugAssert(value_bytes.size() == row_count * sizeof(RowID), "Row-id tile does not match the slot tile.");
+
+  for (auto row = size_t{0}; row < row_count; ++row) {
+    auto& row_id = _row_ids[slots[row]];
+    if (row_id.is_null()) {
+      std::memcpy(&row_id, value_bytes.data() + row * sizeof(RowID), sizeof(RowID));
+    }
+  }
+}
+
+template <typename ColumnType>
+void AnyAccumulatorColumn<ColumnType>::clear() {
+  _row_ids.clear();
+}
+
+template <typename ColumnType>
+void AnyAccumulatorColumn<ColumnType>::finalize_into(const size_t first_slot, const size_t last_slot,
+                                                     const size_t output_column_index, OutputColumns& output) const {
+  auto& output_column = static_cast<TypedOutputColumn<ColumnType>&>(output.column(output_column_index));
+  auto segment_chunk_id = INVALID_CHUNK_ID;
+  auto segment = std::shared_ptr<AbstractSegment>{};
+  for (auto slot = first_slot; slot < last_slot; ++slot) {
+    const auto row_id = _row_ids[slot];
+    DebugAssert(!row_id.is_null(), "Every dense slot was created by at least one row.");
+    if (row_id.chunk_id != segment_chunk_id) {
+      segment = _input_table->get_chunk(row_id.chunk_id)->get_segment(_source_column);
+      segment_chunk_id = row_id.chunk_id;
+    }
+    const auto variant = (*segment)[row_id.chunk_offset];
+    if (variant_is_null(variant)) {
+      output_column.append_null();
+    } else {
+      output_column.append(boost::get<ColumnType>(variant));
+    }
+  }
+}
+
 AggregateSchema AggregateSchema::build(const std::vector<std::shared_ptr<WindowFunctionExpression>>& aggregates,
                                        const Table& input_table) {
   auto schema = AggregateSchema{};
+  schema._input_table = &input_table;
   auto nullable_stream_count = size_t{0};
 
   for (const auto& aggregate : aggregates) {
@@ -273,8 +328,13 @@ AggregateSchema AggregateSchema::build(const std::vector<std::shared_ptr<WindowF
     Assert(entry.result_type != DataType::Null, "Invalid aggregate function for the source column's data type.");
 
     entry.value_stream_index = NO_VALUE_STREAM;
+    if (function == WindowFunction::Any) {
+      schema._entries.emplace_back(entry);
+      continue;
+    }
+
     for (const auto& earlier : schema._entries) {
-      if (earlier.source_column == source_column) {
+      if (earlier.source_column == source_column && earlier.value_stream_index != NO_VALUE_STREAM) {
         entry.value_stream_index = earlier.value_stream_index;
         break;
       }
@@ -308,6 +368,14 @@ DataType AggregateSchema::result_type(const size_t aggregate_index) const {
   return _entries[aggregate_index].result_type;
 }
 
+WindowFunction AggregateSchema::function(const size_t aggregate_index) const {
+  return _entries[aggregate_index].function;
+}
+
+ColumnID AggregateSchema::source_column(const size_t aggregate_index) const {
+  return _entries[aggregate_index].source_column;
+}
+
 size_t AggregateSchema::value_stream_count() const {
   return _value_streams.size();
 }
@@ -333,11 +401,28 @@ bool AggregateSchema::needs_value_arena() const {
   return false;
 }
 
+bool AggregateSchema::needs_row_id_stream() const {
+  for (const auto& entry : _entries) {
+    if (entry.function == WindowFunction::Any) {
+      return true;
+    }
+  }
+  return false;
+}
+
 std::vector<std::unique_ptr<AbstractAccumulatorColumn>> AggregateSchema::make_accumulator_columns() const {
   auto columns = std::vector<std::unique_ptr<AbstractAccumulatorColumn>>{};
   columns.reserve(_entries.size());
 
   for (const auto& entry : _entries) {
+    if (entry.function == WindowFunction::Any) {
+      resolve_data_type(entry.input_type, [&](const auto type) {
+        using ColumnDataType = typename decltype(type)::type;
+        columns.emplace_back(
+            std::make_unique<AnyAccumulatorColumn<ColumnDataType>>(*_input_table, entry.source_column));
+      });
+      continue;
+    }
     if (entry.value_stream_index == NO_VALUE_STREAM) {
       columns.emplace_back(std::make_unique<TypedAccumulatorColumn<int64_t, WindowFunction::Count>>());
       continue;

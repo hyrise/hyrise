@@ -151,6 +151,67 @@ class StandardAggregator : public AbstractAggregator {
   State _final{};
 };
 
+// ANY keeps the carried input column's name and nullability, like AggregateHash.
+template <typename ColumnDataType>
+class AnyAggregator : public AbstractAggregator {
+  struct State {
+    AllTypeVariant value;
+    bool seen{false};
+  };
+
+  struct alignas(64) PaddedState {
+    State state{};
+  };
+
+ public:
+  AnyAggregator(std::string output_name, const ColumnID column_id, const bool nullable)
+      : _output_name{std::move(output_name)}, _column_id{column_id}, _nullable{nullable} {}
+
+  void set_worker_count(const size_t worker_count) override {
+    _states.assign(worker_count, PaddedState{});
+  }
+
+  void accumulate(const size_t worker_id, const Chunk& chunk) override {
+    auto& state = _states[worker_id].state;
+    if (state.seen || chunk.size() == 0) {
+      return;
+    }
+    state.value = (*chunk.get_segment(_column_id))[ChunkOffset{0}];
+    state.seen = true;
+  }
+
+  void merge() override {
+    for (const auto& padded : _states) {
+      if (padded.state.seen) {
+        _final = padded.state;
+        break;
+      }
+    }
+  }
+
+  std::shared_ptr<AbstractSegment> build_segment() const override {
+    const auto is_null = !_final.seen || variant_is_null(_final.value);
+    auto values = pmr_vector<ColumnDataType>{};
+    values.emplace_back(is_null ? ColumnDataType{} : boost::get<ColumnDataType>(_final.value));
+    if (!_nullable) {
+      return std::make_shared<ValueSegment<ColumnDataType>>(std::move(values));
+    }
+
+    return std::make_shared<ValueSegment<ColumnDataType>>(std::move(values), pmr_vector<bool>{is_null});
+  }
+
+  TableColumnDefinition output_column_definition() const override {
+    return TableColumnDefinition{_output_name, data_type_from_type<ColumnDataType>(), _nullable};
+  }
+
+ private:
+  std::string _output_name;
+  ColumnID _column_id;
+  bool _nullable;
+  std::vector<PaddedState> _states;
+  State _final{};
+};
+
 class CountStarAggregator : public AbstractAggregator {
   struct alignas(64) PaddedCount {
     size_t count{0};
@@ -240,6 +301,9 @@ std::unique_ptr<AbstractAggregator> make_aggregator(const Table& input_table, co
     return std::make_unique<CountStarAggregator>(std::move(output_name));
   }
   Assert(column_id != INVALID_COLUMN_ID, "Only COUNT(*) can have an invalid ColumnID.");
+  if (window_function == WindowFunction::Any) {
+    output_name = input_table.column_name(column_id);
+  }
 
   auto aggregator = std::unique_ptr<AbstractAggregator>{};
   resolve_data_type(input_table.column_data_type(column_id), [&](const auto type) {
@@ -263,6 +327,10 @@ std::unique_ptr<AbstractAggregator> make_aggregator(const Table& input_table, co
         break;
       case WindowFunction::Count:
         aggregator = std::make_unique<CountColumnAggregator<ColumnDataType>>(std::move(output_name), column_id);
+        break;
+      case WindowFunction::Any:
+        aggregator = std::make_unique<AnyAggregator<ColumnDataType>>(std::move(output_name), column_id,
+                                                                     input_table.column_is_nullable(column_id));
         break;
       default:
         Fail("WindowFunction not yet supported");
@@ -330,7 +398,8 @@ AggregateSchema AggregateDYOD::_prepare(const Table& input_table) {
   for (const auto& aggregate : _aggregates) {
     const auto function = aggregate->window_function;
     Assert(function == WindowFunction::Sum || function == WindowFunction::Min || function == WindowFunction::Max ||
-               function == WindowFunction::Avg || function == WindowFunction::Count,
+               function == WindowFunction::Avg || function == WindowFunction::Count ||
+               function == WindowFunction::Any,
            "WindowFunction not yet supported");
   }
   return AggregateSchema::build(_aggregates, input_table);
@@ -415,8 +484,7 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate(const KeySchema& key_schema, co
     if (stream_index == AggregateSchema::NO_VALUE_STREAM) {
       continue;
     }
-    const auto& pqp_column = static_cast<const PQPColumnExpression&>(*_aggregates[aggregate_index]->argument());
-    value_stream_sources[stream_index] = pqp_column.column_id;
+    value_stream_sources[stream_index] = aggregate_schema.source_column(aggregate_index);
   }
 
   const auto value_null_bitmap_width = aggregate_schema.value_null_bitmap_width();
@@ -425,10 +493,18 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate(const KeySchema& key_schema, co
   const auto max_value_width =
       value_stream_count == 0 ? size_t{0} : *std::max_element(value_stream_widths.begin(), value_stream_widths.end());
 
+  // ANY aggregates scatter no value; they read one shared row-id stream instead.
+  const auto needs_row_id_stream = aggregate_schema.needs_row_id_stream();
+  const auto row_id_stream_index = value_stream_count;
+  if (needs_row_id_stream) {
+    value_stream_widths.emplace_back(sizeof(RowID));
+  }
+  const auto value_null_bitmap_stream_index = 1 + value_stream_widths.size();
+
   // The packed key is staged in 4-byte pieces and the value-null bitmap byte-wise, so every declared stream width
   // divides the SWWC line.
   auto stream_widths = std::vector<size_t>{};
-  stream_widths.reserve(1 + value_stream_count + (has_value_null_bitmap ? 1 : 0));
+  stream_widths.reserve(1 + value_stream_widths.size() + (has_value_null_bitmap ? 1 : 0));
   stream_widths.emplace_back(4);
   stream_widths.insert(stream_widths.end(), value_stream_widths.begin(), value_stream_widths.end());
   if (has_value_null_bitmap) {
@@ -497,8 +573,13 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate(const KeySchema& key_schema, co
                       value_stream_null_bits[stream_index], value_arena);
             heads.push(store, 1 + stream_index, partition, value_scratch.data(), width);
           }
+          if (needs_row_id_stream) {
+            const auto row_id = RowID{ChunkID{static_cast<ChunkID::base_type>(chunk_index)}, chunk_offset};
+            heads.push(store, 1 + row_id_stream_index, partition, reinterpret_cast<const std::byte*>(&row_id),
+                       sizeof(row_id));
+          }
           for (auto byte_index = size_t{0}; byte_index < value_null_bitmap_width; ++byte_index) {
-            heads.push(store, 1 + value_stream_count, partition, bitmap_scratch.data() + byte_index, 1);
+            heads.push(store, value_null_bitmap_stream_index, partition, bitmap_scratch.data() + byte_index, 1);
           }
         }
       }
@@ -514,6 +595,14 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate(const KeySchema& key_schema, co
                                            input_table.column_is_nullable(column_id));
   }
   for (auto aggregate_index = size_t{0}; aggregate_index < aggregate_count; ++aggregate_index) {
+    // ANY keeps the input column's name and nullability.
+    if (aggregate_schema.function(aggregate_index) == WindowFunction::Any) {
+      const auto source_column = aggregate_schema.source_column(aggregate_index);
+      output_column_definitions.emplace_back(input_table.column_name(source_column),
+                                             aggregate_schema.result_type(aggregate_index),
+                                             input_table.column_is_nullable(source_column));
+      continue;
+    }
     output_column_definitions.emplace_back(_aggregates[aggregate_index]->as_column_name(),
                                            aggregate_schema.result_type(aggregate_index),
                                            _aggregates[aggregate_index]->window_function != WindowFunction::Count);
@@ -552,7 +641,13 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate(const KeySchema& key_schema, co
             for (auto aggregate_index = size_t{0}; aggregate_index < aggregate_count; ++aggregate_index) {
               const auto stream_index = aggregate_schema.aggregate_value_stream(aggregate_index);
               if (stream_index == AggregateSchema::NO_VALUE_STREAM) {
-                merge_map.fold(aggregate_index, slots, {}, {});
+                if (aggregate_schema.function(aggregate_index) == WindowFunction::Any) {
+                  const auto& row_id_region = store.value_region(partition, row_id_stream_index);
+                  merge_map.fold(aggregate_index, slots,
+                                 {row_id_region.data() + tile_start * sizeof(RowID), tile_rows * sizeof(RowID)}, {});
+                } else {
+                  merge_map.fold(aggregate_index, slots, {}, {});
+                }
                 continue;
               }
               const auto width = value_stream_widths[stream_index];
