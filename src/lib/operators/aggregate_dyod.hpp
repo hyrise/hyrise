@@ -4,6 +4,7 @@
 #include <optional>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -47,23 +48,28 @@ class AbstractAggregateVector {
   std::vector<size_t> _counts;
 };
 
-template <typename AggregateDataType>
+template <typename ColumnDataType, WindowFunction aggregate_function>
 struct TypedAggregateVector : AbstractAggregateVector {
+  using AggregateDataType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
+  using DistinctValues = std::unordered_set<ColumnDataType>;
+  using AccumulatorDataType =
+      std::conditional_t<aggregate_function == WindowFunction::CountDistinct, DistinctValues, AggregateDataType>;
+
  public:
-  AggregateDataType& operator[](size_t index) {
+  AccumulatorDataType& operator[](size_t index) {
     return _aggregates[index];
   }
 
-  const AggregateDataType& operator[](size_t index) const {
+  const AccumulatorDataType& operator[](size_t index) const {
     return _aggregates[index];
   }
 
   // The mutable accessor is needed because aggregator functions mutate values directly.
-  pmr_vector<AggregateDataType>& values() {
+  pmr_vector<AccumulatorDataType>& values() {
     return _aggregates;
   }
 
-  const pmr_vector<AggregateDataType>& values() const {
+  const pmr_vector<AccumulatorDataType>& values() const {
     return _aggregates;
   }
 
@@ -73,7 +79,7 @@ struct TypedAggregateVector : AbstractAggregateVector {
   }
 
  protected:
-  pmr_vector<AggregateDataType> _aggregates;
+  pmr_vector<AccumulatorDataType> _aggregates;
 };
 
 template <typename T>
@@ -139,23 +145,24 @@ class AggregateDYOD : public AbstractAggregateOperator {
   template <typename ColumnDataType>
   std::shared_ptr<AbstractSegment> _write_groupby_segment(size_t groupby_column_index);
 
-  template <typename ColumnDataType>
-  std::shared_ptr<AbstractSegment> _write_count_distinct_aggregate_segment(size_t aggregate_index);
-
   template <typename ColumnDataType, WindowFunction aggregate_function>
   std::shared_ptr<AbstractSegment> _write_aggregate_segment(size_t aggregate_index);
 
-  template <typename AggregateDataType>
+  template <typename ColumnDataType, WindowFunction aggregate_function>
   std::shared_ptr<AbstractSegment> _write_avg_aggregate_segment(
-      size_t aggregate_index, TypedAggregateVector<AggregateDataType>& aggregate_vector);
+      size_t aggregate_index, TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector);
 
-  template <typename AggregateDataType>
+  template <typename ColumnDataType, WindowFunction aggregate_function>
   std::shared_ptr<AbstractSegment> _write_count_aggregate_segment(
-      size_t aggregate_index, TypedAggregateVector<AggregateDataType>& aggregate_vector);
+      size_t aggregate_index, TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector);
 
-  template <typename AggregateDataType>
+  template <typename ColumnDataType, WindowFunction aggregate_function>
+  std::shared_ptr<AbstractSegment> _write_count_distinct_aggregate_segment(
+      size_t aggregate_index, TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector);
+
+  template <typename ColumnDataType, WindowFunction aggregate_function>
   std::shared_ptr<AbstractSegment> _write_default_aggregate_segment(
-      size_t aggregate_index, TypedAggregateVector<AggregateDataType>& aggregate_vector);
+      size_t aggregate_index, TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector);
 
   GroupID _group_id(const GroupKey& group_key);
 

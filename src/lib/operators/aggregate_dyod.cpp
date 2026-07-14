@@ -173,18 +173,8 @@ void AggregateDYOD::_prepare_aggregate_vectors() {
 
       resolve_window_function(aggregate->window_function, [&](auto type) {
         constexpr auto aggregate_function = decltype(type)::value;
-
-        // TODO(anyone) instead of doing this,
-        // we could also give the AggregateVector another member variable _distinct_values,
-        // pros: we don't have to do this here, we dont have to template the _write_count_distinct_aggregate_segment
-        // cons: unused member for other aggregates
-        if constexpr (aggregate_function == WindowFunction::CountDistinct) {
-          _aggregate_vectors[aggregate_index] =
-              std::make_unique<TypedAggregateVector<std::unordered_set<ColumnDataType>>>();
-        } else {
-          using AggregateDataType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
-          _aggregate_vectors[aggregate_index] = std::make_unique<TypedAggregateVector<AggregateDataType>>();
-        }
+        _aggregate_vectors[aggregate_index] =
+            std::make_unique<TypedAggregateVector<ColumnDataType, aggregate_function>>();
       });
     });
   }
@@ -288,33 +278,29 @@ std::shared_ptr<AbstractSegment> AggregateDYOD::_write_groupby_segment(size_t gr
 
 template <typename ColumnDataType, WindowFunction aggregate_function>
 std::shared_ptr<AbstractSegment> AggregateDYOD::_write_aggregate_segment(size_t aggregate_index) {
-  using AggregateDataType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
   constexpr auto data_type = WindowFunctionTraits<ColumnDataType, aggregate_function>::RESULT_TYPE;
+  auto& aggregate_vector =
+      static_cast<TypedAggregateVector<ColumnDataType, aggregate_function>&>(*_aggregate_vectors[aggregate_index]);
 
   if constexpr (data_type == DataType::Null) {
     Fail("Invalid combination of column type and aggregate function.");
   } else {
     if constexpr (aggregate_function == WindowFunction::Count) {
-      auto& aggregate_vector =
-          static_cast<TypedAggregateVector<AggregateDataType>&>(*_aggregate_vectors[aggregate_index]);
       return _write_count_aggregate_segment(aggregate_index, aggregate_vector);
     } else if constexpr (aggregate_function == WindowFunction::Avg) {
-      auto& aggregate_vector =
-          static_cast<TypedAggregateVector<AggregateDataType>&>(*_aggregate_vectors[aggregate_index]);
       return _write_avg_aggregate_segment(aggregate_index, aggregate_vector);
     } else if constexpr (aggregate_function == WindowFunction::CountDistinct) {
-      return _write_count_distinct_aggregate_segment<ColumnDataType>(aggregate_index);
+      return _write_count_distinct_aggregate_segment(aggregate_index, aggregate_vector);
     } else {
-      auto& aggregate_vector =
-          static_cast<TypedAggregateVector<AggregateDataType>&>(*_aggregate_vectors[aggregate_index]);
       return _write_default_aggregate_segment(aggregate_index, aggregate_vector);
     }
   }
 }
 
-template <typename AggregateDataType>
+template <typename ColumnDataType, WindowFunction aggregate_function>
 std::shared_ptr<AbstractSegment> AggregateDYOD::_write_avg_aggregate_segment(
-    size_t aggregate_index, TypedAggregateVector<AggregateDataType>& aggregate_vector) {
+    size_t aggregate_index, TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector) {
+  using AggregateDataType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
   const auto& sums = aggregate_vector.values();
   const auto& counts = aggregate_vector.counts();
   const auto group_count = _group_count();
@@ -335,33 +321,35 @@ std::shared_ptr<AbstractSegment> AggregateDYOD::_write_avg_aggregate_segment(
   return std::make_shared<ValueSegment<AggregateDataType>>(std::move(averages), std::move(null_values));
 }
 
-template <typename AggregateDataType>
+template <typename ColumnDataType, WindowFunction aggregate_function>
 std::shared_ptr<AbstractSegment> AggregateDYOD::_write_count_aggregate_segment(
-    size_t aggregate_index, TypedAggregateVector<AggregateDataType>& aggregate_vector) {
+    size_t aggregate_index, TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector) {
+  using AggregateDataType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
   const auto& counts = aggregate_vector.counts();
   auto values = pmr_vector<AggregateDataType>(counts.begin(), counts.end());
   return std::make_shared<ValueSegment<AggregateDataType>>(std::move(values));
 }
 
-template <typename ColumnDataType>
-std::shared_ptr<AbstractSegment> AggregateDYOD::_write_count_distinct_aggregate_segment(size_t aggregate_index) {
-  auto& aggregate_vector =
-      static_cast<TypedAggregateVector<std::unordered_set<ColumnDataType>>&>(*_aggregate_vectors[aggregate_index]);
+template <typename ColumnDataType, WindowFunction aggregate_function>
+std::shared_ptr<AbstractSegment> AggregateDYOD::_write_count_distinct_aggregate_segment(
+    size_t aggregate_index, TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector) {
+  using AggregateDataType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
   const auto group_count = _group_count();
 
-  auto values = pmr_vector<int64_t>(group_count);
+  auto values = pmr_vector<AggregateDataType>(group_count);
 
   for (auto group_id = GroupID{0}; group_id < group_count; ++group_id) {
     // The set size is the number of distinct values.
     values[group_id] = aggregate_vector[group_id].size();
   }
 
-  return std::make_shared<ValueSegment<int64_t>>(std::move(values));
+  return std::make_shared<ValueSegment<AggregateDataType>>(std::move(values));
 }
 
-template <typename AggregateDataType>
+template <typename ColumnDataType, WindowFunction aggregate_function>
 std::shared_ptr<AbstractSegment> AggregateDYOD::_write_default_aggregate_segment(
-    size_t aggregate_index, TypedAggregateVector<AggregateDataType>& aggregate_vector) {
+    size_t aggregate_index, TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector) {
+  using AggregateDataType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
   if (_aggregate_is_nullable(aggregate_index)) {
     const auto group_count = _group_count();
     auto null_values = pmr_vector<bool>(group_count);
@@ -478,9 +466,9 @@ std::vector<GroupID> AggregateDYOD::_group_ids_for_chunk(const Chunk& chunk) {
 template <typename ColumnDataType, WindowFunction aggregate_function>
 void AggregateDYOD::_aggregate_segment(size_t aggregate_index, const AbstractSegment& segment,
                                        const std::vector<GroupID>& group_ids) {
+  auto& aggregate_vector =
+      static_cast<TypedAggregateVector<ColumnDataType, aggregate_function>&>(*_aggregate_vectors[aggregate_index]);
   if constexpr (aggregate_function == WindowFunction::CountDistinct) {
-    auto& aggregate_vector =
-        static_cast<TypedAggregateVector<std::unordered_set<ColumnDataType>>&>(*_aggregate_vectors[aggregate_index]);
     segment_iterate<ColumnDataType>(segment, [&](const auto& position) {
       if (!position.is_null()) {
         const auto group_id = group_ids[position.chunk_offset()];
@@ -491,9 +479,6 @@ void AggregateDYOD::_aggregate_segment(size_t aggregate_index, const AbstractSeg
     using AggregateDataType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
     auto aggregator =
         WindowFunctionBuilder<ColumnDataType, AggregateDataType, aggregate_function>().get_aggregate_function();
-    auto& aggregate_vector =
-        static_cast<TypedAggregateVector<AggregateDataType>&>(*_aggregate_vectors[aggregate_index]);
-
     segment_iterate<ColumnDataType>(segment, [&](const auto& position) {
       if (!position.is_null()) {
         const auto group_id = group_ids[position.chunk_offset()];
