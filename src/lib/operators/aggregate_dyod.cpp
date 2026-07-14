@@ -1052,13 +1052,14 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
 
   // SPLIT END
 
-  auto threads = std::vector<std::thread>{};
-  threads.reserve(RADIX_SPLIT_MAX_BUCKETS);
   auto final_output_table = std::make_shared<Table>(input_table->column_definitions(), TableType::Data);
   auto output_mutex = std::mutex{};
 
+  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+  jobs.reserve(RADIX_SPLIT_MAX_BUCKETS);
+
   for (auto thread_id = size_t{0}; thread_id < RADIX_SPLIT_MAX_BUCKETS; ++thread_id) {
-    threads.emplace_back([&, thread_id]() {
+    jobs.emplace_back(std::make_shared<JobTask>([&, thread_id]() {
       const auto pos_lists = pos_lists_per_thread[thread_id];
       const auto local_input_table = std::make_shared<Table>(input_table->column_definitions(), TableType::References);
 
@@ -1135,12 +1136,10 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
         auto chunk = output_table->get_chunk(chunk_id);
         final_output_table->append_chunk(chunk->segments());
       }
-    });
+    }));
   }
 
-  for (auto& thread : threads) {
-    thread.join();
-  }
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 
   return final_output_table;
 }
