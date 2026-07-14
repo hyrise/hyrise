@@ -4,13 +4,21 @@
 #include <cstring>
 #include <memory>
 #include <memory_resource>
+#include <type_traits>
 #include <vector>
 
 #include <boost/unordered/unordered_flat_map.hpp>
 
 #include "operators/aggregate_dyod_utils/concurrent_ticket_map.hpp"
+#include "storage/abstract_segment.hpp"
 #include "storage/chunk.hpp"
+#include "storage/dictionary_segment.hpp"
+#include "storage/reference_segment.hpp"
+#include "storage/segment_iterate.hpp"
+#include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
+#include "storage/value_segment.hpp"
+#include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -18,6 +26,148 @@ namespace hyrise {
 
 // Target number of groups per output chunk. The grouped output columns are split into chunks of this size.
 constexpr auto TARGET_CHUNK_SIZE = Chunk::DEFAULT_SIZE;
+
+// The callbacks below have the signature `void(const pmr_string& value, const bool is_null, NeedsCopy needs_copy)`.
+// `NeedsCopy` is `std::true_type` if the string value is transient and `std::false_type` if not.
+template <typename ColumnDataType, typename Functor>
+bool _with_string_segment_iterate_generic(const std::shared_ptr<AbstractSegment>& segment, const Functor& callback) {
+  segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
+    callback(position.value(), position.is_null(), std::true_type{});
+  });
+
+  return true;
+}
+
+template <typename Functor>
+bool _with_string_segment_iterate(const std::shared_ptr<ValueSegment<pmr_string>>& segment, const Functor& callback) {
+  const auto& values = segment->values();
+  const auto value_count = values.size();
+
+  if (segment->is_nullable()) {
+    const auto& null_values = segment->null_values();
+    for (auto offset = size_t{0}; offset < value_count; ++offset) {
+      callback(values[offset], static_cast<bool>(null_values[offset]), std::false_type{});
+    }
+  } else {
+    for (const auto& value : values) {
+      callback(value, false, std::false_type{});
+    }
+  }
+
+  return false;
+}
+
+template <typename Functor>
+bool _with_string_segment_iterate(const std::shared_ptr<DictionarySegment<pmr_string>>& segment,
+                                  const Functor& callback) {
+  const auto& dictionary = *segment->dictionary();
+  const auto null_value_id = segment->null_value_id();
+  const auto placeholder_string = pmr_string{};
+
+  resolve_compressed_vector_type(*segment->attribute_vector(), [&](const auto& attribute_vector) {
+    auto decompressor = attribute_vector.create_decompressor();
+    const auto value_count = attribute_vector.size();
+
+    for (auto offset = size_t{0}; offset < value_count; ++offset) {
+      const auto value_id = static_cast<ValueID>(decompressor.get(offset));
+
+      if (value_id == null_value_id) {
+        callback(placeholder_string, true, std::false_type{});
+      } else {
+        callback(dictionary[value_id], false, std::false_type{});
+      }
+    }
+  });
+
+  return false;
+}
+
+template <typename Functor>
+bool _with_string_segment_iterate(const std::shared_ptr<ReferenceSegment>& segment, const Functor& callback) {
+  const auto& pos_list = segment->pos_list();
+
+  if (pos_list->empty()) {
+    return false;
+  }
+
+  if (!pos_list->references_single_chunk()) {
+    return _with_string_segment_iterate_generic<pmr_string>(segment, callback);
+  }
+
+  const auto& referenced_table = segment->referenced_table();
+  const auto referenced_column_id = segment->referenced_column_id();
+  const auto referenced_segment =
+      referenced_table->get_chunk(pos_list->common_chunk_id())->get_segment(referenced_column_id);
+  const auto pos_list_size = pos_list->size();
+
+  if (const auto referenced_value = std::dynamic_pointer_cast<ValueSegment<pmr_string>>(referenced_segment)) {
+    const auto& values = referenced_value->values();
+    if (referenced_value->is_nullable()) {
+      const auto& null_values = referenced_value->null_values();
+      for (auto offset = size_t{0}; offset < pos_list_size; ++offset) {
+        const auto chunk_offset = (*pos_list)[offset].chunk_offset;
+        callback(values[chunk_offset], static_cast<bool>(null_values[chunk_offset]), std::false_type{});
+      }
+    } else {
+      for (auto offset = size_t{0}; offset < pos_list_size; ++offset) {
+        const auto chunk_offset = (*pos_list)[offset].chunk_offset;
+        callback(values[chunk_offset], false, std::false_type{});
+      }
+    }
+
+    return false;
+  }
+
+  if (const auto referenced_dictionary = std::dynamic_pointer_cast<DictionarySegment<pmr_string>>(referenced_segment)) {
+    const auto& dictionary = *referenced_dictionary->dictionary();
+    const auto null_value_id = referenced_dictionary->null_value_id();
+    const auto placeholder_string = pmr_string{};
+
+    resolve_compressed_vector_type(*referenced_dictionary->attribute_vector(), [&](const auto& attribute_vector) {
+      auto decompressor = attribute_vector.create_decompressor();
+
+      for (auto offset = size_t{0}; offset < pos_list_size; ++offset) {
+        const auto chunk_offset = (*pos_list)[offset].chunk_offset;
+        const auto value_id = static_cast<ValueID>(decompressor.get(chunk_offset));
+
+        if (value_id == null_value_id) {
+          callback(placeholder_string, true, std::false_type{});
+        } else {
+          callback(dictionary[value_id], false, std::false_type{});
+        }
+      }
+    });
+
+    return false;
+  }
+
+  // Fallback to the generic iterator for other referenced segment types.
+  return _with_string_segment_iterate_generic<pmr_string>(segment, callback);
+}
+
+// TODO(@Rob2U): We should write a specialization for FixedStringDictionarySegment. Its dictionary hands out temporaries
+// rather than stable `pmr_string`s, so it would need a path of its own instead of the generic fallback.
+// Iterates the string values of `segment` and returns whether the values handed to `callback` had to be copied.
+template <typename ColumnDataType, typename Functor>
+bool with_string_segment_iterate(const std::shared_ptr<AbstractSegment>& segment, const Functor& callback) {
+  if constexpr (!std::is_same_v<ColumnDataType, pmr_string>) {
+    return _with_string_segment_iterate_generic<ColumnDataType>(segment, callback);
+  } else {
+    if (const auto value_segment = std::dynamic_pointer_cast<ValueSegment<pmr_string>>(segment)) {
+      return _with_string_segment_iterate(value_segment, callback);
+    }
+
+    if (const auto dictionary_segment = std::dynamic_pointer_cast<DictionarySegment<pmr_string>>(segment)) {
+      return _with_string_segment_iterate(dictionary_segment, callback);
+    }
+
+    if (const auto reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(segment)) {
+      return _with_string_segment_iterate(reference_segment, callback);
+    }
+
+    return _with_string_segment_iterate_generic<pmr_string>(segment, callback);
+  }
+}
 
 // Number of leading string bytes stored inline in a row.
 constexpr uint64_t PREFIX_LENGTH = 8;

@@ -76,11 +76,10 @@ RowFormat _create_row_format(const TableColumnDefinitions& column_definitions,
 // at the segment's own string storage instead of copying. Other kinds fall back to the generic copying iterator.
 // `materialized.string_pointer_needs_copy` records, per string column, whether its long-string pointers reference the
 // transient per-chunk arena (and so must be promoted on insert) or stable source memory.
-void _materialize_string_column(const RowFormat& format, const AbstractSegment& segment,
+void _materialize_string_column(const RowFormat& format, const std::shared_ptr<AbstractSegment>& segment,
                                 const size_t group_by_column_index, const size_t string_col_index,
                                 const uint64_t null_mask_bit, MaterializedRows& materialized) {
   auto* const rows = materialized.rows.get();
-  const auto chunk_size = materialized.row_count;
   auto& string_arena = materialized.string_arena;
 
   const auto row_at = [&](const size_t offset) {
@@ -105,129 +104,38 @@ void _materialize_string_column(const RowFormat& format, const AbstractSegment& 
     }
   };
 
-  // Fallback: the iterator materializes a transient `pmr_string` per row, so long strings must be copied into
-  // the per-chunk arena and promoted into the key arena when a group is first inserted.
-
-  // TODO(@Rob2U): We should write a specialization for FixedStringDictionarySegment and maybe think about a generic
-  // way.
-  const auto materialize_via_iterator = [&] {
-    materialized.string_pointer_needs_copy.push_back(true);
-    auto chunk_offset = size_t{0};
-    segment_iterate<pmr_string>(segment, [&](const auto& position) {
-      const auto row = row_at(chunk_offset);
-      ++chunk_offset;
-      if (position.is_null()) {
-        row.set_null_bitmap(row.null_bitmap() | null_mask_bit);
-        return;
-      }
-      const auto& str_value = position.value();
-      if (write_inline(row, str_value.c_str(), str_value.size())) {
-        const auto length = str_value.size();
-        auto* const str_copy = static_cast<char*>(string_arena.allocate(length + 1));
-        std::memcpy(str_copy, str_value.c_str(), length);
-        str_copy[length] = '\0';
-        row.set_string_ptr(string_col_index, str_copy);
-      }
-    });
+  const auto write_volatile_string = [&](const RowView& row, const pmr_string& value) {
+    if (write_inline(row, value.c_str(), value.size())) {
+      const auto length = value.size();
+      auto* const str_copy = static_cast<char*>(string_arena.allocate(length + 1));
+      std::memcpy(str_copy, value.c_str(), length);
+      str_copy[length] = '\0';
+      row.set_string_ptr(string_col_index, str_copy);
+    }
   };
 
-  if (const auto* const value_segment = dynamic_cast<const ValueSegment<pmr_string>*>(&segment)) {
-    materialized.string_pointer_needs_copy.push_back(false);
-    const auto& values = value_segment->values();
-    if (value_segment->is_nullable()) {
-      const auto& null_values = value_segment->null_values();
-      for (auto offset = size_t{0}; offset < chunk_size; ++offset) {
-        const auto row = row_at(offset);
-        if (null_values[offset]) {
-          row.set_null_bitmap(row.null_bitmap() | null_mask_bit);
-          continue;
-        }
-        write_stable_string(row, values[offset]);
-      }
+  // `needs_copy` is a `std::bool_constant` (see `with_string_segment_iterate`), so only the taken branch is compiled
+  // for any given segment kind and no per-row check remains.
+  auto chunk_offset = size_t{0};
+  const auto callback = [&](const auto& str_value, const bool is_null, const auto needs_copy) {
+    const auto row = row_at(chunk_offset);
+    ++chunk_offset;
+
+    if (is_null) {
+      row.set_null_bitmap(row.null_bitmap() | null_mask_bit);
+      return;
+    }
+
+    if constexpr (std::is_same_v<decltype(needs_copy), std::true_type>) {
+      write_volatile_string(row, str_value);
     } else {
-      for (auto offset = size_t{0}; offset < chunk_size; ++offset) {
-        write_stable_string(row_at(offset), values[offset]);
-      }
+      write_stable_string(row, str_value);
     }
-  } else if (const auto* const dictionary_segment = dynamic_cast<const DictionarySegment<pmr_string>*>(&segment)) {
-    materialized.string_pointer_needs_copy.push_back(false);
-    const auto& dictionary = *dictionary_segment->dictionary();
+  };
 
-    resolve_compressed_vector_type(*dictionary_segment->attribute_vector(), [&](const auto& attribute_vector) {
-      auto decompressor = attribute_vector.create_decompressor();
-      const auto null_value_id = dictionary_segment->null_value_id();
-      for (auto offset = size_t{0}; offset < chunk_size; ++offset) {
-        const auto value_id = static_cast<ValueID>(decompressor.get(offset));
-        const auto row = row_at(offset);
+  const auto needs_copy = with_string_segment_iterate<pmr_string>(segment, callback);
 
-        if (value_id == null_value_id) {
-          row.set_null_bitmap(row.null_bitmap() | null_mask_bit);
-          continue;
-        }
-        write_stable_string(row, dictionary[value_id]);
-      }
-    });
-  } else if (const auto* const reference_segment = dynamic_cast<const ReferenceSegment*>(&segment)) {
-    const auto& pos_list = reference_segment->pos_list();
-    auto handled = false;
-
-    if (pos_list->references_single_chunk() && !pos_list->empty()) {
-      // A single-chunk pos-list is guaranteed to contain no NULL row ids, so only value-level NULLs are handled.
-      const auto& referenced_table = reference_segment->referenced_table();
-      const auto referenced_column_id = reference_segment->referenced_column_id();
-      const auto referenced_segment =
-          referenced_table->get_chunk(pos_list->common_chunk_id())->get_segment(referenced_column_id);
-
-      if (const auto* const referenced_value =
-              dynamic_cast<const ValueSegment<pmr_string>*>(referenced_segment.get())) {
-        materialized.string_pointer_needs_copy.push_back(false);
-        const auto& values = referenced_value->values();
-        if (referenced_value->is_nullable()) {
-          const auto& null_values = referenced_value->null_values();
-          for (auto offset = size_t{0}; offset < chunk_size; ++offset) {
-            const auto chunk_offset = (*pos_list)[offset].chunk_offset;
-            const auto row = row_at(offset);
-            if (null_values[chunk_offset]) {
-              row.set_null_bitmap(row.null_bitmap() | null_mask_bit);
-              continue;
-            }
-            write_stable_string(row, values[chunk_offset]);
-          }
-        } else {
-          for (auto offset = size_t{0}; offset < chunk_size; ++offset) {
-            write_stable_string(row_at(offset), values[(*pos_list)[offset].chunk_offset]);
-          }
-        }
-        handled = true;
-      } else if (const auto* const referenced_dictionary =
-                     dynamic_cast<const DictionarySegment<pmr_string>*>(referenced_segment.get())) {
-        materialized.string_pointer_needs_copy.push_back(false);
-        const auto& dictionary = *referenced_dictionary->dictionary();
-        resolve_compressed_vector_type(*referenced_dictionary->attribute_vector(), [&](const auto& attribute_vector) {
-          const auto null_value_id = referenced_dictionary->null_value_id();
-          auto decompressor = attribute_vector.create_decompressor();
-          for (auto offset = size_t{0}; offset < chunk_size; ++offset) {
-            const auto chunk_offset = (*pos_list)[offset].chunk_offset;
-            const auto value_id = static_cast<ValueID>(decompressor.get(chunk_offset));
-            const auto row = row_at(offset);
-            if (value_id == null_value_id) {
-              row.set_null_bitmap(row.null_bitmap() | null_mask_bit);
-              continue;
-            }
-            write_stable_string(row, dictionary[value_id]);
-          }
-        });
-        handled = true;
-      }
-    }
-
-    if (!handled) {
-      materialize_via_iterator();
-    }
-  } else {
-    // Fallback for every other segment kind (fixed-string dictionaries, other encodings).
-    materialize_via_iterator();
-  }
+  materialized.string_pointer_needs_copy.push_back(needs_copy);
 }
 
 // TODO(@forUnity): think about alignment and padding, also sort string_columns to be last in groupby columns?
@@ -254,7 +162,7 @@ void _materialize_rows(const RowFormat& format, const std::shared_ptr<const Chun
       using ColumnDataType = typename decltype(type)::type;
 
       if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
-        _materialize_string_column(format, *segment, group_by_column_index, string_col_index, null_mask_bit,
+        _materialize_string_column(format, segment, group_by_column_index, string_col_index, null_mask_bit,
                                    materialized);
         ++string_col_index;
       } else {
@@ -330,6 +238,7 @@ std::shared_ptr<GroupKeyData<true>> _compute_groups_single_column_concurrent(
         auto estimate_map = ConcurrentTicketMap<ColumnDataType>(first_chunk_size);
         const auto& segment = first_chunk->get_segment(groupby_column_id);
         auto counter = uint64_t{0};
+
         segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
           if (!position.is_null() && estimate_map.try_emplace(position.value(), counter) == counter) {
             ++counter;
@@ -351,6 +260,8 @@ std::shared_ptr<GroupKeyData<true>> _compute_groups_single_column_concurrent(
         const auto& chunk = input_table->get_chunk(chunk_id);
         const auto& segment = chunk->get_segment(groupby_column_id);
         const auto chunk_start = ticket_offsets[chunk_id];
+        auto chunk_offset =
+            size_t{0};  // local row index within the chunk, used to look up the global row index in `tickets`
 
         segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
           auto current_ticket = null_ticket;
@@ -369,7 +280,8 @@ std::shared_ptr<GroupKeyData<true>> _compute_groups_single_column_concurrent(
               }
             }
           }
-          tickets[chunk_start + position.chunk_offset()] = current_ticket;
+          tickets[chunk_start + chunk_offset] = current_ticket;
+          chunk_offset++;
         });
       };
 
@@ -470,68 +382,55 @@ std::shared_ptr<GroupKeyData<false>> _compute_groups_single_column_sequential(
 
   resolve_data_type(data_type, [&](const auto data_type_t) {
     using ColumnDataType = typename decltype(data_type_t)::type;
-    if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
-      Fail("The single-column fast path is not used for string columns.");
-    } else {
-      auto value_to_ticket = boost::unordered_flat_map<ColumnDataType, uint64_t>{};
-      value_to_ticket.reserve(TARGET_CHUNK_SIZE);
+    auto value_to_ticket = boost::unordered_flat_map<ColumnDataType, uint64_t>{};
+    value_to_ticket.reserve(TARGET_CHUNK_SIZE);
 
-      // Tickets are handed out densely in first-seen order across the NULL group and the value groups alike, so a
-      // single counter suffices and no output vectors are touched in the hot loop.
-      auto next_ticket = uint64_t{0};
-      auto null_ticket = uint64_t{0};
-      auto has_null = false;
-      auto row_index = size_t{0};  // flat row index across chunks, matching the `tickets` layout
+    // Tickets are handed out densely in first-seen order across the NULL group and the value groups alike, so a
+    // single counter suffices and no output vectors are touched in the hot loop.
+    auto next_ticket = uint64_t{0};
+    auto null_ticket = uint64_t{0};
+    auto has_null = false;
+    auto row_index = size_t{0};  // flat row index across chunks, matching the `tickets` layout
 
-      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-        const auto& chunk = input_table->get_chunk(chunk_id);
-        const auto& segment = chunk->get_segment(groupby_column_id);
-        auto ticket = uint64_t{0};
-        segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
-          if (position.is_null()) {
-            if (!has_null) {
-              has_null = true;
-              null_ticket = next_ticket++;
+    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+      const auto& chunk = input_table->get_chunk(chunk_id);
+      const auto& segment = chunk->get_segment(groupby_column_id);
+      auto ticket = uint64_t{0};
+      with_string_segment_iterate<ColumnDataType>(
+          segment, [&](const auto& value, const bool is_null, const auto needs_copy) {
+            if (is_null) {
+              if (!has_null) {
+                has_null = true;
+                null_ticket = next_ticket++;
+              }
+              ticket = null_ticket;
+            } else {
+              const auto [iter, inserted] = value_to_ticket.try_emplace(value, next_ticket);
+              if (inserted) {
+                ++next_ticket;
+              }
+              ticket = iter->second;
             }
-            ticket = null_ticket;
-          } else {
-            const auto [iter, inserted] = value_to_ticket.try_emplace(position.value(), next_ticket);
-            if (inserted) {
-              ++next_ticket;
-            }
-            ticket = iter->second;
-          }
-          tickets[row_index++] = ticket;
-        });
+            tickets[row_index++] = ticket;
+          });
 
-        // Adaptively reserve space in the hashmap just as in `_compute_groups_byte_row`.
-        if (chunk_id == ChunkID{0} && chunk_count > 1) {
-          const auto rows_seen = chunk->size();
-          const auto groups_seen = value_to_ticket.size();
-          if (rows_seen > 0) {
-            const auto remaining_rows = input_table->row_count() - rows_seen;
-            const auto estimated_groups =
-                std::min<size_t>(input_table->row_count(), groups_seen + remaining_rows * groups_seen / rows_seen);
-            value_to_ticket.reserve(estimated_groups);
-          }
+      // Adaptively reserve space in the hashmap just as in `_compute_groups_byte_row`.
+      if (chunk_id == ChunkID{0} && chunk_count > 1) {
+        const auto rows_seen = chunk->size();
+        const auto groups_seen = value_to_ticket.size();
+        if (rows_seen > 0) {
+          const auto remaining_rows = input_table->row_count() - rows_seen;
+          const auto estimated_groups =
+              std::min<size_t>(input_table->row_count(), groups_seen + remaining_rows * groups_seen / rows_seen);
+          value_to_ticket.reserve(estimated_groups);
         }
       }
-
-      group_key_data->group_count = size_t{next_ticket};
     }
+
+    group_key_data->group_count = size_t{next_ticket};
   });
 
   return group_key_data;
-}
-
-template <bool Concurrent>
-std::shared_ptr<GroupKeyData<Concurrent>> _compute_groups_single_column(
-    const ColumnID groupby_column_id, const std::shared_ptr<const Table>& input_table) {
-  if constexpr (Concurrent) {
-    return _compute_groups_single_column_concurrent(groupby_column_id, input_table);
-  } else {
-    return _compute_groups_single_column_sequential(groupby_column_id, input_table);
-  }
 }
 
 // A single slot of the direct-mapped cache that sits in front of the global hash table.
@@ -907,9 +806,20 @@ std::shared_ptr<GroupKeyData<Concurrent>> _compute_groups_byte_row(const std::ve
 template <bool Concurrent>
 std::shared_ptr<GroupKeyData<Concurrent>> _compute_groups(const std::vector<ColumnID>& groupby_column_ids,
                                                           const std::shared_ptr<const Table>& input_table) {
-  if (groupby_column_ids.size() == 1 && input_table->column_data_type(groupby_column_ids[0]) != DataType::String) {
-    const auto column_id = groupby_column_ids[0];
-    return _compute_groups_single_column<Concurrent>(column_id, input_table);
+  if constexpr (!Concurrent) {
+    if (groupby_column_ids.size() == 1 && input_table->column_data_type(groupby_column_ids[0]) != DataType::String) {
+      // For a single column, we can use the sequential ticketing path, which is faster than the byte-row path.
+      const auto column_id = groupby_column_ids[0];
+      return _compute_groups_single_column_sequential(column_id, input_table);
+    }
+  } else {
+    // We do not support non-trivial types in the concurrent HashMap, so. we fall back to the byte-row path for
+    // single-column group-bys on strings.
+    if (groupby_column_ids.size() == 1 && input_table->column_data_type(groupby_column_ids[0]) != DataType::String) {
+      // For a single column, we can use the concurrent ticketing path, which is faster than the byte-row path.
+      const auto column_id = groupby_column_ids[0];
+      return _compute_groups_single_column_concurrent(column_id, input_table);
+    }
   }
   return _compute_groups_byte_row<Concurrent>(groupby_column_ids, input_table);
 }
