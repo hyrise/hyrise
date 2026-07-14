@@ -993,10 +993,12 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
   // Check for invalid aggregates
   _validate_aggregates();
 
-  auto groupby_keys_count = _groupby_column_ids.size();
+  const auto groupby_keys_count = _groupby_column_ids.size();
 
+  const auto is_multi_threaded = Hyrise::get().is_multi_threaded();
   const auto row_count = input_table->row_count();
-  if (groupby_keys_count == 0 || row_count == 0) {
+  // TODO(anyone): parallelize for same keys and merge
+  if (groupby_keys_count == 0 || row_count == 0 || !is_multi_threaded) {
     std::atomic_size_t expected_result_size;
     auto contexts_per_column = ContextsPerColumn(aggregate_count);
     _aggregate<AggregateKey>(contexts_per_column, input_table, expected_result_size);
