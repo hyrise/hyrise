@@ -913,36 +913,30 @@ TYPED_TEST(OperatorsAggregateTest, StringVariations) {
 
 // Test for issue #2761.
 TYPED_TEST(OperatorsAggregateTest, Issue2761) {
-
-  const auto chunk_count = ChunkID{1};
-
-  auto column_definitions = TableColumnDefinitions{{"col_0", DataType::Long, false},
-                                                   {"col_1", DataType::Long, false},
-                                                   {"col_2", DataType::Long, false}};
+  auto column_definitions = TableColumnDefinitions{
+      {"col_0", DataType::Long, false}, {"col_1", DataType::Long, false}, {"col_2", DataType::Long, false}};
   auto table = std::make_shared<Table>(column_definitions, TableType::Data);
 
   auto row_id = int64_t{0};
-  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-    auto col_0_segment = pmr_vector<int64_t>{};
-    auto col_1_segment = pmr_vector<int64_t>{};
-    auto col_2_segment = pmr_vector<int64_t>{};
+  auto col_0_segment = pmr_vector<int64_t>{};
+  auto col_1_segment = pmr_vector<int64_t>{};
+  auto col_2_segment = pmr_vector<int64_t>{};
 
-    // To trigger #2761, we need to have more output rows than fit into a chunk.
-    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < Chunk::DEFAULT_SIZE + 1'000; ++chunk_offset) {
-      col_0_segment.emplace_back(row_id);
-      col_1_segment.emplace_back(row_id);
-      col_2_segment.emplace_back(17);
-      ++row_id;
-    }
-
-    auto segments = pmr_vector<std::shared_ptr<AbstractSegment>>{};
-    segments.emplace_back(std::make_shared<ValueSegment<int64_t>>(std::move(col_0_segment)));
-    segments.emplace_back(std::make_shared<ValueSegment<int64_t>>(std::move(col_1_segment)));
-    segments.emplace_back(std::make_shared<ValueSegment<int64_t>>(std::move(col_2_segment)));
-
-    table->append_chunk(segments);
-    table->last_chunk()->set_immutable();
+  // To trigger #2761, we need to have more output rows than fit into a chunk.
+  for (auto chunk_offset = ChunkOffset{0}; chunk_offset < Chunk::DEFAULT_SIZE + 1'000; ++chunk_offset) {
+    col_0_segment.emplace_back(row_id);
+    col_1_segment.emplace_back(row_id);
+    col_2_segment.emplace_back(17);
+    ++row_id;
   }
+
+  auto segments = pmr_vector<std::shared_ptr<AbstractSegment>>{};
+  segments.emplace_back(std::make_shared<ValueSegment<int64_t>>(std::move(col_0_segment)));
+  segments.emplace_back(std::make_shared<ValueSegment<int64_t>>(std::move(col_1_segment)));
+  segments.emplace_back(std::make_shared<ValueSegment<int64_t>>(std::move(col_2_segment)));
+
+  table->append_chunk(segments);
+  table->last_chunk()->set_immutable();
 
   const auto table_wrapper = std::make_shared<TableWrapper>(table);
   table_wrapper->never_clear_output();
