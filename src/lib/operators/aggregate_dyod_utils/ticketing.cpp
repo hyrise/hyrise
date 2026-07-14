@@ -813,7 +813,8 @@ std::shared_ptr<GroupKeyData<Concurrent>> _compute_groups(const std::vector<Colu
       return _compute_groups_single_column_sequential(column_id, input_table);
     }
   } else {
-    // We do not support non-trivial types in the concurrent HashMap, so. we fall back to the byte-row path for single-column group-bys on strings.
+    // We do not support non-trivial types in the concurrent HashMap, so. we fall back to the byte-row path for
+    // single-column group-bys on strings.
     if (groupby_column_ids.size() == 1 && input_table->column_data_type(groupby_column_ids[0]) != DataType::String) {
       // For a single column, we can use the concurrent ticketing path, which is faster than the byte-row path.
       const auto column_id = groupby_column_ids[0];

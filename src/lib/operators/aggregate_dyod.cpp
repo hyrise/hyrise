@@ -11,6 +11,7 @@
 #include <optional>
 #include <string>
 #include <type_traits>
+#include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <vector>
@@ -95,13 +96,14 @@ NoGroupbyPartialResult _aggregate_chunk(const std::shared_ptr<const Chunk>& chun
       WindowFunctionBuilder<ColumnDataType, AggregateType, window_function>().get_aggregate_function();
   const auto& segment = chunk->get_segment(input_column_id);
 
-  segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
-    if (position.is_null()) {
-      return;
-    }
-    aggregate_function(position.value(), result.value_count, accumulator);
-    ++result.value_count;
-  });
+  with_string_segment_iterate<ColumnDataType>(segment,
+                                              [&](const auto& value, const bool is_null, const auto needs_copy) {
+                                                if (is_null) {
+                                                  return;
+                                                }
+                                                aggregate_function(value, result.value_count, accumulator);
+                                                ++result.value_count;
+                                              });
   if (result.value_count > 0) {
     result.accumulator = AllTypeVariant{accumulator};
   }
@@ -113,17 +115,19 @@ NoGroupbyPartialResult _count_distinct_chunk(const std::shared_ptr<const Chunk>&
                                              const ColumnID input_column_id) {
   auto result = NoGroupbyPartialResult{};
   const auto& segment = chunk->get_segment(input_column_id);
-  segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
-    if (!position.is_null()) {
-      result.distinct_values.emplace(ColumnDataType{position.value()});
-    }
-  });
+  with_string_segment_iterate<ColumnDataType>(segment,
+                                              [&](const auto& value, const bool is_null, const auto needs_copy) {
+                                                if (is_null) {
+                                                  return;
+                                                }
+                                                result.distinct_values.emplace(ColumnDataType{value});
+                                              });
   return result;
 }
 
 template <typename ColumnDataType>
 NoGroupbyPartialResult _standard_deviation_chunk(const std::shared_ptr<const Chunk>& chunk,
-                                                  const ColumnID input_column_id) {
+                                                 const ColumnID input_column_id) {
   auto result = NoGroupbyPartialResult{};
   const auto aggregate_function =
       WindowFunctionBuilder<ColumnDataType, double, WindowFunction::StandardDeviationSample>().get_aggregate_function();
@@ -235,27 +239,27 @@ std::pair<ChunkedVector<AggregateType>, ChunkedVector<bool>> _aggregate_grouped(
     const auto& chunk = input_table->get_chunk(chunk_id);
     const auto& aggregate_segment = chunk->get_segment(input_column_id);
 
-    segment_iterate<ColumnDataType>(*aggregate_segment, [&](const auto& position) {
-      if (position.is_null()) {
-        ++row_index;
-        return;
-      }
-      const auto value = std::move(position.value());
-      const auto ticket = tickets[row_index++];
-      if constexpr (window_function == WindowFunction::Avg) {
-        aggregate_function(value, value_counts[ticket], values[ticket]);
-        ++value_counts[ticket];
-        nulls[ticket] = false;
-      } else if constexpr (window_function == WindowFunction::Count) {
-        values[ticket]++;
-      } else {
-        // MIN/MAX/SUM: the aggregate function only needs to know whether this is the group's first contributing value
-        // (it checks `aggregate_count == 0`). `nulls[ticket]` is still true until that first value, so it doubles as
-        // the first-seen flag and we avoid maintaining a separate per-group count.
-        aggregate_function(value, nulls[ticket] ? size_t{0} : size_t{1}, values[ticket]);
-        nulls[ticket] = false;
-      }
-    });
+    with_string_segment_iterate<ColumnDataType>(
+        aggregate_segment, [&](const auto& value, const bool is_null, const auto needs_copy) {
+          if (is_null) {
+            ++row_index;
+            return;
+          }
+          const auto ticket = tickets[row_index++];
+          if constexpr (window_function == WindowFunction::Avg) {
+            aggregate_function(value, value_counts[ticket], values[ticket]);
+            ++value_counts[ticket];
+            nulls[ticket] = false;
+          } else if constexpr (window_function == WindowFunction::Count) {
+            values[ticket]++;
+          } else {
+            // MIN/MAX/SUM: the aggregate function only needs to know whether this is the group's first contributing
+            // value (it checks `aggregate_count == 0`). `nulls[ticket]` is still true until that first value, so it
+            // doubles as the first-seen flag and we avoid maintaining a separate per-group count.
+            aggregate_function(value, nulls[ticket] ? size_t{0} : size_t{1}, values[ticket]);
+            nulls[ticket] = false;
+          }
+        });
   }
 
   // We have aggregated all values per group, but need to apply some 'post-processing' to finalize the results.
@@ -282,13 +286,14 @@ ChunkedVector<int64_t> _count_distinct_grouped(const uint64_t* const tickets, co
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto& chunk = input_table->get_chunk(chunk_id);
     const auto& aggregate_segment = chunk->get_segment(input_column_id);
-    segment_iterate<ColumnDataType>(*aggregate_segment, [&](const auto& position) {
-      if (position.is_null()) {
-        ++row_index;
-        return;
-      }
-      distinct_values[tickets[row_index++]].insert(std::move(position.value()));
-    });
+    with_string_segment_iterate<ColumnDataType>(aggregate_segment,
+                                                [&](const auto& value, const bool is_null, const auto needs_copy) {
+                                                  if (is_null) {
+                                                    ++row_index;
+                                                    return;
+                                                  }
+                                                  distinct_values[tickets[row_index++]].insert(value);
+                                                });
   }
 
   auto values = ChunkedVector<int64_t>(group_count);
@@ -314,18 +319,19 @@ std::pair<ChunkedVector<ColumnDataType>, ChunkedVector<bool>> _any_grouped(
     const auto& chunk = input_table->get_chunk(chunk_id);
     const auto& aggregate_segment = chunk->get_segment(input_column_id);
 
-    segment_iterate<ColumnDataType>(*aggregate_segment, [&](const auto& position) {
-      const auto index = tickets[row_index++];
-      if (seen[index]) {
-        return;
-      }
-      seen[index] = true;
-      if (position.is_null()) {
-        nulls[index] = true;
-      } else {
-        values[index] = std::move(position.value());
-      }
-    });
+    with_string_segment_iterate<ColumnDataType>(aggregate_segment,
+                                                [&](const auto& value, const bool is_null, const auto needs_copy) {
+                                                  const auto index = tickets[row_index++];
+                                                  if (seen[index]) {
+                                                    return;
+                                                  }
+                                                  seen[index] = true;
+                                                  if (is_null) {
+                                                    nulls[index] = true;
+                                                  } else {
+                                                    values[index] = value;
+                                                  }
+                                                });
   }
   return {std::move(values), std::move(nulls)};
 }
@@ -439,7 +445,8 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
         chunk_count, std::vector<NoGroupbyPartialResult>(aggregate_count));
 
     // Compute every aggregate for one chunk. The calling job exclusively owns this chunk's partial-result row.
-    const auto compute_chunk_aggregates = [this, &input_table, &partial_results, aggregate_count](const ChunkID chunk_id) {
+    const auto compute_chunk_aggregates = [this, &input_table, &partial_results,
+                                           aggregate_count](const ChunkID chunk_id) {
       const auto& chunk = input_table->get_chunk(chunk_id);
       for (auto aggregate_id = size_t{0}; aggregate_id < aggregate_count; ++aggregate_id) {
         const auto& aggregate = _aggregates[aggregate_id];
@@ -485,8 +492,7 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
               break;
             }
             case WindowFunction::CountDistinct: {
-              partial_results[chunk_id][aggregate_id] =
-                  _count_distinct_chunk<ColumnDataType>(chunk, input_column_id);
+              partial_results[chunk_id][aggregate_id] = _count_distinct_chunk<ColumnDataType>(chunk, input_column_id);
               break;
             }
             case WindowFunction::StandardDeviationSample:
@@ -501,7 +507,8 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
                   _aggregate_chunk<ColumnDataType, T, WindowFunction::Any>(chunk, input_column_id);
               break;
             }
-            default: Fail("Unsupported aggregate function.");
+            default:
+              Fail("Unsupported aggregate function.");
           }
         });
       }
