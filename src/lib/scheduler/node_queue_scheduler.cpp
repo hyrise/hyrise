@@ -54,7 +54,7 @@ void NodeQueueScheduler::begin() {
   _max_considered_queue_load = static_cast<double>(std::max(size_t{8}, UPPER_LIMIT_QUEUE_SIZE_FACTOR * _worker_count));
 
   const auto min_group_count =
-      std::max(static_cast<double>(MIN_GROUP_COUNT), NUM_GROUPS_MIN_FACTOR * static_cast<float>(_worker_count));
+      std::max(static_cast<double>(MIN_GROUP_COUNT), NUM_GROUPS_MIN_FACTOR * static_cast<double>(_worker_count));
   _max_group_count = NUM_GROUPS_MAX_FACTOR * static_cast<double>(_worker_count);
 
   // We precalculate the "step size" as we know potential queue loads. The load can be between 0 (no load) up to

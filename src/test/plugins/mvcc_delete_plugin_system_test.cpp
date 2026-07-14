@@ -31,6 +31,8 @@
 #include "utils/pausable_loop_thread.hpp"
 #include "utils/plugin_manager.hpp"
 
+namespace {
+
 using namespace hyrise;
 using namespace hyrise::expression_functional;
 
@@ -334,3 +336,5 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
   // (17) Unload the plugin
   Hyrise::get().plugin_manager.unload_plugin("hyriseMvccDeletePlugin");
 }
+
+}  // namespace
