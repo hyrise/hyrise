@@ -181,9 +181,16 @@ class AggregateDYOD : public AbstractAggregateOperator {
   void _aggregate_segment(size_t aggregate_index, const AbstractSegment& segment,
                           const std::vector<GroupID>& group_ids);
 
+  template <typename ColumnDataType, WindowFunction aggregate_function>
+    requires(aggregate_function == WindowFunction::Any)
+  void _aggregate_segment(size_t aggregate_index, const AbstractSegment& segment,
+                          const std::vector<GroupID>& group_ids);
+
   void _aggregate_count_star(size_t aggregate_index, const std::vector<GroupID>& group_ids);
 
   DataType _aggregate_data_type(size_t aggregate_index);
+
+  std::string _aggregate_column_name(size_t aggregate_index);
 
   bool _aggregate_is_nullable(size_t aggregate_index);
 
