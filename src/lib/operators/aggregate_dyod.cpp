@@ -9,7 +9,6 @@
 #include <optional>
 #include <string>
 #include <type_traits>
-#include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <vector>
@@ -22,10 +21,8 @@
 #include "operators/abstract_aggregate_operator.hpp"
 #include "operators/abstract_operator.hpp"
 #include "resolve_type.hpp"
-#include "scheduler/abstract_task.hpp"
 #include "scheduler/immediate_execution_scheduler.hpp"
 #include "scheduler/job_task.hpp"
-#include "storage/abstract_segment.hpp"
 #include "storage/chunk.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/table.hpp"
@@ -100,11 +97,15 @@ std::pair<AggregateType, bool> _aggregate_all_values(const std::shared_ptr<const
 
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto& segment = input_table->get_chunk(chunk_id)->get_segment(input_column_id);
+    //TODO
+    // if constexpr (ColumnDataType == pmr_string) {
+    //   // use our own segment iterate
+    // }
     segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
       if (position.is_null()) {
         return;
       }
-      aggregate_function(position.value(), value_count, accumulator);
+      aggregate_function(std::move(position.value()), value_count, accumulator);
       ++value_count;
     });
   }
@@ -144,7 +145,7 @@ std::optional<double> _standard_deviation_sample_all_values(const std::shared_pt
       if (position.is_null()) {
         return;
       }
-      aggregate_function(position.value(), value_count, accumulator);
+      aggregate_function(std::move(position.value()), value_count, accumulator);
       ++value_count;
     });
   }
@@ -201,7 +202,7 @@ std::pair<ChunkedVector<AggregateType>, ChunkedVector<bool>> _aggregate_grouped(
         ++row_index;
         return;
       }
-      const auto value = position.value();
+      const auto value = std::move(position.value());
       const auto ticket = tickets[row_index++];
       if constexpr (window_function == WindowFunction::Avg) {
         aggregate_function(value, value_counts[ticket], values[ticket]);
@@ -248,8 +249,7 @@ ChunkedVector<int64_t> _count_distinct_grouped(const uint64_t* const tickets, co
         ++row_index;
         return;
       }
-      const auto value = position.value();
-      distinct_values[tickets[row_index++]].insert(value);
+      distinct_values[tickets[row_index++]].insert(std::move(position.value()));
     });
   }
 
@@ -285,7 +285,7 @@ std::pair<ChunkedVector<ColumnDataType>, ChunkedVector<bool>> _any_grouped(
       if (position.is_null()) {
         nulls[index] = true;
       } else {
-        values[index] = position.value();
+        values[index] = std::move(position.value());
       }
     });
   }
@@ -366,9 +366,8 @@ std::pair<ChunkedVector<double>, ChunkedVector<bool>> _standard_deviation_sample
         ++row_index;
         return;
       }
-      const auto value = position.value();
       // Welford's algorithm tracks its own count in `accumulator[0]`, so the `aggregate_count` argument is unused.
-      aggregate_function(value, size_t{0}, accumulators[tickets[row_index++]]);
+      aggregate_function(std::move(position.value()), size_t{0}, accumulators[tickets[row_index++]]);
     });
   }
 
@@ -454,21 +453,16 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
           }
           case WindowFunction::Count: {
             // Special case for COUNT(*): count all rows, ignoring the input column id.
-            if (input_column_id == INVALID_COLUMN_ID) {
-              auto value_count = size_t{0};
-              const auto chunk_count = input_table->chunk_count();
-              for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-                value_count += input_table->get_chunk(chunk_id)->size();
-              }
-              result_values.emplace_back(static_cast<int64_t>(value_count));
-              break;
-            } else {
-              using AggregateType = typename WindowFunctionTraits<ColumnDataType, WindowFunction::Count>::ReturnType;
-              const auto [value, _] = _aggregate_all_values<ColumnDataType, AggregateType, WindowFunction::Count>(
-                  input_table, input_column_id);
-              result_values.emplace_back(value);
+            if (input_column_id == INVALID_COLUMN_ID || !input_table->column_is_nullable(input_column_id)) {
+              auto row_count = input_table->row_count();
+              result_values.emplace_back(static_cast<int64_t>(row_count));
               break;
             }
+            using AggregateType = typename WindowFunctionTraits<ColumnDataType, WindowFunction::Count>::ReturnType;
+            const auto [value, _] = _aggregate_all_values<ColumnDataType, AggregateType, WindowFunction::Count>(
+                input_table, input_column_id);
+            result_values.emplace_back(value);
+            break;
           }
           case WindowFunction::CountDistinct: {
             const auto result = _count_distinct_all_values<ColumnDataType>(input_table, input_column_id);
