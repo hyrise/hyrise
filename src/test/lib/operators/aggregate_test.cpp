@@ -912,7 +912,7 @@ TYPED_TEST(OperatorsAggregateTest, StringVariations) {
 }
 
 // Test for issue #2761.
-TYPED_TEST(OperatorsAggregateTest, SingleVsManyValue) {
+TYPED_TEST(OperatorsAggregateTest, Issue2761) {
 
   const auto chunk_count = ChunkID{1};
 

@@ -387,10 +387,12 @@ typename Results::reference get_or_add_result(CacheResultIds /*cache_result_ids*
 
     // We are seeing this group (i.e., this AggregateKey) for the first time, so we need to add it to the list of
     // results and set the row_id needed for restoring the GroupBy column(s).
-    const auto result_id = results.size();
+    const auto result_id = result_ids.size();
     result_ids.emplace_hint(it, key, result_id);
 
-    results.emplace_back();
+    if (result_id >= results.size()) {
+      results.resize(static_cast<size_t>(static_cast<double>(result_id + 1) * 1.5));
+    }
     results[result_id].row_id = row_id;
 
     if constexpr (std::is_same_v<CacheResultIds, std::true_type>) {
