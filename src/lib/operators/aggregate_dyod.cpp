@@ -1023,20 +1023,23 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
     }
   }
 
-  // TODO(anyone): think about doing radix on more than one column
-  const auto groubpy_column_we_take_for_radix = _groupby_column_ids[0];
-  const auto data_type = input_table->column_data_type(groubpy_column_we_take_for_radix);
-
   auto hashing_jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   hashing_jobs.reserve(chunk_count);
 
-  resolve_data_type(data_type, [&](auto type) {
-    using ColumnDataType = typename decltype(type)::type;
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+    hashing_jobs.emplace_back(std::make_shared<JobTask>([&, chunk_id]() {
+      const auto& chunk = input_table->get_chunk(chunk_id);
+      const auto chunk_size = chunk->size();
+      if (chunk_size == 0) {
+        return;
+      }
+      auto hashes = std::vector<size_t>(chunk_size, 0);
+      for (const auto& column_id : _groupby_column_ids) {
+        const auto data_type = input_table->column_data_type(column_id);
+        resolve_data_type(data_type, [&](auto type) {
+          using ColumnDataType = typename decltype(type)::type;
 
-    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-      hashing_jobs.emplace_back(std::make_shared<JobTask>([&, chunk_id]() {
-        if (input_table->get_chunk(chunk_id)->size() > 0) {
-          const auto abstract_segment = input_table->get_chunk(chunk_id)->get_segment(groubpy_column_we_take_for_radix);
+          const auto& abstract_segment = chunk->get_segment(column_id);
 
           segment_iterate<ColumnDataType>(*abstract_segment, [&](const auto& position) {
             auto value = 0;
@@ -1044,18 +1047,22 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
               value = std::hash<ColumnDataType>{}(position.value());
             }
 
-            const auto key = value & RADIX_MASK;
-            // see definition of pos_lists_per_thread
-            if constexpr (std::is_same_v<IsReferenceTable, std::true_type>) {
-              pos_lists_per_thread[key]->at(chunk_id)->push_back(position.chunk_offset());
-            } else {
-              pos_lists_per_thread[key]->at(chunk_id)->push_back(RowID{chunk_id, position.chunk_offset()});
-            }
+            boost::hash_combine(hashes[position.chunk_offset()], value);
           });
+        });
+      }
+      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
+        // see definition of pos_lists_per_thread
+        const auto value = hashes[chunk_offset];
+        const auto key = value & RADIX_MASK;
+        if constexpr (std::is_same_v<IsReferenceTable, std::true_type>) {
+          pos_lists_per_thread[key]->at(chunk_id)->push_back(chunk_offset);
+        } else {
+          pos_lists_per_thread[key]->at(chunk_id)->push_back(RowID{chunk_id, chunk_offset});
         }
-      }));
-    }
-  });
+      }
+    }));
+  }
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(hashing_jobs);
 
   // SPLIT END
