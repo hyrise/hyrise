@@ -23,4 +23,4 @@ else
 fi
 
 # Python formatting
-black --line-length 120 --preview --enable-unstable-feature string_processing scripts -q
+black --line-length 120 scripts -q
