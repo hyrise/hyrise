@@ -408,10 +408,6 @@ void AggregateDYOD::_aggregate_chunk(const std::shared_ptr<const Chunk> chunk) {
 
     const auto segment = chunk->get_segment(column_id);
 
-    // TODO(anyone) design decision:
-    // we could do _aggregate_count_distinct here instead of in _aggregate_segment
-    // to keep it clean there, but does nearly the same
-
     resolve_data_type(pqp_column.data_type(), [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
       resolve_window_function(aggregate->window_function, [&](auto type) {
@@ -501,19 +497,6 @@ void AggregateDYOD::_aggregate_count_star(size_t aggregate_index, const std::vec
     aggregate_vector.increment_count(group_id);
   }
 }
-
-// template <typename ColumnDataType>
-// void AggregateDYOD::_aggregate_count_distinct(size_t aggregate_index, const AbstractSegment& segment,
-//                                               const std::vector<GroupID>& group_ids) {
-//   auto& aggregate_vector = *_aggregate_vectors[aggregate_index];
-
-//   segment_iterate<ColumnDataType>(segment, [&](const auto& position) {
-//     if (!position.is_null()) {
-//       const auto group_id = group_ids[position.chunk_offset()];
-//       aggregate_vector[group_id].insert(position.value());
-//     }
-//   });
-// }
 
 bool AggregateDYOD::_aggregate_is_nullable(size_t aggregate_index) {
   const auto aggregate_function = _aggregates[aggregate_index]->window_function;
