@@ -65,6 +65,4 @@ std::ostream& operator<<(std::ostream& stream, const ScaledHistogram<T>& histogr
   return stream << histogram.description() << '\n';
 }
 
-EXPLICITLY_DECLARE_DATA_TYPES(ScaledHistogram);
-
 }  // namespace hyrise

@@ -109,7 +109,7 @@ JoinGraphBuilder::PredicateParseResult JoinGraphBuilder::_parse_predicate(
       const auto and_predicate = and_(left_predicate, parse_result_right.predicate);
 
       return {parse_result_right.base_node, and_predicate};
-    } break;
+    }
 
     default:
       Assert(node->left_input() && !node->right_input(), "");
