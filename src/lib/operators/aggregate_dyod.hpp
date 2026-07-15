@@ -82,6 +82,22 @@ struct TypedAggregateVector : AbstractAggregateVector {
   pmr_vector<AccumulatorDataType> _aggregates;
 };
 
+class AggregateVectors : public Noncopyable {
+ public:
+  explicit AggregateVectors(const std::vector<std::shared_ptr<WindowFunctionExpression>>& aggregates);
+  void merge(AggregateVectors& other);
+  AbstractAggregateVector& operator[](size_t index);
+  const AbstractAggregateVector& operator[](size_t index) const;
+  auto begin();
+  auto begin() const;
+  auto end();
+  auto end() const;
+
+ protected:
+  const std::vector<std::shared_ptr<WindowFunctionExpression>>& _aggregates;
+  std::vector<std::unique_ptr<AbstractAggregateVector>> _vectors;
+};
+
 template <typename T>
   requires std::is_trivially_copyable_v<T>
 std::vector<std::byte> serialize_value(T value);
@@ -125,7 +141,7 @@ class AggregateDYOD : public AbstractAggregateOperator {
   std::vector<DataType> _aggregate_data_types;
   GroupIDMap _group_id_map;
   std::vector<GroupKey> _group_keys;
-  std::vector<std::unique_ptr<AbstractAggregateVector>> _aggregate_vectors;
+  std::unique_ptr<AggregateVectors> _aggregate_vectors;
 
   std::shared_ptr<const Table> _on_execute() override;
 
