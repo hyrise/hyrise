@@ -917,17 +917,15 @@ TYPED_TEST(OperatorsAggregateTest, Issue2761) {
       {"col_0", DataType::Long, false}, {"col_1", DataType::Long, false}, {"col_2", DataType::Long, false}};
   auto table = std::make_shared<Table>(column_definitions, TableType::Data);
 
-  auto row_id = int64_t{0};
   auto col_0_segment = pmr_vector<int64_t>{};
   auto col_1_segment = pmr_vector<int64_t>{};
   auto col_2_segment = pmr_vector<int64_t>{};
 
   // To trigger #2761, we need to have more output rows than fit into a chunk.
-  for (auto chunk_offset = ChunkOffset{0}; chunk_offset < Chunk::DEFAULT_SIZE + 1'000; ++chunk_offset) {
+  for (auto row_id = int64_t{0}; row_id < static_cast<int64_t>(Chunk::DEFAULT_SIZE + 1'000); ++row_id) {
     col_0_segment.emplace_back(row_id);
     col_1_segment.emplace_back(row_id);
     col_2_segment.emplace_back(17);
-    ++row_id;
   }
 
   auto segments = pmr_vector<std::shared_ptr<AbstractSegment>>{};
@@ -942,7 +940,7 @@ TYPED_TEST(OperatorsAggregateTest, Issue2761) {
   table_wrapper->never_clear_output();
   table_wrapper->execute();
 
-  const auto col_2 = std::make_shared<PQPColumnExpression>(ColumnID{2}, DataType::Long, "col_2");
+  const auto col_2 = PQPColumnExpression::from_table(*table, ColumnID{2});
   const auto aggregates = std::vector<std::shared_ptr<WindowFunctionExpression>>{sum_(col_2)};
 
   // Single distinct group-by column.
