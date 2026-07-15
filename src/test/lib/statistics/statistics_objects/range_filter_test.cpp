@@ -260,7 +260,7 @@ TYPED_TEST(RangeFilterTest, Between) {
 
 // Test larger value ranges.
 TYPED_TEST(RangeFilterTest, LargeValueRange) {
-  using CalcType = std::conditional_t<std::is_floating_point_v<TypeParam>, TypeParam, double>;
+  using CalcType = TypeParam;
 
   const auto lowest = std::numeric_limits<TypeParam>::lowest();
   const auto max = std::numeric_limits<TypeParam>::max();
