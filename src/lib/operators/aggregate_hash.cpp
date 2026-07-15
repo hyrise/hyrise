@@ -310,13 +310,13 @@ void prepare_output(std::vector<Segments>& output, const size_t chunk_count, con
 // been calculated as part of `_partition_by_groupby_keys`. We also pass in the `row_id` of that row. This row id is
 // stored in `Results` so that we can later use it to reconstruct the values in the GROUP BY columns. If the operator
 // calculates multiple aggregate functions, we only need to perform this lookup as part of the first aggregate function.
-// By setting CacheResultIds to true_type, we can store the result of the lookup in the AggregateKey. Following
-// aggregate functions can then retrieve the index from the AggregateKey.
+// By setting `cache_result_ids` to true, we can store the result of the lookup in the AggregateKey. Following aggregate
+// functions can then retrieve the index from the AggregateKey.
 constexpr auto CACHE_MASK = AggregateKeyEntry{1} << uint8_t{63};  // See explanation below
 
-template <typename CacheResultIds, typename ResultIds, typename Results, typename AggregateKey>
-typename Results::reference get_or_add_result(CacheResultIds /*cache_result_ids*/, ResultIds& result_ids,
-                                              Results& results, AggregateKey& key, const RowID& row_id) {
+template <bool cache_result_ids, typename ResultIds, typename Results, typename AggregateKey>
+typename Results::reference get_or_add_result(ResultIds& result_ids, Results& results, AggregateKey& key,
+                                              const RowID& row_id) {
   if constexpr (std::is_same_v<AggregateKey, EmptyAggregateKey>) {
     // No GROUP BY columns are defined for this aggregate operator. We still want to keep most code paths similar and
     // avoid special handling. Thus, get_or_add_result is still called, however, we always return the same result
@@ -351,7 +351,7 @@ typename Results::reference get_or_add_result(CacheResultIds /*cache_result_ids*
                   "Expected AggregateKeyEntry to be unsigned 64-bit value.");
 
     // Check if the AggregateKey already contains a stored index.
-    if constexpr (std::is_same_v<CacheResultIds, std::true_type>) {
+    if constexpr (cache_result_ids) {
       if (*first_key_entry & CACHE_MASK) {
         // The most significant bit is a 1, remove it by XORing the mask gives us the index into the results vector.
         const auto result_id = *first_key_entry ^ CACHE_MASK;
@@ -378,7 +378,7 @@ typename Results::reference get_or_add_result(CacheResultIds /*cache_result_ids*
     if (it != result_ids.end()) {
       // We have already seen this group and need to return a reference to the group's result.
       const auto result_id = it->second;
-      if constexpr (std::is_same_v<CacheResultIds, std::true_type>) {
+      if constexpr (cache_result_ids) {
         // If requested, store the index the the first_key_entry and set the most significant bit to 1.
         *first_key_entry = CACHE_MASK | result_id;
       }
@@ -395,7 +395,7 @@ typename Results::reference get_or_add_result(CacheResultIds /*cache_result_ids*
     }
     results[result_id].row_id = row_id;
 
-    if constexpr (std::is_same_v<CacheResultIds, std::true_type>) {
+    if constexpr (cache_result_ids) {
       // If requested, store the index the the first_key_entry and set the most significant bit to 1.
       *first_key_entry = CACHE_MASK | result_id;
     }
@@ -622,9 +622,9 @@ void AggregateHash::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, 
   // CacheResultIds is a boolean type parameter that is forwarded to get_or_add_result, see the documentation over there
   // for details.
   const auto process_position = [&](const auto cache_result_ids, const auto& position) {
-    auto& result = get_or_add_result(cache_result_ids, result_ids, results,
-                                     get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
-                                     RowID{chunk_id, chunk_offset});
+    auto& result = get_or_add_result<decltype(cache_result_ids)::value>(
+        result_ids, results, get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
+        RowID{chunk_id, chunk_offset});
 
     // If the value is NULL, the current aggregate value does not change.
     if (!position.is_null()) {
@@ -641,10 +641,10 @@ void AggregateHash::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, 
     ++chunk_offset;
   };
 
-  // Pass true_type into get_or_add_result to enable certain optimizations: If we have more than one aggregate function
-  // (and thus more than one context), it makes sense to cache the results indexes, see get_or_add_result for details.
-  // Furthermore, if we use the immediate key shortcut (which uses the same code path as caching), we need to pass
-  // true_type so that the aggregate keys are checked for immediate access values.
+  // Pass true into `get_or_add_result` to enable certain optimizations: If we have more than one aggregate function
+  // (and, thus more than one context), it makes sense to cache the results indexes, see `get_or_add_result` for
+  // details. Furthermore, if we use the immediate key shortcut (which uses the same code path as caching), we need to
+  // pass true so that the aggregate keys are checked for immediate access values.
   if (_contexts_per_column.size() > 1 || _use_immediate_key_shortcut) {
     segment_iterate<ColumnDataType>(abstract_segment, [&](const auto& position) {
       process_position(std::true_type{}, position);
@@ -1043,22 +1043,22 @@ void AggregateHash::_aggregate() {
       auto& results = context->results;
 
       // Add value or combination of values is added to the list of distinct value(s). This is done by calling
-      // get_or_add_result, which adds the corresponding entry in the list of GROUP BY values.
+      // `get_or_add_result`, which adds the corresponding entry in the list of GROUP BY values.
       if (_use_immediate_key_shortcut) {
         for (auto chunk_offset = ChunkOffset{0}; chunk_offset < input_chunk_size; ++chunk_offset) {
-          // We are able to use immediate keys, so pass true_type so that the combined caching/immediate key code path
-          // is enabled in get_or_add_result.
-          get_or_add_result(std::true_type{}, result_ids, results,
-                            get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
-                            RowID{chunk_id, chunk_offset});
+          // We are able to use immediate keys, so pass true so that the combined caching/immediate key code path is
+          // enabled in `get_or_add_result`.
+          get_or_add_result<true>(result_ids, results,
+                                  get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
+                                  RowID{chunk_id, chunk_offset});
         }
       } else {
         // Same as above, but we do not have immediate keys, so we disable that code path to reduce the complexity of
-        // get_aggregate_key.
+        // `get_or_add_result`.
         for (auto chunk_offset = ChunkOffset{0}; chunk_offset < input_chunk_size; ++chunk_offset) {
-          get_or_add_result(std::false_type{}, result_ids, results,
-                            get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
-                            RowID{chunk_id, chunk_offset});
+          get_or_add_result<false>(result_ids, results,
+                                   get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
+                                   RowID{chunk_id, chunk_offset});
         }
       }
     } else {
@@ -1093,24 +1093,22 @@ void AggregateHash::_aggregate() {
             // not NULL_ROW_ID.
             results[0].row_id = RowID{ChunkID{0}, ChunkOffset{0}};
           } else {
-            // Count occurrences for each group key -  If we have more than one aggregate function (and thus more than
-            // one context), it makes sense to cache the results indexes, see get_or_add_result for details.
+            // Count occurrences for each group key -  If we have more than one aggregate function (and, thus more than
+            // one context), it makes sense to cache the results indexes, see `get_or_add_result` for details.
             if (_contexts_per_column.size() > 1 || _use_immediate_key_shortcut) {
               for (auto chunk_offset = ChunkOffset{0}; chunk_offset < input_chunk_size; ++chunk_offset) {
-                // Use CacheResultIds==true_type if we have more than one group by column or if the cached result ids
+                // Use `cache_result_ids == true` if we have more than one group by column or if the cached result IDs
                 // have been written by the immediate key shortcut
-                auto& result =
-                    get_or_add_result(std::true_type{}, result_ids, results,
-                                      get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
-                                      RowID{chunk_id, chunk_offset});
+                auto& result = get_or_add_result<true>(
+                    result_ids, results, get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
+                    RowID{chunk_id, chunk_offset});
                 ++result.aggregate_count;
               }
             } else {
               for (auto chunk_offset = ChunkOffset{0}; chunk_offset < input_chunk_size; ++chunk_offset) {
-                auto& result =
-                    get_or_add_result(std::false_type{}, result_ids, results,
-                                      get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
-                                      RowID{chunk_id, chunk_offset});
+                auto& result = get_or_add_result<false>(
+                    result_ids, results, get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
+                    RowID{chunk_id, chunk_offset});
                 ++result.aggregate_count;
               }
             }
@@ -1123,10 +1121,9 @@ void AggregateHash::_aggregate() {
         const auto abstract_segment = chunk_in->get_segment(input_column_id);
         const auto data_type = input_table->column_data_type(input_column_id);
 
-        /*
-        Invoke correct aggregator for each segment
-        */
-
+        /**
+         * Invoke correct aggregator for each segment.
+         */
         resolve_data_type(data_type, [&, aggregate](auto type) {
           using ColumnDataType = typename decltype(type)::type;
 
