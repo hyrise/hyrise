@@ -21,6 +21,8 @@
 #include <utility>
 #include <vector>
 
+#include <boost/iterator/indirect_iterator.hpp>
+
 #include "all_type_variant.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
@@ -163,19 +165,19 @@ const AbstractAggregateVector& AggregateVectors::operator[](size_t index) const 
 }
 
 auto AggregateVectors::begin() {
-  return _vectors.begin();
+  return boost::indirect_iterator(_vectors.begin());
 }
 
 auto AggregateVectors::begin() const {
-  return _vectors.begin();
+  return boost::indirect_iterator(_vectors.cbegin());
 }
 
 auto AggregateVectors::end() {
-  return _vectors.end();
+  return boost::indirect_iterator(_vectors.end());
 }
 
 auto AggregateVectors::end() const {
-  return _vectors.end();
+  return boost::indirect_iterator(_vectors.cend());
 }
 
 void AggregateVectors::merge(AggregateVectors& other) {
@@ -417,7 +419,7 @@ GroupID AggregateDYOD::_group_id(const GroupKey& group_key) {
 
   // And append a new item for the new group to the aggregate vectors.
   for (auto& aggregate_vector : *_aggregate_vectors) {
-    aggregate_vector->push_back_default();
+    aggregate_vector.push_back_default();
   }
 
   return it->second;
