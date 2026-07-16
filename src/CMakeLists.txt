@@ -81,6 +81,8 @@ if (NOT "${HYRISE_RELAXED_BUILD}")
             -Wno-float-equal                # Currently we compare floats for equality or inequality.
             -Wno-global-constructors        # We use declarations that require global destructors.
             -Wno-missing-prototypes         # Messes with our tests and benchmarks.
+            -Wno-nrvo                       # Fixing -Wnrvo warnings decreases readability in many places, and #2750 showed
+                                            # that enabling NRVO even in hot loops has no measurable performance impact.
             -Wno-padded                     # Do not warn when structs not have been manually padded.
             -Wno-pass-failed                # Complains about failed loop unrolling when building release builds with
                                             # sanitization.
