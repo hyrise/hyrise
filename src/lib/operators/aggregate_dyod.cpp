@@ -10,6 +10,7 @@
 #include <format>
 #include <functional>
 #include <limits>
+#include <map>
 #include <memory>
 #include <memory_resource>
 #include <numeric>
@@ -124,6 +125,9 @@ void resolve_window_function(WindowFunction window_function, Functor&& functor) 
     case WindowFunction::CountDistinct:
       functor(std::integral_constant<WindowFunction, WindowFunction::CountDistinct>{});
       break;
+    case WindowFunction::Any:
+      functor(std::integral_constant<WindowFunction, WindowFunction::Any>{});
+      break;
     default:
       Fail("Unsupported aggregate function.");
   }
@@ -200,8 +204,12 @@ std::shared_ptr<Table> AggregateDYOD::_write_output_table() {
       resolve_window_function(aggregate->window_function, [&](auto type) {
         constexpr auto aggregate_function = decltype(type)::value;
         const auto data_type = WindowFunctionTraits<ColumnDataType, aggregate_function>::RESULT_TYPE;
-        column_definitions.emplace_back(aggregate->as_column_name(), data_type,
-                                        _aggregate_is_nullable(aggregate_index));
+
+        // TODO(anyone): For some reason, the expected name of `ANY(my_col)` is `any` and not `ANY(my_col)` as for
+        // all other aggregates.
+        const auto name = aggregate->window_function == WindowFunction::Any ? _aggregate_column_name(aggregate_index)
+                                                                            : aggregate->as_column_name();
+        column_definitions.emplace_back(name, data_type, _aggregate_is_nullable(aggregate_index));
       });
     });
   }
@@ -490,6 +498,27 @@ void AggregateDYOD::_aggregate_segment(size_t aggregate_index, const AbstractSeg
   });
 }
 
+template <typename ColumnDataType, WindowFunction aggregate_function>
+  requires(aggregate_function == WindowFunction::Any)
+void AggregateDYOD::_aggregate_segment(size_t aggregate_index, const AbstractSegment& segment,
+                                       const std::vector<GroupID>& group_ids) {
+  auto& aggregate_vector =
+      static_cast<TypedAggregateVector<ColumnDataType, aggregate_function>&>(*_aggregate_vectors[aggregate_index]);
+
+  // TODO(anyone): We don’t need to iterate through the segment if we’ve already found any
+  // value for all groups (i.e., the count for the respective group_id is greater than 0).
+  segment_iterate<ColumnDataType>(segment, [&](const auto& position) {
+    if (!position.is_null()) {
+      const auto group_id = group_ids[position.chunk_offset()];
+
+      if (aggregate_vector.count(group_id) == 0) {
+        aggregate_vector[group_id] = position.value();
+        aggregate_vector.increment_count(group_id);
+      }
+    }
+  });
+}
+
 void AggregateDYOD::_aggregate_count_star(size_t aggregate_index, const std::vector<GroupID>& group_ids) {
   auto& aggregate_vector = *_aggregate_vectors[aggregate_index];
 
@@ -500,13 +529,33 @@ void AggregateDYOD::_aggregate_count_star(size_t aggregate_index, const std::vec
 
 bool AggregateDYOD::_aggregate_is_nullable(size_t aggregate_index) {
   const auto aggregate_function = _aggregates[aggregate_index]->window_function;
-  return aggregate_function != WindowFunction::Count && aggregate_function != WindowFunction::CountDistinct;
+
+  if (aggregate_function == WindowFunction::Count || aggregate_function == WindowFunction::CountDistinct) {
+    return false;
+  }
+
+  if (aggregate_function == WindowFunction::Any) {
+    // TODO(anyone): Figure out why exactly this is true only for ANY
+    const auto input_table = left_input_table();
+    const auto aggregate = _aggregates[aggregate_index];
+    const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
+    return input_table->column_is_nullable(pqp_column.column_id);
+  }
+
+  return true;
 }
 
 DataType AggregateDYOD::_aggregate_column_data_type(size_t aggregate_index) {
   const auto aggregate = _aggregates[aggregate_index];
   const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
   return pqp_column.data_type();
+}
+
+std::string AggregateDYOD::_aggregate_column_name(size_t aggregate_index) {
+  const auto input_table = left_input_table();
+  const auto aggregate = _aggregates[aggregate_index];
+  const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
+  return input_table->column_name(pqp_column.column_id);
 }
 
 std::shared_ptr<AbstractOperator> AggregateDYOD::_on_deep_copy(
