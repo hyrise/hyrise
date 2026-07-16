@@ -26,11 +26,11 @@ class Console : public Singleton<Console> {
   Console(Console&&) = delete;
   Console& operator=(const Console&) = delete;
   Console& operator=(Console&&) = delete;
-  using CommandFunction = std::function<int(const std::string&)>;
-  using RegisteredCommands = std::unordered_map<std::string, CommandFunction>;
 
-  // NOLINTNEXTLINE(cppcoreguidelines-use-enum-class)
-  enum ReturnCode : int8_t { Multiline = -2, Quit = -1, Ok = 0, Error = 1 };
+  enum class ReturnCode : int8_t { Multiline = -2, Quit = -1, Ok = 0, Error = 1 };
+
+  using CommandFunction = std::function<Console::ReturnCode(const std::string&)>;
+  using RegisteredCommands = std::unordered_map<std::string, CommandFunction>;
 
   /*
    * Prompts user for one line of input, evaluates the given input, and prints out the result.
@@ -40,9 +40,9 @@ class Console : public Singleton<Console> {
    *          ReturnCode::Multiline if the last command ended with a '\' and should be continued next line,
    *          ReturnCode::Ok if the input was evaluated/executed correctly.
    */
-  int read();
+  Console::ReturnCode read();
 
-  int execute_script(const std::string& filepath);
+  Console::ReturnCode execute_script(const std::string& filepath);
 
   /*
    * Register a custom command which can be called from the console.
@@ -105,39 +105,39 @@ class Console : public Singleton<Console> {
   /*
    * Evaluates given input string. Calls either _eval_command or _eval_sql.
    */
-  int _eval(const std::string& input);
+  Console::ReturnCode _eval(const std::string& input);
 
   /*
    * Evaluates given Console command.
    */
-  static int _eval_command(const CommandFunction& func, const std::string& command);
+  static Console::ReturnCode _eval_command(const CommandFunction& func, const std::string& command);
 
   /*
    * Evaluates given SQL statement using hyrise::SqlQueryTranslator.
    */
-  int _eval_sql(const std::string& sql);
+  Console::ReturnCode _eval_sql(const std::string& sql);
 
   // Command functions, registered to be called from the Console
-  int _exit(const std::string& /*args*/);
-  int _help(const std::string& /*args*/);
-  int _generate_tpcc(const std::string& args);
-  int _generate_tpch(const std::string& args);
-  int _generate_tpcds(const std::string& args);
-  int _generate_ssb(const std::string& args);
-  int _load_table(const std::string& args);
-  int _export_table(const std::string& args);
-  int _exec_script(const std::string& script_file);
-  int _print_table(const std::string& args);
-  int _visualize(const std::string& input);
-  int _change_runtime_setting(const std::string& input);
+  Console::ReturnCode _exit(const std::string& /*args*/);
+  Console::ReturnCode _help(const std::string& /*args*/);
+  Console::ReturnCode _generate_tpcc(const std::string& args);
+  Console::ReturnCode _generate_tpch(const std::string& args);
+  Console::ReturnCode _generate_tpcds(const std::string& args);
+  Console::ReturnCode _generate_ssb(const std::string& args);
+  Console::ReturnCode _load_table(const std::string& args);
+  Console::ReturnCode _export_table(const std::string& args);
+  Console::ReturnCode _exec_script(const std::string& script_file);
+  Console::ReturnCode _print_table(const std::string& args);
+  Console::ReturnCode _visualize(const std::string& input);
+  Console::ReturnCode _change_runtime_setting(const std::string& input);
 
-  int _print_transaction_info();
-  int _print_current_working_directory();
+  Console::ReturnCode _print_transaction_info();
+  Console::ReturnCode _print_current_working_directory();
 
-  int _load_plugin(const std::string& args);
-  int _unload_plugin(const std::string& input);
+  Console::ReturnCode _load_plugin(const std::string& args);
+  Console::ReturnCode _unload_plugin(const std::string& input);
 
-  int _reset();
+  Console::ReturnCode _reset();
   void _rollback();
 
   // Creates the pipelines and returns whether is was successful (true) or not (false)

@@ -183,7 +183,7 @@ Console::~Console() {
   out(std::format("--- Session end --- {}\n", current_timestamp()), false);
 }
 
-int Console::read() {
+Console::ReturnCode Console::read() {
   char* buffer = nullptr;
 
   // Prompt user for input.
@@ -212,11 +212,11 @@ int Console::read() {
   return _eval(input);
 }
 
-int Console::execute_script(const std::string& filepath) {
+Console::ReturnCode Console::execute_script(const std::string& filepath) {
   return _exec_script(filepath);
 }
 
-int Console::_eval(const std::string& input) {
+Console::ReturnCode Console::_eval(const std::string& input) {
   // Do nothing if no input was given.
   if (input.empty() && _multiline_input.empty()) {
     return ReturnCode::Ok;
@@ -255,7 +255,7 @@ int Console::_eval(const std::string& input) {
   return ReturnCode::Multiline;
 }
 
-int Console::_eval_command(const CommandFunction& func, const std::string& command) {
+Console::ReturnCode Console::_eval_command(const CommandFunction& func, const std::string& command) {
   auto cmd = command;
   if (command.back() == ';') {
     cmd = command.substr(0, command.size() - 1);
@@ -267,7 +267,7 @@ int Console::_eval_command(const CommandFunction& func, const std::string& comma
 
   // If no whitespace is found, zero arguments are provided.
   if (std::string::npos == first) {
-    return static_cast<int>(func(""));
+    return func("");
   }
 
   auto args = cmd.substr(first + 1, last - (first + 1));
@@ -279,7 +279,7 @@ int Console::_eval_command(const CommandFunction& func, const std::string& comma
   const auto unique_range = std::ranges::unique(args, both_are_spaces);
   args.erase(unique_range.begin(), unique_range.end());
 
-  return static_cast<int>(func(args));
+  return func(args);
 }
 
 bool Console::_initialize_pipeline(const std::string& sql) {
@@ -297,7 +297,7 @@ bool Console::_initialize_pipeline(const std::string& sql) {
   return true;
 }
 
-int Console::_eval_sql(const std::string& sql) {
+Console::ReturnCode Console::_eval_sql(const std::string& sql) {
   if (!_initialize_pipeline(sql)) {
     return ReturnCode::Error;
   }
@@ -435,11 +435,11 @@ void Console::out(const std::shared_ptr<const Table>& table, const PrintFlags fl
 
 // While this particular method could be made static, others cannot.
 // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
-int Console::_exit(const std::string& /*args*/) {
+Console::ReturnCode Console::_exit(const std::string& /*args*/) {
   return ReturnCode::Quit;
 }
 
-int Console::_help(const std::string& /*args*/) {
+Console::ReturnCode Console::_help(const std::string& /*args*/) {
   auto encoding_options = std::string{"                                                 Encoding options: "};
   encoding_options += all_encoding_options();
   // Split the encoding options in lines of 120 and add padding. For each input line, it takes up to 120 characters
@@ -493,7 +493,7 @@ int Console::_help(const std::string& /*args*/) {
   return ReturnCode::Ok;
 }
 
-int Console::_generate_tpcc(const std::string& args) {
+Console::ReturnCode Console::_generate_tpcc(const std::string& args) {
   const auto arguments = tokenize(args);
 
   if (arguments.empty() || arguments.size() > 2) {
@@ -521,7 +521,7 @@ int Console::_generate_tpcc(const std::string& args) {
   return ReturnCode::Ok;
 }
 
-int Console::_generate_tpch(const std::string& args) {
+Console::ReturnCode Console::_generate_tpch(const std::string& args) {
   const auto arguments = tokenize(args);
 
   if (arguments.empty() || arguments.size() > 2) {
@@ -549,7 +549,7 @@ int Console::_generate_tpch(const std::string& args) {
   return ReturnCode::Ok;
 }
 
-int Console::_generate_tpcds(const std::string& args) {
+Console::ReturnCode Console::_generate_tpcds(const std::string& args) {
   const auto arguments = tokenize(args);
 
   if (arguments.empty() || arguments.size() > 2) {
@@ -574,7 +574,7 @@ int Console::_generate_tpcds(const std::string& args) {
   return ReturnCode::Ok;
 }
 
-int Console::_generate_ssb(const std::string& args) {
+Console::ReturnCode Console::_generate_ssb(const std::string& args) {
   const auto arguments = tokenize(args);
 
   if (arguments.empty() || arguments.size() > 2) {
@@ -613,7 +613,7 @@ int Console::_generate_ssb(const std::string& args) {
   return ReturnCode::Ok;
 }
 
-int Console::_load_table(const std::string& args) {
+Console::ReturnCode Console::_load_table(const std::string& args) {
   const auto arguments = trim_and_split(args);
 
   if (arguments.empty() || arguments.size() > 3) {
@@ -672,7 +672,7 @@ int Console::_load_table(const std::string& args) {
   return ReturnCode::Ok;
 }
 
-int Console::_export_table(const std::string& args) {
+Console::ReturnCode Console::_export_table(const std::string& args) {
   const auto arguments = trim_and_split(args);
 
   if (arguments.size() != 2) {
@@ -716,7 +716,7 @@ int Console::_export_table(const std::string& args) {
   return ReturnCode::Ok;
 }
 
-int Console::_print_table(const std::string& args) {
+Console::ReturnCode Console::_print_table(const std::string& args) {
   const auto arguments = trim_and_split(args);
 
   if (arguments.size() != 1) {
@@ -741,7 +741,7 @@ int Console::_print_table(const std::string& args) {
   return ReturnCode::Ok;
 }
 
-int Console::_visualize(const std::string& input) {
+Console::ReturnCode Console::_visualize(const std::string& input) {
   /**
    * "visualize" supports three dimensions of options:
    *    - "noexec"; or implicit "exec", the execution of the specified query
@@ -866,7 +866,7 @@ int Console::_visualize(const std::string& input) {
     }
   } catch (const InvalidInputException& exception) {
     out(std::format("{}\n", exception.what()));
-    return 0;
+    return Console::ReturnCode::Ok;
   }
 
   // NOLINTBEGIN(concurrency-mt-unsafe): system() is not thread-safe, but it is not used concurrently here.
@@ -892,7 +892,7 @@ int Console::_visualize(const std::string& input) {
   return ReturnCode::Ok;
 }
 
-int Console::_change_runtime_setting(const std::string& input) {
+Console::ReturnCode Console::_change_runtime_setting(const std::string& input) {
   const auto property = input.substr(0, input.find_first_of(" \n"));
   const auto value = input.substr(input.find_first_of(" \n") + 1, input.size());
 
@@ -905,9 +905,9 @@ int Console::_change_runtime_setting(const std::string& input) {
       out("Scheduler turned off\n");
     } else {
       out("Usage: scheduler (on|off)\n");
-      return 1;
+      return Console::ReturnCode::Error;
     }
-    return 0;
+    return Console::ReturnCode::Ok;
   }
 
   if (property == "binary_caching") {
@@ -919,16 +919,16 @@ int Console::_change_runtime_setting(const std::string& input) {
       out("Binary caching turned off\n");
     } else {
       out("Usage: binary_caching (on|off)\n");
-      return 1;
+      return Console::ReturnCode::Error;
     }
-    return 0;
+    return Console::ReturnCode::Ok;
   }
 
   out("Error: Unknown property.\n");
-  return 1;
+  return Console::ReturnCode::Error;
 }
 
-int Console::_exec_script(const std::string& script_file) {
+Console::ReturnCode Console::_exec_script(const std::string& script_file) {
   auto filepath = script_file;
   boost::algorithm::trim(filepath);
   auto script = std::ifstream{filepath};
@@ -947,9 +947,9 @@ int Console::_exec_script(const std::string& script_file) {
   _verbose = true;
   auto command = std::string{};
   // TODO(anyone): Use std::to_underlying(ReturnCode::Ok) once we use C++23.
-  auto return_code = magic_enum::enum_underlying(ReturnCode::Ok);
+  auto return_code = Console::ReturnCode{};
   while (std::getline(script, command)) {
-    return_code = static_cast<int8_t>(_eval(command));
+    return_code = _eval(command);
     if (return_code == ReturnCode::Error || return_code == ReturnCode::Quit) {
       break;
     }
@@ -977,7 +977,7 @@ void Console::handle_signal(int sig) {
   }
 }
 
-int Console::_print_transaction_info() {
+Console::ReturnCode Console::_print_transaction_info() {
   if (!_explicitly_created_transaction_context) {
     out("Console is in auto-commit mode. Type `begin` to start a manual transaction.\n");
     return ReturnCode::Error;
@@ -990,12 +990,12 @@ int Console::_print_transaction_info() {
   return ReturnCode::Ok;
 }
 
-int Console::_print_current_working_directory() {
+Console::ReturnCode Console::_print_current_working_directory() {
   out(std::format("{}\n", std::filesystem::current_path().string()));
   return ReturnCode::Ok;
 }
 
-int Console::_load_plugin(const std::string& args) {
+Console::ReturnCode Console::_load_plugin(const std::string& args) {
   const auto arguments = trim_and_split(args);
 
   if (arguments.size() != 1) {
@@ -1016,7 +1016,7 @@ int Console::_load_plugin(const std::string& args) {
   return ReturnCode::Ok;
 }
 
-int Console::_unload_plugin(const std::string& input) {
+Console::ReturnCode Console::_unload_plugin(const std::string& input) {
   const auto arguments = trim_and_split(input);
 
   if (arguments.size() != 1) {
@@ -1040,7 +1040,7 @@ int Console::_unload_plugin(const std::string& input) {
   return ReturnCode::Ok;
 }
 
-int Console::_reset() {
+Console::ReturnCode Console::_reset() {
   _rollback();
 
   Hyrise::reset();
@@ -1165,7 +1165,7 @@ int main(int argc, char** argv) {
   console.out(std::format("--- Session start --- {}\n", current_timestamp()), false);
 
   // TODO(anyone): Use std::to_underlying(ReturnCode::Ok) once we use C++23.
-  auto return_code = magic_enum::enum_underlying(Return::Ok);
+  auto return_code = Return{};
 
   // Display usage if too many arguments are provided.
   if (argc > 2) {
@@ -1177,7 +1177,7 @@ int main(int argc, char** argv) {
 
   // Execute .sql script if specified.
   if (argc == 2) {
-    return_code = static_cast<int8_t>(console.execute_script(std::string(argv[1])));
+    return_code = console.execute_script(std::string(argv[1]));
     // Terminate Console if an error occured during script execution
     if (return_code == Return::Error) {
       return_code = Return::Quit;
@@ -1186,6 +1186,7 @@ int main(int argc, char** argv) {
 
   // Display welcome message if console started normally.
   if (argc == 1) {
+    return_code = Return::Ok;
     console.out("HYRISE SQL Interface\n");
     console.out("Type 'help' for more information.\n\n");
 
@@ -1203,7 +1204,7 @@ int main(int argc, char** argv) {
 
   // Main REPL loop.
   while (return_code != Return::Quit) {
-    return_code = static_cast<int8_t>(console.read());
+    return_code = console.read();
     if (return_code == Return::Ok) {
       console.set_prompt("> ");
     } else if (return_code == Return::Multiline) {
