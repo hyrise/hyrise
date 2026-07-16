@@ -53,7 +53,7 @@ cxxopts::Options get_server_cli_options() {
 void generate_benchmark_data(std::string argument_string) {
   // Remove unnecessary whitespaces.
 
-  // NOLINTNEXTLINE(clang-analyzer-security.ArrayBound):
+  // NOLINTBEGIN(clang-analyzer-security.ArrayBound):
   // Known false positive (https://github.com/llvm/llvm-project/issues/153764#issuecomment-3265056719).
   boost::trim_if(argument_string, boost::is_any_of(":"));
 
@@ -64,9 +64,9 @@ void generate_benchmark_data(std::string argument_string) {
   auto benchmark_data_config = std::vector<std::string>{};
   // Split benchmark name and scale factor.
 
-  // NOLINTNEXTLINE(clang-analyzer-security.ArrayBound)
-  // Known false positive (https://github.com/llvm/llvm-project/issues/153764#issuecomment-3265056719).
   boost::split(benchmark_data_config, argument_string, boost::is_any_of(":"), boost::token_compress_on);
+  // NOLINTEND(clang-analyzer-security.ArrayBound)
+  
   Assert(benchmark_data_config.size() == 2,
          "Malformed input for benchmark data generation. Expecting <benchmark name>:<scale factor>.");
 
