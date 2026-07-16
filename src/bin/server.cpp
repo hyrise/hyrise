@@ -52,7 +52,7 @@ cxxopts::Options get_server_cli_options() {
 
 void generate_benchmark_data(std::string argument_string) {
   // Remove unnecessary whitespaces.
-  
+
   // NOLINTNEXTLINE(clang-analyzer-security.ArrayBound):
   // Known false positive (https://github.com/llvm/llvm-project/issues/153764#issuecomment-3265056719).
   boost::trim_if(argument_string, boost::is_any_of(":"));
