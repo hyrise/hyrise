@@ -1385,7 +1385,6 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std
       }
     }
   }
-  // step_performance_data.set_step_runtime(OperatorSteps::Aggregating, timer.lap());
 }  // NOLINT(readability/fn_size)
 
 std::shared_ptr<Table> AggregateDYOD::_create_output_table(ContextsPerColumn& contexts_per_column,
@@ -1409,9 +1408,6 @@ std::shared_ptr<Table> AggregateDYOD::_create_output_table(ContextsPerColumn& co
     // auto groupby_columns_writing_timer = Timer{};
     dyod_write_output_group_columns(input_table, _aggregates, _groupby_column_ids, context->results,
                                     output_column_definitions, intermediate_result);
-    // DebugAssert(_groupby_columns_writing_duration == std::chrono::nanoseconds{0},
-    // "_groupby_columns_writing_duration() was apparently called more than once.");
-    // _groupby_columns_writing_duration = groupby_columns_writing_timer.lap();
   }
 
   /*
@@ -1483,7 +1479,6 @@ std::shared_ptr<Table> AggregateDYOD::_create_output_table(ContextsPerColumn& co
    * reference segments to materialized columns (of the temporary table, using `EntireChunkPosList`) for the aggregate
    * columns.
   */
-  // auto timer = Timer{};
 
   auto reference_segment_indexes = std::vector<ColumnID>(_groupby_column_ids.size());
   auto entireposlist_indexes = std::vector<ColumnID>{};
@@ -1563,15 +1558,6 @@ std::shared_ptr<Table> AggregateDYOD::_create_output_table(ContextsPerColumn& co
     }
   }
 
-  // _aggregate has its own internal timer. As groupby/aggregate column writing can be interleaved, the runtime is
-  // stored in members and later written to the operator performance data struct.
-  // auto& step_performance_data = dynamic_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
-  // step_performance_data.set_step_runtime(OperatorSteps::OutputWriting, timer.lap());
-
-  // step_performance_data.set_step_runtime(OperatorSteps::GroupByColumnsWriting, _groupby_columns_writing_duration);
-  // step_performance_data.set_step_runtime(OperatorSteps::AggregateColumnsWriting,
-  // _aggregate_columns_writing_duration);
-
   return operator_output;
 }
 
@@ -1598,12 +1584,6 @@ void AggregateDYOD::_write_aggregate_output(ColumnID aggregate_index, ContextsPe
                                             std::vector<Segments>& intermediate_result,
                                             const std::shared_ptr<const Table>& input_table,
                                             TableColumnDefinitions& output_column_definitions) {
-  // Used to track the duration of groupby columns writing, which is done for the first aggregate column only. Value is
-  // subtracted from the runtime of this method (thus, it is either non-zero for the first aggregate column or zero for
-  // the remaining columns).
-  // auto excluded_time = std::chrono::nanoseconds{};
-  // auto timer = Timer{};
-
   // Retrieve type information from the aggregation traits.
   using aggregate_type = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
   auto result_type = WindowFunctionTraits<ColumnDataType, aggregate_function>::RESULT_TYPE;
@@ -1625,14 +1605,8 @@ void AggregateDYOD::_write_aggregate_output(ColumnID aggregate_index, ContextsPe
 
   // Before writing the first aggregate column, write all group keys into the respective columns.
   if (aggregate_index == 0) {
-    // auto groupby_columns_writing_timer = Timer{};
     dyod_write_output_group_columns(input_table, _aggregates, _groupby_column_ids, results, output_column_definitions,
                                     intermediate_result);
-    // const auto groupby_columns_writing_runtime = groupby_columns_writing_timer.lap();
-    // DebugAssert(_groupby_columns_writing_duration == std::chrono::nanoseconds{0},
-    //             "_groupby_columns_writing_duration() was apparently called more than once.");
-    // _groupby_columns_writing_duration = groupby_columns_writing_runtime;
-    // excluded_time = groupby_columns_writing_runtime;
   }
 
   constexpr auto NEEDS_NULL =
@@ -1677,8 +1651,6 @@ void AggregateDYOD::_write_aggregate_output(ColumnID aggregate_index, ContextsPe
     }
     intermediate_result[segment_id][output_column_id] = output_segment;
   }
-
-  // _aggregate_columns_writing_duration += timer.lap() - excluded_time;
 }
 
 template <typename AggregateKey>

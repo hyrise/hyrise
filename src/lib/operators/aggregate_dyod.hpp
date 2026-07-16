@@ -201,20 +201,7 @@ class AggregateDYOD : public AbstractAggregateOperator {
                                                                        const WindowFunction aggregate_function,
                                                                        std::atomic_size_t& expected_result_size) const;
 
-  // Data structure used to gather intermediate results of grouping and aggregation. This data structure stores both
-  // the PosLists for group-by columns as well as the materialized aggregate results that are later returned as
-  // EntirePosList ReferenceSegments in the output table.
-  // std::vector<Segments> _intermediate_result;
-
-  // std::vector<std::shared_ptr<BaseValueSegment>> _groupby_segments;
-  // ContextsPerColumn _contexts_per_column;
   bool _has_aggregate_functions;
-
-  // std::atomic_size_t _expected_result_size;
-  // bool _use_immediate_key_shortcut{};
-
-  // std::chrono::nanoseconds _groupby_columns_writing_duration{};
-  // std::chrono::nanoseconds _aggregate_columns_writing_duration{};
 };
 
 }  // namespace hyrise
@@ -227,18 +214,4 @@ struct hash<hyrise::DYODEmptyAggregateKey> {
   }
 };
 
-// template <>
-// struct hash<hyrise::DYODAggregateKeySmallVector> {
-//   size_t operator()(const hyrise::DYODAggregateKeySmallVector& key) const {
-//     return boost::hash_range(key.begin(), key.end());
-//   }
-// };
-
-// template <>
-// struct hash<std::array<hyrise::DYODAggregateKeyEntry, 2>> {
-//   // gcc9 doesn't support templating by `int N` here.
-//   size_t operator()(const std::array<hyrise::DYODAggregateKeyEntry, 2>& key) const {
-//     return boost::hash_range(key.begin(), key.end());
-//   }
-// };
 }  // namespace std
