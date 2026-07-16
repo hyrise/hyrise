@@ -18,6 +18,7 @@
 #include "operators/join_nested_loop.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
+#include "scheduler/node_queue_scheduler.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/table.hpp"
 #include "storage/value_segment.hpp"
@@ -912,6 +913,30 @@ TYPED_TEST(OperatorsAggregateTest, StringVariations) {
   const auto values_sorted = std::set<pmr_string>(values.begin(), values.end());
   const auto result_values_sorted = std::set<pmr_string>(result_values.begin(), result_values.end());
   EXPECT_EQ(values_sorted, result_values_sorted);
+}
+
+TYPED_TEST(OperatorsAggregateTest, MultiThreadingMin) {
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+  test_output<TypeParam>(this->_table_wrapper_1_1, {{ColumnID{1}, WindowFunction::Min}}, {ColumnID{0}},
+                         "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/min.tbl");
+}
+
+TYPED_TEST(OperatorsAggregateTest, MultiThreadingAny) {
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+  test_output<TypeParam>(this->_table_wrapper_1_0_null, {{ColumnID{0}, WindowFunction::Any}}, {ColumnID{1}},
+                         "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_0agg/result_any_null.tbl", false);
+}
+
+TYPED_TEST(OperatorsAggregateTest, MultiThreadingCount) {
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+  test_output<TypeParam>(this->_table_wrapper_1_1, {{ColumnID{1}, WindowFunction::Count}}, {ColumnID{0}},
+                         "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/count.tbl");
+}
+
+TYPED_TEST(OperatorsAggregateTest, MultiThreadingCountDistinct) {
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+  test_output<TypeParam>(this->_table_wrapper_1_1, {{ColumnID{1}, WindowFunction::CountDistinct}}, {ColumnID{0}},
+                         "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/count_distinct.tbl");
 }
 
 }  // namespace hyrise

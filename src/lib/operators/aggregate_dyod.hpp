@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <memory>
 #include <optional>
 #include <string>
@@ -30,7 +31,8 @@ using GroupIDMap = std::unordered_map<GroupKey, GroupID, boost::hash<GroupKey>>;
 class AbstractAggregateVector {
  public:
   virtual ~AbstractAggregateVector() = default;
-  virtual void push_back_default() = 0;
+  virtual void grow_if_necessary(size_t size) = 0;
+  virtual void merge(AbstractAggregateVector& other) = 0;
 
   size_t count(size_t index) const {
     return _counts[index];
@@ -42,6 +44,10 @@ class AbstractAggregateVector {
 
   const std::vector<size_t>& counts() const {
     return _counts;
+  }
+
+  GroupID group_count() const {
+    return _counts.size();
   }
 
  protected:
@@ -73,13 +79,68 @@ struct TypedAggregateVector : AbstractAggregateVector {
     return _aggregates;
   }
 
-  void push_back_default() override {
-    _aggregates.emplace_back();
-    _counts.emplace_back();
+  void grow_if_necessary(size_t size) override {
+    if (_counts.size() < size) {
+      _counts.resize(size);
+      _aggregates.resize(size);
+    }
+  }
+
+  void merge(AbstractAggregateVector& other) override {
+    auto& typed_other = static_cast<TypedAggregateVector<ColumnDataType, aggregate_function>&>(other);
+    _merge(typed_other);
   }
 
  protected:
   pmr_vector<AccumulatorDataType> _aggregates;
+
+  void _merge(TypedAggregateVector<ColumnDataType, aggregate_function>& other) {
+    const auto other_group_count = other.group_count();
+    const auto max_group_count = std::max(group_count(), other_group_count);
+
+    _aggregates.resize(max_group_count);
+    _counts.resize(max_group_count);
+
+    if constexpr (aggregate_function == WindowFunction::CountDistinct) {
+      auto& other_values = other.values();
+
+      for (auto group_id = GroupID{0}; group_id < max_group_count; ++group_id) {
+        if (group_id < other_group_count) {
+          _aggregates[group_id].merge(other_values[group_id]);
+        }
+      }
+    } else if constexpr (aggregate_function == WindowFunction::Count) {
+      const auto& other_counts = other.counts();
+
+      for (auto group_id = GroupID{0}; group_id < max_group_count; ++group_id) {
+        if (group_id < other_group_count && other_counts[group_id] > 0) {
+          _counts[group_id] += other_counts[group_id];
+        }
+      }
+    } else if constexpr (aggregate_function == WindowFunction::Any) {
+      const auto& other_values = other.values();
+      const auto& other_counts = other.counts();
+
+      for (auto group_id = GroupID{0}; group_id < max_group_count; ++group_id) {
+        if (_counts[group_id] == 0 && group_id < other_group_count && other_counts[group_id] > 0) {
+          _aggregates[group_id] = other_values[group_id];
+          _counts[group_id] += other_counts[group_id];
+        }
+      }
+    } else {
+      auto aggregator =
+          WindowFunctionBuilder<AggregateDataType, AggregateDataType, aggregate_function>().get_aggregate_function();
+      const auto& other_values = other.values();
+      const auto& other_counts = other.counts();
+
+      for (auto group_id = GroupID{0}; group_id < max_group_count; ++group_id) {
+        if (group_id < other_group_count && other_counts[group_id] > 0) {
+          aggregator(other_values[group_id], _counts[group_id], _aggregates[group_id]);
+          _counts[group_id] += other_counts[group_id];
+        }
+      }
+    }
+  }
 };
 
 class AggregateVectors : public Noncopyable {
@@ -94,7 +155,6 @@ class AggregateVectors : public Noncopyable {
   auto end() const;
 
  protected:
-  const std::vector<std::shared_ptr<WindowFunctionExpression>>& _aggregates;
   std::vector<std::unique_ptr<AbstractAggregateVector>> _vectors;
 };
 
@@ -140,8 +200,8 @@ class AggregateDYOD : public AbstractAggregateOperator {
  protected:
   std::vector<DataType> _aggregate_data_types;
   GroupIDMap _group_id_map;
+  std::mutex _group_id_map_mutex;
   std::vector<GroupKey> _group_keys;
-  std::unique_ptr<AggregateVectors> _aggregate_vectors;
 
   std::shared_ptr<const Table> _on_execute() override;
 
@@ -156,53 +216,54 @@ class AggregateDYOD : public AbstractAggregateOperator {
 
   void _prepare_aggregate_vectors();
 
-  std::shared_ptr<Table> _write_output_table();
+  std::shared_ptr<Table> _write_output_table(AggregateVectors& aggregate_vectors);
 
   template <typename ColumnDataType>
   std::shared_ptr<AbstractSegment> _write_groupby_segment(size_t groupby_column_index);
 
   template <typename ColumnDataType, WindowFunction aggregate_function>
-  std::shared_ptr<AbstractSegment> _write_aggregate_segment(size_t aggregate_index);
+  std::shared_ptr<AbstractSegment> _write_aggregate_segment(
+      TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector, bool is_nullable);
 
   template <typename ColumnDataType, WindowFunction aggregate_function>
   std::shared_ptr<AbstractSegment> _write_avg_aggregate_segment(
-      size_t aggregate_index, TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector);
+      TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector);
 
   template <typename ColumnDataType, WindowFunction aggregate_function>
   std::shared_ptr<AbstractSegment> _write_count_aggregate_segment(
-      size_t aggregate_index, TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector);
+      TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector);
 
   template <typename ColumnDataType, WindowFunction aggregate_function>
   std::shared_ptr<AbstractSegment> _write_count_distinct_aggregate_segment(
-      size_t aggregate_index, TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector);
+      TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector);
 
   template <typename ColumnDataType, WindowFunction aggregate_function>
   std::shared_ptr<AbstractSegment> _write_default_aggregate_segment(
-      size_t aggregate_index, TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector);
+      TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector, bool is_nullable);
 
-  GroupID _group_id(const GroupKey& group_key);
+  GroupID _group_id(const GroupKey& group_key, AggregateVectors& aggregate_vectors);
 
   GroupID _group_count();
 
-  std::vector<GroupID> _group_ids_for_chunk(const Chunk& chunk);
+  std::vector<GroupID> _group_ids_for_chunk(const Chunk& chunk, AggregateVectors& aggregate_vectors);
 
-  void _aggregate_chunk(const std::shared_ptr<const Chunk> chunk);
+  void _aggregate_chunk(AggregateVectors& state, const std::shared_ptr<const Chunk> chunk);
 
   template <typename ColumnDataType, WindowFunction aggregate_function>
-  void _aggregate_segment(size_t aggregate_index, const AbstractSegment& segment,
-                          const std::vector<GroupID>& group_ids);
+  void _aggregate_segment(TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector,
+                          const AbstractSegment& segment, const std::vector<GroupID>& group_ids);
 
   template <typename ColumnDataType, WindowFunction aggregate_function>
     requires(aggregate_function == WindowFunction::CountDistinct)
-  void _aggregate_segment(size_t aggregate_index, const AbstractSegment& segment,
-                          const std::vector<GroupID>& group_ids);
+  void _aggregate_segment(TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector,
+                          const AbstractSegment& segment, const std::vector<GroupID>& group_ids);
 
   template <typename ColumnDataType, WindowFunction aggregate_function>
     requires(aggregate_function == WindowFunction::Any)
-  void _aggregate_segment(size_t aggregate_index, const AbstractSegment& segment,
-                          const std::vector<GroupID>& group_ids);
+  void _aggregate_segment(TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector,
+                          const AbstractSegment& segment, const std::vector<GroupID>& group_ids);
 
-  void _aggregate_count_star(size_t aggregate_index, const std::vector<GroupID>& group_ids);
+  void _aggregate_count_star(AbstractAggregateVector& state, const std::vector<GroupID>& group_ids);
 
   DataType _aggregate_data_type(size_t aggregate_index);
 

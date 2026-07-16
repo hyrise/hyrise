@@ -131,6 +131,10 @@ class OperatorSharedState : public Noncopyable {
     return worker_states;
   }
 
+  size_t size() {
+    return _worker_states.size();
+  }
+
  protected:
   std::function<std::unique_ptr<WorkerState>()> _factory;
   std::vector<std::unique_ptr<WorkerState>> _worker_states;
