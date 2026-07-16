@@ -63,26 +63,26 @@ struct TypedAggregateVector : AbstractAggregateVector {
 
  public:
   AccumulatorDataType& operator[](size_t index) {
-    return _aggregates[index];
+    return _values[index];
   }
 
   const AccumulatorDataType& operator[](size_t index) const {
-    return _aggregates[index];
+    return _values[index];
   }
 
   // The mutable accessor is needed because aggregator functions mutate values directly.
   pmr_vector<AccumulatorDataType>& values() {
-    return _aggregates;
+    return _values;
   }
 
   const pmr_vector<AccumulatorDataType>& values() const {
-    return _aggregates;
+    return _values;
   }
 
   void grow_if_necessary(size_t size) override {
     if (_counts.size() < size) {
       _counts.resize(size);
-      _aggregates.resize(size);
+      _values.resize(size);
     }
   }
 
@@ -92,13 +92,13 @@ struct TypedAggregateVector : AbstractAggregateVector {
   }
 
  protected:
-  pmr_vector<AccumulatorDataType> _aggregates;
+  pmr_vector<AccumulatorDataType> _values;
 
   void _merge(TypedAggregateVector<ColumnDataType, aggregate_function>& other) {
     const auto other_group_count = other.group_count();
     const auto max_group_count = std::max(group_count(), other_group_count);
 
-    _aggregates.resize(max_group_count);
+    _values.resize(max_group_count);
     _counts.resize(max_group_count);
 
     if constexpr (aggregate_function == WindowFunction::CountDistinct) {
@@ -106,7 +106,7 @@ struct TypedAggregateVector : AbstractAggregateVector {
 
       for (auto group_id = GroupID{0}; group_id < max_group_count; ++group_id) {
         if (group_id < other_group_count) {
-          _aggregates[group_id].merge(other_values[group_id]);
+          _values[group_id].merge(other_values[group_id]);
         }
       }
     } else if constexpr (aggregate_function == WindowFunction::Count) {
@@ -123,7 +123,7 @@ struct TypedAggregateVector : AbstractAggregateVector {
 
       for (auto group_id = GroupID{0}; group_id < max_group_count; ++group_id) {
         if (_counts[group_id] == 0 && group_id < other_group_count && other_counts[group_id] > 0) {
-          _aggregates[group_id] = other_values[group_id];
+          _values[group_id] = other_values[group_id];
           _counts[group_id] += other_counts[group_id];
         }
       }
@@ -135,7 +135,7 @@ struct TypedAggregateVector : AbstractAggregateVector {
 
       for (auto group_id = GroupID{0}; group_id < max_group_count; ++group_id) {
         if (group_id < other_group_count && other_counts[group_id] > 0) {
-          aggregator(other_values[group_id], _counts[group_id], _aggregates[group_id]);
+          aggregator(other_values[group_id], _counts[group_id], _values[group_id]);
           _counts[group_id] += other_counts[group_id];
         }
       }
