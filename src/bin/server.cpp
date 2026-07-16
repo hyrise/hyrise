@@ -66,7 +66,7 @@ void generate_benchmark_data(std::string argument_string) {
 
   boost::split(benchmark_data_config, argument_string, boost::is_any_of(":"), boost::token_compress_on);
   // NOLINTEND(clang-analyzer-security.ArrayBound)
-  
+
   Assert(benchmark_data_config.size() == 2,
          "Malformed input for benchmark data generation. Expecting <benchmark name>:<scale factor>.");
 
