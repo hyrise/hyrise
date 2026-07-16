@@ -330,7 +330,7 @@ typename Results::reference get_or_add_result(CacheResultIds /*cache_result_ids*
     // As described above, we may store the index into the results vector in the AggregateKey. If the AggregateKey
     // contains multiple entries, we use the first one. As such, we store a (non-owning, raw) pointer to either the only
     // or the first entry in first_key_entry. We need a raw pointer as a reference cannot be null or reset.
-    // NOLINTNEXTLINE(misc-const-correctness)
+    // NOLINTNEXTLINE(misc-const-correctness): False positive.
     AggregateKeyEntry* first_key_entry = nullptr;
     if constexpr (std::is_same_v<AggregateKey, AggregateKeyEntry>) {
       first_key_entry = &key;
