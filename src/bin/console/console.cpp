@@ -1063,7 +1063,7 @@ void Console::_rollback() {
 // GNU readline interface to our commands
 
 char** Console::_command_completion(const char* text, const int start, const int /*end*/) {
-  // NOLINTNEXTLINE(misc-const-correctness)
+  // NOLINTNEXTLINE(misc-const-correctness): False positive.
   char** completion_matches = nullptr;
 
   const auto input = std::string{rl_line_buffer};
