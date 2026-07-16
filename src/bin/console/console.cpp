@@ -751,9 +751,10 @@ int Console::_visualize(const std::string& input) {
 
   auto input_words = std::vector<std::string>{};
 
-  // NOLINTNEXTLINE(clang-analyzer-security.ArrayBound)
+  // NOLINTBEGIN(clang-analyzer-security.ArrayBound):
   // Known false positive (https://github.com/llvm/llvm-project/issues/153764#issuecomment-3265056719).
   boost::algorithm::split(input_words, input, boost::is_any_of(" \n"));
+  // NOLINTEND(clang-analyzer-security.ArrayBound)
 
   constexpr auto EXEC = "exec";
   constexpr auto NOEXEC = "noexec";
