@@ -11,6 +11,8 @@
 
 #include <boost/container_hash/hash.hpp>
 
+#include <oneapi/tbb/concurrent_unordered_map.h>
+
 #include "abstract_aggregate_operator.hpp"
 #include "abstract_read_only_operator.hpp"
 #include "aggregate/window_function_traits.hpp"
@@ -26,7 +28,7 @@ namespace hyrise {
 using GroupID = size_t;
 using GroupKeyEntry = std::vector<std::byte>;
 using GroupKey = std::vector<GroupKeyEntry>;
-using GroupIDMap = std::unordered_map<GroupKey, GroupID, boost::hash<GroupKey>>;
+using GroupIDMap = tbb::concurrent_unordered_map<GroupKey, GroupID, boost::hash<GroupKey>>;
 
 class AbstractAggregateVector {
  public:
@@ -201,7 +203,7 @@ class AggregateDYOD : public AbstractAggregateOperator {
   std::vector<DataType> _aggregate_data_types;
   GroupIDMap _group_id_map;
   std::mutex _group_id_map_mutex;
-  std::vector<GroupKey> _group_keys;
+  tbb::concurrent_vector<GroupKey> _group_keys;
 
   std::shared_ptr<const Table> _on_execute() override;
 

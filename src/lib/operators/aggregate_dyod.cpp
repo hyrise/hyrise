@@ -422,20 +422,25 @@ std::shared_ptr<AbstractSegment> AggregateDYOD::_write_default_aggregate_segment
 }
 
 GroupID AggregateDYOD::_group_id(const GroupKey& group_key, AggregateVectors& aggregate_vectors) {
-  // TODO(till): Replace with concurrent hash map
+  auto it = _group_id_map.find(group_key);
+  if (it != _group_id_map.end()) {
+    const auto group_id = it->second;
+    for (auto& aggregate_vector : aggregate_vectors) {
+      aggregate_vector.grow_if_necessary(group_id + 1);
+    }
+    return group_id;
+  }
+
+  // We need to lock here because multiple threads may attempt to insert the same group key concurrently. 
   std::lock_guard lock(_group_id_map_mutex);
-  auto [it, inserted] = _group_id_map.try_emplace(group_key, _group_count());
-  const auto group_id = it->second;
+  auto [insert_it, inserted] = _group_id_map.insert({group_key, _group_count()});
+  const auto group_id = insert_it->second;
 
   if (inserted) {
-    // Store the newly inserted group key for later retrieval.
-    // TODO(anyone): Consider storing group key entries by column, not by row
     _group_keys.push_back(group_key);
   }
 
   for (auto& aggregate_vector : aggregate_vectors) {
-    // We might have to resize the vectors even if the group key was already present in
-    // the map, because it might have been inserted by another worker.
     aggregate_vector.grow_if_necessary(group_id + 1);
   }
 
@@ -443,7 +448,7 @@ GroupID AggregateDYOD::_group_id(const GroupKey& group_key, AggregateVectors& ag
 }
 
 GroupID AggregateDYOD::_group_count() {
-  return _group_id_map.size();
+  return _group_keys.size();
 }
 
 void AggregateDYOD::_aggregate_chunk(AggregateVectors& aggregate_vectors, const std::shared_ptr<const Chunk> chunk) {
