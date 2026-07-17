@@ -1164,16 +1164,12 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
 template <typename AggregateKey>
 void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std::shared_ptr<const Table>& input_table,
                                std::atomic_size_t& expected_result_size) {
-  // auto& step_performance_data = dynamic_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
-  // auto timer = Timer{};
-
   /**
    * PARTITIONING STEP
    */
   bool use_immediate_key_shortcut = false;
   auto keys_per_chunk =
       _partition_by_groupby_keys<AggregateKey>(input_table, expected_result_size, use_immediate_key_shortcut);
-  // step_performance_data.set_step_runtime(OperatorSteps::GroupByKeyPartitioning, timer.lap());
 
   /**
    * AGGREGATION STEP
