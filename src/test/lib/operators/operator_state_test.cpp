@@ -25,10 +25,13 @@ constexpr static auto TASK_COUNT_LOW = size_t{4};
 
 class TestWorkerState : public Noncopyable {
  public:
+  explicit TestWorkerState(uint32_t initial_value = 0) : value(initial_value) {}
+
   void merge(TestWorkerState& other) {
     task_count += other.task_count;
   }
 
+  uint32_t value;
   size_t task_count{0};
 };
 
@@ -66,6 +69,18 @@ TEST_F(OperatorSharedStateTest, ExecuteSingleThreaded) {
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 
   test_state_output(operator_state, TASK_COUNT_HIGH, 1);
+}
+
+TEST_F(OperatorSharedStateTest, ConstructorArguments) {
+  auto operator_state = OperatorSharedState<TestWorkerState>{5};
+  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{std::make_shared<JobTask>([&] {
+    operator_state.current_worker_state();
+  })};
+
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+  const auto& merged_state = operator_state.merge_worker_states();
+
+  EXPECT_EQ(merged_state.value, 5);
 }
 
 TEST_F(OperatorSharedStateTest, MoreTasksThanWorkers) {

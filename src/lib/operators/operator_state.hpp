@@ -55,7 +55,6 @@ namespace hyrise {
 
 template <typename WorkerState>
 concept ValidWorkerState = std::derived_from<WorkerState, Noncopyable> && requires(WorkerState state) {
-  WorkerState();                                 // WorkerState has default constructor for use with `std::make_unique`.
   { state.merge(state) } -> std::same_as<void>;  // WorkerState has `merge` method that takes same type, returns void.
 };
 
@@ -63,7 +62,16 @@ template <ValidWorkerState WorkerState>
 class OperatorSharedState : public Noncopyable {
  public:
   // Initializes a wrapper that is able to hold state for each worker.
-  OperatorSharedState() {
+  template <typename... Args>
+  explicit OperatorSharedState(Args&&... args) {
+    _factory = [args_tuple = std::make_tuple(std::forward<Args>(args)...)]() {
+      return std::apply(
+          [](const auto&... args) {
+            return std::make_unique<WorkerState>(args...);
+          },
+          args_tuple);
+    };
+
     // Reserve one slot for the main thread if the scheduler is used.
     const auto scheduler = std::dynamic_pointer_cast<NodeQueueScheduler>(Hyrise::get().scheduler());
     _main_thread_worker_id = scheduler ? static_cast<WorkerID>(scheduler->workers().size()) : WorkerID{0};
@@ -83,7 +91,7 @@ class OperatorSharedState : public Noncopyable {
     // Create worker states only lazily because they could be large and we do not want to waste memory if we only have a
     // few jobs, but many workers.
     if (!_worker_states[worker_id]) {
-      _worker_states[worker_id] = std::make_unique<WorkerState>();
+      _worker_states[worker_id] = _factory();
     }
     return *_worker_states[worker_id];
   }
@@ -123,7 +131,12 @@ class OperatorSharedState : public Noncopyable {
     return worker_states;
   }
 
+  size_t size() {
+    return _worker_states.size();
+  }
+
  protected:
+  std::function<std::unique_ptr<WorkerState>()> _factory;
   std::vector<std::unique_ptr<WorkerState>> _worker_states;
   WorkerID _main_thread_worker_id;
 };
