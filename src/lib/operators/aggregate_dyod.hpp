@@ -10,8 +10,7 @@
 #include <vector>
 
 #include <boost/container_hash/hash.hpp>
-
-#include <oneapi/tbb/concurrent_unordered_map.h>
+#include <oneapi/tbb/concurrent_unordered_map.h>  // NOLINT(build/include_order)
 
 #include "abstract_aggregate_operator.hpp"
 #include "abstract_read_only_operator.hpp"

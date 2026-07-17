@@ -431,13 +431,16 @@ GroupID AggregateDYOD::_group_id(const GroupKey& group_key, AggregateVectors& ag
     return group_id;
   }
 
-  // We need to lock here because multiple threads may attempt to insert the same group key concurrently. 
-  std::lock_guard lock(_group_id_map_mutex);
-  auto [insert_it, inserted] = _group_id_map.insert({group_key, _group_count()});
-  const auto group_id = insert_it->second;
+  // We need to lock here because multiple threads may attempt to insert the same group key concurrently.
+  GroupID group_id;
+  {
+    std::lock_guard lock(_group_id_map_mutex);
+    auto [insert_it, inserted] = _group_id_map.insert({group_key, _group_count()});
+    group_id = insert_it->second;
 
-  if (inserted) {
-    _group_keys.push_back(group_key);
+    if (inserted) {
+      _group_keys.push_back(group_key);
+    }
   }
 
   for (auto& aggregate_vector : aggregate_vectors) {
