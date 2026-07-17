@@ -219,27 +219,33 @@ class AggregateDYOD : public AbstractAggregateOperator {
   std::shared_ptr<Table> _write_output_table(AggregateVectors& aggregate_vectors);
 
   template <typename ColumnDataType>
-  std::shared_ptr<AbstractSegment> _write_groupby_segment(size_t groupby_column_index);
+  std::shared_ptr<AbstractSegment> _write_groupby_segment(size_t groupby_column_index, GroupID start_group_id,
+                                                          GroupID end_group_id);
 
   template <typename ColumnDataType, WindowFunction aggregate_function>
   std::shared_ptr<AbstractSegment> _write_aggregate_segment(
-      TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector, bool is_nullable);
+      TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector, bool is_nullable,
+      GroupID start_group_id, GroupID end_group_id);
 
   template <typename ColumnDataType, WindowFunction aggregate_function>
   std::shared_ptr<AbstractSegment> _write_avg_aggregate_segment(
-      TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector);
+      TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector, GroupID start_group_id,
+      GroupID end_group_id);
 
   template <typename ColumnDataType, WindowFunction aggregate_function>
   std::shared_ptr<AbstractSegment> _write_count_aggregate_segment(
-      TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector);
+      TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector, GroupID start_group_id,
+      GroupID end_group_id);
 
   template <typename ColumnDataType, WindowFunction aggregate_function>
   std::shared_ptr<AbstractSegment> _write_count_distinct_aggregate_segment(
-      TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector);
+      TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector, GroupID start_group_id,
+      GroupID end_group_id);
 
   template <typename ColumnDataType, WindowFunction aggregate_function>
   std::shared_ptr<AbstractSegment> _write_default_aggregate_segment(
-      TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector, bool is_nullable);
+      TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector, bool is_nullable,
+      GroupID start_group_id, GroupID end_group_id);
 
   GroupID _group_id(const GroupKey& group_key, AggregateVectors& aggregate_vectors);
 
