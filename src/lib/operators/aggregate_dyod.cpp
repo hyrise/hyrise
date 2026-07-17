@@ -1262,125 +1262,137 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std
         }
       }
     } else {
-      auto aggregate_idx = ColumnID{0};
-      for (const auto& aggregate : _aggregates) {
-        /**
-         * Special COUNT(*) implementation.
-         * Because COUNT(*) does not have a specific target column, we use the maximum ColumnID. We then go through the
-         * `keys_per_chunk` map and count the occurrences of each group key. The results are saved in the regular
-         * `aggregate_count` variable so that we do not need a specific output logic for COUNT(*).
-         */
+      const auto aggregate_count = _aggregates.size();
 
-        const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
-        const auto input_column_id = pqp_column.column_id;
+      auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+      jobs.reserve(aggregate_count);
 
-        if (input_column_id == INVALID_COLUMN_ID) {
-          Assert(aggregate->window_function == WindowFunction::Count, "Only COUNT may have an invalid ColumnID.");
-          auto context =
-              std::static_pointer_cast<DYODAggregateContext<CountColumnType, WindowFunction::Count, AggregateKey>>(
-                  contexts_per_column[aggregate_idx]);
+      for (auto aggregate_idx = ColumnID{0}; aggregate_idx < aggregate_count; ++aggregate_idx) {
+        const auto perform_aggregation = [&, aggregate_idx]() {
+          const auto aggregate = _aggregates[aggregate_idx];
+          /**
+           * Special COUNT(*) implementation.
+           * Because COUNT(*) does not have a specific target column, we use the maximum ColumnID. We then go through the
+           * `keys_per_chunk` map and count the occurrences of each group key. The results are saved in the regular
+           * `aggregate_count` variable so that we do not need a specific output logic for COUNT(*).
+           */
 
-          auto& result_ids = *context->result_ids;
-          auto& results = context->results;
+          const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
+          const auto input_column_id = pqp_column.column_id;
 
-          if constexpr (std::is_same_v<AggregateKey, DYODEmptyAggregateKey>) {
-            // Not grouped by anything, simply count the number of rows.
-            results.resize(1);
-            results[0].aggregate_count += input_chunk_size;
+          if (input_column_id == INVALID_COLUMN_ID) {
+            Assert(aggregate->window_function == WindowFunction::Count, "Only COUNT may have an invalid ColumnID.");
+            auto context =
+                std::static_pointer_cast<DYODAggregateContext<CountColumnType, WindowFunction::Count, AggregateKey>>(
+                    contexts_per_column[aggregate_idx]);
 
-            // We need to set any RowID because the default value (NULL_ROW_ID) would later be skipped. As we are not
-            // reconstructing the GROUP BY values later, the exact value of this row_id does not matter, as long as it
-            // not NULL_ROW_ID.
-            results[0].row_id = RowID{ChunkID{0}, ChunkOffset{0}};
-          } else {
-            // Count occurrences for each group key -  If we have more than one aggregate function (and thus more than
-            // one context), it makes sense to cache the results indexes, see visit_and_get_result for details.
-            if (contexts_per_column.size() > 1 || use_immediate_key_shortcut) {
-              for (auto chunk_offset = ChunkOffset{0}; chunk_offset < input_chunk_size; ++chunk_offset) {
-                // Use CacheResultIds==true_type if we have more than one group by column or if the cached result ids
-                // have been written by the immediate key shortcut
-                auto& result =
-                    visit_and_get_result(std::true_type{}, result_ids, results,
-                                         dyod_get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
-                                         RowID{chunk_id, chunk_offset});
-                ++result.aggregate_count;
-              }
+            auto& result_ids = *context->result_ids;
+            auto& results = context->results;
+
+            if constexpr (std::is_same_v<AggregateKey, DYODEmptyAggregateKey>) {
+              // Not grouped by anything, simply count the number of rows.
+              results.resize(1);
+              results[0].aggregate_count += input_chunk_size;
+
+              // We need to set any RowID because the default value (NULL_ROW_ID) would later be skipped. As we are not
+              // reconstructing the GROUP BY values later, the exact value of this row_id does not matter, as long as it
+              // not NULL_ROW_ID.
+              results[0].row_id = RowID{ChunkID{0}, ChunkOffset{0}};
             } else {
-              for (auto chunk_offset = ChunkOffset{0}; chunk_offset < input_chunk_size; ++chunk_offset) {
-                auto& result =
-                    visit_and_get_result(std::false_type{}, result_ids, results,
-                                         dyod_get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
-                                         RowID{chunk_id, chunk_offset});
-                ++result.aggregate_count;
+              // Count occurrences for each group key -  If we have more than one aggregate function (and thus more than
+              // one context), it makes sense to cache the results indexes, see visit_and_get_result for details.
+              if (contexts_per_column.size() > 1 || use_immediate_key_shortcut) {
+                for (auto chunk_offset = ChunkOffset{0}; chunk_offset < input_chunk_size; ++chunk_offset) {
+                  // Use CacheResultIds==true_type if we have more than one group by column or if the cached result ids
+                  // have been written by the immediate key shortcut
+                  auto& result =
+                      visit_and_get_result(std::true_type{}, result_ids, results,
+                                           dyod_get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
+                                           RowID{chunk_id, chunk_offset});
+                  ++result.aggregate_count;
+                }
+              } else {
+                for (auto chunk_offset = ChunkOffset{0}; chunk_offset < input_chunk_size; ++chunk_offset) {
+                  auto& result =
+                      visit_and_get_result(std::false_type{}, result_ids, results,
+                                           dyod_get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
+                                           RowID{chunk_id, chunk_offset});
+                  ++result.aggregate_count;
+                }
               }
             }
+
+            return;
           }
 
-          ++aggregate_idx;
-          continue;
-        }
+          const auto abstract_segment = chunk_in->get_segment(input_column_id);
+          const auto data_type = input_table->column_data_type(input_column_id);
 
-        const auto abstract_segment = chunk_in->get_segment(input_column_id);
-        const auto data_type = input_table->column_data_type(input_column_id);
-
-        /*
+          /*
         Invoke correct aggregator for each segment
         */
 
-        resolve_data_type(data_type, [&, aggregate](auto type) {
-          using ColumnDataType = typename decltype(type)::type;
+          resolve_data_type(data_type, [&, aggregate](auto type) {
+            using ColumnDataType = typename decltype(type)::type;
 
-          switch (aggregate->window_function) {
-            case WindowFunction::Min:
-              _aggregate_segment<ColumnDataType, WindowFunction::Min, AggregateKey>(
-                  chunk_id, aggregate_idx, *abstract_segment, keys_per_chunk, contexts_per_column,
-                  use_immediate_key_shortcut);
-              break;
-            case WindowFunction::Max:
-              _aggregate_segment<ColumnDataType, WindowFunction::Max, AggregateKey>(
-                  chunk_id, aggregate_idx, *abstract_segment, keys_per_chunk, contexts_per_column,
-                  use_immediate_key_shortcut);
-              break;
-            case WindowFunction::Sum:
-              _aggregate_segment<ColumnDataType, WindowFunction::Sum, AggregateKey>(
-                  chunk_id, aggregate_idx, *abstract_segment, keys_per_chunk, contexts_per_column,
-                  use_immediate_key_shortcut);
-              break;
-            case WindowFunction::Avg:
-              _aggregate_segment<ColumnDataType, WindowFunction::Avg, AggregateKey>(
-                  chunk_id, aggregate_idx, *abstract_segment, keys_per_chunk, contexts_per_column,
-                  use_immediate_key_shortcut);
-              break;
-            case WindowFunction::Count:
-              _aggregate_segment<ColumnDataType, WindowFunction::Count, AggregateKey>(
-                  chunk_id, aggregate_idx, *abstract_segment, keys_per_chunk, contexts_per_column,
-                  use_immediate_key_shortcut);
-              break;
-            case WindowFunction::CountDistinct:
-              _aggregate_segment<ColumnDataType, WindowFunction::CountDistinct, AggregateKey>(
-                  chunk_id, aggregate_idx, *abstract_segment, keys_per_chunk, contexts_per_column,
-                  use_immediate_key_shortcut);
-              break;
-            case WindowFunction::StandardDeviationSample:
-              _aggregate_segment<ColumnDataType, WindowFunction::StandardDeviationSample, AggregateKey>(
-                  chunk_id, aggregate_idx, *abstract_segment, keys_per_chunk, contexts_per_column,
-                  use_immediate_key_shortcut);
-              break;
-            case WindowFunction::Any:
-              // ANY is a pseudo-function and is handled by `dyod_get_aggregate_key`.
-              break;
-            case WindowFunction::CumeDist:
-            case WindowFunction::DenseRank:
-            case WindowFunction::PercentRank:
-            case WindowFunction::Rank:
-            case WindowFunction::RowNumber:
-              Fail(std::format("Unsupported aggregate function '{}'.",
-                               window_function_to_string.left.at(aggregate->window_function)));
-          }
-        });
-
-        ++aggregate_idx;
+            switch (aggregate->window_function) {
+              case WindowFunction::Min:
+                _aggregate_segment<ColumnDataType, WindowFunction::Min, AggregateKey>(
+                    chunk_id, aggregate_idx, *abstract_segment, keys_per_chunk, contexts_per_column,
+                    use_immediate_key_shortcut);
+                break;
+              case WindowFunction::Max:
+                _aggregate_segment<ColumnDataType, WindowFunction::Max, AggregateKey>(
+                    chunk_id, aggregate_idx, *abstract_segment, keys_per_chunk, contexts_per_column,
+                    use_immediate_key_shortcut);
+                break;
+              case WindowFunction::Sum:
+                _aggregate_segment<ColumnDataType, WindowFunction::Sum, AggregateKey>(
+                    chunk_id, aggregate_idx, *abstract_segment, keys_per_chunk, contexts_per_column,
+                    use_immediate_key_shortcut);
+                break;
+              case WindowFunction::Avg:
+                _aggregate_segment<ColumnDataType, WindowFunction::Avg, AggregateKey>(
+                    chunk_id, aggregate_idx, *abstract_segment, keys_per_chunk, contexts_per_column,
+                    use_immediate_key_shortcut);
+                break;
+              case WindowFunction::Count:
+                _aggregate_segment<ColumnDataType, WindowFunction::Count, AggregateKey>(
+                    chunk_id, aggregate_idx, *abstract_segment, keys_per_chunk, contexts_per_column,
+                    use_immediate_key_shortcut);
+                break;
+              case WindowFunction::CountDistinct:
+                _aggregate_segment<ColumnDataType, WindowFunction::CountDistinct, AggregateKey>(
+                    chunk_id, aggregate_idx, *abstract_segment, keys_per_chunk, contexts_per_column,
+                    use_immediate_key_shortcut);
+                break;
+              case WindowFunction::StandardDeviationSample:
+                _aggregate_segment<ColumnDataType, WindowFunction::StandardDeviationSample, AggregateKey>(
+                    chunk_id, aggregate_idx, *abstract_segment, keys_per_chunk, contexts_per_column,
+                    use_immediate_key_shortcut);
+                break;
+              case WindowFunction::Any:
+                // ANY is a pseudo-function and is handled by `dyod_get_aggregate_key`.
+                break;
+              case WindowFunction::CumeDist:
+              case WindowFunction::DenseRank:
+              case WindowFunction::PercentRank:
+              case WindowFunction::Rank:
+              case WindowFunction::RowNumber:
+                Fail(std::format("Unsupported aggregate function '{}'.",
+                                 window_function_to_string.left.at(aggregate->window_function)));
+            }
+          });
+        };
+        // TODO(anyone): make the immediate key shortcut thread safe
+        if (contexts_per_column.size() > 1 || use_immediate_key_shortcut) {
+          perform_aggregation();
+        } else {
+          jobs.emplace_back(std::make_shared<JobTask>(perform_aggregation));
+        }
       }
+
+      Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
     }
   }
 }  // NOLINT(readability/fn_size)
