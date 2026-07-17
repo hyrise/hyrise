@@ -1384,8 +1384,10 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std
             }
           });
         };
-        // TODO(anyone): make the immediate key shortcut thread safe
-        if (contexts_per_column.size() > 1 || use_immediate_key_shortcut) {
+        // If we cache the lookups, we do one run single threaded to write the cached results.
+        // If there are only 1 or 2 aggregates, we don't bother creating an extra thread.
+        // If we use immediate key shortcuts, key_per_chunk should remain const and thus thread safe.
+        if ((aggregate_idx == size_t{0} && contexts_per_column.size() > 1) || aggregate_count <= 2) {
           perform_aggregation();
         } else {
           jobs.emplace_back(std::make_shared<JobTask>(perform_aggregation));
