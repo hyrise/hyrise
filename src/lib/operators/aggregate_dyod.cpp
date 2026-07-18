@@ -613,6 +613,8 @@ struct DYODAggregateContext : public DYODAggregateResultContext<ColumnDataType, 
   }
 
   std::unique_ptr<DYODAggregateResultIdMap<AggregateKey>> result_ids;
+
+  void merge(const DYODAggregateContext<ColumnDataType, aggregate_function, AggregateKey>& other) {}
 };
 
 template <typename ColumnDataType, WindowFunction aggregate_function, typename AggregateKey>
@@ -1077,82 +1079,102 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
 
   for (auto thread_id = size_t{0}; thread_id < RADIX_SPLIT_MAX_BUCKETS; ++thread_id) {
     jobs.emplace_back(std::make_shared<JobTask>([&, thread_id]() {
-      const auto pos_lists = pos_lists_per_thread[thread_id];
-      const auto local_input_table = std::make_shared<Table>(input_table->column_definitions(), TableType::References);
+      // TODO(anyone): estimate ideal number of threads for this bucket.
+      const auto bucket_job_count = ChunkID{1};
+      const auto job_size = chunk_count / bucket_job_count;
 
-      const auto column_count = input_table->column_count();
-      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-        auto pos_list = pos_lists->at(chunk_id);
-        if (pos_list->empty()) {
-          continue;
-        }
-        auto out_segments = Segments{};
-        out_segments.reserve(column_count);
-        if constexpr (std::is_same_v<IsReferenceTable, std::false_type>) {
-          for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
-            pos_list->guarantee_single_chunk();
-            out_segments.push_back(std::make_shared<ReferenceSegment>(input_table, column_id, pos_list));
-          }
-        } else {
-          // This mostly copy pasta from TableScan.
-          const auto& chunk_in = input_table->get_chunk(chunk_id);
-          if (pos_list->size() == chunk_in->size()) {
-            // Shortcut - the entire input reference segment matches, so we can simply forward that chunk.
-            local_input_table->append_chunk(chunk_in->segments());
-            continue;
-          } else {
-            auto filtered_pos_lists = std::map<std::shared_ptr<const AbstractPosList>, std::shared_ptr<RowIDPosList>>{};
+      auto mini_jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+      mini_jobs.reserve(bucket_job_count);
 
-            for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
-              const auto segment_in = chunk_in->get_segment(column_id);
+      for (auto job_id = ChunkID{0}; job_id < bucket_job_count; ++job_id) {
+        const auto aggregate_bucket = [&, job_id]() {
+          const auto job_start = static_cast<ChunkID>(job_id * job_size);
+          const auto job_end =
+              static_cast<ChunkID>((job_id + 1 == bucket_job_count) ? (chunk_count) : ((job_id + 1) * job_size));
 
-              const auto ref_segment_in = std::dynamic_pointer_cast<const ReferenceSegment>(segment_in);
-              DebugAssert(ref_segment_in, "All segments should be of type ReferenceSegment.");
+          const auto pos_lists = pos_lists_per_thread[thread_id];
+          const auto local_input_table =
+              std::make_shared<Table>(input_table->column_definitions(), TableType::References);
 
-              const auto pos_list_in = ref_segment_in->pos_list();
-              auto& filtered_pos_list = filtered_pos_lists[pos_list_in];
+          const auto column_count = input_table->column_count();
+          for (auto chunk_id = job_start; chunk_id < job_end; ++chunk_id) {
+            auto pos_list = pos_lists->at(chunk_id);
+            if (pos_list->empty()) {
+              continue;
+            }
+            auto out_segments = Segments{};
+            out_segments.reserve(column_count);
+            if constexpr (std::is_same_v<IsReferenceTable, std::false_type>) {
+              for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+                pos_list->guarantee_single_chunk();
+                out_segments.push_back(std::make_shared<ReferenceSegment>(input_table, column_id, pos_list));
+              }
+            } else {
+              // This mostly copy pasta from TableScan.
+              const auto& chunk_in = input_table->get_chunk(chunk_id);
+              if (pos_list->size() == chunk_in->size()) {
+                // Shortcut - the entire input reference segment matches, so we can simply forward that chunk.
+                local_input_table->append_chunk(chunk_in->segments());
+                continue;
+              } else {
+                auto filtered_pos_lists =
+                    std::map<std::shared_ptr<const AbstractPosList>, std::shared_ptr<RowIDPosList>>{};
 
-              if (!filtered_pos_list) {
-                filtered_pos_list = std::make_shared<RowIDPosList>(pos_list->size());
-                if (pos_list_in->references_single_chunk()) {
-                  filtered_pos_list->guarantee_single_chunk();
-                }
+                for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+                  const auto segment_in = chunk_in->get_segment(column_id);
 
-                auto offset = size_t{0};
-                for (const auto& match : *pos_list) {
-                  const auto row_id = (*pos_list_in)[match];
-                  (*filtered_pos_list)[offset] = row_id;
-                  ++offset;
+                  const auto ref_segment_in = std::dynamic_pointer_cast<const ReferenceSegment>(segment_in);
+                  DebugAssert(ref_segment_in, "All segments should be of type ReferenceSegment.");
+
+                  const auto pos_list_in = ref_segment_in->pos_list();
+                  auto& filtered_pos_list = filtered_pos_lists[pos_list_in];
+
+                  if (!filtered_pos_list) {
+                    filtered_pos_list = std::make_shared<RowIDPosList>(pos_list->size());
+                    if (pos_list_in->references_single_chunk()) {
+                      filtered_pos_list->guarantee_single_chunk();
+                    }
+
+                    auto offset = size_t{0};
+                    for (const auto& match : *pos_list) {
+                      const auto row_id = (*pos_list_in)[match];
+                      (*filtered_pos_list)[offset] = row_id;
+                      ++offset;
+                    }
+                  }
+
+                  const auto table_out = ref_segment_in->referenced_table();
+                  const auto column_id_out = ref_segment_in->referenced_column_id();
+                  const auto ref_segment_out =
+                      std::make_shared<ReferenceSegment>(table_out, column_id_out, filtered_pos_list);
+                  out_segments.emplace_back(ref_segment_out);
                 }
               }
-
-              const auto table_out = ref_segment_in->referenced_table();
-              const auto column_id_out = ref_segment_in->referenced_column_id();
-              const auto ref_segment_out =
-                  std::make_shared<ReferenceSegment>(table_out, column_id_out, filtered_pos_list);
-              out_segments.emplace_back(ref_segment_out);
             }
+            local_input_table->append_chunk(out_segments);
           }
-        }
-        local_input_table->append_chunk(out_segments);
-      }
 
-      auto expected_result_size = std::atomic_size_t{0};
-      auto contexts_per_column = ContextsPerColumn(aggregate_count);
-      _aggregate<AggregateKey>(contexts_per_column, local_input_table, expected_result_size);
-      const auto& output_table = _create_output_table(contexts_per_column, local_input_table, expected_result_size);
-      const auto lock = std::lock_guard<std::mutex>{output_mutex};
-      // we use TableType::Data as an indicator that the final output has not been set yet.
-      if (final_output_table->type() == TableType::Data) {
-        final_output_table = output_table;
-        return;
-      }
+          auto expected_result_size = std::atomic_size_t{0};
+          auto contexts_per_column = ContextsPerColumn{aggregate_count};
+          _aggregate<AggregateKey>(contexts_per_column, local_input_table, expected_result_size);
+          const auto& output_table = _create_output_table(contexts_per_column, local_input_table, expected_result_size);
+          const auto lock = std::lock_guard<std::mutex>{output_mutex};
+          // we use TableType::Data as an indicator that the final output has not been set yet.
+          if (final_output_table->type() == TableType::Data) {
+            final_output_table = output_table;
+            return;
+          }
 
-      const auto chunk_count = output_table->chunk_count();
-      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; chunk_id++) {
-        auto chunk = output_table->get_chunk(chunk_id);
-        final_output_table->append_chunk(chunk->segments());
+          const auto chunk_count = output_table->chunk_count();
+          for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; chunk_id++) {
+            auto chunk = output_table->get_chunk(chunk_id);
+            final_output_table->append_chunk(chunk->segments());
+          }
+        };
+
+        mini_jobs.emplace_back(std::make_shared<JobTask>(aggregate_bucket));
       }
+      Hyrise::get().scheduler()->schedule_and_wait_for_tasks(mini_jobs);
     }));
   }
 
