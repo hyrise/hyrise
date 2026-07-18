@@ -1156,26 +1156,31 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
           const auto job_end =
               static_cast<ChunkID>((job_id + 1 == bucket_job_count) ? (local_chunk_count) : ((job_id + 1) * job_size));
 
-          auto& contexts_per_column = contexts_per_column_per_job[job_id];
-          _aggregate<AggregateKey>(contexts_per_column, local_input_table, job_start, job_end);
-          const auto& output_table = _create_output_table(contexts_per_column, local_input_table);
-          const auto lock = std::lock_guard<std::mutex>{output_mutex};
-          // we use TableType::Data as an indicator that the final output has not been set yet.
-          if (final_output_table->type() == TableType::Data) {
-            final_output_table = output_table;
-            return;
-          }
-
-          const auto output_chunk_count = output_table->chunk_count();
-          for (auto chunk_id = ChunkID{0}; chunk_id < output_chunk_count; chunk_id++) {
-            auto chunk = output_table->get_chunk(chunk_id);
-            final_output_table->append_chunk(chunk->segments());
-          }
+          _aggregate<AggregateKey>(contexts_per_column_per_job[job_id], local_input_table, job_start, job_end);
         };
 
-        mini_jobs.emplace_back(std::make_shared<JobTask>(aggregate_bucket));
+        if (bucket_job_count == 1) {
+          aggregate_bucket();
+        } else {
+          mini_jobs.emplace_back(std::make_shared<JobTask>(aggregate_bucket));
+        }
       }
       Hyrise::get().scheduler()->schedule_and_wait_for_tasks(mini_jobs);
+      // TODO: merge
+
+      const auto& output_table = _create_output_table(contexts_per_column_per_job[0], local_input_table);
+      const auto lock = std::lock_guard<std::mutex>{output_mutex};
+      // we use TableType::Data as an indicator that the final output has not been set yet.
+      if (final_output_table->type() == TableType::Data) {
+        final_output_table = output_table;
+        return;
+      }
+
+      const auto output_chunk_count = output_table->chunk_count();
+      for (auto chunk_id = ChunkID{0}; chunk_id < output_chunk_count; chunk_id++) {
+        auto chunk = output_table->get_chunk(chunk_id);
+        final_output_table->append_chunk(chunk->segments());
+      }
     }));
   }
 
