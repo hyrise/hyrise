@@ -614,7 +614,7 @@ struct DYODAggregateContext : public DYODAggregateResultContext<ColumnDataType, 
 
   std::unique_ptr<DYODAggregateResultIdMap<AggregateKey>> result_ids;
 
-  void merge(const DYODAggregateContext<ColumnDataType, aggregate_function, AggregateKey>& other) {}
+  void merge(const std::shared_ptr<DYODSegmentVisitorContext>& other) {}
 };
 
 template <typename ColumnDataType, WindowFunction aggregate_function, typename AggregateKey>
@@ -1139,7 +1139,7 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
       }
 
       // TODO(anyone): estimate ideal number of threads for this bucket.
-      const auto bucket_job_count = ChunkID{1};
+      const auto bucket_job_count = ChunkID{2};
       const auto local_chunk_count = local_input_table->chunk_count();
       const auto job_size = local_chunk_count / bucket_job_count;
 
@@ -1166,7 +1166,74 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
         }
       }
       Hyrise::get().scheduler()->schedule_and_wait_for_tasks(mini_jobs);
-      // TODO: merge
+
+      // TODO(anyone): parallelize merging ?
+      // TODO(anyone): make more pretty.
+      for (auto aggregate_idx = ColumnID{0}; aggregate_idx < aggregate_count; ++aggregate_idx) {
+        const auto& aggregate = _aggregates[aggregate_idx];
+        const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
+        const auto input_column_id = pqp_column.column_id;
+
+        // Output column for COUNT(*).
+        const auto data_type =
+            input_column_id == INVALID_COLUMN_ID ? DataType::Long : input_table->column_data_type(input_column_id);
+
+        const auto context = contexts_per_column_per_job[0][aggregate_idx];
+        resolve_data_type(data_type, [&](auto type) {
+          using ColumnDataType = typename decltype(type)::type;
+          for (auto job_id = ChunkID{1}; job_id < bucket_job_count; ++job_id) {
+            const auto other = contexts_per_column_per_job[job_id][aggregate_idx];
+            switch (aggregate->window_function) {
+              case WindowFunction::Min:
+                std::static_pointer_cast<DYODAggregateContext<ColumnDataType, WindowFunction::Min, AggregateKey>>(
+                    context)
+                    ->merge(other);
+                break;
+              case WindowFunction::Max:
+                std::static_pointer_cast<DYODAggregateContext<ColumnDataType, WindowFunction::Max, AggregateKey>>(
+                    context)
+                    ->merge(other);
+                break;
+              case WindowFunction::Sum:
+                std::static_pointer_cast<DYODAggregateContext<ColumnDataType, WindowFunction::Sum, AggregateKey>>(
+                    context)
+                    ->merge(other);
+                break;
+              case WindowFunction::Avg:
+                std::static_pointer_cast<DYODAggregateContext<ColumnDataType, WindowFunction::Avg, AggregateKey>>(
+                    context)
+                    ->merge(other);
+                break;
+              case WindowFunction::Count:
+                std::static_pointer_cast<DYODAggregateContext<ColumnDataType, WindowFunction::Count, AggregateKey>>(
+                    context)
+                    ->merge(other);
+                break;
+              case WindowFunction::CountDistinct:
+                std::static_pointer_cast<
+                    DYODAggregateContext<ColumnDataType, WindowFunction::CountDistinct, AggregateKey>>(context)
+                    ->merge(other);
+                break;
+              case WindowFunction::StandardDeviationSample:
+                std::static_pointer_cast<
+                    DYODAggregateContext<ColumnDataType, WindowFunction::StandardDeviationSample, AggregateKey>>(
+                    context)
+                    ->merge(other);
+                break;
+              case WindowFunction::Any:
+                // Pseudo-aggregates are written by dyod_write_output_group_columns.
+                break;
+              case WindowFunction::CumeDist:
+              case WindowFunction::DenseRank:
+              case WindowFunction::PercentRank:
+              case WindowFunction::Rank:
+              case WindowFunction::RowNumber:
+                Fail(std::format("Unsupported aggregate function '{}'.",
+                                 window_function_to_string.left.at(aggregate->window_function)));
+            }
+          }
+        });
+      }
 
       const auto& output_table = _create_output_table(contexts_per_column_per_job[0], local_input_table);
       const auto lock = std::lock_guard<std::mutex>{output_mutex};
