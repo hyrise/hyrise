@@ -48,6 +48,7 @@
 #include "storage/value_segment.hpp"
 #include "table_scan.hpp"
 #include "table_wrapper.hpp"
+#include "type_comparison.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/timer.hpp"
@@ -626,23 +627,51 @@ struct DYODAggregateContext : public DYODAggregateResultContext<ColumnDataType, 
         std::static_pointer_cast<const DYODAggregateContext<ColumnDataType, aggregate_function, AggregateKey>>(other);
     Assert(context, "Expected merging context to have same template parameters.");
 
-    const auto& result_ids = *context->result_ids;
-    const auto& results = context->results;
+    const auto& other_result_ids = *context->result_ids;
+    const auto& other_results = context->results;
 
     if constexpr (std::is_same_v<AggregateKey, DYODEmptyAggregateKey>) {
       // TODO(anyone): merge without keys.
     } else {
-      for (const auto& key : result_ids) {
-        const auto it = result_ids.find(key.first);
-        if (it != result_ids.end()) {
+      for (const auto& key : other_result_ids) {
+        const auto it = result_ids->find(key.first);
+        auto& other_result = other_results[key.second];
+        if (it != result_ids->end()) {
           // We have already seen this group and need to merge both results.
-          const auto result_id = it->second;
-          auto other_result = results[result_id];
-          other_result = other_result;
-          continue;
+          auto result_id = it->second;
+          auto& result = this->results[result_id];
+
+          if constexpr (aggregate_function == WindowFunction::CountDistinct) {
+            // For CountDistinct, we need to merge both sets.
+            // result.accumulator.merge(other_result.accumulator);
+          }
+          if constexpr (aggregate_function == WindowFunction::StandardDeviationSample) {
+            // TODO(anyone): merge STDDEV
+          }
+          if constexpr (aggregate_function == WindowFunction::Min) {
+            if (value_smaller(other_result.accumulator, result.accumulator)) {
+              result.accumulator = other_result.accumulator;
+            }
+          }
+          if constexpr (aggregate_function == WindowFunction::Max) {
+            if (value_greater(other_result.accumulator, result.accumulator)) {
+              result.accumulator = other_result.accumulator;
+            }
+          }
+          if constexpr (aggregate_function == WindowFunction::Sum || aggregate_function == WindowFunction::Avg) {
+            result.accumulator += other_result.accumulator;
+          }
+
+          result.aggregate_count += other_result.aggregate_count;
         }
         // We found a key that we have not seen yet and need to add it.
-        // TODO(anyone): add unseen keys
+        const auto result_id = result_ids->size();
+        result_ids->emplace_hint(it, key.first, result_id);
+
+        if (result_id >= this->results.size()) {
+          this->results.resize(static_cast<size_t>(static_cast<double>(result_id + 1) * 1.5));
+        }
+        this->results[result_id] = other_result;
       }
     }
   }
