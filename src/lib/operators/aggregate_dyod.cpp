@@ -614,7 +614,38 @@ struct DYODAggregateContext : public DYODAggregateResultContext<ColumnDataType, 
 
   std::unique_ptr<DYODAggregateResultIdMap<AggregateKey>> result_ids;
 
-  void merge(const std::shared_ptr<DYODSegmentVisitorContext>& other) {}
+  void merge(const std::shared_ptr<DYODSegmentVisitorContext>& other) {
+    using AggregateType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
+
+    auto aggregator =
+        WindowFunctionBuilder<ColumnDataType, AggregateType, aggregate_function>().get_aggregate_function();
+
+    aggregator = aggregator;
+
+    auto context =
+        std::static_pointer_cast<const DYODAggregateContext<ColumnDataType, aggregate_function, AggregateKey>>(other);
+    Assert(context, "Expected merging context to have same template parameters.");
+
+    const auto& result_ids = *context->result_ids;
+    const auto& results = context->results;
+
+    if constexpr (std::is_same_v<AggregateKey, DYODEmptyAggregateKey>) {
+      // TODO(anyone): merge without keys.
+    } else {
+      for (const auto& key : result_ids) {
+        const auto it = result_ids.find(key.first);
+        if (it != result_ids.end()) {
+          // We have already seen this group and need to merge both results.
+          const auto result_id = it->second;
+          auto other_result = results[result_id];
+          other_result = other_result;
+          continue;
+        }
+        // We found a key that we have not seen yet and need to add it.
+        // TODO(anyone): add unseen keys
+      }
+    }
+  }
 };
 
 template <typename ColumnDataType, WindowFunction aggregate_function, typename AggregateKey>
