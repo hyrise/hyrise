@@ -969,8 +969,8 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
 //  (2) adapt mask recursively based on partition size.
 //  (3) add low cardinality partitioning (all same key).
 
-// 16 threads
-constexpr auto RADIX_MASK = 0xf;
+// 64 threads
+constexpr auto RADIX_MASK = 0x3f;
 constexpr auto RADIX_SPLIT_MAX_BUCKETS = RADIX_MASK + 1;
 
 template <typename AggregateKey>
