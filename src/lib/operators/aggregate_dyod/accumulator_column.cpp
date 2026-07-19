@@ -155,7 +155,7 @@ void TypedAccumulatorColumn<ColumnType, Function>::fold(std::span<const uint32_t
   DebugAssert(value_null_bitmap.empty() || value_null_bitmap.size() * 8 >= row_count,
               "Value-null bitmap does not cover the tile.");
   if constexpr (Function != WindowFunction::Count) {
-    constexpr auto VALUE_WIDTH =
+    [[maybe_unused]] constexpr auto VALUE_WIDTH =
         std::is_same_v<ColumnType, pmr_string> ? sizeof(StringValueReference) : sizeof(ColumnType);
     DebugAssert(value_bytes.size() == row_count * VALUE_WIDTH, "Value tile does not match the slot tile.");
   }
@@ -314,7 +314,7 @@ void DistinctAccumulatorColumn<ColumnType>::fold(std::span<const uint32_t> slots
   const auto row_count = slots.size();
   DebugAssert(value_null_bitmap.empty() || value_null_bitmap.size() * 8 >= row_count,
               "Value-null bitmap does not cover the tile.");
-  constexpr auto VALUE_WIDTH =
+  [[maybe_unused]] constexpr auto VALUE_WIDTH =
       std::is_same_v<ColumnType, pmr_string> ? sizeof(StringValueReference) : sizeof(ColumnType);
   DebugAssert(value_bytes.size() == row_count * VALUE_WIDTH, "Value tile does not match the slot tile.");
 
