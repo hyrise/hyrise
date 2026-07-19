@@ -1079,27 +1079,29 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
       std::conditional_t<std::is_same_v<IsReferenceTable, std::true_type>, std::vector<ChunkOffset>, RowIDPosList>;
   using PosLists = std::vector<std::shared_ptr<ReferenceList>>;
 
-  auto pos_lists_per_thread = std::vector<std::shared_ptr<PosLists>>{};
-  pos_lists_per_thread.reserve(RADIX_SPLIT_MAX_BUCKETS);
+  auto pos_lists_per_thread = std::vector<std::shared_ptr<PosLists>>(RADIX_SPLIT_MAX_BUCKETS);
 
   const auto chunk_count = input_table->chunk_count();
   for (auto bucket_id = size_t{0}; bucket_id < RADIX_SPLIT_MAX_BUCKETS; ++bucket_id) {
-    pos_lists_per_thread.emplace_back(std::make_shared<PosLists>());
+    auto pos_lists = std::make_shared<PosLists>(chunk_count);
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-      pos_lists_per_thread[bucket_id]->emplace_back(std::make_shared<ReferenceList>());
+      (*pos_lists)[chunk_id] = std::make_shared<ReferenceList>();
     }
+    pos_lists_per_thread[bucket_id] = pos_lists;
   }
 
   auto hashing_jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   hashing_jobs.reserve(chunk_count);
 
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-    hashing_jobs.emplace_back(std::make_shared<JobTask>([&, chunk_id]() {
-      const auto& chunk = input_table->get_chunk(chunk_id);
-      const auto chunk_size = chunk->size();
-      if (chunk_size == 0) {
-        return;
-      }
+    const auto chunk = input_table->get_chunk(chunk_id);
+    const auto chunk_size = chunk->size();
+
+    if (chunk_size == 0) {
+      continue;
+    }
+
+    hashing_jobs.emplace_back(std::make_shared<JobTask>([&, chunk_id, chunk_size]() {
       auto hashes = std::vector<size_t>(chunk_size, 0);
       for (const auto& column_id : _groupby_column_ids) {
         const auto data_type = input_table->column_data_type(column_id);
@@ -1107,12 +1109,10 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
           using ColumnDataType = typename decltype(type)::type;
 
           const auto& abstract_segment = chunk->get_segment(column_id);
+          const auto hash_f = std::hash<ColumnDataType>{};
 
           segment_iterate<ColumnDataType>(*abstract_segment, [&](const auto& position) {
-            auto value = 0;
-            if (!position.is_null()) {
-              value = std::hash<ColumnDataType>{}(position.value());
-            }
+            auto value = position.is_null() ? 0 : hash_f(position.value());
 
             boost::hash_combine(hashes[position.chunk_offset()], value);
           });
@@ -1155,8 +1155,8 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
         auto out_segments = Segments{};
         out_segments.reserve(column_count);
         if constexpr (std::is_same_v<IsReferenceTable, std::false_type>) {
+          pos_list->guarantee_single_chunk();
           for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
-            pos_list->guarantee_single_chunk();
             out_segments.push_back(std::make_shared<ReferenceSegment>(input_table, column_id, pos_list));
           }
         } else {
