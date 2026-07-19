@@ -65,8 +65,7 @@ TEST_F(HllSketchTest, DuplicateHashesDoNotIncreaseEstimate) {
 }
 
 TEST_F(HllSketchTest, EstimatesSmallCardinalities) {
-  const auto counts_and_tolerances =
-      std::array<std::pair<size_t, double>, 3>{{{10, 3.0}, {100, 15.0}, {1'000, 100.0}}};
+  const auto counts_and_tolerances = std::array<std::pair<size_t, double>, 3>{{{10, 3.0}, {100, 15.0}, {1'000, 100.0}}};
 
   for (const auto& [count, tolerance] : counts_and_tolerances) {
     auto sketch = HllSketch{};
@@ -195,13 +194,13 @@ TEST_F(HllSketchTest, ChoosePartitionCountClampsOversizedWorkerCountToMax) {
 
 TEST_F(HllSketchTest, ChoosePartitionCountAlwaysReturnsPowerOfTwo) {
   const auto inputs = std::array<std::pair<size_t, size_t>, 8>{{{0, 0},
-                                                               {1, 1},
-                                                               {KEYS_BUDGET - 1, 1},
-                                                               {KEYS_BUDGET + 1, 1},
-                                                               {3 * KEYS_BUDGET, 1},
-                                                               {100 * KEYS_BUDGET, 3},
-                                                               {1'000 * KEYS_BUDGET, 64},
-                                                               {std::numeric_limits<size_t>::max() / 2, 17}}};
+                                                                {1, 1},
+                                                                {KEYS_BUDGET - 1, 1},
+                                                                {KEYS_BUDGET + 1, 1},
+                                                                {3 * KEYS_BUDGET, 1},
+                                                                {100 * KEYS_BUDGET, 3},
+                                                                {1'000 * KEYS_BUDGET, 64},
+                                                                {std::numeric_limits<size_t>::max() / 2, 17}}};
 
   for (const auto& [cardinality_estimate, worker_count] : inputs) {
     EXPECT_TRUE(is_power_of_two(choose_partition_count(cardinality_estimate, worker_count)));

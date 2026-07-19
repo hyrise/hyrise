@@ -136,7 +136,7 @@ class TypedOutputColumn : public AbstractOutputColumn {
   pmr_vector<T> _values;                         // In-progress append buffer, parallel to _null_values.
   std::optional<pmr_vector<bool>> _null_values;  // Bit-packed null flags (only when nullable); single writer, no sync.
   std::vector<std::shared_ptr<AbstractSegment>> _sealed;  // Sealed segments, in append order.
-  size_t _reserve_hint;                          // Rows reserved for each fresh in-progress buffer (soft hint).
+  size_t _reserve_hint;  // Rows reserved for each fresh in-progress buffer (soft hint).
 };
 
 /**
@@ -200,7 +200,7 @@ class OutputColumns : private Noncopyable {
 
  private:
   std::vector<std::unique_ptr<AbstractOutputColumn>> _columns;  // One builder per output column, in schema order.
-  size_t _seal_threshold;  // Soft chunk-size target and per-buffer reserve hint.
+  size_t _seal_threshold;                                       // Soft chunk-size target and per-buffer reserve hint.
 };
 
 /**

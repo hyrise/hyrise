@@ -26,9 +26,8 @@ void HllSketch::add(const uint64_t key_hash) {
   const auto register_index = static_cast<size_t>(key_hash >> REMAINING_HASH_BITS);
   const auto remaining_hash_bits = key_hash << HLL_PRECISION;
 
-  const auto rank = remaining_hash_bits == 0
-                        ? static_cast<uint8_t>(REMAINING_HASH_BITS + 1)
-                        : static_cast<uint8_t>(std::countl_zero(remaining_hash_bits) + 1);
+  const auto rank = remaining_hash_bits == 0 ? static_cast<uint8_t>(REMAINING_HASH_BITS + 1)
+                                             : static_cast<uint8_t>(std::countl_zero(remaining_hash_bits) + 1);
   _registers[register_index] = std::max(_registers[register_index], rank);
 }
 

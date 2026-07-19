@@ -155,7 +155,7 @@ class MergeMap : private Noncopyable {
   uint32_t _shift{0};            // log2(P); the probe ignores the low `shift` hash bits (constant within a partition)
   std::vector<std::byte> _keys;  // dense key bytes, stride KeySchema::packed_width()
   std::vector<std::unique_ptr<AbstractAccumulatorColumn>> _columns;  // one accumulator per aggregate, dense by slot
-  StringSpillBuffer _spill;  // merge-side interned spill content; unused for numeric schemas
+  StringSpillBuffer _spill;               // merge-side interned spill content; unused for numeric schemas
   const KeySchema* _key_schema{nullptr};  // borrowed; must outlive this map
 };
 
