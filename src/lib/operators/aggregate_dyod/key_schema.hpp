@@ -271,6 +271,8 @@ class NumericShortKeySchema {
 
   /** @return The packed key width in bytes; always the compile-time constant PackedWidth. */
   size_t packed_width() const;
+  /** @return The number of group-by columns this schema packs, which is also the group-by output column count. */
+  size_t column_count() const;
 
   /**
    * Pack one input row's group-by tuple into a key buffer.
@@ -350,6 +352,8 @@ class NumericArbitraryKeySchema {
 
   /** @return The packed key width in bytes, fixed for this query but known only at runtime. */
   size_t packed_width() const;
+  /** @return The number of group-by columns this schema packs, which is also the group-by output column count. */
+  size_t column_count() const;
 
   /**
    * Pack one input row's group-by tuple into a key buffer.
@@ -422,9 +426,8 @@ class NumericArbitraryKeySchema {
  * points into lives in per-partition StringSpillBuffers. Used in the scatter (pack) and merge (unpack/hash/equals)
  * phases.
  *
- * Only LenWidth 4 is explicitly instantiated for now (see resolve_key_schema); the merge side's re-interning of
- * spilled content (see MergeMap) will need a schema helper to determine a key's spilled length, to be added with the
- * MergeMap implementation.
+ * Only LenWidth 4 is explicitly instantiated for now (see resolve_key_schema); the merge side re-interns spilled
+ * content on a key's first insertion via reintern_spill() (see MergeMap).
  *
  * See StringOnlyKeySchema (this schema with a zero-width numeric prefix) and StringSpillBuffer.
  */
@@ -453,6 +456,8 @@ class MixedKeySchema {
    *   extent that hash() and equals() memcmp.
    */
   size_t fixed_part_width() const;
+  /** @return The number of group-by columns this schema packs, which is also the group-by output column count. */
+  size_t column_count() const;
 
   /**
    * Pack one input row's group-by tuple into a key buffer, spilling overlong strings as needed.
@@ -496,6 +501,18 @@ class MixedKeySchema {
    * Complexity: O(fixed_part_width()) inline, plus O(string length) for the deep compare when both keys are spilled.
    */
   bool equals(const std::byte* a, const std::byte* b) const;
+  /**
+   * Re-intern a spilled key's string content into `spill_buffer` and repoint the key's spill pointer there.
+   *
+   * Called by the merge side on a key's first insertion, so later deep compares read bytes co-located with the
+   * cache-resident merge map instead of chasing a pointer into a cold scatter-side buffer. A no-op for inline keys.
+   *
+   * @param key Packed key to re-intern; borrowed, its spill pointer is rewritten. The spilled content it points to
+   *   must still be live.
+   * @param spill_buffer The merge side's own buffer; borrowed, appended to.
+   * @pre Runs in the merge phase, single-threaded per worker on that worker's own map and buffer.
+   */
+  void reintern_spill(std::byte* key, StringSpillBuffer& spill_buffer) const;
 
  private:
   NumericKeyLanes _numeric_lanes;          // One lane per non-string group-by column, in schema order.
@@ -539,6 +556,8 @@ class StringOnlyKeySchema {
   size_t packed_width() const;
   /** @return Width in bytes of the fixed part (null bitmap + inline string blob), the memcmp/hash extent. */
   size_t fixed_part_width() const;
+  /** @return The number of group-by columns this schema packs, which is also the group-by output column count. */
+  size_t column_count() const;
 
   /**
    * Pack one input row's group-by tuple into a key buffer, spilling overlong strings as needed.
@@ -582,6 +601,16 @@ class StringOnlyKeySchema {
    * Complexity: O(fixed_part_width()) inline, plus O(string length) for the deep compare when both keys are spilled.
    */
   bool equals(const std::byte* a, const std::byte* b) const;
+  /**
+   * Re-intern a spilled key's string content into `spill_buffer` and repoint the key's spill pointer there; see
+   * MixedKeySchema::reintern_spill. A no-op for inline keys.
+   *
+   * @param key Packed key to re-intern; borrowed, its spill pointer is rewritten. The spilled content it points to
+   *   must still be live.
+   * @param spill_buffer The merge side's own buffer; borrowed, appended to.
+   * @pre Runs in the merge phase, single-threaded per worker on that worker's own map and buffer.
+   */
+  void reintern_spill(std::byte* key, StringSpillBuffer& spill_buffer) const;
 
  private:
   StringKeyColumns _string_columns;  // One descriptor per string group-by column, in schema order.

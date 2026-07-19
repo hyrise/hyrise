@@ -43,7 +43,7 @@ class StringSpillBuffer;
  *
  * A value stream reads a source column cell and serializes it into the per-worker scatter store's value lane during
  * the scatter phase, so the merge phase can later fold the raw bytes without touching the input table again. Numeric
- * streams write the value's native bytes; string streams write an (offset, length) reference into the per-partition
+ * streams write the value's native bytes; string streams write a (pointer, length) reference into the per-partition
  * value arena. The concrete subclass is chosen per source column from its data type.
  *
  * Invariants: element_width() and is_nullable() are fixed for the stream's lifetime; every pack() call writes exactly
@@ -58,7 +58,7 @@ class AbstractValueScatterColumn {
 
   /**
    * The fixed number of bytes this stream writes to the value lane per row.
-   * @return sizeof(source type) for a numeric stream, or the size of an (offset, length) arena reference for a string
+   * @return sizeof(source type) for a numeric stream, or the size of a (pointer, length) arena reference for a string
    *   stream (whose payload bytes live in the per-partition value arena, not in the value lane).
    */
   virtual uint32_t element_width() const = 0;
@@ -75,7 +75,7 @@ class AbstractValueScatterColumn {
    * @param null_bit_index bit position within null_bitmap for this row.
    * @param value_arena per-partition string arena; string payload bytes are appended here. Unused by numeric streams.
    * @pre runs in the scatter phase, single-threaded per worker on that worker's own destinations.
-   * @post for a non-NULL cell, value_dest holds the packed value (native bytes for numeric, an (offset, length)
+   * @post for a non-NULL cell, value_dest holds the packed value (native bytes for numeric, a (pointer, length)
    *   reference for string); for a NULL cell, bit null_bit_index of null_bitmap is set and value_dest is unspecified.
    */
   virtual void pack(const AbstractSegment& segment, ChunkOffset chunk_offset, std::byte* value_dest,
@@ -113,11 +113,12 @@ class NumericValueScatterColumn : public AbstractValueScatterColumn {
 
 /**
  * String value stream (for MIN/MAX/COUNT on a string column): appends the value's bytes to the per-partition value
- * arena and writes an (offset, length) reference into the fixed-width stream slot.
+ * arena and writes a (pointer, length) reference into the fixed-width stream slot.
  *
  * This is the simplest workable representation: unlike string keys, string values are never hashed or compared for
- * equality, so there is no inline-prefix or content-hash optimization here. element_width() is therefore the size of
- * the (offset, length) reference, not of the string payload.
+ * equality, so there is no inline-prefix or content-hash optimization here, and the reference holds a stable pointer
+ * (StringSpillBuffer never relocates live content) rather than an offset that would need arena-base resolution at fold
+ * time. element_width() is therefore the size of the (pointer, length) reference, not of the string payload.
  *
  * Ownership/lifetime/threading: see AbstractValueScatterColumn -- immutable after construction, shared read-only
  *   across scatter workers; the referenced payload lives in the value arena passed to pack().
@@ -131,7 +132,7 @@ class StringValueScatterColumn : public AbstractValueScatterColumn {
    */
   StringValueScatterColumn(ColumnID source_column, bool nullable);
 
-  uint32_t element_width() const override;  // sizeof(offset,length) reference
+  uint32_t element_width() const override;  // sizeof(pointer, length) reference
   bool is_nullable() const override;
   void pack(const AbstractSegment& segment, ChunkOffset chunk_offset, std::byte* value_dest, std::byte* null_bitmap,
             uint32_t null_bit_index, StringSpillBuffer& value_arena) const override;
@@ -186,7 +187,8 @@ class AbstractAccumulatorColumn {
    * @param value_bytes this aggregate's value stream over the same tile, one element_width()-sized cell per row.
    *   Empty for COUNT(*), which counts every row regardless of value.
    * @param value_null_bitmap the tile's value-null bitmap, one bit per row. Empty when the stream is non-nullable
-   *   (no row is NULL).
+   *   (no row is NULL). The scatter store keeps per-row bitmap fields (one bit per nullable stream), so the merge
+   *   driver gathers this stream-major, bit-per-row form when assembling the tile.
    * @pre grow_to() has already sized dense state to cover every id in slots. Runs single-threaded on the owning worker.
    * @post each row not skipped as NULL is folded into slot slots[i]; per-slot non-null counts reflect contributions
    *   seen so far.
@@ -349,7 +351,8 @@ class AggregateSchema {
   // One AggregateEntry per aggregate, index-aligned with aggregate indices.
   boost::container::small_vector<AggregateEntry, EXPECTED_AGGREGATE_COLUMNS> _entries;
   // One owned scatter column per distinct source column, index-aligned with value-stream indices.
-  boost::container::small_vector<std::unique_ptr<AbstractValueScatterColumn>, EXPECTED_AGGREGATE_COLUMNS> _value_streams;
+  boost::container::small_vector<std::unique_ptr<AbstractValueScatterColumn>, EXPECTED_AGGREGATE_COLUMNS>
+      _value_streams;
   // Cached value_null_bitmap_width() in bytes; 0 when no value stream is nullable.
   uint32_t _value_null_bitmap_width{0};
 };
