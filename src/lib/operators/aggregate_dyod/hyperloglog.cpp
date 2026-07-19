@@ -5,6 +5,8 @@
 #include <cmath>
 #include <limits>
 
+#include "operators/aggregate_dyod/aggregate_dyod_config.hpp"
+
 namespace hyrise {
 
 namespace {

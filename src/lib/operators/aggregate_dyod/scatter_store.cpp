@@ -7,6 +7,7 @@
 #include <cstring>
 #include <vector>
 
+#include "operators/aggregate_dyod/aggregate_dyod_config.hpp"
 #include "utils/assert.hpp"
 
 #if defined(__SSE2__) || defined(_M_X64) || (defined(_M_IX86_FP) && _M_IX86_FP >= 2)

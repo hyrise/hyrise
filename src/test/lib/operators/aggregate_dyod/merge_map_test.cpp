@@ -11,6 +11,7 @@
 #include "expression/expression_functional.hpp"
 #include "expression/window_function_expression.hpp"
 #include "operators/aggregate_dyod/accumulator_column.hpp"
+#include "operators/aggregate_dyod/aggregate_dyod_config.hpp"
 #include "operators/aggregate_dyod/key_schema.hpp"
 #include "operators/aggregate_dyod/merge_map.hpp"
 #include "operators/aggregate_dyod/output_columns.hpp"

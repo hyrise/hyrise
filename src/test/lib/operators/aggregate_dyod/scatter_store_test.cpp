@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "base_test.hpp"
+#include "operators/aggregate_dyod/aggregate_dyod_config.hpp"
 #include "operators/aggregate_dyod/scatter_store.hpp"
 
 namespace {
