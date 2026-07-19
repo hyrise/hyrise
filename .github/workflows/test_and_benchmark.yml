@@ -1,4 +1,4 @@
-name: CI
+name: Test and Benchmark
 
 on:
   push:
@@ -26,8 +26,14 @@ jobs:
 
     strategy:
       fail-fast: false
+      matrix:
+        runner:
+          - dyod2026evalkoro
+          - dyod2026evalgx
 
-    runs-on: self-hosted
+    runs-on:
+      - self-hosted
+      - ${{ matrix.runner }}
 
     defaults:
       run:
