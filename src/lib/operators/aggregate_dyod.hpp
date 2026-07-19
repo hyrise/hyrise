@@ -6,14 +6,16 @@
 #include <unordered_map>
 #include <vector>
 
+#include "expression/window_function_expression.hpp"
 #include "operators/abstract_aggregate_operator.hpp"
 #include "operators/abstract_read_only_operator.hpp"
 #include "operators/aggregate_dyod/accumulator_column.hpp"
 #include "operators/aggregate_dyod/aggregate_dyod_config.hpp"
-#include "expression/window_function_expression.hpp"
 #include "types.hpp"
 
 namespace hyrise {
+
+class AbstractAggregator;
 
 /**
  * Parallel, radix-partitioned hash aggregation operator (GROUP BY).
@@ -99,6 +101,9 @@ class AggregateDYOD : public AbstractAggregateOperator {
    * @note Override; the base operator's execute() invokes it exactly once.
    */
   std::shared_ptr<const Table> _on_execute() override;
+
+  std::vector<std::unique_ptr<AbstractAggregator>> _build_aggregators(
+      const std::shared_ptr<const Table>& input_table) const;
 
   /**
    * Deep-copies this operator for plan caching / re-execution, rewiring it onto already-copied input operators.
