@@ -615,23 +615,30 @@ struct DYODAggregateContext : public DYODAggregateResultContext<ColumnDataType, 
 
   std::unique_ptr<DYODAggregateResultIdMap<AggregateKey>> result_ids;
 
-  void merge(const std::shared_ptr<DYODSegmentVisitorContext>& other) {
-    using AggregateType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
-
-    auto aggregator =
-        WindowFunctionBuilder<ColumnDataType, AggregateType, aggregate_function>().get_aggregate_function();
-
-    aggregator = aggregator;
-
-    auto context =
-        std::static_pointer_cast<const DYODAggregateContext<ColumnDataType, aggregate_function, AggregateKey>>(other);
-    Assert(context, "Expected merging context to have same template parameters.");
-
-    const auto& other_result_ids = *context->result_ids;
-    const auto& other_results = context->results;
+  void merge(const std::shared_ptr<DYODAggregateContext<ColumnDataType, aggregate_function, AggregateKey>>& other) {
+    const auto& other_result_ids = *other->result_ids;
+    const auto& other_results = other->results;
 
     if constexpr (std::is_same_v<AggregateKey, DYODEmptyAggregateKey>) {
       // TODO(anyone): merge without keys.
+      auto& other_result = other_results[0];
+      auto& result = this->results[0];
+      if constexpr (aggregate_function == WindowFunction::Min) {
+        if (value_smaller(other_result.accumulator, result.accumulator)) {
+          result.accumulator = other_result.accumulator;
+        }
+      }
+      if constexpr (aggregate_function == WindowFunction::Max) {
+        if (value_greater(other_result.accumulator, result.accumulator)) {
+          result.accumulator = other_result.accumulator;
+        }
+      }
+      if constexpr (aggregate_function == WindowFunction::Sum || aggregate_function == WindowFunction::Avg) {
+        result.accumulator += other_result.accumulator;
+      }
+      if constexpr (aggregate_function == WindowFunction::Any) {
+        result.accumulator = other_result.accumulator;
+      }
     } else {
       for (const auto& key : other_result_ids) {
         const auto it = result_ids->find(key.first);
@@ -661,6 +668,9 @@ struct DYODAggregateContext : public DYODAggregateResultContext<ColumnDataType, 
           if constexpr (aggregate_function == WindowFunction::Sum || aggregate_function == WindowFunction::Avg) {
             result.accumulator += other_result.accumulator;
           }
+          if constexpr (aggregate_function == WindowFunction::Any) {
+            result.accumulator = other_result.accumulator;
+          }
 
           result.aggregate_count += other_result.aggregate_count;
         }
@@ -676,6 +686,19 @@ struct DYODAggregateContext : public DYODAggregateResultContext<ColumnDataType, 
     }
   }
 };
+
+template <typename ColumnDataType, WindowFunction aggregate_function, typename AggregateKey>
+void AggregateDYOD::_merge_contexts(const std::shared_ptr<DYODSegmentVisitorContext>& target,
+                                    const std::shared_ptr<DYODSegmentVisitorContext>& other) {
+  const auto cast_target =
+      std::static_pointer_cast<DYODAggregateContext<ColumnDataType, aggregate_function, AggregateKey>>(target);
+  DebugAssert(cast_target, "Merged Context has unexpected template arguments.");
+
+  const auto cast_other =
+      std::static_pointer_cast<DYODAggregateContext<ColumnDataType, aggregate_function, AggregateKey>>(other);
+  DebugAssert(cast_other, "Merged Context has unexpected template arguments.");
+  cast_target->merge(cast_other);
+}
 
 template <typename ColumnDataType, WindowFunction aggregate_function, typename AggregateKey>
 void AggregateDYOD::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, const AbstractSegment& abstract_segment,
@@ -1238,50 +1261,35 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
         const auto data_type =
             input_column_id == INVALID_COLUMN_ID ? DataType::Long : input_table->column_data_type(input_column_id);
 
-        const auto context = contexts_per_column_per_job[0][aggregate_idx];
+        auto& context = contexts_per_column_per_job[0][aggregate_idx];
         resolve_data_type(data_type, [&](auto type) {
           using ColumnDataType = typename decltype(type)::type;
           for (auto job_id = ChunkID{1}; job_id < bucket_job_count; ++job_id) {
-            const auto other = contexts_per_column_per_job[job_id][aggregate_idx];
+            auto& other = contexts_per_column_per_job[job_id][aggregate_idx];
             switch (aggregate->window_function) {
               case WindowFunction::Min:
-                std::static_pointer_cast<DYODAggregateContext<ColumnDataType, WindowFunction::Min, AggregateKey>>(
-                    context)
-                    ->merge(other);
+                _merge_contexts<ColumnDataType, WindowFunction::Min, AggregateKey>(context, other);
                 break;
               case WindowFunction::Max:
-                std::static_pointer_cast<DYODAggregateContext<ColumnDataType, WindowFunction::Max, AggregateKey>>(
-                    context)
-                    ->merge(other);
+                _merge_contexts<ColumnDataType, WindowFunction::Max, AggregateKey>(context, other);
                 break;
               case WindowFunction::Sum:
-                std::static_pointer_cast<DYODAggregateContext<ColumnDataType, WindowFunction::Sum, AggregateKey>>(
-                    context)
-                    ->merge(other);
+                _merge_contexts<ColumnDataType, WindowFunction::Sum, AggregateKey>(context, other);
                 break;
               case WindowFunction::Avg:
-                std::static_pointer_cast<DYODAggregateContext<ColumnDataType, WindowFunction::Avg, AggregateKey>>(
-                    context)
-                    ->merge(other);
+                _merge_contexts<ColumnDataType, WindowFunction::Avg, AggregateKey>(context, other);
                 break;
               case WindowFunction::Count:
-                std::static_pointer_cast<DYODAggregateContext<ColumnDataType, WindowFunction::Count, AggregateKey>>(
-                    context)
-                    ->merge(other);
+                _merge_contexts<ColumnDataType, WindowFunction::Count, AggregateKey>(context, other);
                 break;
               case WindowFunction::CountDistinct:
-                std::static_pointer_cast<
-                    DYODAggregateContext<ColumnDataType, WindowFunction::CountDistinct, AggregateKey>>(context)
-                    ->merge(other);
+                _merge_contexts<ColumnDataType, WindowFunction::CountDistinct, AggregateKey>(context, other);
                 break;
               case WindowFunction::StandardDeviationSample:
-                std::static_pointer_cast<
-                    DYODAggregateContext<ColumnDataType, WindowFunction::StandardDeviationSample, AggregateKey>>(
-                    context)
-                    ->merge(other);
+                _merge_contexts<ColumnDataType, WindowFunction::StandardDeviationSample, AggregateKey>(context, other);
                 break;
               case WindowFunction::Any:
-                // Pseudo-aggregates are written by dyod_write_output_group_columns.
+                _merge_contexts<ColumnDataType, WindowFunction::Any, AggregateKey>(context, other);
                 break;
               case WindowFunction::CumeDist:
               case WindowFunction::DenseRank:

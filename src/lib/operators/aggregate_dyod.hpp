@@ -167,6 +167,10 @@ class AggregateDYOD : public AbstractAggregateOperator {
   void _aggregate(ContextsPerColumn& contexts_per_column, const std::shared_ptr<const Table>& input_table,
                   ChunkID start, ChunkID end);
 
+  template <typename ColumnDataType, WindowFunction aggregate_function, typename AggregateKey>
+  void _merge_contexts(const std::shared_ptr<DYODSegmentVisitorContext>& target,
+                       const std::shared_ptr<DYODSegmentVisitorContext>& other);
+
   template <typename AggregateKey>
   std::shared_ptr<Table> _partition_and_aggregate();
 
