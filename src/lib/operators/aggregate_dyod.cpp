@@ -617,8 +617,6 @@ struct DYODAggregateContext : public DYODAggregateResultContext<ColumnDataType, 
 
   void merge_results(DYODAggregateResult<ColumnDataType, aggregate_function>& target,
                      DYODAggregateResult<ColumnDataType, aggregate_function>& other) {
-    std::cout << "merging results\n";
-
     if constexpr (aggregate_function == WindowFunction::Min) {
       if (value_smaller(other.accumulator, target.accumulator)) {
         target.accumulator = other.accumulator;
@@ -1064,7 +1062,8 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
 
   const auto groupby_keys_count = _groupby_column_ids.size();
 
-  const auto is_multi_threaded = Hyrise::get().is_multi_threaded();
+  // const auto is_multi_threaded = Hyrise::get().is_multi_threaded();
+  const auto is_multi_threaded = true;
   const auto row_count = input_table->row_count();
   // TODO(anyone): parallelize for same keys and merge
   if (groupby_keys_count == 0 || row_count == 0 || !is_multi_threaded) {
@@ -1146,6 +1145,7 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
       const auto pos_lists = pos_lists_per_thread[thread_id];
       const auto local_input_table = std::make_shared<Table>(input_table->column_definitions(), TableType::References);
 
+      // Scan input table for radix bucket.
       const auto column_count = input_table->column_count();
       for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
         auto pos_list = pos_lists->at(chunk_id);
@@ -1203,6 +1203,15 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
         local_input_table->append_chunk(out_segments);
       }
 
+      /**
+       * PARTITIONING STEP
+       */
+
+      std::atomic_size_t expected_result_size;
+      bool use_immediate_key_shortcut = false;
+      auto keys_per_chunk =
+          _partition_by_groupby_keys<AggregateKey>(local_input_table, expected_result_size, use_immediate_key_shortcut);
+
       // TODO(anyone): estimate ideal number of threads for this bucket.
       const auto bucket_job_count = ChunkID{2};
       const auto local_chunk_count = local_input_table->chunk_count();
@@ -1221,7 +1230,8 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
           const auto job_end =
               static_cast<ChunkID>((job_id + 1 == bucket_job_count) ? (local_chunk_count) : ((job_id + 1) * job_size));
 
-          _aggregate<AggregateKey>(contexts_per_column_per_job[job_id], local_input_table, job_start, job_end);
+          _aggregate<AggregateKey>(contexts_per_column_per_job[job_id], local_input_table, expected_result_size,
+                                   use_immediate_key_shortcut, keys_per_chunk, job_start, job_end);
         };
 
         if (bucket_job_count == 1) {
@@ -1306,25 +1316,24 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
   return final_output_table;
 }
 
+// This is the unpartitioned variant
 template <typename AggregateKey>
 void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column,
                                const std::shared_ptr<const Table>& input_table) {
-  const auto chunk_count = input_table->chunk_count();
-  _aggregate<AggregateKey>(contexts_per_column, input_table, ChunkID{0}, chunk_count);
-}
-
-template <typename AggregateKey>
-void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std::shared_ptr<const Table>& input_table,
-                               ChunkID start, ChunkID end) {
-  /**
-   * PARTITIONING STEP
-   */
-
   std::atomic_size_t expected_result_size;
   bool use_immediate_key_shortcut = false;
   auto keys_per_chunk =
       _partition_by_groupby_keys<AggregateKey>(input_table, expected_result_size, use_immediate_key_shortcut);
 
+  const auto chunk_count = input_table->chunk_count();
+  _aggregate<AggregateKey>(contexts_per_column, input_table, expected_result_size, use_immediate_key_shortcut,
+                           keys_per_chunk, ChunkID{0}, chunk_count);
+}
+
+template <typename AggregateKey>
+void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std::shared_ptr<const Table>& input_table,
+                               std::atomic_size_t& expected_result_size, bool& use_immediate_key_shortcut,
+                               KeysPerChunk<AggregateKey>& keys_per_chunk, ChunkID start, ChunkID end) {
   /**
    * AGGREGATION STEP
    */
