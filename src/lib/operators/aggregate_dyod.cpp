@@ -615,64 +615,46 @@ struct DYODAggregateContext : public DYODAggregateResultContext<ColumnDataType, 
 
   std::unique_ptr<DYODAggregateResultIdMap<AggregateKey>> result_ids;
 
-  void merge(const std::shared_ptr<DYODAggregateContext<ColumnDataType, aggregate_function, AggregateKey>>& other) {
-    const auto& other_result_ids = *other->result_ids;
-    const auto& other_results = other->results;
+  void merge_results(DYODAggregateResult<ColumnDataType, aggregate_function>& target,
+                     DYODAggregateResult<ColumnDataType, aggregate_function>& other) {
+    std::cout << "merging results\n";
+
+    if constexpr (aggregate_function == WindowFunction::Min) {
+      if (value_smaller(other.accumulator, target.accumulator)) {
+        target.accumulator = other.accumulator;
+      }
+    }
+    if constexpr (aggregate_function == WindowFunction::Max) {
+      if (value_greater(other.accumulator, target.accumulator)) {
+        target.accumulator = other.accumulator;
+      }
+    }
+    if constexpr (aggregate_function == WindowFunction::Sum || aggregate_function == WindowFunction::Avg) {
+      target.accumulator += other.accumulator;
+    }
+    if constexpr (aggregate_function == WindowFunction::Any) {
+      target.accumulator = other.accumulator;
+    }
+    target.aggregate_count += other.aggregate_count;
+  }
+
+  void merge(std::shared_ptr<DYODAggregateContext<ColumnDataType, aggregate_function, AggregateKey>>& other) {
+    auto& other_result_ids = *other->result_ids;
+    auto& other_results = other->results;
 
     if constexpr (std::is_same_v<AggregateKey, DYODEmptyAggregateKey>) {
       // TODO(anyone): merge without keys.
       auto& other_result = other_results[0];
       auto& result = this->results[0];
-      if constexpr (aggregate_function == WindowFunction::Min) {
-        if (value_smaller(other_result.accumulator, result.accumulator)) {
-          result.accumulator = other_result.accumulator;
-        }
-      }
-      if constexpr (aggregate_function == WindowFunction::Max) {
-        if (value_greater(other_result.accumulator, result.accumulator)) {
-          result.accumulator = other_result.accumulator;
-        }
-      }
-      if constexpr (aggregate_function == WindowFunction::Sum || aggregate_function == WindowFunction::Avg) {
-        result.accumulator += other_result.accumulator;
-      }
-      if constexpr (aggregate_function == WindowFunction::Any) {
-        result.accumulator = other_result.accumulator;
-      }
+      merge_results(result, other_result);
     } else {
       for (const auto& key : other_result_ids) {
         const auto it = result_ids->find(key.first);
         auto& other_result = other_results[key.second];
         if (it != result_ids->end()) {
-          // We have already seen this group and need to merge both results.
           auto result_id = it->second;
           auto& result = this->results[result_id];
-
-          if constexpr (aggregate_function == WindowFunction::CountDistinct) {
-            // For CountDistinct, we need to merge both sets.
-            // result.accumulator.merge(other_result.accumulator);
-          }
-          if constexpr (aggregate_function == WindowFunction::StandardDeviationSample) {
-            // TODO(anyone): merge STDDEV
-          }
-          if constexpr (aggregate_function == WindowFunction::Min) {
-            if (value_smaller(other_result.accumulator, result.accumulator)) {
-              result.accumulator = other_result.accumulator;
-            }
-          }
-          if constexpr (aggregate_function == WindowFunction::Max) {
-            if (value_greater(other_result.accumulator, result.accumulator)) {
-              result.accumulator = other_result.accumulator;
-            }
-          }
-          if constexpr (aggregate_function == WindowFunction::Sum || aggregate_function == WindowFunction::Avg) {
-            result.accumulator += other_result.accumulator;
-          }
-          if constexpr (aggregate_function == WindowFunction::Any) {
-            result.accumulator = other_result.accumulator;
-          }
-
-          result.aggregate_count += other_result.aggregate_count;
+          merge_results(result, other_result);
         }
         // We found a key that we have not seen yet and need to add it.
         const auto result_id = result_ids->size();
@@ -688,13 +670,13 @@ struct DYODAggregateContext : public DYODAggregateResultContext<ColumnDataType, 
 };
 
 template <typename ColumnDataType, WindowFunction aggregate_function, typename AggregateKey>
-void AggregateDYOD::_merge_contexts(const std::shared_ptr<DYODSegmentVisitorContext>& target,
-                                    const std::shared_ptr<DYODSegmentVisitorContext>& other) {
-  const auto cast_target =
+void AggregateDYOD::_merge_contexts(std::shared_ptr<DYODSegmentVisitorContext>& target,
+                                    std::shared_ptr<DYODSegmentVisitorContext>& other) {
+  auto cast_target =
       std::static_pointer_cast<DYODAggregateContext<ColumnDataType, aggregate_function, AggregateKey>>(target);
   DebugAssert(cast_target, "Merged Context has unexpected template arguments.");
 
-  const auto cast_other =
+  auto cast_other =
       std::static_pointer_cast<DYODAggregateContext<ColumnDataType, aggregate_function, AggregateKey>>(other);
   DebugAssert(cast_other, "Merged Context has unexpected template arguments.");
   cast_target->merge(cast_other);
