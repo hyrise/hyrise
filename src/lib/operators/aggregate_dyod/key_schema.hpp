@@ -65,6 +65,18 @@ class OutputColumns;
 enum class KeyComposition : uint8_t { NumericOnly, Mixed, StringOnly };
 
 /**
+ * Rewrite -0.0 to +0.0 and every NaN to the one quiet-NaN pattern, so byte-equality on the result matches value
+ * equality (see the file banner). Shared by the float/double key lanes and by DistinctSet's value equality
+ * (distinct_set.hpp), which must agree with key equality.
+ */
+float canonicalize(float value);
+double canonicalize(double value);
+
+/** FNV-1a over a byte range; the seeded overload continues a previous hash. */
+uint64_t hash_bytes(const std::byte* data, size_t length);
+uint64_t hash_bytes(const std::byte* data, size_t length, uint64_t seed);
+
+/**
  * Overflow storage for string key content that does not fit a key's inline string blob.
  *
  * When a group-by string is too long for the inline blob, its bytes are copied here and the key instead holds a

@@ -12,6 +12,7 @@
 #include "expression/window_function_expression.hpp"
 #include "operators/aggregate/window_function_traits.hpp"
 #include "operators/aggregate_dyod/aggregate_dyod_config.hpp"
+#include "operators/aggregate_dyod/distinct_set.hpp"
 #include "types.hpp"
 
 namespace hyrise {
@@ -208,8 +209,9 @@ class AbstractAccumulatorColumn {
    * Append the finalized results for dense slots [first_slot, last_slot) as one contiguous run of output rows.
    *
    * Applies per-aggregate finalization: AVG divides its running sum by the non-null count; a group with zero non-null
-   * contributions emits NULL (for SUM/MIN/MAX/AVG alike); string MIN/MAX appends the accumulated extremum string.
-   * Exactly one value (possibly NULL) is appended per slot to output column output_column_index.
+   * contributions emits NULL (for SUM/MIN/MAX/AVG alike, while COUNT and COUNT(DISTINCT) emit 0); string MIN/MAX
+   * appends the accumulated extremum string; ANY reads its representative row's cell from the input table, NULL
+   * included. Exactly one value (possibly NULL) is appended per slot to output column output_column_index.
    *
    * @param first_slot inclusive start of the dense slot range to emit.
    * @param last_slot exclusive end of the range; must satisfy first_slot <= last_slot <= the current slot count.
@@ -228,7 +230,8 @@ class AbstractAccumulatorColumn {
  * Concrete accumulator column, monomorphized over the input column type and the window function.
  *
  * Instantiated only for the (type, function) pairs WindowFunctionTraits marks valid: SUM/AVG on arithmetic types;
- * MIN/MAX/COUNT on any type, including lexicographic MIN/MAX over strings. AccumulatorType is
+ * MIN/MAX/COUNT on any type, including lexicographic MIN/MAX over strings (ANY and COUNT(DISTINCT) live in
+ * AnyAccumulatorColumn and DistinctAccumulatorColumn instead). AccumulatorType is
  * WindowFunctionTraits<ColumnType, Function>::ReturnType, except AVG, which carries a running {sum, non-null count}
  * and divides at finalize.
  *
@@ -262,6 +265,47 @@ class TypedAccumulatorColumn : public AbstractAccumulatorColumn {
 };
 
 /**
+ * Accumulator for ANY: keeps the first row id that lands in each dense slot and gathers the cell from the input table
+ * at finalize, NULL included. No value stream is scattered for ANY; fold() consumes the shared row-id stream.
+ */
+template <typename ColumnType>
+class AnyAccumulatorColumn : public AbstractAccumulatorColumn {
+ public:
+  AnyAccumulatorColumn(const Table& input_table, ColumnID source_column);
+
+  void grow_to(size_t slot_count) override;
+  void fold(std::span<const uint32_t> slots, std::span<const std::byte> value_bytes,
+            std::span<const std::byte> value_null_bitmap) override;
+  void clear() override;
+  void finalize_into(size_t first_slot, size_t last_slot, size_t output_column_index,
+                     OutputColumns& output) const override;
+
+ private:
+  const Table* _input_table;
+  ColumnID _source_column;
+  std::vector<RowID> _row_ids;  // representative row per dense slot; NULL_ROW_ID until the slot's first fold
+};
+
+/**
+ * Accumulator for COUNT(DISTINCT): bumps a slot's count only when its DistinctSet reports a first sighting. A group
+ * with no non-NULL contributions counts 0, never NULL.
+ */
+template <typename ColumnType>
+class DistinctAccumulatorColumn : public AbstractAccumulatorColumn {
+ public:
+  void grow_to(size_t slot_count) override;
+  void fold(std::span<const uint32_t> slots, std::span<const std::byte> value_bytes,
+            std::span<const std::byte> value_null_bitmap) override;
+  void clear() override;
+  void finalize_into(size_t first_slot, size_t last_slot, size_t output_column_index,
+                     OutputColumns& output) const override;
+
+ private:
+  DistinctSet<ColumnType> _distinct;
+  std::vector<int64_t> _counts;  // first sightings per dense slot, as reported by _distinct
+};
+
+/**
  * Per-query description of the requested aggregates and the value streams they read.
  *
  * Built once from the query's WindowFunctionExpressions and validated against WindowFunctionTraits, so invalid
@@ -285,8 +329,9 @@ class AggregateSchema {
    * @param aggregates requested window-function expressions; each is validated against WindowFunctionTraits. Borrowed.
    * @param input_table the operator's input, used to resolve source column data types and nullability. Borrowed.
    * @return a fully resolved schema owning one value-scatter column per distinct source column.
-   * @throws std::logic_error (via Hyrise Assert/Fail) if an aggregate is unsupported (only SUM/MIN/MAX/AVG/COUNT
-   *   exist) or its (type, function) combination is invalid -- e.g. SUM(string), whose result type is DataType::Null.
+   * @throws std::logic_error (via Hyrise Assert/Fail) if an aggregate is unsupported (only
+   *   SUM/MIN/MAX/AVG/COUNT/COUNT_DISTINCT/ANY exist) or its (type, function) combination is invalid -- e.g.
+   *   SUM(string), whose result type is DataType::Null.
    */
   static AggregateSchema build(const std::vector<std::shared_ptr<WindowFunctionExpression>>& aggregates,
                                const Table& input_table);
@@ -301,6 +346,18 @@ class AggregateSchema {
    */
   DataType result_type(size_t aggregate_index) const;
 
+  /**
+   * @param aggregate_index aggregate to query; must be in [0, aggregate_count()).
+   * @return that aggregate's window function.
+   */
+  WindowFunction function(size_t aggregate_index) const;
+
+  /**
+   * @param aggregate_index aggregate to query; must be in [0, aggregate_count()).
+   * @return that aggregate's source column, or INVALID_COLUMN_ID for COUNT(*).
+   */
+  ColumnID source_column(size_t aggregate_index) const;
+
   // ---- Scatter-phase value-stream model ----
   /** @return the number of distinct scattered source columns (COUNT(*) contributes none). */
   size_t value_stream_count() const;
@@ -309,18 +366,21 @@ class AggregateSchema {
    * @return the scatter column describing that stream; borrowed, valid while this schema lives.
    */
   const AbstractValueScatterColumn& value_stream(size_t stream_index) const;
-  // Sentinel returned by aggregate_value_stream() for an aggregate with no source column (COUNT(*)).
+  // Sentinel returned by aggregate_value_stream() for an aggregate that scatters no value stream (COUNT(*), ANY).
   static constexpr size_t NO_VALUE_STREAM = ~size_t{0};
   /**
    * @param aggregate_index aggregate to query; must be in [0, aggregate_count()).
    * @return the value-stream index (in [0, value_stream_count())) this aggregate reads, or NO_VALUE_STREAM if the
-   *   aggregate has no source column (COUNT(*)).
+   *   aggregate scatters no value stream: COUNT(*), which has no source column, and ANY, which reads the shared
+   *   row-id stream instead.
    */
   size_t aggregate_value_stream(size_t aggregate_index) const;
   /** @return the value-null-bitmap width in bytes; 0 when no value stream is nullable. */
   size_t value_null_bitmap_width() const;
   /** @return true iff any value stream is a string stream and a per-partition value arena must be allocated. */
   bool needs_value_arena() const;
+  /** @return true iff an ANY aggregate is present and the scatter phase must emit the shared row-id stream. */
+  bool needs_row_id_stream() const;
 
   // ---- Merge-phase accumulators ----
   /**
@@ -342,14 +402,16 @@ class AggregateSchema {
   // Passive per-aggregate configuration resolved at build time; no behavior of its own.
   struct AggregateEntry {
     ColumnID source_column;     // source column to aggregate; INVALID_COLUMN_ID for COUNT(*)
-    WindowFunction function;    // requested aggregate function (SUM/MIN/MAX/AVG/COUNT in v1)
+    WindowFunction function;    // requested aggregate function (SUM/MIN/MAX/AVG/COUNT/COUNT_DISTINCT/ANY)
     DataType input_type;        // data type of source_column, the value folded into the accumulator
     DataType result_type;       // output data type of this aggregate, from WindowFunctionTraits
-    size_t value_stream_index;  // index into the value streams, or NO_VALUE_STREAM for COUNT(*)
+    size_t value_stream_index;  // index into the value streams, or NO_VALUE_STREAM for COUNT(*) and ANY
   };
 
   // One AggregateEntry per aggregate, index-aligned with aggregate indices.
   boost::container::small_vector<AggregateEntry, EXPECTED_AGGREGATE_COLUMNS> _entries;
+  // Needed by the ANY accumulators to gather representative rows.
+  const Table* _input_table{nullptr};
   // One owned scatter column per distinct source column, index-aligned with value-stream indices.
   boost::container::small_vector<std::unique_ptr<AbstractValueScatterColumn>, EXPECTED_AGGREGATE_COLUMNS>
       _value_streams;

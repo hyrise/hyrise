@@ -3,16 +3,19 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
+#include <bit>
 #include <chrono>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <format>
 #include <functional>
 #include <limits>
 #include <memory>
 #include <memory_resource>
 #include <numeric>
+#include <span>
 #include <string>
 #include <type_traits>
 #include <unordered_map>
@@ -25,10 +28,25 @@
 #include "hyrise.hpp"
 #include "operators/abstract_aggregate_operator.hpp"
 #include "operators/abstract_operator.hpp"
+#include "operators/aggregate_dyod/accumulator_column.hpp"
+#include "operators/aggregate_dyod/aggregate_dyod_config.hpp"
+#include "operators/aggregate_dyod/distinct_set.hpp"
+#include "operators/aggregate_dyod/hyperloglog.hpp"
+#include "operators/aggregate_dyod/key_schema.hpp"
+#include "operators/aggregate_dyod/merge_map.hpp"
+#include "operators/aggregate_dyod/output_columns.hpp"
+#include "operators/aggregate_dyod/scatter_store.hpp"
+#include "operators/operator_performance_data.hpp"
+#include "scheduler/abstract_task.hpp"
+#include "scheduler/job_task.hpp"
 #include "storage/abstract_segment.hpp"
+#include "storage/chunk.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/table.hpp"
+#include "storage/table_column_definition.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
+#include "utils/timer.hpp"
 
 namespace hyrise {
 
@@ -134,6 +152,67 @@ class StandardAggregator : public AbstractAggregator {
   State _final{};
 };
 
+// ANY keeps the carried input column's name and nullability, like AggregateHash.
+template <typename ColumnDataType>
+class AnyAggregator : public AbstractAggregator {
+  struct State {
+    AllTypeVariant value;
+    bool seen{false};
+  };
+
+  struct alignas(64) PaddedState {
+    State state{};
+  };
+
+ public:
+  AnyAggregator(std::string output_name, const ColumnID column_id, const bool nullable)
+      : _output_name{std::move(output_name)}, _column_id{column_id}, _nullable{nullable} {}
+
+  void set_worker_count(const size_t worker_count) override {
+    _states.assign(worker_count, PaddedState{});
+  }
+
+  void accumulate(const size_t worker_id, const Chunk& chunk) override {
+    auto& state = _states[worker_id].state;
+    if (state.seen || chunk.size() == 0) {
+      return;
+    }
+    state.value = (*chunk.get_segment(_column_id))[ChunkOffset{0}];
+    state.seen = true;
+  }
+
+  void merge() override {
+    for (const auto& padded : _states) {
+      if (padded.state.seen) {
+        _final = padded.state;
+        break;
+      }
+    }
+  }
+
+  std::shared_ptr<AbstractSegment> build_segment() const override {
+    const auto is_null = !_final.seen || variant_is_null(_final.value);
+    auto values = pmr_vector<ColumnDataType>{};
+    values.emplace_back(is_null ? ColumnDataType{} : boost::get<ColumnDataType>(_final.value));
+    if (!_nullable) {
+      return std::make_shared<ValueSegment<ColumnDataType>>(std::move(values));
+    }
+
+    return std::make_shared<ValueSegment<ColumnDataType>>(std::move(values), pmr_vector<bool>{is_null});
+  }
+
+  TableColumnDefinition output_column_definition() const override {
+    return TableColumnDefinition{_output_name, data_type_from_type<ColumnDataType>(), _nullable};
+  }
+
+ private:
+  std::string _output_name;
+  ColumnID _column_id;
+  bool _nullable;
+  std::vector<PaddedState> _states;
+  State _final{};
+};
+
 class CountStarAggregator : public AbstractAggregator {
   struct alignas(64) PaddedCount {
     size_t count{0};
@@ -214,6 +293,50 @@ class CountColumnAggregator : public AbstractAggregator {
   size_t _final{0};
 };
 
+template <typename ColumnDataType>
+class CountDistinctAggregator : public AbstractAggregator {
+  struct alignas(64) PaddedState {
+    DistinctSet<ColumnDataType> set;
+  };
+
+ public:
+  CountDistinctAggregator(std::string output_name, const ColumnID column_id)
+      : _output_name{std::move(output_name)}, _column_id{column_id} {}
+
+  void set_worker_count(const size_t worker_count) override {
+    _states = std::vector<PaddedState>(worker_count);
+  }
+
+  void accumulate(const size_t worker_id, const Chunk& chunk) override {
+    auto& set = _states[worker_id].set;
+    segment_iterate<ColumnDataType>(*chunk.get_segment(_column_id), [&](const auto& position) {
+      if (position.is_null()) {
+        return;
+      }
+      set.insert(0, position.value());
+    });
+  }
+
+  void merge() override {
+    for (auto worker_id = size_t{1}; worker_id < _states.size(); ++worker_id) {
+      _states.front().set.merge(_states[worker_id].set);
+    }
+  }
+
+  std::shared_ptr<AbstractSegment> build_segment() const override {
+    return std::make_shared<ValueSegment<int64_t>>(pmr_vector{static_cast<int64_t>(_states.front().set.size())});
+  }
+
+  TableColumnDefinition output_column_definition() const override {
+    return TableColumnDefinition{_output_name, DataType::Long, false};
+  }
+
+ private:
+  std::string _output_name;
+  ColumnID _column_id;
+  std::vector<PaddedState> _states;
+};
+
 std::unique_ptr<AbstractAggregator> make_aggregator(const Table& input_table, const WindowFunctionExpression& aggregate,
                                                     const ColumnID column_id) {
   const auto window_function = aggregate.window_function;
@@ -223,6 +346,9 @@ std::unique_ptr<AbstractAggregator> make_aggregator(const Table& input_table, co
     return std::make_unique<CountStarAggregator>(std::move(output_name));
   }
   Assert(column_id != INVALID_COLUMN_ID, "Only COUNT(*) can have an invalid ColumnID.");
+  if (window_function == WindowFunction::Any) {
+    output_name = input_table.column_name(column_id);
+  }
 
   auto aggregator = std::unique_ptr<AbstractAggregator>{};
   resolve_data_type(input_table.column_data_type(column_id), [&](const auto type) {
@@ -247,6 +373,13 @@ std::unique_ptr<AbstractAggregator> make_aggregator(const Table& input_table, co
       case WindowFunction::Count:
         aggregator = std::make_unique<CountColumnAggregator<ColumnDataType>>(std::move(output_name), column_id);
         break;
+      case WindowFunction::CountDistinct:
+        aggregator = std::make_unique<CountDistinctAggregator<ColumnDataType>>(std::move(output_name), column_id);
+        break;
+      case WindowFunction::Any:
+        aggregator = std::make_unique<AnyAggregator<ColumnDataType>>(std::move(output_name), column_id,
+                                                                     input_table.column_is_nullable(column_id));
+        break;
       default:
         Fail("WindowFunction not yet supported");
     }
@@ -267,12 +400,26 @@ std::vector<std::unique_ptr<AbstractAggregator>> build_aggregators(
 
   return aggregators;
 }
+
+template <typename Worker>
+void run_workers(const size_t worker_count, const Worker& worker) {
+  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+  jobs.reserve(worker_count);
+  for (auto worker_id = size_t{0}; worker_id < worker_count; ++worker_id) {
+    jobs.emplace_back(std::make_shared<JobTask>([&worker, worker_id]() {
+      worker(worker_id);
+    }));
+  }
+
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+}
 }  // namespace
 
 AggregateDYOD::AggregateDYOD(const std::shared_ptr<AbstractOperator>& input_operator,
                              const std::vector<std::shared_ptr<WindowFunctionExpression>>& aggregates,
                              const std::vector<ColumnID>& groupby_column_ids)
-    : AbstractAggregateOperator(input_operator, aggregates, groupby_column_ids) {}
+    : AbstractAggregateOperator(input_operator, aggregates, groupby_column_ids,
+                                std::make_unique<OperatorPerformanceData<OperatorSteps>>()) {}
 
 const std::string& AggregateDYOD::name() const {
   static const auto name = std::string{"AggregateDYOD"};
@@ -280,14 +427,319 @@ const std::string& AggregateDYOD::name() const {
 }
 
 std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
-  Assert(_groupby_column_ids.empty(), "AggregateDYOD currently supports only queries without GROUP BY.");
-  _validate_aggregates();
-
   const auto input_table = left_input_table();
-  const auto aggregators = build_aggregators(*input_table, _aggregates);
+  const auto aggregate_schema = _prepare(*input_table);
+
+  if (_groupby_column_ids.empty()) {
+    return _aggregate_without_group_by(aggregate_schema, *input_table);
+  }
+
+  auto output_table = std::shared_ptr<Table>{};
+  resolve_key_schema(_groupby_column_ids, *input_table, [&](const auto& key_schema) {
+    output_table = _aggregate(key_schema, aggregate_schema, *input_table);
+  });
+  return output_table;
+}
+
+AggregateSchema AggregateDYOD::_prepare(const Table& input_table) {
+  _validate_aggregates();
+  for (const auto& aggregate : _aggregates) {
+    const auto function = aggregate->window_function;
+    Assert(function == WindowFunction::Sum || function == WindowFunction::Min || function == WindowFunction::Max ||
+               function == WindowFunction::Avg || function == WindowFunction::Count ||
+               function == WindowFunction::CountDistinct || function == WindowFunction::Any,
+           "WindowFunction not yet supported");
+  }
+  return AggregateSchema::build(_aggregates, input_table);
+}
+
+template <typename KeySchema>
+std::shared_ptr<Table> AggregateDYOD::_aggregate(const KeySchema& key_schema, const AggregateSchema& aggregate_schema,
+                                                 const Table& input_table) {
+  auto& step_performance_data = dynamic_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
+  auto timer = Timer{};
+
+  const auto chunk_count = static_cast<size_t>(input_table.chunk_count());
+  const auto num_cpus = std::max(size_t{1}, Hyrise::get().topology.num_cpus());
+  const auto scatter_worker_count = std::clamp(chunk_count, size_t{1}, num_cpus);
+  const auto key_width = key_schema.packed_width();
+
+  const auto gather_group_by_segments = [&](const Chunk& chunk, std::vector<std::shared_ptr<AbstractSegment>>& owners,
+                                            std::vector<const AbstractSegment*>& segments) {
+    owners.clear();
+    segments.clear();
+    for (const auto column_id : _groupby_column_ids) {
+      owners.emplace_back(chunk.get_segment(column_id));
+      segments.emplace_back(owners.back().get());
+    }
+  };
+
+  // Estimate: per-worker HyperLogLog sketches over the packed-key hash choose the partition count.
+  const auto estimate_worker_count =
+      input_table.row_count() < PARALLEL_ESTIMATE_THRESHOLD ? size_t{1} : scatter_worker_count;
+  auto sketches = std::vector<HllSketch>(estimate_worker_count);
+  {
+    auto chunk_cursor = std::atomic<size_t>{0};
+    run_workers(estimate_worker_count, [&](const size_t worker_id) {
+      auto& sketch = sketches[worker_id];
+      auto key_scratch = std::vector<std::byte>(key_width);
+      auto spill_scratch = StringSpillBuffer{};
+      auto segment_owners = std::vector<std::shared_ptr<AbstractSegment>>{};
+      auto segments = std::vector<const AbstractSegment*>{};
+      while (true) {
+        const auto chunk_index = chunk_cursor.fetch_add(1, std::memory_order_relaxed);
+        if (chunk_index >= chunk_count) {
+          break;
+        }
+        const auto chunk = input_table.get_chunk(ChunkID{static_cast<ChunkID::base_type>(chunk_index)});
+        if (!chunk) {
+          continue;
+        }
+        gather_group_by_segments(*chunk, segment_owners, segments);
+        const auto row_count = chunk->size();
+        for (auto chunk_offset = ChunkOffset{0}; chunk_offset < row_count; ++chunk_offset) {
+          key_schema.pack(segments, chunk_offset, key_scratch.data(), spill_scratch);
+          sketch.add(key_schema.hash(key_scratch.data()));
+        }
+        spill_scratch.clear();
+      }
+    });
+  }
+  for (auto worker_id = size_t{1}; worker_id < estimate_worker_count; ++worker_id) {
+    sketches.front().merge(sketches[worker_id]);
+  }
+  const auto cardinality_estimate = sketches.front().estimate();
+  const auto partition_count = choose_partition_count(cardinality_estimate, num_cpus);
+  const auto shift = static_cast<uint32_t>(std::countr_zero(partition_count));
+  step_performance_data.set_step_runtime(OperatorSteps::Estimate, timer.lap());
+
+  const auto value_stream_count = aggregate_schema.value_stream_count();
+  auto value_stream_widths = std::vector<size_t>(value_stream_count);
+  auto value_stream_sources = std::vector<ColumnID>(value_stream_count, INVALID_COLUMN_ID);
+  auto value_stream_null_bits = std::vector<uint32_t>(value_stream_count, 0);
+  auto nullable_stream_count = uint32_t{0};
+  for (auto stream_index = size_t{0}; stream_index < value_stream_count; ++stream_index) {
+    const auto& stream = aggregate_schema.value_stream(stream_index);
+    value_stream_widths[stream_index] = stream.element_width();
+    if (stream.is_nullable()) {
+      value_stream_null_bits[stream_index] = nullable_stream_count;
+      ++nullable_stream_count;
+    }
+  }
+  const auto aggregate_count = aggregate_schema.aggregate_count();
+  for (auto aggregate_index = size_t{0}; aggregate_index < aggregate_count; ++aggregate_index) {
+    const auto stream_index = aggregate_schema.aggregate_value_stream(aggregate_index);
+    if (stream_index == AggregateSchema::NO_VALUE_STREAM) {
+      continue;
+    }
+    value_stream_sources[stream_index] = aggregate_schema.source_column(aggregate_index);
+  }
+
+  const auto value_null_bitmap_width = aggregate_schema.value_null_bitmap_width();
+  const auto has_value_null_bitmap = value_null_bitmap_width > 0;
+  const auto needs_value_arena = aggregate_schema.needs_value_arena();
+  const auto max_value_width =
+      value_stream_count == 0 ? size_t{0} : *std::max_element(value_stream_widths.begin(), value_stream_widths.end());
+
+  // ANY aggregates scatter no value; they read one shared row-id stream instead.
+  const auto needs_row_id_stream = aggregate_schema.needs_row_id_stream();
+  const auto row_id_stream_index = value_stream_count;
+  if (needs_row_id_stream) {
+    value_stream_widths.emplace_back(sizeof(RowID));
+  }
+  const auto value_null_bitmap_stream_index = 1 + value_stream_widths.size();
+
+  // The packed key is staged in 4-byte pieces and the value-null bitmap byte-wise, so every declared stream width
+  // divides the SWWC line.
+  auto stream_widths = std::vector<size_t>{};
+  stream_widths.reserve(1 + value_stream_widths.size() + (has_value_null_bitmap ? 1 : 0));
+  stream_widths.emplace_back(4);
+  stream_widths.insert(stream_widths.end(), value_stream_widths.begin(), value_stream_widths.end());
+  if (has_value_null_bitmap) {
+    stream_widths.emplace_back(1);
+  }
+
+  auto scatter_stores = std::vector<ScatterStore>{};
+  scatter_stores.reserve(scatter_worker_count);
+  for (auto worker_id = size_t{0}; worker_id < scatter_worker_count; ++worker_id) {
+    scatter_stores.emplace_back(partition_count, key_width, value_stream_widths, value_null_bitmap_width,
+                                needs_value_arena);
+  }
+
+  // Scatter: buffer raw (key, values...) rows into per-worker stores across the partitions.
+  {
+    auto chunk_cursor = std::atomic<size_t>{0};
+    run_workers(scatter_worker_count, [&](const size_t worker_id) {
+      auto& store = scatter_stores[worker_id];
+      auto heads = ScatterHeads{partition_count, stream_widths.size(), stream_widths, has_value_null_bitmap};
+      auto key_scratch = std::vector<std::byte>(key_width);
+      auto bitmap_scratch = std::vector<std::byte>(value_null_bitmap_width);
+      auto value_scratch = std::vector<std::byte>(max_value_width);
+      auto pack_spill = StringSpillBuffer{};
+      auto dummy_arena = StringSpillBuffer{};
+      auto segment_owners = std::vector<std::shared_ptr<AbstractSegment>>{};
+      auto segments = std::vector<const AbstractSegment*>{};
+      auto value_segment_owners = std::vector<std::shared_ptr<AbstractSegment>>{};
+      auto value_segments = std::vector<const AbstractSegment*>{};
+      while (true) {
+        const auto chunk_index = chunk_cursor.fetch_add(1, std::memory_order_relaxed);
+        if (chunk_index >= chunk_count) {
+          break;
+        }
+        const auto chunk = input_table.get_chunk(ChunkID{static_cast<ChunkID::base_type>(chunk_index)});
+        if (!chunk) {
+          continue;
+        }
+        gather_group_by_segments(*chunk, segment_owners, segments);
+        value_segment_owners.clear();
+        value_segments.clear();
+        for (const auto column_id : value_stream_sources) {
+          value_segment_owners.emplace_back(chunk->get_segment(column_id));
+          value_segments.emplace_back(value_segment_owners.back().get());
+        }
+        const auto row_count = chunk->size();
+        for (auto chunk_offset = ChunkOffset{0}; chunk_offset < row_count; ++chunk_offset) {
+          key_schema.pack(segments, chunk_offset, key_scratch.data(), pack_spill);
+          const auto key_hash = key_schema.hash(key_scratch.data());
+          const auto partition = static_cast<PartitionId>(key_hash & (partition_count - 1));
+          if constexpr (KeySchema::HAS_STRINGS) {
+            key_schema.reintern_spill(key_scratch.data(), store.key_spill_buffer(partition));
+            pack_spill.clear();
+          }
+          for (auto piece_offset = size_t{0}; piece_offset < key_width; piece_offset += 4) {
+            heads.push(store, 0, partition, key_scratch.data() + piece_offset, 4);
+          }
+          if (has_value_null_bitmap) {
+            std::memset(bitmap_scratch.data(), 0, value_null_bitmap_width);
+          }
+          for (auto stream_index = size_t{0}; stream_index < value_stream_count; ++stream_index) {
+            const auto width = value_stream_widths[stream_index];
+            std::memset(value_scratch.data(), 0, width);
+            auto& value_arena = needs_value_arena ? store.value_arena(partition) : dummy_arena;
+            aggregate_schema.value_stream(stream_index)
+                .pack(*value_segments[stream_index], chunk_offset, value_scratch.data(), bitmap_scratch.data(),
+                      value_stream_null_bits[stream_index], value_arena);
+            heads.push(store, 1 + stream_index, partition, value_scratch.data(), width);
+          }
+          if (needs_row_id_stream) {
+            const auto row_id = RowID{ChunkID{static_cast<ChunkID::base_type>(chunk_index)}, chunk_offset};
+            heads.push(store, 1 + row_id_stream_index, partition, reinterpret_cast<const std::byte*>(&row_id),
+                       sizeof(row_id));
+          }
+          for (auto byte_index = size_t{0}; byte_index < value_null_bitmap_width; ++byte_index) {
+            heads.push(store, value_null_bitmap_stream_index, partition, bitmap_scratch.data() + byte_index, 1);
+          }
+        }
+      }
+      heads.finish(store);
+    });
+  }
+  step_performance_data.set_step_runtime(OperatorSteps::Scatter, timer.lap());
+
+  auto output_column_definitions = TableColumnDefinitions{};
+  output_column_definitions.reserve(_groupby_column_ids.size() + aggregate_count);
+  for (const auto column_id : _groupby_column_ids) {
+    output_column_definitions.emplace_back(input_table.column_name(column_id), input_table.column_data_type(column_id),
+                                           input_table.column_is_nullable(column_id));
+  }
+  for (auto aggregate_index = size_t{0}; aggregate_index < aggregate_count; ++aggregate_index) {
+    const auto function = aggregate_schema.function(aggregate_index);
+    // ANY keeps the input column's name and nullability.
+    if (function == WindowFunction::Any) {
+      const auto source_column = aggregate_schema.source_column(aggregate_index);
+      output_column_definitions.emplace_back(input_table.column_name(source_column),
+                                             aggregate_schema.result_type(aggregate_index),
+                                             input_table.column_is_nullable(source_column));
+      continue;
+    }
+    output_column_definitions.emplace_back(
+        _aggregates[aggregate_index]->as_column_name(), aggregate_schema.result_type(aggregate_index),
+        function != WindowFunction::Count && function != WindowFunction::CountDistinct);
+  }
+
+  // Merge: workers claim partitions and fold every store's rows for that partition through a dense MergeMap.
+  const auto merge_worker_count = std::min(static_cast<size_t>(partition_count), num_cpus);
+  auto per_worker_outputs = std::vector<OutputColumns>{};
+  per_worker_outputs.reserve(merge_worker_count);
+  for (auto worker_id = size_t{0}; worker_id < merge_worker_count; ++worker_id) {
+    per_worker_outputs.emplace_back(output_column_definitions, Chunk::DEFAULT_SIZE);
+  }
+  {
+    const auto partition_hint = cardinality_estimate / partition_count + 1;
+    auto partition_cursor = std::atomic<size_t>{0};
+    run_workers(merge_worker_count, [&](const size_t worker_id) {
+      auto merge_map = MergeMap<KeySchema>{key_schema, shift, aggregate_schema.make_accumulator_columns()};
+      auto& output = per_worker_outputs[worker_id];
+      auto slots = std::vector<uint32_t>{};
+      auto bitmap_tile = std::vector<std::byte>((MERGE_TILE_ROWS + 7) / 8);
+      while (true) {
+        const auto partition = static_cast<PartitionId>(partition_cursor.fetch_add(1, std::memory_order_relaxed));
+        if (partition >= partition_count) {
+          break;
+        }
+        merge_map.clear();
+        merge_map.reserve(partition_hint);
+        for (auto& store : scatter_stores) {
+          const auto& key_region = store.key_region(partition);
+          DebugAssert(key_region.size() % key_width == 0, "Key region must hold whole keys.");
+          const auto row_count = key_region.size() / key_width;
+          for (auto tile_start = size_t{0}; tile_start < row_count; tile_start += MERGE_TILE_ROWS) {
+            const auto tile_rows = std::min(MERGE_TILE_ROWS, row_count - tile_start);
+            slots.clear();
+            merge_map.resolve({key_region.data() + tile_start * key_width, tile_rows * key_width}, slots);
+            for (auto aggregate_index = size_t{0}; aggregate_index < aggregate_count; ++aggregate_index) {
+              const auto stream_index = aggregate_schema.aggregate_value_stream(aggregate_index);
+              if (stream_index == AggregateSchema::NO_VALUE_STREAM) {
+                if (aggregate_schema.function(aggregate_index) == WindowFunction::Any) {
+                  const auto& row_id_region = store.value_region(partition, row_id_stream_index);
+                  merge_map.fold(aggregate_index, slots,
+                                 {row_id_region.data() + tile_start * sizeof(RowID), tile_rows * sizeof(RowID)}, {});
+                } else {
+                  merge_map.fold(aggregate_index, slots, {}, {});
+                }
+                continue;
+              }
+              const auto width = value_stream_widths[stream_index];
+              const auto& value_region = store.value_region(partition, stream_index);
+              const auto value_bytes =
+                  std::span<const std::byte>{value_region.data() + tile_start * width, tile_rows * width};
+              auto value_null_bitmap = std::span<const std::byte>{};
+              if (aggregate_schema.value_stream(stream_index).is_nullable()) {
+                // Gather this stream's bits from the per-row bitmap fields into the bit-per-row tile form.
+                const auto* row_bitmaps = store.value_null_bitmap_region(partition).data();
+                const auto stream_bit = value_stream_null_bits[stream_index];
+                std::memset(bitmap_tile.data(), 0, bitmap_tile.size());
+                for (auto row = size_t{0}; row < tile_rows; ++row) {
+                  const auto* row_bitmap = row_bitmaps + (tile_start + row) * value_null_bitmap_width;
+                  if ((row_bitmap[stream_bit / 8] & (std::byte{1} << (stream_bit % 8))) != std::byte{0}) {
+                    bitmap_tile[row / 8] |= std::byte{1} << (row % 8);
+                  }
+                }
+                value_null_bitmap = {bitmap_tile.data(), (tile_rows + 7) / 8};
+              }
+              merge_map.fold(aggregate_index, slots, value_bytes, value_null_bitmap);
+            }
+          }
+        }
+        merge_map.flush_into(output);
+        output.maybe_seal();
+      }
+      output.seal_all();
+    });
+  }
+  step_performance_data.set_step_runtime(OperatorSteps::Merge, timer.lap());
+
+  const auto output_table = build_output_table(output_column_definitions, per_worker_outputs);
+  step_performance_data.set_step_runtime(OperatorSteps::OutputWriting, timer.lap());
+  return output_table;
+}
+
+std::shared_ptr<Table> AggregateDYOD::_aggregate_without_group_by(const AggregateSchema& /*aggregate_schema*/,
+                                                                  const Table& input_table) {
+  const auto aggregators = build_aggregators(input_table, _aggregates);
 
   // TODO: currently morsel_count == chunk_count, this has to be adjusted
-  const auto morsel_count = static_cast<size_t>(input_table->chunk_count());
+  const auto morsel_count = static_cast<size_t>(input_table.chunk_count());
   const auto worker_count = std::clamp(morsel_count, size_t{1}, Hyrise::get().topology.num_cpus());
 
   for (const auto& aggregator : aggregators) {
@@ -295,32 +747,21 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
   }
 
   auto morsel_cursor = std::atomic<size_t>{0};
-  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
-  jobs.reserve(worker_count);
-
-  for (auto worker_id = size_t{0}; worker_id < worker_count; ++worker_id) {
-    jobs.emplace_back(std::make_shared<JobTask>([&, worker_id]() {
-      while (true) {
-        const auto morsel = morsel_cursor.fetch_add(1, std::memory_order_relaxed);
-        if (morsel >= morsel_count) {
-          break;
-        }
-        const auto chunk = input_table->get_chunk(ChunkID{static_cast<ChunkID::base_type>(morsel)});
-        if (!chunk) {
-          continue;
-        }
-        for (const auto& aggregator : aggregators) {
-          aggregator->accumulate(worker_id, *chunk);
-        }
+  run_workers(worker_count, [&](const size_t worker_id) {
+    while (true) {
+      const auto morsel = morsel_cursor.fetch_add(1, std::memory_order_relaxed);
+      if (morsel >= morsel_count) {
+        break;
       }
-    }));
-  }
-
-  if (jobs.size() > 1) {
-    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
-  } else if (!jobs.empty()) {
-    jobs.front()->execute();
-  }
+      const auto chunk = input_table.get_chunk(ChunkID{static_cast<ChunkID::base_type>(morsel)});
+      if (!chunk) {
+        continue;
+      }
+      for (const auto& aggregator : aggregators) {
+        aggregator->accumulate(worker_id, *chunk);
+      }
+    }
+  });
 
   _output_column_definitions.reserve(aggregators.size());
   _output_segments.reserve(aggregators.size());
