@@ -254,6 +254,19 @@ std::unique_ptr<AbstractAggregator> make_aggregator(const Table& input_table, co
 
   return aggregator;
 }
+
+std::vector<std::unique_ptr<AbstractAggregator>> build_aggregators(
+    const Table& input_table, const std::vector<std::shared_ptr<WindowFunctionExpression>>& aggregates) {
+  auto aggregators = std::vector<std::unique_ptr<AbstractAggregator>>{};
+  aggregators.reserve(aggregates.size());
+
+  for (const auto& aggregate : aggregates) {
+    const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
+    aggregators.push_back(make_aggregator(input_table, *aggregate, pqp_column.column_id));
+  }
+
+  return aggregators;
+}
 }  // namespace
 
 AggregateDYOD::AggregateDYOD(const std::shared_ptr<AbstractOperator>& input_operator,
@@ -266,25 +279,12 @@ const std::string& AggregateDYOD::name() const {
   return name;
 }
 
-std::vector<std::unique_ptr<AbstractAggregator>> AggregateDYOD::_build_aggregators(
-    const std::shared_ptr<const Table>& input_table) const {
-  auto aggregators = std::vector<std::unique_ptr<AbstractAggregator>>{};
-  aggregators.reserve(_aggregates.size());
-
-  for (const auto& aggregate : _aggregates) {
-    const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
-    aggregators.push_back(make_aggregator(*input_table, *aggregate, pqp_column.column_id));
-  }
-
-  return aggregators;
-}
-
 std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
   Assert(_groupby_column_ids.empty(), "AggregateDYOD currently supports only queries without GROUP BY.");
   _validate_aggregates();
 
   const auto input_table = left_input_table();
-  const auto aggregators = _build_aggregators(input_table);
+  const auto aggregators = build_aggregators(*input_table, _aggregates);
 
   // TODO: currently morsel_count == chunk_count, this has to be adjusted
   const auto morsel_count = static_cast<size_t>(input_table->chunk_count());

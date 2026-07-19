@@ -73,9 +73,26 @@
 
           # Running Hyrise executables requires the LD_LIBRARY_PATH variable set. This does not happen by other
           # hooks, therefore it happens manually here. Each of the packages listed here provides a dynamically linked
-          # library. View the results by running `nix develop --command bash -c 'echo $LD_LIBRARY_PATH'`.
+          # library. View the result by running `echo $HYRISE_LIB_PATH`.
+          #
+          # We intentionally do NOT export this as LD_LIBRARY_PATH for the whole shell: cmake/ninja run every
+          # build step through `/bin/sh -c ...`, and an exported LD_LIBRARY_PATH leaks into that /bin/sh too.
+          # If /bin/sh (typically the host system's, not this flake's) is linked against an older glibc than
+          # one of the libraries above (e.g. ncurses), it aborts with a "version GLIBC_x.y not found" error
+          # and the whole CMake configure step fails. Use the `hyrise-run` helper below to set
+          # LD_LIBRARY_PATH only for the one command that actually needs it, e.g.:
+          #   hyrise-run ./cmake-build-debug/hyriseServer
           shellHook = ''
-            export LD_LIBRARY_PATH="${pkgs.lib.makeLibraryPath ([
+            # nixpkgs' own `cmake` is patched to also search $NIXPKGS_CMAKE_PREFIX_PATH (populated
+            # automatically for every nativeBuildInput above, e.g. boost), so a plain `cmake ..` run from
+            # this shell finds dependencies' CMake config files without any extra setup. Tools that bundle
+            # their own unpatched cmake binary (e.g. CLion's `clion/bin/cmake/.../cmake`) don't get that
+            # behavior for free: they only honor the standard CMAKE_PREFIX_PATH, which is otherwise unset,
+            # so find_package(Boost CONFIG) fails with "Could not find a package configuration file...".
+            # Exporting it here fixes that for every cmake binary, not just nixpkgs' patched one.
+            export CMAKE_PREFIX_PATH="$NIXPKGS_CMAKE_PREFIX_PATH"
+
+            export HYRISE_LIB_PATH="${pkgs.lib.makeLibraryPath ([
               pkgs.boost
               pkgs.hwloc
               pkgs.llvmPackages_20.lld
@@ -85,7 +102,16 @@
               pkgs.sqlite
               pkgs.stdenv.cc.cc.lib
               pkgs.tbb_2022
-            ] ++ pkgs.lib.optionals pkgs.stdenv.isLinux [ pkgs.numactl ])}:$LD_LIBRARY_PATH"
+            ] ++ pkgs.lib.optionals pkgs.stdenv.isLinux [ pkgs.numactl ])}"
+
+            hyrise-run() {
+              if [ -n "$LD_LIBRARY_PATH" ]; then
+                LD_LIBRARY_PATH="$HYRISE_LIB_PATH:$LD_LIBRARY_PATH" "$@"
+              else
+                LD_LIBRARY_PATH="$HYRISE_LIB_PATH" "$@"
+              fi
+            }
+            export -f hyrise-run
           '';
         };
       });
