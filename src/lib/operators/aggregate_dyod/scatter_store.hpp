@@ -187,7 +187,7 @@ class ScatterStore : private Noncopyable {
   void clear();
 
  private:
-  PartitionCount _partition_count;                    // Radix partition count P; valid PartitionId range [0, P).
+  [[maybe_unused]] PartitionCount _partition_count;   // Radix partition count P; valid PartitionId range [0, P).
   std::vector<Region> _key_regions;                   // One packed-key region per partition; indexed [partition].
   std::vector<Region> _value_regions;                 // [partition * _value_stream_count + stream].
   std::vector<Region> _value_null_bitmap_regions;     // Per partition; empty if no nullable value stream.
