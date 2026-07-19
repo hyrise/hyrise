@@ -30,7 +30,7 @@ void copy_line(std::byte* destination, const std::byte* source) {
   static_assert(hyrise::SWWC_LINE_BYTES % 16 == 0, "line must be a whole number of 128-bit stores");
 
   for (auto offset = size_t{0}; offset < hyrise::SWWC_LINE_BYTES; offset += 16) {
-    __m128i vec = _mm_loadu_si128(reinterpret_cast<const __m128i*>(source + offset));
+    const auto vec = _mm_loadu_si128(reinterpret_cast<const __m128i*>(source + offset));
     _mm_stream_si128(reinterpret_cast<__m128i*>(destination + offset), vec);
   }
 #else
@@ -75,7 +75,7 @@ void Region::push_line(const std::byte* line) {
     grow();
   }
 
-  std::byte* destination = _data.get() + _size;
+  auto* destination = _data.get() + _size;
   copy_line(destination, line);
   _size += SWWC_LINE_BYTES;
 }
@@ -218,7 +218,7 @@ Region& ScatterHeads::_region_for(ScatterStore& store, const size_t stream, cons
 
 void ScatterHeads::_store_line_flush(ScatterStore& store, const size_t stream, const PartitionId partition,
                                      const size_t line_offset, const size_t fill) const {
-  Region& region = _region_for(store, stream, partition);
+  auto& region = _region_for(store, stream, partition);
   if (fill == SWWC_LINE_BYTES) {
     region.push_line(_staging.data() + line_offset);
   } else {
