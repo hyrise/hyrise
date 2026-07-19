@@ -738,7 +738,7 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate_without_group_by(const Aggregat
                                                                   const Table& input_table) {
   const auto aggregators = build_aggregators(input_table, _aggregates);
 
-  // TODO: currently morsel_count == chunk_count, this has to be adjusted
+  // TODO(anyone): currently morsel_count == chunk_count, this has to be adjusted
   const auto morsel_count = static_cast<size_t>(input_table.chunk_count());
   const auto worker_count = std::clamp(morsel_count, size_t{1}, Hyrise::get().topology.num_cpus());
 
