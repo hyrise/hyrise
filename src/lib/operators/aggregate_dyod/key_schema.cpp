@@ -19,6 +19,7 @@
 #include "operators/aggregate_dyod/aggregate_dyod_config.hpp"
 #include "operators/aggregate_dyod/output_columns.hpp"
 #include "storage/abstract_segment.hpp"
+#include "storage/segment_iterate.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -175,6 +176,65 @@ std::unique_ptr<AbstractNumericKeyLane> make_numeric_lane(const DataType data_ty
     default:
       Fail("Not a numeric group-by column.");
   }
+}
+
+void decode_string_column(const AbstractSegment& segment, KeyDecodeScratch::StringColumn& column) {
+  const auto row_count = static_cast<size_t>(segment.size());
+  column.values.resize(row_count);
+  column.nulls.assign(row_count, 0);
+  auto row = size_t{0};
+  segment_iterate<pmr_string>(segment, [&](const auto& position) {
+    if (position.is_null()) {
+      column.values[row].clear();
+      column.nulls[row] = 1;
+    } else {
+      column.values[row] = position.value();
+    }
+    ++row;
+  });
+}
+
+void pack_string_columns(const StringKeyColumns& string_columns, const size_t length_field_width,
+                         const size_t blob_offset, const size_t fixed_part_width, const KeyDecodeScratch& scratch,
+                         const ChunkOffset chunk_offset, std::byte* key_out, StringSpillBuffer& spill_buffer) {
+  auto total_length = size_t{0};
+  const auto column_count = string_columns.size();
+  for (auto index = size_t{0}; index < column_count; ++index) {
+    const auto& column = string_columns[index];
+    const auto& decoded = scratch.string_columns[index];
+    if (decoded.nulls[chunk_offset]) {
+      DebugAssert(column.null_bit_index != NO_NULL_BIT, "NULL in a non-nullable group-by column.");
+      set_null_bit(key_out, column.null_bit_index);
+      continue;
+    }
+    const auto& value = decoded.values[chunk_offset];
+    write_length_field(key_out, column.length_field_offset, length_field_width, value.size());
+    total_length += value.size();
+  }
+
+  const auto blob_capacity = STRING_BLOB_BYTES_PER_COLUMN * column_count;
+  if (total_length <= blob_capacity) {
+    auto* cursor = key_out + blob_offset;
+    for (auto index = size_t{0}; index < column_count; ++index) {
+      const auto& value = scratch.string_columns[index].values[chunk_offset];
+      std::memcpy(cursor, value.data(), value.size());
+      cursor += value.size();
+    }
+    return;
+  }
+
+  auto content = std::vector<std::byte>{};
+  content.reserve(total_length);
+  for (auto index = size_t{0}; index < column_count; ++index) {
+    const auto& value = scratch.string_columns[index].values[chunk_offset];
+    const auto* bytes = reinterpret_cast<const std::byte*>(value.data());
+    content.insert(content.end(), bytes, bytes + value.size());
+  }
+  const auto* interned = spill_buffer.append(content.data(), content.size());
+  const auto content_hash = hash_bytes(content.data(), content.size());
+  std::memcpy(key_out + blob_offset, &content_hash, sizeof(content_hash));
+  const auto pointer_value = reinterpret_cast<uintptr_t>(interned);
+  std::memcpy(key_out + fixed_part_width, &pointer_value, sizeof(pointer_value));
 }
 
 void pack_string_columns(const StringKeyColumns& string_columns, const size_t length_field_width,
@@ -361,6 +421,26 @@ void NumericKeyLane<T>::pack(const AbstractSegment& segment, const ChunkOffset c
 }
 
 template <typename T>
+void NumericKeyLane<T>::decode(const AbstractSegment& segment, KeyDecodeScratch::NumericLane& lane) const {
+  using Encoded = decltype(encode_lane_value(T{}));
+  const auto row_count = static_cast<size_t>(segment.size());
+  lane.values.resize(row_count * sizeof(Encoded));
+  lane.nulls.assign(row_count, 0);
+  auto* values = reinterpret_cast<Encoded*>(lane.values.data());
+  auto row = size_t{0};
+  segment_iterate<T>(segment, [&](const auto& position) {
+    if (position.is_null()) {
+      DebugAssert(_null_bit_index != NO_NULL_BIT, "NULL in a non-nullable group-by column.");
+      values[row] = Encoded{};
+      lane.nulls[row] = 1;
+    } else {
+      values[row] = encode_lane_value(position.value());
+    }
+    ++row;
+  });
+}
+
+template <typename T>
 void NumericKeyLane<T>::unpack(const std::byte* key, const std::byte* null_bitmap, OutputColumns& output,
                                const size_t output_column_index, const size_t /*output_row*/) const {
   auto& output_column = static_cast<TypedOutputColumn<T>&>(output.column(output_column_index));
@@ -389,6 +469,8 @@ NumericShortKeySchema<PackedWidth> NumericShortKeySchema<PackedWidth>::build(
     const auto& column = layout.columns[index];
     schema._lanes.emplace_back(
         make_numeric_lane(column.data_type, group_by_column_ids[index], column.field_offset, column.null_bit_index));
+    schema._lane_fields.emplace_back(NumericLaneField{
+        column.field_offset, static_cast<uint32_t>(numeric_lane_width(column.data_type)), column.null_bit_index});
   }
   return schema;
 }
@@ -411,6 +493,32 @@ void NumericShortKeySchema<PackedWidth>::pack(const std::span<const AbstractSegm
   const auto lane_count = _lanes.size();
   for (auto index = size_t{0}; index < lane_count; ++index) {
     _lanes[index]->pack(*group_by_segments[index], chunk_offset, key_out, key_out);
+  }
+}
+
+template <size_t PackedWidth>
+void NumericShortKeySchema<PackedWidth>::decode(const std::span<const AbstractSegment* const> group_by_segments,
+                                                KeyDecodeScratch& scratch) const {
+  const auto lane_count = _lanes.size();
+  scratch.numeric_lanes.resize(lane_count);
+  for (auto index = size_t{0}; index < lane_count; ++index) {
+    _lanes[index]->decode(*group_by_segments[index], scratch.numeric_lanes[index]);
+  }
+}
+
+template <size_t PackedWidth>
+void NumericShortKeySchema<PackedWidth>::pack(const KeyDecodeScratch& scratch, const ChunkOffset chunk_offset,
+                                              std::byte* key_out, StringSpillBuffer& /*spill_buffer*/) const {
+  std::memset(key_out, 0, PackedWidth);
+  const auto lane_count = _lane_fields.size();
+  for (auto index = size_t{0}; index < lane_count; ++index) {
+    const auto& field = _lane_fields[index];
+    const auto& lane = scratch.numeric_lanes[index];
+    if (lane.nulls[chunk_offset]) {
+      set_null_bit(key_out, field.null_bit_index);
+      continue;
+    }
+    std::memcpy(key_out + field.field_offset, lane.values.data() + size_t{chunk_offset} * field.width, field.width);
   }
 }
 
@@ -450,6 +558,8 @@ NumericArbitraryKeySchema NumericArbitraryKeySchema::build(const std::vector<Col
     const auto& column = layout.columns[index];
     schema._lanes.emplace_back(
         make_numeric_lane(column.data_type, group_by_column_ids[index], column.field_offset, column.null_bit_index));
+    schema._lane_fields.emplace_back(NumericLaneField{
+        column.field_offset, static_cast<uint32_t>(numeric_lane_width(column.data_type)), column.null_bit_index});
   }
   return schema;
 }
@@ -469,6 +579,30 @@ void NumericArbitraryKeySchema::pack(const std::span<const AbstractSegment* cons
   const auto lane_count = _lanes.size();
   for (auto index = size_t{0}; index < lane_count; ++index) {
     _lanes[index]->pack(*group_by_segments[index], chunk_offset, key_out, key_out);
+  }
+}
+
+void NumericArbitraryKeySchema::decode(const std::span<const AbstractSegment* const> group_by_segments,
+                                       KeyDecodeScratch& scratch) const {
+  const auto lane_count = _lanes.size();
+  scratch.numeric_lanes.resize(lane_count);
+  for (auto index = size_t{0}; index < lane_count; ++index) {
+    _lanes[index]->decode(*group_by_segments[index], scratch.numeric_lanes[index]);
+  }
+}
+
+void NumericArbitraryKeySchema::pack(const KeyDecodeScratch& scratch, const ChunkOffset chunk_offset,
+                                     std::byte* key_out, StringSpillBuffer& /*spill_buffer*/) const {
+  std::memset(key_out, 0, _packed_width);
+  const auto lane_count = _lane_fields.size();
+  for (auto index = size_t{0}; index < lane_count; ++index) {
+    const auto& field = _lane_fields[index];
+    const auto& lane = scratch.numeric_lanes[index];
+    if (lane.nulls[chunk_offset]) {
+      set_null_bit(key_out, field.null_bit_index);
+      continue;
+    }
+    std::memcpy(key_out + field.field_offset, lane.values.data() + size_t{chunk_offset} * field.width, field.width);
   }
 }
 
@@ -506,6 +640,8 @@ MixedKeySchema<LenWidth> MixedKeySchema<LenWidth>::build(const std::vector<Colum
     } else {
       schema._numeric_lanes.emplace_back(
           make_numeric_lane(column.data_type, group_by_column_ids[index], column.field_offset, column.null_bit_index));
+      schema._lane_fields.emplace_back(NumericLaneField{
+          column.field_offset, static_cast<uint32_t>(numeric_lane_width(column.data_type)), column.null_bit_index});
       schema._numeric_tuple_indices.emplace_back(static_cast<uint32_t>(index));
     }
   }
@@ -538,6 +674,39 @@ void MixedKeySchema<LenWidth>::pack(const std::span<const AbstractSegment* const
   }
   pack_string_columns(_string_columns, LenWidth, _blob_offset, _fixed_part_width, group_by_segments, chunk_offset,
                       key_out, spill_buffer);
+}
+
+template <size_t LenWidth>
+void MixedKeySchema<LenWidth>::decode(const std::span<const AbstractSegment* const> group_by_segments,
+                                      KeyDecodeScratch& scratch) const {
+  const auto lane_count = _numeric_lanes.size();
+  scratch.numeric_lanes.resize(lane_count);
+  for (auto index = size_t{0}; index < lane_count; ++index) {
+    _numeric_lanes[index]->decode(*group_by_segments[_numeric_tuple_indices[index]], scratch.numeric_lanes[index]);
+  }
+  const auto string_count = _string_columns.size();
+  scratch.string_columns.resize(string_count);
+  for (auto index = size_t{0}; index < string_count; ++index) {
+    decode_string_column(*group_by_segments[_string_columns[index].tuple_index], scratch.string_columns[index]);
+  }
+}
+
+template <size_t LenWidth>
+void MixedKeySchema<LenWidth>::pack(const KeyDecodeScratch& scratch, const ChunkOffset chunk_offset, std::byte* key_out,
+                                    StringSpillBuffer& spill_buffer) const {
+  std::memset(key_out, 0, packed_width());
+  const auto lane_count = _lane_fields.size();
+  for (auto index = size_t{0}; index < lane_count; ++index) {
+    const auto& field = _lane_fields[index];
+    const auto& lane = scratch.numeric_lanes[index];
+    if (lane.nulls[chunk_offset]) {
+      set_null_bit(key_out, field.null_bit_index);
+      continue;
+    }
+    std::memcpy(key_out + field.field_offset, lane.values.data() + size_t{chunk_offset} * field.width, field.width);
+  }
+  pack_string_columns(_string_columns, LenWidth, _blob_offset, _fixed_part_width, scratch, chunk_offset, key_out,
+                      spill_buffer);
 }
 
 template <size_t LenWidth>
@@ -607,6 +776,24 @@ void StringOnlyKeySchema<LenWidth>::pack(const std::span<const AbstractSegment* 
   std::memset(key_out, 0, packed_width());
   pack_string_columns(_string_columns, LenWidth, _blob_offset, _fixed_part_width, group_by_segments, chunk_offset,
                       key_out, spill_buffer);
+}
+
+template <size_t LenWidth>
+void StringOnlyKeySchema<LenWidth>::decode(const std::span<const AbstractSegment* const> group_by_segments,
+                                           KeyDecodeScratch& scratch) const {
+  const auto string_count = _string_columns.size();
+  scratch.string_columns.resize(string_count);
+  for (auto index = size_t{0}; index < string_count; ++index) {
+    decode_string_column(*group_by_segments[_string_columns[index].tuple_index], scratch.string_columns[index]);
+  }
+}
+
+template <size_t LenWidth>
+void StringOnlyKeySchema<LenWidth>::pack(const KeyDecodeScratch& scratch, const ChunkOffset chunk_offset,
+                                         std::byte* key_out, StringSpillBuffer& spill_buffer) const {
+  std::memset(key_out, 0, packed_width());
+  pack_string_columns(_string_columns, LenWidth, _blob_offset, _fixed_part_width, scratch, chunk_offset, key_out,
+                      spill_buffer);
 }
 
 template <size_t LenWidth>
