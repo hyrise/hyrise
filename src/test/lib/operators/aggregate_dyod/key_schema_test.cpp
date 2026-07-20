@@ -5,6 +5,7 @@
 #include <cstring>
 #include <limits>
 #include <memory>
+#include <optional>
 #include <span>
 #include <stdexcept>
 #include <string>
@@ -18,6 +19,10 @@
 #include "operators/aggregate_dyod/key_schema.hpp"
 #include "operators/aggregate_dyod/output_columns.hpp"
 #include "storage/abstract_segment.hpp"
+#include "storage/chunk_encoder.hpp"
+#include "storage/encoding_type.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
+#include "storage/reference_segment.hpp"
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
 #include "types.hpp"
@@ -27,45 +32,73 @@ namespace hyrise {
 namespace {
 
 struct PackInput {
-  std::shared_ptr<Table> table;
+  std::shared_ptr<const Table> table;
   std::vector<std::shared_ptr<AbstractSegment>> segment_owners;
   std::vector<const AbstractSegment*> segments;
   std::vector<ColumnID> column_ids;
 };
 
-PackInput make_pack_input(const TableColumnDefinitions& definitions,
-                          const std::vector<std::vector<AllTypeVariant>>& rows) {
-  auto input = PackInput{};
-  input.table = std::make_shared<Table>(definitions, TableType::Data);
-  for (const auto& row : rows) {
-    input.table->append(row);
-  }
+void gather_segments(PackInput& input) {
+  input.segment_owners.clear();
+  input.segments.clear();
   const auto chunk = input.table->get_chunk(ChunkID{0});
-  for (auto column_index = size_t{0}; column_index < definitions.size(); ++column_index) {
-    const auto column_id = ColumnID{static_cast<ColumnID::base_type>(column_index)};
-    input.column_ids.emplace_back(column_id);
+  for (const auto column_id : input.column_ids) {
     input.segment_owners.emplace_back(chunk->get_segment(column_id));
     input.segments.emplace_back(input.segment_owners.back().get());
   }
+}
+
+PackInput make_pack_input(const TableColumnDefinitions& definitions,
+                          const std::vector<std::vector<AllTypeVariant>>& rows,
+                          const std::optional<ChunkOffset> target_chunk_size = std::nullopt,
+                          const std::optional<SegmentEncodingSpec> encoding = std::nullopt) {
+  auto input = PackInput{};
+  const auto table = std::make_shared<Table>(definitions, TableType::Data, target_chunk_size);
+  for (const auto& row : rows) {
+    table->append(row);
+  }
+  if (encoding) {
+    table->last_chunk()->set_immutable();
+    ChunkEncoder::encode_all_chunks(table, *encoding);
+  }
+  input.table = table;
+  for (auto column_index = size_t{0}; column_index < definitions.size(); ++column_index) {
+    input.column_ids.emplace_back(ColumnID{static_cast<ColumnID::base_type>(column_index)});
+  }
+  gather_segments(input);
   return input;
+}
+
+PackInput to_reference_input(const PackInput& input) {
+  auto reference = PackInput{};
+  reference.table = to_simple_reference_table(input.table);
+  reference.column_ids = input.column_ids;
+  gather_segments(reference);
+  return reference;
 }
 
 // Prefilled with garbage so pack() has to overwrite every byte.
 template <typename KeySchema>
 std::vector<std::byte> pack_key(const KeySchema& schema, const PackInput& input, uint32_t row,
                                 StringSpillBuffer& spill_buffer) {
+  auto scratch = KeyDecodeScratch{};
+  schema.decode(std::span<const AbstractSegment* const>{input.segments}, scratch);
   auto key = std::vector<std::byte>(schema.packed_width(), std::byte{0xAA});
-  schema.pack(std::span<const AbstractSegment* const>{input.segments}, ChunkOffset{row}, key.data(), spill_buffer);
+  schema.pack(scratch, ChunkOffset{row}, key.data(), spill_buffer);
   return key;
 }
 
 template <typename KeySchema>
 std::vector<std::vector<std::byte>> pack_all_keys(const KeySchema& schema, const PackInput& input,
                                                   StringSpillBuffer& spill_buffer) {
+  auto scratch = KeyDecodeScratch{};
+  schema.decode(std::span<const AbstractSegment* const>{input.segments}, scratch);
   auto keys = std::vector<std::vector<std::byte>>{};
   const auto row_count = input.table->row_count();
   for (auto row = uint32_t{0}; row < row_count; ++row) {
-    keys.emplace_back(pack_key(schema, input, row, spill_buffer));
+    auto key = std::vector<std::byte>(schema.packed_width(), std::byte{0xAA});
+    schema.pack(scratch, ChunkOffset{row}, key.data(), spill_buffer);
+    keys.emplace_back(std::move(key));
   }
   return keys;
 }
@@ -563,6 +596,72 @@ TEST_F(AggregateDYODKeySchemaTest, MixedKeysCompareNumericAndStringParts) {
     expect_keys_not_equal(schema, keys[0], keys[4]);
     expect_keys_not_equal(schema, keys[0], keys[5]);
   });
+}
+
+TEST_F(AggregateDYODKeySchemaTest, DictionarySegmentsPackLikeValueSegments) {
+  const auto definitions = TableColumnDefinitions{{"a", DataType::Int, true}, {"b", DataType::String, true}};
+  const auto long_string = pmr_string(3 * STRING_BLOB_BYTES_PER_COLUMN, 'd');
+  const auto rows = std::vector<std::vector<AllTypeVariant>>{{1, pmr_string{"abc"}},
+                                                             {NullValue{}, pmr_string{"abc"}},
+                                                             {1, NullValue{}},
+                                                             {2, long_string},
+                                                             {1, pmr_string{"abc"}}};
+  const auto plain = make_pack_input(definitions, rows);
+  const auto encoded = make_pack_input(definitions, rows, std::nullopt, SegmentEncodingSpec{EncodingType::Dictionary});
+  resolve_key_schema(plain.column_ids, *plain.table, [&](const auto& schema) {
+    auto spill_plain = StringSpillBuffer{};
+    auto spill_encoded = StringSpillBuffer{};
+    const auto expected = pack_all_keys(schema, plain, spill_plain);
+    const auto actual = pack_all_keys(schema, encoded, spill_encoded);
+    for (auto row = size_t{0}; row < expected.size(); ++row) {
+      expect_keys_equal(schema, expected[row], actual[row]);
+    }
+  });
+}
+
+TEST_F(AggregateDYODKeySchemaTest, ReferenceSegmentsSpanningChunksPackLikeValueSegments) {
+  const auto definitions = TableColumnDefinitions{{"a", DataType::Int, true}, {"b", DataType::String, false}};
+  const auto rows = std::vector<std::vector<AllTypeVariant>>{{1, pmr_string{"x"}},
+                                                             {NullValue{}, pmr_string{"y"}},
+                                                             {2, pmr_string{""}},
+                                                             {1, pmr_string{"x"}},
+                                                             {3, pmr_string{"z"}}};
+  const auto plain = make_pack_input(definitions, rows);
+  const auto reference = to_reference_input(make_pack_input(definitions, rows, ChunkOffset{2}));
+  resolve_key_schema(plain.column_ids, *plain.table, [&](const auto& schema) {
+    auto spill_plain = StringSpillBuffer{};
+    auto spill_reference = StringSpillBuffer{};
+    const auto expected = pack_all_keys(schema, plain, spill_plain);
+    const auto actual = pack_all_keys(schema, reference, spill_reference);
+    for (auto row = size_t{0}; row < expected.size(); ++row) {
+      expect_keys_equal(schema, expected[row], actual[row]);
+    }
+  });
+}
+
+TEST_F(AggregateDYODKeySchemaTest, NullRowIdsPackAsNullValues) {
+  const auto definitions = TableColumnDefinitions{{"a", DataType::Int, true}};
+  const auto plain = make_pack_input(definitions, {{7}, {NullValue{}}, {8}});
+
+  const auto data = make_pack_input(definitions, {{7}, {8}});
+  auto pos_list = std::make_shared<RowIDPosList>();
+  pos_list->emplace_back(RowID{ChunkID{0}, ChunkOffset{0}});
+  pos_list->emplace_back(NULL_ROW_ID);
+  pos_list->emplace_back(RowID{ChunkID{0}, ChunkOffset{1}});
+  auto reference = PackInput{};
+  const auto reference_table = std::make_shared<Table>(definitions, TableType::References);
+  reference_table->append_chunk({std::make_shared<ReferenceSegment>(data.table, ColumnID{0}, pos_list)});
+  reference.table = reference_table;
+  reference.column_ids = plain.column_ids;
+  gather_segments(reference);
+
+  const auto schema = NumericShortKeySchema<8>::build(plain.column_ids, *plain.table);
+  auto spill = StringSpillBuffer{};
+  const auto expected = pack_all_keys(schema, plain, spill);
+  const auto actual = pack_all_keys(schema, reference, spill);
+  for (auto row = size_t{0}; row < expected.size(); ++row) {
+    expect_keys_equal(schema, expected[row], actual[row]);
+  }
 }
 
 TEST_F(AggregateDYODKeySchemaTest, StringKeysRoundTripThroughUnpack) {
