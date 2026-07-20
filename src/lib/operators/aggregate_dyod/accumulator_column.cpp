@@ -17,6 +17,7 @@
 #include "operators/aggregate_dyod/scatter_store.hpp"
 #include "resolve_type.hpp"
 #include "storage/abstract_segment.hpp"
+#include "storage/segment_accessor.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
@@ -297,20 +298,21 @@ template <typename ColumnType>
 void AnyAccumulatorColumn<ColumnType>::finalize_into(const size_t first_slot, const size_t last_slot,
                                                      const size_t output_column_index, OutputColumns& output) const {
   auto& output_column = static_cast<TypedOutputColumn<ColumnType>&>(output.column(output_column_index));
-  auto segment_chunk_id = INVALID_CHUNK_ID;
-  auto segment = std::shared_ptr<AbstractSegment>{};
+  auto accessor_chunk_id = INVALID_CHUNK_ID;
+  auto accessor = std::unique_ptr<AbstractSegmentAccessor<ColumnType>>{};
   for (auto slot = first_slot; slot < last_slot; ++slot) {
     const auto row_id = _row_ids[slot];
     DebugAssert(!row_id.is_null(), "Every dense slot was created by at least one row.");
-    if (row_id.chunk_id != segment_chunk_id) {
-      segment = _input_table->get_chunk(row_id.chunk_id)->get_segment(_source_column);
-      segment_chunk_id = row_id.chunk_id;
+    if (row_id.chunk_id != accessor_chunk_id) {
+      accessor =
+          create_segment_accessor<ColumnType>(_input_table->get_chunk(row_id.chunk_id)->get_segment(_source_column));
+      accessor_chunk_id = row_id.chunk_id;
     }
-    const auto variant = (*segment)[row_id.chunk_offset];
-    if (variant_is_null(variant)) {
-      output_column.append_null();
+    const auto value = accessor->access(row_id.chunk_offset);
+    if (value) {
+      output_column.append(*value);
     } else {
-      output_column.append(boost::get<ColumnType>(variant));
+      output_column.append_null();
     }
   }
 }
