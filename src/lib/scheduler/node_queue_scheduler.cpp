@@ -19,17 +19,12 @@
 #include "shutdown_task.hpp"
 #include "task_queue.hpp"
 #include "types.hpp"
-#include "uid_allocator.hpp"
 #include "utils/assert.hpp"
 #include "worker.hpp"
 
 namespace hyrise {
 
 using namespace node_queue_scheduler::detail;
-
-NodeQueueScheduler::NodeQueueScheduler() {
-  _worker_id_allocator = std::make_shared<UidAllocator>();
-}
 
 NodeQueueScheduler::~NodeQueueScheduler() {
   if (_active) {
@@ -72,6 +67,7 @@ void NodeQueueScheduler::begin() {
   // queue load of 640 (i.e., ~640 normal priority tasks) is enough to use the minimum number of groups.
   _regrouping_upper_limit = _worker_count * UPPER_LIMIT_QUEUE_SIZE_FACTOR;
 
+  auto worker_id = WorkerID{0};
   for (auto node_id = NodeID{0}; node_id < _node_count; ++node_id) {
     const auto& topology_node = Hyrise::get().topology.nodes()[node_id];
 
@@ -88,8 +84,8 @@ void NodeQueueScheduler::begin() {
 
       for (const auto& topology_cpu : topology_node.cpus) {
         // TODO(anybody): Place queues on the actual NUMA node once we have NUMA-aware allocators.
-        _workers.emplace_back(
-            std::make_shared<Worker>(queue, WorkerID{_worker_id_allocator->allocate()}, topology_cpu.cpu_id));
+        _workers.emplace_back(std::make_shared<Worker>(queue, worker_id, topology_cpu.cpu_id));
+        ++worker_id;
       }
     }
   }

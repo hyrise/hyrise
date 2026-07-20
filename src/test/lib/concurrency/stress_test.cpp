@@ -23,6 +23,7 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "operators/abstract_operator.hpp"
 #include "operators/insert.hpp"
+#include "operators/operator_state.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/union_all.hpp"
 #include "scheduler/immediate_execution_scheduler.hpp"
@@ -848,6 +849,43 @@ TEST_F(StressTest, AddModifyTableKeyConstraintsConcurrently) {
 
   // The constraints were cleared, so we expect no constraints to be present anymore.
   EXPECT_TRUE(table->soft_key_constraints().empty());
+}
+
+TEST_F(StressTest, SharedOperatorState) {
+  class TestWorkerState : public Noncopyable {
+   public:
+    void merge(TestWorkerState& other) {
+      task_count += other.task_count;
+    }
+
+    size_t task_count{0};
+  };
+
+  // Push some work to task queues and execute some directly from the main thread.
+  constexpr auto SCHEDULED_TASK_COUNT = 20'000;
+  constexpr auto DIRECTLY_EXECUTED_TASK_COUNT = SCHEDULED_TASK_COUNT / 10;
+  auto operator_state = OperatorSharedState<TestWorkerState>{};
+  auto start_flag = std::atomic_flag{};
+
+  const auto execute_work = [&]() {
+    start_flag.wait(false);
+    ++operator_state.current_worker_state().task_count;
+  };
+
+  for (auto task_id = 0; task_id < SCHEDULED_TASK_COUNT; ++task_id) {
+    std::make_shared<JobTask>(execute_work)->schedule();
+  }
+
+  start_flag.test_and_set();
+  start_flag.notify_all();
+
+  for (auto task_id = 0; task_id < DIRECTLY_EXECUTED_TASK_COUNT; ++task_id) {
+    execute_work();
+  }
+
+  Hyrise::get().scheduler()->wait_for_all_tasks();
+  const auto executed_job_count = operator_state.merge_worker_states().task_count;
+  EXPECT_EQ(executed_job_count, SCHEDULED_TASK_COUNT + DIRECTLY_EXECUTED_TASK_COUNT);
 }
 
 }  // namespace hyrise
