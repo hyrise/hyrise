@@ -21,6 +21,8 @@ class AbstractSegment;
 class Table;
 class OutputColumns;
 class StringSpillBuffer;
+class ScatterHeads;
+class ScatterStore;
 
 // ============================================================================================================
 // Aggregate value handling for AggregateDYOD: the value side of the operator, symmetric to the packed-key KeySchema.
@@ -81,6 +83,29 @@ class AbstractValueScatterColumn {
    */
   virtual void pack(const AbstractSegment& segment, ChunkOffset chunk_offset, std::byte* value_dest,
                     std::byte* null_bitmap, uint32_t null_bit_index, StringSpillBuffer& value_arena) const = 0;
+
+  /**
+   * Scatter one chunk's source column into the worker's store, one typed segment_iterate pass over the whole column.
+   *
+   * The per-row partition routing is precomputed by the key pass, so this pass only decodes and pushes. NULL cells
+   * push a zeroed value and set their bit in the row's field of the chunk's value-null-bitmap scratch, which the
+   * caller pushes row-wise after all value streams ran.
+   *
+   * @param segment input segment holding the source column for the current chunk; borrowed, not retained.
+   * @param row_partitions destination partition per chunk row, computed by the key pass; borrowed.
+   * @param stream the ScatterHeads stream index of this value stream.
+   * @param heads the worker's SWWC staging front-end; borrowed, mutated.
+   * @param store the worker's scatter store; borrowed, mutated. String streams append payload bytes to the
+   *   destination partition's value arena.
+   * @param null_bitmap the chunk's value-null-bitmap scratch, null_bitmap_width bytes per row; written only for NULL
+   *   cells. May be null when no value stream is nullable.
+   * @param null_bitmap_width per-row width of the bitmap scratch in bytes.
+   * @param null_bit_index bit position of this stream within a row's bitmap field.
+   * @pre runs in the scatter phase, single-threaded per worker on that worker's own store and scratch.
+   */
+  virtual void scatter(const AbstractSegment& segment, std::span<const PartitionId> row_partitions, size_t stream,
+                       ScatterHeads& heads, ScatterStore& store, std::byte* null_bitmap, size_t null_bitmap_width,
+                       uint32_t null_bit_index) const = 0;
 };
 
 /**
@@ -106,6 +131,9 @@ class NumericValueScatterColumn : public AbstractValueScatterColumn {
   bool is_nullable() const override;
   void pack(const AbstractSegment& segment, ChunkOffset chunk_offset, std::byte* value_dest, std::byte* null_bitmap,
             uint32_t null_bit_index, StringSpillBuffer& value_arena) const override;
+  void scatter(const AbstractSegment& segment, std::span<const PartitionId> row_partitions, size_t stream,
+               ScatterHeads& heads, ScatterStore& store, std::byte* null_bitmap, size_t null_bitmap_width,
+               uint32_t null_bit_index) const override;
 
  private:
   ColumnID _source_column;
@@ -137,6 +165,9 @@ class StringValueScatterColumn : public AbstractValueScatterColumn {
   bool is_nullable() const override;
   void pack(const AbstractSegment& segment, ChunkOffset chunk_offset, std::byte* value_dest, std::byte* null_bitmap,
             uint32_t null_bit_index, StringSpillBuffer& value_arena) const override;
+  void scatter(const AbstractSegment& segment, std::span<const PartitionId> row_partitions, size_t stream,
+               ScatterHeads& heads, ScatterStore& store, std::byte* null_bitmap, size_t null_bitmap_width,
+               uint32_t null_bit_index) const override;
 
  private:
   ColumnID _source_column;

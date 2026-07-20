@@ -14,8 +14,10 @@
 #include "expression/window_function_expression.hpp"
 #include "operators/aggregate_dyod/key_schema.hpp"
 #include "operators/aggregate_dyod/output_columns.hpp"
+#include "operators/aggregate_dyod/scatter_store.hpp"
 #include "resolve_type.hpp"
 #include "storage/abstract_segment.hpp"
+#include "storage/segment_iterate.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -103,6 +105,26 @@ void NumericValueScatterColumn<T>::pack(const AbstractSegment& segment, const Ch
   std::memcpy(value_dest, &value, sizeof(value));
 }
 
+template <typename T>
+void NumericValueScatterColumn<T>::scatter(const AbstractSegment& segment,
+                                           const std::span<const PartitionId> row_partitions, const size_t stream,
+                                           ScatterHeads& heads, ScatterStore& store, std::byte* null_bitmap,
+                                           const size_t null_bitmap_width, const uint32_t null_bit_index) const {
+  auto row = size_t{0};
+  segment_iterate<T>(segment, [&](const auto& position) {
+    const auto partition = static_cast<PartitionId>(row_partitions[row]);
+    auto value = T{};
+    if (position.is_null()) {
+      DebugAssert(_nullable, "NULL in a non-nullable value column.");
+      set_null_bit(null_bitmap + row * null_bitmap_width, null_bit_index);
+    } else {
+      value = position.value();
+    }
+    heads.push(store, stream, partition, reinterpret_cast<const std::byte*>(&value), sizeof(value));
+    ++row;
+  });
+}
+
 template class NumericValueScatterColumn<int32_t>;
 template class NumericValueScatterColumn<int64_t>;
 template class NumericValueScatterColumn<float>;
@@ -133,6 +155,28 @@ void StringValueScatterColumn::pack(const AbstractSegment& segment, const ChunkO
   reference.data = value_arena.append(reinterpret_cast<const std::byte*>(value.data()), value.size());
   reference.length = value.size();
   std::memcpy(value_dest, &reference, sizeof(reference));
+}
+
+void StringValueScatterColumn::scatter(const AbstractSegment& segment,
+                                       const std::span<const PartitionId> row_partitions, const size_t stream,
+                                       ScatterHeads& heads, ScatterStore& store, std::byte* null_bitmap,
+                                       const size_t null_bitmap_width, const uint32_t null_bit_index) const {
+  auto row = size_t{0};
+  segment_iterate<pmr_string>(segment, [&](const auto& position) {
+    const auto partition = static_cast<PartitionId>(row_partitions[row]);
+    auto reference = StringValueReference{};
+    if (position.is_null()) {
+      DebugAssert(_nullable, "NULL in a non-nullable value column.");
+      set_null_bit(null_bitmap + row * null_bitmap_width, null_bit_index);
+    } else {
+      const auto& value = position.value();
+      reference.data =
+          store.value_arena(partition).append(reinterpret_cast<const std::byte*>(value.data()), value.size());
+      reference.length = value.size();
+    }
+    heads.push(store, stream, partition, reinterpret_cast<const std::byte*>(&reference), sizeof(reference));
+    ++row;
+  });
 }
 
 template <typename ColumnType, WindowFunction Function>
