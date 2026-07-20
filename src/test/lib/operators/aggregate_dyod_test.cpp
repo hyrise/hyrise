@@ -12,6 +12,8 @@
 #include "operators/aggregate_dyod.hpp"
 #include "operators/aggregate_hash.hpp"
 #include "operators/table_wrapper.hpp"
+#include "storage/chunk_encoder.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
 #include "testing_assert.hpp"
@@ -24,7 +26,7 @@ using namespace expression_functional;
 namespace {
 
 // The d values are multiples of 0.5, so per-group sums are exact regardless of fold order.
-std::shared_ptr<TableWrapper> make_input(const size_t row_count) {
+std::shared_ptr<Table> make_input_table(const size_t row_count) {
   const auto definitions = TableColumnDefinitions{{"a", DataType::Int, true},
                                                   {"b", DataType::String, true},
                                                   {"c", DataType::Int, false},
@@ -47,10 +49,18 @@ std::shared_ptr<TableWrapper> make_input(const size_t row_count) {
     table->append({a, b, c, d, e});
   }
 
+  return table;
+}
+
+std::shared_ptr<TableWrapper> wrap_input(const std::shared_ptr<const Table>& table) {
   const auto wrapper = std::make_shared<TableWrapper>(table);
   wrapper->never_clear_output();
   wrapper->execute();
   return wrapper;
+}
+
+std::shared_ptr<TableWrapper> make_input(const size_t row_count) {
+  return wrap_input(make_input_table(row_count));
 }
 
 void compare_with_aggregate_hash(const std::shared_ptr<AbstractOperator>& input,
@@ -151,6 +161,24 @@ TEST_F(OperatorsAggregateDYODTest, CountDistinctWithoutGroupBy) {
                                {ColumnID{1}, WindowFunction::CountDistinct},
                                {ColumnID{3}, WindowFunction::CountDistinct}},
                               {});
+}
+
+TEST_F(OperatorsAggregateDYODTest, ReferenceInputSpanningChunks) {
+  const auto input = wrap_input(to_simple_reference_table(make_input_table(30'000)));
+  compare_with_aggregate_hash(
+      input,
+      {{ColumnID{2}, WindowFunction::Sum}, {ColumnID{4}, WindowFunction::Min}, {ColumnID{0}, WindowFunction::Any}},
+      {ColumnID{0}, ColumnID{1}});
+}
+
+TEST_F(OperatorsAggregateDYODTest, DictionaryEncodedInput) {
+  const auto table = make_input_table(30'000);
+  table->last_chunk()->set_immutable();
+  ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{EncodingType::Dictionary});
+  compare_with_aggregate_hash(
+      wrap_input(table),
+      {{ColumnID{2}, WindowFunction::Sum}, {ColumnID{4}, WindowFunction::Min}, {ColumnID{3}, WindowFunction::Avg}},
+      {ColumnID{0}, ColumnID{1}});
 }
 
 TEST_F(OperatorsAggregateDYODTest, EmptyInput) {
