@@ -14,8 +14,11 @@
 #include "expression/window_function_expression.hpp"
 #include "operators/aggregate_dyod/key_schema.hpp"
 #include "operators/aggregate_dyod/output_columns.hpp"
+#include "operators/aggregate_dyod/scatter_store.hpp"
 #include "resolve_type.hpp"
 #include "storage/abstract_segment.hpp"
+#include "storage/segment_accessor.hpp"
+#include "storage/segment_iterate.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -90,17 +93,23 @@ bool NumericValueScatterColumn<T>::is_nullable() const {
 }
 
 template <typename T>
-void NumericValueScatterColumn<T>::pack(const AbstractSegment& segment, const ChunkOffset chunk_offset,
-                                        std::byte* value_dest, std::byte* null_bitmap, const uint32_t null_bit_index,
-                                        StringSpillBuffer& /*value_arena*/) const {
-  const auto variant = segment[chunk_offset];
-  if (variant_is_null(variant)) {
-    DebugAssert(_nullable, "NULL in a non-nullable value column.");
-    set_null_bit(null_bitmap, null_bit_index);
-    return;
-  }
-  const auto value = boost::get<T>(variant);
-  std::memcpy(value_dest, &value, sizeof(value));
+void NumericValueScatterColumn<T>::scatter(const AbstractSegment& segment,
+                                           const std::span<const PartitionId> row_partitions, const size_t stream,
+                                           ScatterHeads& heads, ScatterStore& store, std::byte* null_bitmap,
+                                           const size_t null_bitmap_width, const uint32_t null_bit_index) const {
+  auto row = size_t{0};
+  segment_iterate<T>(segment, [&](const auto& position) {
+    const auto partition = row_partitions[row];
+    auto value = T{};
+    if (position.is_null()) {
+      DebugAssert(_nullable, "NULL in a non-nullable value column.");
+      set_null_bit(null_bitmap + row * null_bitmap_width, null_bit_index);
+    } else {
+      value = position.value();
+    }
+    heads.push(store, stream, partition, reinterpret_cast<const std::byte*>(&value), sizeof(value));
+    ++row;
+  });
 }
 
 template class NumericValueScatterColumn<int32_t>;
@@ -119,20 +128,26 @@ bool StringValueScatterColumn::is_nullable() const {
   return _nullable;
 }
 
-void StringValueScatterColumn::pack(const AbstractSegment& segment, const ChunkOffset chunk_offset,
-                                    std::byte* value_dest, std::byte* null_bitmap, const uint32_t null_bit_index,
-                                    StringSpillBuffer& value_arena) const {
-  const auto variant = segment[chunk_offset];
-  if (variant_is_null(variant)) {
-    DebugAssert(_nullable, "NULL in a non-nullable value column.");
-    set_null_bit(null_bitmap, null_bit_index);
-    return;
-  }
-  const auto value = boost::get<pmr_string>(variant);
-  auto reference = StringValueReference{};
-  reference.data = value_arena.append(reinterpret_cast<const std::byte*>(value.data()), value.size());
-  reference.length = value.size();
-  std::memcpy(value_dest, &reference, sizeof(reference));
+void StringValueScatterColumn::scatter(const AbstractSegment& segment,
+                                       const std::span<const PartitionId> row_partitions, const size_t stream,
+                                       ScatterHeads& heads, ScatterStore& store, std::byte* null_bitmap,
+                                       const size_t null_bitmap_width, const uint32_t null_bit_index) const {
+  auto row = size_t{0};
+  segment_iterate<pmr_string>(segment, [&](const auto& position) {
+    const auto partition = row_partitions[row];
+    auto reference = StringValueReference{};
+    if (position.is_null()) {
+      DebugAssert(_nullable, "NULL in a non-nullable value column.");
+      set_null_bit(null_bitmap + row * null_bitmap_width, null_bit_index);
+    } else {
+      const auto& value = position.value();
+      reference.data =
+          store.value_arena(partition).append(reinterpret_cast<const std::byte*>(value.data()), value.size());
+      reference.length = value.size();
+    }
+    heads.push(store, stream, partition, reinterpret_cast<const std::byte*>(&reference), sizeof(reference));
+    ++row;
+  });
 }
 
 template <typename ColumnType, WindowFunction Function>
@@ -283,20 +298,21 @@ template <typename ColumnType>
 void AnyAccumulatorColumn<ColumnType>::finalize_into(const size_t first_slot, const size_t last_slot,
                                                      const size_t output_column_index, OutputColumns& output) const {
   auto& output_column = static_cast<TypedOutputColumn<ColumnType>&>(output.column(output_column_index));
-  auto segment_chunk_id = INVALID_CHUNK_ID;
-  auto segment = std::shared_ptr<AbstractSegment>{};
+  auto accessor_chunk_id = INVALID_CHUNK_ID;
+  auto accessor = std::unique_ptr<AbstractSegmentAccessor<ColumnType>>{};
   for (auto slot = first_slot; slot < last_slot; ++slot) {
     const auto row_id = _row_ids[slot];
     DebugAssert(!row_id.is_null(), "Every dense slot was created by at least one row.");
-    if (row_id.chunk_id != segment_chunk_id) {
-      segment = _input_table->get_chunk(row_id.chunk_id)->get_segment(_source_column);
-      segment_chunk_id = row_id.chunk_id;
+    if (row_id.chunk_id != accessor_chunk_id) {
+      accessor =
+          create_segment_accessor<ColumnType>(_input_table->get_chunk(row_id.chunk_id)->get_segment(_source_column));
+      accessor_chunk_id = row_id.chunk_id;
     }
-    const auto variant = (*segment)[row_id.chunk_offset];
-    if (variant_is_null(variant)) {
-      output_column.append_null();
+    const auto value = accessor->access(row_id.chunk_offset);
+    if (value) {
+      output_column.append(*value);
     } else {
-      output_column.append(boost::get<ColumnType>(variant));
+      output_column.append_null();
     }
   }
 }
