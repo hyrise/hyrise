@@ -99,7 +99,7 @@ void NumericValueScatterColumn<T>::scatter(const AbstractSegment& segment,
                                            const size_t null_bitmap_width, const uint32_t null_bit_index) const {
   auto row = size_t{0};
   segment_iterate<T>(segment, [&](const auto& position) {
-    const auto partition = static_cast<PartitionId>(row_partitions[row]);
+    const auto partition = row_partitions[row];
     auto value = T{};
     if (position.is_null()) {
       DebugAssert(_nullable, "NULL in a non-nullable value column.");
@@ -134,7 +134,7 @@ void StringValueScatterColumn::scatter(const AbstractSegment& segment,
                                        const size_t null_bitmap_width, const uint32_t null_bit_index) const {
   auto row = size_t{0};
   segment_iterate<pmr_string>(segment, [&](const auto& position) {
-    const auto partition = static_cast<PartitionId>(row_partitions[row]);
+    const auto partition = row_partitions[row];
     auto reference = StringValueReference{};
     if (position.is_null()) {
       DebugAssert(_nullable, "NULL in a non-nullable value column.");

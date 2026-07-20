@@ -20,7 +20,6 @@ namespace hyrise {
 class AbstractSegment;
 class Table;
 class OutputColumns;
-class StringSpillBuffer;
 class ScatterHeads;
 class ScatterStore;
 
@@ -71,9 +70,8 @@ class AbstractValueScatterColumn {
   /**
    * Scatter one chunk's source column into the worker's store, one typed segment_iterate pass over the whole column.
    *
-   * The per-row partition routing is precomputed by the key pass, so this pass only decodes and pushes. NULL cells
-   * push a zeroed value and set their bit in the row's field of the chunk's value-null-bitmap scratch, which the
-   * caller pushes row-wise after all value streams ran.
+   * NULL cells push a zeroed value and set their bit in the row's field of the chunk's value-null-bitmap scratch,
+   * which the caller pushes row-wise after all value streams ran.
    *
    * @param segment input segment holding the source column for the current chunk; borrowed, not retained.
    * @param row_partitions destination partition per chunk row, computed by the key pass; borrowed.
@@ -132,7 +130,7 @@ class NumericValueScatterColumn : public AbstractValueScatterColumn {
  * time. element_width() is therefore the size of the (pointer, length) reference, not of the string payload.
  *
  * Ownership/lifetime/threading: see AbstractValueScatterColumn -- immutable after construction, shared read-only
- *   across scatter workers; the referenced payload lives in the value arena passed to pack().
+ *   across scatter workers; the referenced payload lives in the per-partition value arena.
  * See also: TypedAccumulatorColumn for string MIN/MAX, which decodes these references from the arena at fold time.
  */
 class StringValueScatterColumn : public AbstractValueScatterColumn {

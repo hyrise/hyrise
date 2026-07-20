@@ -568,7 +568,7 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate(const KeySchema& key_schema, co
 
   // Scatter: buffer raw (key, values...) rows into per-worker stores across the partitions. The key pass packs and
   // routes each row and records its partition; the value streams, the row-id stream, and the value-null bitmap then
-  // run as separate column-wise passes over the same chunk, reusing that routing.
+  // run as separate column-wise passes over the same chunk.
   {
     auto chunk_cursor = std::atomic<size_t>{0};
     run_workers(scatter_worker_count, [&](const size_t worker_id) {
