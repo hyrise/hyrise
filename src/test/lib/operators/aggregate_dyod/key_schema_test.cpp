@@ -599,13 +599,14 @@ TEST_F(AggregateDYODKeySchemaTest, MixedKeysCompareNumericAndStringParts) {
 }
 
 TEST_F(AggregateDYODKeySchemaTest, DictionarySegmentsPackLikeValueSegments) {
-  const auto definitions = TableColumnDefinitions{{"a", DataType::Int, true}, {"b", DataType::String, true}};
+  const auto definitions =
+      TableColumnDefinitions{{"a", DataType::Int, true}, {"b", DataType::String, true}, {"c", DataType::Float, false}};
   const auto long_string = pmr_string(3 * STRING_BLOB_BYTES_PER_COLUMN, 'd');
-  const auto rows = std::vector<std::vector<AllTypeVariant>>{{1, pmr_string{"abc"}},
-                                                             {NullValue{}, pmr_string{"abc"}},
-                                                             {1, NullValue{}},
-                                                             {2, long_string},
-                                                             {1, pmr_string{"abc"}}};
+  const auto rows = std::vector<std::vector<AllTypeVariant>>{{1, pmr_string{"abc"}, 1.5f},
+                                                             {NullValue{}, pmr_string{"abc"}, -0.0f},
+                                                             {1, NullValue{}, 0.0f},
+                                                             {2, long_string, 2.5f},
+                                                             {1, pmr_string{"abc"}, 1.5f}};
   const auto plain = make_pack_input(definitions, rows);
   const auto encoded = make_pack_input(definitions, rows, std::nullopt, SegmentEncodingSpec{EncodingType::Dictionary});
   resolve_key_schema(plain.column_ids, *plain.table, [&](const auto& schema) {
