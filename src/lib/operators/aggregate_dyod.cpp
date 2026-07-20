@@ -1101,7 +1101,7 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
       continue;
     }
 
-    hashing_jobs.emplace_back(std::make_shared<JobTask>([&, chunk_id, chunk_size]() {
+    hashing_jobs.emplace_back(std::make_shared<JobTask>([&, chunk_id, chunk_size, chunk]() {
       auto hashes = std::vector<size_t>(chunk_size, 0);
       for (const auto& column_id : _groupby_column_ids) {
         const auto data_type = input_table->column_data_type(column_id);
