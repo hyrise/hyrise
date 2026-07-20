@@ -237,51 +237,6 @@ void pack_string_columns(const StringKeyColumns& string_columns, const size_t le
   std::memcpy(key_out + fixed_part_width, &pointer_value, sizeof(pointer_value));
 }
 
-void pack_string_columns(const StringKeyColumns& string_columns, const size_t length_field_width,
-                         const size_t blob_offset, const size_t fixed_part_width,
-                         const std::span<const AbstractSegment* const> group_by_segments,
-                         const ChunkOffset chunk_offset, std::byte* key_out, StringSpillBuffer& spill_buffer) {
-  auto values = boost::container::small_vector<pmr_string, EXPECTED_GROUP_BY_COLUMNS>{};
-  values.reserve(string_columns.size());
-  auto total_length = size_t{0};
-
-  for (const auto& column : string_columns) {
-    const auto variant = (*group_by_segments[column.tuple_index])[chunk_offset];
-    if (variant_is_null(variant)) {
-      DebugAssert(column.null_bit_index != NO_NULL_BIT, "NULL in a non-nullable group-by column.");
-      set_null_bit(key_out, column.null_bit_index);
-      values.emplace_back();
-      continue;
-    }
-    auto value = boost::get<pmr_string>(variant);
-    write_length_field(key_out, column.length_field_offset, length_field_width, value.size());
-    total_length += value.size();
-    values.emplace_back(std::move(value));
-  }
-
-  const auto blob_capacity = STRING_BLOB_BYTES_PER_COLUMN * string_columns.size();
-  if (total_length <= blob_capacity) {
-    auto* cursor = key_out + blob_offset;
-    for (const auto& value : values) {
-      std::memcpy(cursor, value.data(), value.size());
-      cursor += value.size();
-    }
-    return;
-  }
-
-  auto scratch = std::vector<std::byte>{};
-  scratch.reserve(total_length);
-  for (const auto& value : values) {
-    const auto* bytes = reinterpret_cast<const std::byte*>(value.data());
-    scratch.insert(scratch.end(), bytes, bytes + value.size());
-  }
-  const auto* interned = spill_buffer.append(scratch.data(), scratch.size());
-  const auto content_hash = hash_bytes(scratch.data(), scratch.size());
-  std::memcpy(key_out + blob_offset, &content_hash, sizeof(content_hash));
-  const auto pointer_value = reinterpret_cast<uintptr_t>(interned);
-  std::memcpy(key_out + fixed_part_width, &pointer_value, sizeof(pointer_value));
-}
-
 void unpack_string_columns(const StringKeyColumns& string_columns, const size_t length_field_width,
                            const size_t blob_offset, const size_t fixed_part_width, const std::byte* key,
                            OutputColumns& output) {
@@ -408,19 +363,6 @@ NumericKeyLane<T>::NumericKeyLane(const ColumnID column_id, const uint32_t field
     : _column_id{column_id}, _field_offset{field_offset}, _null_bit_index{null_bit_index} {}
 
 template <typename T>
-void NumericKeyLane<T>::pack(const AbstractSegment& segment, const ChunkOffset chunk_offset, std::byte* key,
-                             std::byte* null_bitmap) const {
-  const auto variant = segment[chunk_offset];
-  if (variant_is_null(variant)) {
-    DebugAssert(_null_bit_index != NO_NULL_BIT, "NULL in a non-nullable group-by column.");
-    set_null_bit(null_bitmap, _null_bit_index);
-    return;
-  }
-  const auto encoded = encode_lane_value(boost::get<T>(variant));
-  std::memcpy(key + _field_offset, &encoded, sizeof(encoded));
-}
-
-template <typename T>
 void NumericKeyLane<T>::decode(const AbstractSegment& segment, KeyDecodeScratch::NumericLane& lane) const {
   using Encoded = decltype(encode_lane_value(T{}));
   const auto row_count = static_cast<size_t>(segment.size());
@@ -483,17 +425,6 @@ size_t NumericShortKeySchema<PackedWidth>::packed_width() const {
 template <size_t PackedWidth>
 size_t NumericShortKeySchema<PackedWidth>::column_count() const {
   return _lanes.size();
-}
-
-template <size_t PackedWidth>
-void NumericShortKeySchema<PackedWidth>::pack(const std::span<const AbstractSegment* const> group_by_segments,
-                                              const ChunkOffset chunk_offset, std::byte* key_out,
-                                              StringSpillBuffer& /*spill_buffer*/) const {
-  std::memset(key_out, 0, PackedWidth);
-  const auto lane_count = _lanes.size();
-  for (auto index = size_t{0}; index < lane_count; ++index) {
-    _lanes[index]->pack(*group_by_segments[index], chunk_offset, key_out, key_out);
-  }
 }
 
 template <size_t PackedWidth>
@@ -570,16 +501,6 @@ size_t NumericArbitraryKeySchema::packed_width() const {
 
 size_t NumericArbitraryKeySchema::column_count() const {
   return _lanes.size();
-}
-
-void NumericArbitraryKeySchema::pack(const std::span<const AbstractSegment* const> group_by_segments,
-                                     const ChunkOffset chunk_offset, std::byte* key_out,
-                                     StringSpillBuffer& /*spill_buffer*/) const {
-  std::memset(key_out, 0, _packed_width);
-  const auto lane_count = _lanes.size();
-  for (auto index = size_t{0}; index < lane_count; ++index) {
-    _lanes[index]->pack(*group_by_segments[index], chunk_offset, key_out, key_out);
-  }
 }
 
 void NumericArbitraryKeySchema::decode(const std::span<const AbstractSegment* const> group_by_segments,
@@ -661,19 +582,6 @@ size_t MixedKeySchema<LenWidth>::fixed_part_width() const {
 template <size_t LenWidth>
 size_t MixedKeySchema<LenWidth>::column_count() const {
   return _numeric_lanes.size() + _string_columns.size();
-}
-
-template <size_t LenWidth>
-void MixedKeySchema<LenWidth>::pack(const std::span<const AbstractSegment* const> group_by_segments,
-                                    const ChunkOffset chunk_offset, std::byte* key_out,
-                                    StringSpillBuffer& spill_buffer) const {
-  std::memset(key_out, 0, packed_width());
-  const auto lane_count = _numeric_lanes.size();
-  for (auto index = size_t{0}; index < lane_count; ++index) {
-    _numeric_lanes[index]->pack(*group_by_segments[_numeric_tuple_indices[index]], chunk_offset, key_out, key_out);
-  }
-  pack_string_columns(_string_columns, LenWidth, _blob_offset, _fixed_part_width, group_by_segments, chunk_offset,
-                      key_out, spill_buffer);
 }
 
 template <size_t LenWidth>
@@ -767,15 +675,6 @@ size_t StringOnlyKeySchema<LenWidth>::fixed_part_width() const {
 template <size_t LenWidth>
 size_t StringOnlyKeySchema<LenWidth>::column_count() const {
   return _string_columns.size();
-}
-
-template <size_t LenWidth>
-void StringOnlyKeySchema<LenWidth>::pack(const std::span<const AbstractSegment* const> group_by_segments,
-                                         const ChunkOffset chunk_offset, std::byte* key_out,
-                                         StringSpillBuffer& spill_buffer) const {
-  std::memset(key_out, 0, packed_width());
-  pack_string_columns(_string_columns, LenWidth, _blob_offset, _fixed_part_width, group_by_segments, chunk_offset,
-                      key_out, spill_buffer);
 }
 
 template <size_t LenWidth>

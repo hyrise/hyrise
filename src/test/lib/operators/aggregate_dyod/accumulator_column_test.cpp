@@ -156,28 +156,6 @@ TEST_F(AggregateDYODAccumulatorColumnTest, ValueNullBitmapWidthCountsNullableStr
   EXPECT_EQ(AggregateSchema::build(nullable, *table).value_null_bitmap_width(), 1u);
 }
 
-TEST_F(AggregateDYODAccumulatorColumnTest, NumericStreamPacksNativeBytes) {
-  const auto table = make_input_table({{"a", DataType::Int, true}}, {{42}, {NullValue{}}, {-7}});
-  const auto segment = table->get_chunk(ChunkID{0})->get_segment(ColumnID{0});
-
-  const auto column = NumericValueScatterColumn<int32_t>{ColumnID{0}, true};
-  EXPECT_EQ(column.element_width(), sizeof(int32_t));
-  EXPECT_TRUE(column.is_nullable());
-
-  auto arena = StringSpillBuffer{};
-  auto values = std::vector<std::byte>(3 * sizeof(int32_t));
-  auto null_bitmap = std::byte{0};
-  for (auto row = uint32_t{0}; row < 3; ++row) {
-    column.pack(*segment, ChunkOffset{row}, values.data() + row * sizeof(int32_t), &null_bitmap, row, arena);
-  }
-
-  auto decoded = std::vector<int32_t>(3);
-  std::memcpy(decoded.data(), values.data(), values.size());
-  EXPECT_EQ(decoded[0], 42);
-  EXPECT_EQ(decoded[2], -7);
-  EXPECT_EQ(null_bitmap, std::byte{0b010});
-}
-
 TEST_F(AggregateDYODAccumulatorColumnTest, StringStreamHasFixedReferenceWidth) {
   const auto column = StringValueScatterColumn{ColumnID{0}, false};
   EXPECT_EQ(column.element_width(), 16u);
@@ -425,14 +403,19 @@ TEST_F(AggregateDYODAccumulatorColumnTest, CountDistinctDedupesStringsAcrossTile
   auto& column = *columns[0];
 
   const auto& stream = schema.value_stream(0);
-  auto arena = StringSpillBuffer{};
-  auto values = std::vector<std::byte>(4 * stream.element_width());
-  auto null_bitmap = std::vector<std::byte>{std::byte{0}};
-  for (auto row = uint32_t{0}; row < 4; ++row) {
-    stream.pack(*segment, ChunkOffset{row}, values.data() + row * stream.element_width(), null_bitmap.data(), row,
-                arena);
-  }
+  const auto value_stream_widths = std::vector<size_t>{stream.element_width()};
+  auto store = ScatterStore{PartitionCount{1}, /*key_width=*/4, value_stream_widths, /*value_null_bitmap_width=*/1,
+                            /*needs_value_arena=*/true};
+  const auto stream_widths = std::vector<size_t>{4, stream.element_width(), 1};
+  auto heads = ScatterHeads{PartitionCount{1}, stream_widths.size(), stream_widths, true};
+  const auto partitions = std::vector<PartitionId>(4, PartitionId{0});
+  auto bitmap = std::vector<std::byte>(4, std::byte{0});
+  stream.scatter(*segment, partitions, 1, heads, store, bitmap.data(), 1, 0);
+  heads.finish(store);
 
+  const auto& region = store.value_region(0, 0);
+  const auto values = std::span<const std::byte>{region.data(), region.size()};
+  const auto null_bitmap = std::vector<std::byte>{std::byte{0b0100}};
   const auto slots = std::vector<uint32_t>{0, 0, 0, 0};
   column.grow_to(1);
   column.fold(slots, values, null_bitmap);
@@ -472,14 +455,19 @@ TEST_F(AggregateDYODAccumulatorColumnTest, StringMinMaxCompareLexicographically)
   const auto columns = schema.make_accumulator_columns();
 
   const auto& stream = schema.value_stream(0);
-  auto arena = StringSpillBuffer{};
-  auto values = std::vector<std::byte>(4 * stream.element_width());
-  auto null_bitmap = std::vector<std::byte>{std::byte{0}};
-  for (auto row = uint32_t{0}; row < 4; ++row) {
-    stream.pack(*segment, ChunkOffset{row}, values.data() + row * stream.element_width(), null_bitmap.data(), row,
-                arena);
-  }
+  const auto value_stream_widths = std::vector<size_t>{stream.element_width()};
+  auto store = ScatterStore{PartitionCount{1}, /*key_width=*/4, value_stream_widths, /*value_null_bitmap_width=*/1,
+                            /*needs_value_arena=*/true};
+  const auto stream_widths = std::vector<size_t>{4, stream.element_width(), 1};
+  auto heads = ScatterHeads{PartitionCount{1}, stream_widths.size(), stream_widths, true};
+  const auto partitions = std::vector<PartitionId>(4, PartitionId{0});
+  auto bitmap = std::vector<std::byte>(4, std::byte{0});
+  stream.scatter(*segment, partitions, 1, heads, store, bitmap.data(), 1, 0);
+  heads.finish(store);
 
+  const auto& region = store.value_region(0, 0);
+  const auto values = std::span<const std::byte>{region.data(), region.size()};
+  const auto null_bitmap = std::vector<std::byte>{std::byte{0b0100}};
   const auto slots = std::vector<uint32_t>{0, 0, 0, 0};
   for (const auto& column : columns) {
     column->grow_to(1);

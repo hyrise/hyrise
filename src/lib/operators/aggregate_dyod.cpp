@@ -483,6 +483,7 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate(const KeySchema& key_schema, co
     run_workers(estimate_worker_count, [&](const size_t worker_id) {
       auto& sketch = sketches[worker_id];
       auto key_scratch = std::vector<std::byte>(key_width);
+      auto decode_scratch = KeyDecodeScratch{};
       auto spill_scratch = StringSpillBuffer{};
       auto segment_owners = std::vector<std::shared_ptr<AbstractSegment>>{};
       auto segments = std::vector<const AbstractSegment*>{};
@@ -496,9 +497,10 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate(const KeySchema& key_schema, co
           continue;
         }
         gather_group_by_segments(*chunk, segment_owners, segments);
+        key_schema.decode(segments, decode_scratch);
         const auto row_count = chunk->size();
         for (auto chunk_offset = ChunkOffset{0}; chunk_offset < row_count; ++chunk_offset) {
-          key_schema.pack(segments, chunk_offset, key_scratch.data(), spill_scratch);
+          key_schema.pack(decode_scratch, chunk_offset, key_scratch.data(), spill_scratch);
           sketch.add(key_schema.hash(key_scratch.data()));
         }
         spill_scratch.clear();
@@ -538,8 +540,6 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate(const KeySchema& key_schema, co
   const auto value_null_bitmap_width = aggregate_schema.value_null_bitmap_width();
   const auto has_value_null_bitmap = value_null_bitmap_width > 0;
   const auto needs_value_arena = aggregate_schema.needs_value_arena();
-  const auto max_value_width =
-      value_stream_count == 0 ? size_t{0} : *std::max_element(value_stream_widths.begin(), value_stream_widths.end());
 
   // ANY aggregates scatter no value; they read one shared row-id stream instead.
   const auto needs_row_id_stream = aggregate_schema.needs_row_id_stream();
@@ -566,17 +566,19 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate(const KeySchema& key_schema, co
                                 needs_value_arena);
   }
 
-  // Scatter: buffer raw (key, values...) rows into per-worker stores across the partitions.
+  // Scatter: buffer raw (key, values...) rows into per-worker stores across the partitions. The key pass packs and
+  // routes each row and records its partition; the value streams, the row-id stream, and the value-null bitmap then
+  // run as separate column-wise passes over the same chunk, reusing that routing.
   {
     auto chunk_cursor = std::atomic<size_t>{0};
     run_workers(scatter_worker_count, [&](const size_t worker_id) {
       auto& store = scatter_stores[worker_id];
       auto heads = ScatterHeads{partition_count, stream_widths.size(), stream_widths, has_value_null_bitmap};
       auto key_scratch = std::vector<std::byte>(key_width);
-      auto bitmap_scratch = std::vector<std::byte>(value_null_bitmap_width);
-      auto value_scratch = std::vector<std::byte>(max_value_width);
+      auto decode_scratch = KeyDecodeScratch{};
+      auto row_partitions = std::vector<PartitionId>{};
+      auto bitmap_scratch = std::vector<std::byte>{};
       auto pack_spill = StringSpillBuffer{};
-      auto dummy_arena = StringSpillBuffer{};
       auto segment_owners = std::vector<std::shared_ptr<AbstractSegment>>{};
       auto segments = std::vector<const AbstractSegment*>{};
       auto value_segment_owners = std::vector<std::shared_ptr<AbstractSegment>>{};
@@ -598,10 +600,14 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate(const KeySchema& key_schema, co
           value_segments.emplace_back(value_segment_owners.back().get());
         }
         const auto row_count = chunk->size();
+
+        key_schema.decode(segments, decode_scratch);
+        row_partitions.resize(row_count);
         for (auto chunk_offset = ChunkOffset{0}; chunk_offset < row_count; ++chunk_offset) {
-          key_schema.pack(segments, chunk_offset, key_scratch.data(), pack_spill);
+          key_schema.pack(decode_scratch, chunk_offset, key_scratch.data(), pack_spill);
           const auto key_hash = key_schema.hash(key_scratch.data());
           const auto partition = static_cast<PartitionId>(key_hash & (partition_count - 1));
+          row_partitions[chunk_offset] = partition;
           if constexpr (KeySchema::HAS_STRINGS) {
             key_schema.reintern_spill(key_scratch.data(), store.key_spill_buffer(partition));
             pack_spill.clear();
@@ -609,25 +615,30 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate(const KeySchema& key_schema, co
           for (auto piece_offset = size_t{0}; piece_offset < key_width; piece_offset += 4) {
             heads.push(store, 0, partition, key_scratch.data() + piece_offset, 4);
           }
-          if (has_value_null_bitmap) {
-            std::memset(bitmap_scratch.data(), 0, value_null_bitmap_width);
-          }
-          for (auto stream_index = size_t{0}; stream_index < value_stream_count; ++stream_index) {
-            const auto width = value_stream_widths[stream_index];
-            std::memset(value_scratch.data(), 0, width);
-            auto& value_arena = needs_value_arena ? store.value_arena(partition) : dummy_arena;
-            aggregate_schema.value_stream(stream_index)
-                .pack(*value_segments[stream_index], chunk_offset, value_scratch.data(), bitmap_scratch.data(),
-                      value_stream_null_bits[stream_index], value_arena);
-            heads.push(store, 1 + stream_index, partition, value_scratch.data(), width);
-          }
-          if (needs_row_id_stream) {
+        }
+
+        if (has_value_null_bitmap) {
+          bitmap_scratch.assign(row_count * value_null_bitmap_width, std::byte{0});
+        }
+        for (auto stream_index = size_t{0}; stream_index < value_stream_count; ++stream_index) {
+          aggregate_schema.value_stream(stream_index)
+              .scatter(*value_segments[stream_index], row_partitions, 1 + stream_index, heads, store,
+                       bitmap_scratch.data(), value_null_bitmap_width, value_stream_null_bits[stream_index]);
+        }
+        if (needs_row_id_stream) {
+          for (auto chunk_offset = ChunkOffset{0}; chunk_offset < row_count; ++chunk_offset) {
             const auto row_id = RowID{ChunkID{static_cast<ChunkID::base_type>(chunk_index)}, chunk_offset};
-            heads.push(store, 1 + row_id_stream_index, partition, reinterpret_cast<const std::byte*>(&row_id),
-                       sizeof(row_id));
+            heads.push(store, 1 + row_id_stream_index, row_partitions[chunk_offset],
+                       reinterpret_cast<const std::byte*>(&row_id), sizeof(row_id));
           }
-          for (auto byte_index = size_t{0}; byte_index < value_null_bitmap_width; ++byte_index) {
-            heads.push(store, value_null_bitmap_stream_index, partition, bitmap_scratch.data() + byte_index, 1);
+        }
+        if (has_value_null_bitmap) {
+          for (auto chunk_offset = ChunkOffset{0}; chunk_offset < row_count; ++chunk_offset) {
+            const auto* row_bitmap = bitmap_scratch.data() + size_t{chunk_offset} * value_null_bitmap_width;
+            for (auto byte_index = size_t{0}; byte_index < value_null_bitmap_width; ++byte_index) {
+              heads.push(store, value_null_bitmap_stream_index, row_partitions[chunk_offset], row_bitmap + byte_index,
+                         1);
+            }
           }
         }
       }

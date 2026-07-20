@@ -92,20 +92,6 @@ bool NumericValueScatterColumn<T>::is_nullable() const {
 }
 
 template <typename T>
-void NumericValueScatterColumn<T>::pack(const AbstractSegment& segment, const ChunkOffset chunk_offset,
-                                        std::byte* value_dest, std::byte* null_bitmap, const uint32_t null_bit_index,
-                                        StringSpillBuffer& /*value_arena*/) const {
-  const auto variant = segment[chunk_offset];
-  if (variant_is_null(variant)) {
-    DebugAssert(_nullable, "NULL in a non-nullable value column.");
-    set_null_bit(null_bitmap, null_bit_index);
-    return;
-  }
-  const auto value = boost::get<T>(variant);
-  std::memcpy(value_dest, &value, sizeof(value));
-}
-
-template <typename T>
 void NumericValueScatterColumn<T>::scatter(const AbstractSegment& segment,
                                            const std::span<const PartitionId> row_partitions, const size_t stream,
                                            ScatterHeads& heads, ScatterStore& store, std::byte* null_bitmap,
@@ -139,22 +125,6 @@ uint32_t StringValueScatterColumn::element_width() const {
 
 bool StringValueScatterColumn::is_nullable() const {
   return _nullable;
-}
-
-void StringValueScatterColumn::pack(const AbstractSegment& segment, const ChunkOffset chunk_offset,
-                                    std::byte* value_dest, std::byte* null_bitmap, const uint32_t null_bit_index,
-                                    StringSpillBuffer& value_arena) const {
-  const auto variant = segment[chunk_offset];
-  if (variant_is_null(variant)) {
-    DebugAssert(_nullable, "NULL in a non-nullable value column.");
-    set_null_bit(null_bitmap, null_bit_index);
-    return;
-  }
-  const auto value = boost::get<pmr_string>(variant);
-  auto reference = StringValueReference{};
-  reference.data = value_arena.append(reinterpret_cast<const std::byte*>(value.data()), value.size());
-  reference.length = value.size();
-  std::memcpy(value_dest, &reference, sizeof(reference));
 }
 
 void StringValueScatterColumn::scatter(const AbstractSegment& segment,

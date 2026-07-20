@@ -44,15 +44,15 @@ class ScatterStore;
 /**
  * One value stream's packing behavior, resolved once per distinct source column at schema build.
  *
- * A value stream reads a source column cell and serializes it into the per-worker scatter store's value lane during
- * the scatter phase, so the merge phase can later fold the raw bytes without touching the input table again. Numeric
+ * A value stream reads a source column and serializes it into the per-worker scatter store's value lane during the
+ * scatter phase, so the merge phase can later fold the raw bytes without touching the input table again. Numeric
  * streams write the value's native bytes; string streams write a (pointer, length) reference into the per-partition
  * value arena. The concrete subclass is chosen per source column from its data type.
  *
- * Invariants: element_width() and is_nullable() are fixed for the stream's lifetime; every pack() call writes exactly
- *   element_width() bytes to value_dest for a non-NULL cell.
+ * Invariants: element_width() and is_nullable() are fixed for the stream's lifetime; scatter() writes exactly
+ *   element_width() bytes to the stream's value lane per row.
  * Ownership/lifetime/threading: owned by AggregateSchema; immutable after build and shared read-only by all scatter
- *   workers, which call pack() concurrently on their own destinations. Must outlive the scatter phase.
+ *   workers, which call scatter() concurrently on their own destinations. Must outlive the scatter phase.
  * See also: NumericValueScatterColumn, StringValueScatterColumn; AbstractAccumulatorColumn (merge-side counterpart).
  */
 class AbstractValueScatterColumn {
@@ -67,22 +67,6 @@ class AbstractValueScatterColumn {
   virtual uint32_t element_width() const = 0;
   /** @return true iff the source column is nullable and this stream contributes to the value-null bitmap. */
   virtual bool is_nullable() const = 0;
-
-  /**
-   * Read one source cell and serialize it into this worker's scatter store for the merge phase to fold later.
-   *
-   * @param segment input segment holding the source cell; borrowed, not retained.
-   * @param chunk_offset row position of the cell within segment.
-   * @param value_dest destination for the packed value; borrowed, must be writable for at least element_width() bytes.
-   * @param null_bitmap the value-null bitmap; borrowed, written only when the cell is NULL.
-   * @param null_bit_index bit position within null_bitmap for this row.
-   * @param value_arena per-partition string arena; string payload bytes are appended here. Unused by numeric streams.
-   * @pre runs in the scatter phase, single-threaded per worker on that worker's own destinations.
-   * @post for a non-NULL cell, value_dest holds the packed value (native bytes for numeric, a (pointer, length)
-   *   reference for string); for a NULL cell, bit null_bit_index of null_bitmap is set and value_dest is unspecified.
-   */
-  virtual void pack(const AbstractSegment& segment, ChunkOffset chunk_offset, std::byte* value_dest,
-                    std::byte* null_bitmap, uint32_t null_bit_index, StringSpillBuffer& value_arena) const = 0;
 
   /**
    * Scatter one chunk's source column into the worker's store, one typed segment_iterate pass over the whole column.
@@ -129,8 +113,6 @@ class NumericValueScatterColumn : public AbstractValueScatterColumn {
 
   uint32_t element_width() const override;  // sizeof(T)
   bool is_nullable() const override;
-  void pack(const AbstractSegment& segment, ChunkOffset chunk_offset, std::byte* value_dest, std::byte* null_bitmap,
-            uint32_t null_bit_index, StringSpillBuffer& value_arena) const override;
   void scatter(const AbstractSegment& segment, std::span<const PartitionId> row_partitions, size_t stream,
                ScatterHeads& heads, ScatterStore& store, std::byte* null_bitmap, size_t null_bitmap_width,
                uint32_t null_bit_index) const override;
@@ -163,8 +145,6 @@ class StringValueScatterColumn : public AbstractValueScatterColumn {
 
   uint32_t element_width() const override;  // sizeof(pointer, length) reference
   bool is_nullable() const override;
-  void pack(const AbstractSegment& segment, ChunkOffset chunk_offset, std::byte* value_dest, std::byte* null_bitmap,
-            uint32_t null_bit_index, StringSpillBuffer& value_arena) const override;
   void scatter(const AbstractSegment& segment, std::span<const PartitionId> row_partitions, size_t stream,
                ScatterHeads& heads, ScatterStore& store, std::byte* null_bitmap, size_t null_bitmap_width,
                uint32_t null_bit_index) const override;
