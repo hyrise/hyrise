@@ -96,7 +96,8 @@ class ConcurrentTicketMap {
     _slots = SlotArray{static_cast<Slot*>(::operator new[](capacity * sizeof(Slot)))};
 
     const auto initialize_slots = [slots = _slots.get()](const size_t begin, const size_t end) {
-      // TODO(@forUnity): Test using std::memset here. This would also set key to 0 and hardcode that EMPTY == 0. However it might be faster.
+      // TODO(@forUnity): Test using std::memset here. This would also set key to 0 and hardcode that EMPTY == 0.
+      // However it might be faster.
       std::memset(slots + begin, 0, (end - begin) * sizeof(Slot));
     };
 
