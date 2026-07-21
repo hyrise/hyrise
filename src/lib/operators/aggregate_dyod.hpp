@@ -156,6 +156,13 @@ class AggregateDYOD : public AbstractAggregateOperator {
   std::shared_ptr<const Table> _on_execute() override;
 
   template <typename AggregateKey>
+    requires(std::is_same_v<AggregateKey, DYODEmptyAggregateKey>)
+  KeysPerChunk<AggregateKey> _partition_by_groupby_keys(const std::shared_ptr<const Table>& input_table,
+                                                        std::atomic_size_t& expected_result_size,
+                                                        bool& use_immediate_key_shortcut);
+
+  template <typename AggregateKey>
+    requires(!std::is_same_v<AggregateKey, DYODEmptyAggregateKey>)
   KeysPerChunk<AggregateKey> _partition_by_groupby_keys(const std::shared_ptr<const Table>& input_table,
                                                         std::atomic_size_t& expected_result_size,
                                                         bool& use_immediate_key_shortcut);
