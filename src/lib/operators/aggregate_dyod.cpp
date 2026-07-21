@@ -36,7 +36,7 @@
 
 namespace hyrise {
 
-template <typename T>
+template <typename T, bool Concurrent>
 struct ChunkedVector {
   static constexpr auto CHUNK_SIZE = static_cast<size_t>(TARGET_CHUNK_SIZE);
 
@@ -47,18 +47,30 @@ struct ChunkedVector {
     for (auto begin = size_t{0}; begin < size; begin += CHUNK_SIZE) {
       chunks.emplace_back(std::min(CHUNK_SIZE, size - begin), initial_value);
     }
+    if constexpr (Concurrent) {
+      is_written_to = std::vector<std::atomic_flag>(size);
+    }
   }
 
   // This will normally retunr T& but not if T is bool. There bit packing makes it return a proxy object.
   decltype(auto) operator[](const size_t index) {
-    return chunks[index / CHUNK_SIZE][index % CHUNK_SIZE];
+    if constexpr (Concurrent) {
+      while (is_written_to[index].test_and_set(std::memory_order_acquire)) {
+        // `test_and_set` returns the previous value. So if we spin here it means another thread is writing.
+      }
+      return chunks[index / CHUNK_SIZE][index % CHUNK_SIZE];
+      is_written_to[index].clear();
+    } else {
+      return chunks[index / CHUNK_SIZE][index % CHUNK_SIZE];
+    }
   }
 
   std::vector<pmr_vector<T>> chunks;
+  std::vector<std::atomic_flag> is_written_to;  // only used when Concurrent is true
 };
 
-template <typename T>
-void _emit_output_column(ChunkedVector<T>&& values, ChunkedVector<bool>&& nulls, const bool nullable,
+template <typename T, bool Concurrent>
+void _emit_output_column(ChunkedVector<T, Concurrent>&& values, ChunkedVector<bool, false>&& nulls, const bool nullable,
                          std::vector<Segments>& output_chunks, const size_t column_index) {
   const auto chunk_count = values.chunks.size();
   for (auto chunk_index = size_t{0}; chunk_index < chunk_count; ++chunk_index) {
@@ -88,10 +100,59 @@ struct NoGroupbyPartialResult {
   std::unordered_set<AllTypeVariant> distinct_values;
 };
 
+// Abstract Base for partial results.
+struct BasePartialResult {};
+
+template <typename AggregateType>
+struct RegularPartialResult : public BasePartialResult {
+  AggregateType accumulator{};
+  size_t value_count{0};
+};
+
+struct StandardDeviationSamplePartialResult : public BasePartialResult {
+  StandardDeviationSampleData standard_deviation{};
+};
+
+template <typename ColumnDataType>
+struct CountDistinctPartialResult : public BasePartialResult {
+  std::unordered_set<ColumnDataType> distinct_values{};
+};
+
+// Type-erased container for one aggregate's per-chunk partial results. The concrete element type depends on the
+// aggregate's data type and window function, so the per-aggregate columns are stored via this polymorphic base (whose
+// virtual destructor ensures the concrete `per_chunk` vector is destroyed) and cast back to the concrete column when
+// merged.
+struct BasePartialResultColumn {
+  virtual ~BasePartialResultColumn() = default;
+};
+
+template <typename AggregateType>
+struct RegularPartialResultColumn : public BasePartialResultColumn {
+  explicit RegularPartialResultColumn(const size_t chunk_count) : per_chunk(chunk_count) {}
+
+  std::vector<RegularPartialResult<AggregateType>> per_chunk;
+};
+
+template <typename ColumnDataType>
+struct CountDistinctPartialResultColumn : public BasePartialResultColumn {
+  explicit CountDistinctPartialResultColumn(const size_t chunk_count) : per_chunk(chunk_count) {}
+
+  std::vector<CountDistinctPartialResult<ColumnDataType>> per_chunk;
+};
+
+struct StandardDeviationSamplePartialResultColumn : public BasePartialResultColumn {
+  explicit StandardDeviationSamplePartialResultColumn(const size_t chunk_count) : per_chunk(chunk_count) {}
+
+  std::vector<StandardDeviationSamplePartialResult> per_chunk;
+};
+
 template <typename ColumnDataType, typename AggregateType, WindowFunction window_function>
-NoGroupbyPartialResult _aggregate_chunk(const std::shared_ptr<const Chunk>& chunk, const ColumnID input_column_id) {
-  auto result = NoGroupbyPartialResult{};
-  auto accumulator = AggregateType{};
+RegularPartialResult<AggregateType> _aggregate_chunk(const std::shared_ptr<const Chunk>& chunk,
+                                                     const ColumnID input_column_id) {
+  auto result = RegularPartialResult<AggregateType>{};
+  auto& accumulator = result.accumulator;
+  auto& value_count = result.value_count;
+
   const auto aggregate_function =
       WindowFunctionBuilder<ColumnDataType, AggregateType, window_function>().get_aggregate_function();
   const auto& segment = chunk->get_segment(input_column_id);
@@ -101,19 +162,16 @@ NoGroupbyPartialResult _aggregate_chunk(const std::shared_ptr<const Chunk>& chun
                                                 if (is_null) {
                                                   return;
                                                 }
-                                                aggregate_function(value, result.value_count, accumulator);
-                                                ++result.value_count;
+                                                aggregate_function(value, value_count, accumulator);
+                                                ++value_count;
                                               });
-  if (result.value_count > 0) {
-    result.accumulator = AllTypeVariant{accumulator};
-  }
   return result;
 }
 
 template <typename ColumnDataType>
-NoGroupbyPartialResult _count_distinct_chunk(const std::shared_ptr<const Chunk>& chunk,
-                                             const ColumnID input_column_id) {
-  auto result = NoGroupbyPartialResult{};
+CountDistinctPartialResult<ColumnDataType> _count_distinct_chunk(const std::shared_ptr<const Chunk>& chunk,
+                                                                 const ColumnID input_column_id) {
+  auto result = CountDistinctPartialResult<ColumnDataType>{};
   const auto& segment = chunk->get_segment(input_column_id);
   with_string_segment_iterate<ColumnDataType>(segment,
                                               [&](const auto& value, const bool is_null, const auto needs_copy) {
@@ -126,9 +184,9 @@ NoGroupbyPartialResult _count_distinct_chunk(const std::shared_ptr<const Chunk>&
 }
 
 template <typename ColumnDataType>
-NoGroupbyPartialResult _standard_deviation_chunk(const std::shared_ptr<const Chunk>& chunk,
-                                                 const ColumnID input_column_id) {
-  auto result = NoGroupbyPartialResult{};
+StandardDeviationSamplePartialResult _standard_deviation_chunk(const std::shared_ptr<const Chunk>& chunk,
+                                                               const ColumnID input_column_id) {
+  auto result = StandardDeviationSamplePartialResult{};
   const auto aggregate_function =
       WindowFunctionBuilder<ColumnDataType, double, WindowFunction::StandardDeviationSample>().get_aggregate_function();
   const auto& segment = chunk->get_segment(input_column_id);
@@ -142,16 +200,15 @@ NoGroupbyPartialResult _standard_deviation_chunk(const std::shared_ptr<const Chu
 
 template <typename AggregateType, WindowFunction window_function>
 std::pair<AggregateType, bool> _merge_no_groupby_partials(
-    const std::vector<std::vector<NoGroupbyPartialResult>>& partial_results, const size_t aggregate_id) {
+    const RegularPartialResultColumn<AggregateType>& partial_results) {
   auto accumulator = AggregateType{};
   auto value_count = size_t{0};
 
-  for (const auto& chunk_results : partial_results) {
-    const auto& partial = chunk_results[aggregate_id];
+  for (const auto& partial : partial_results.per_chunk) {
     if (partial.value_count == 0) {
       continue;
     }
-    const auto& partial_value = boost::get<AggregateType>(partial.accumulator);
+    const auto& partial_value = partial.accumulator;
     if constexpr (window_function == WindowFunction::Min) {
       if (value_count == 0 || value_smaller(partial_value, accumulator)) {
         accumulator = partial_value;
@@ -184,12 +241,12 @@ std::pair<AggregateType, bool> _merge_no_groupby_partials(
 }
 
 std::optional<double> _merge_standard_deviation_partials(
-    const std::vector<std::vector<NoGroupbyPartialResult>>& partial_results, const size_t aggregate_id) {
+    const StandardDeviationSamplePartialResultColumn& partial_results) {
   auto count = 0.0;
   auto mean = 0.0;
   auto squared_distance = 0.0;
-  for (const auto& chunk_results : partial_results) {
-    const auto& partial = chunk_results[aggregate_id].standard_deviation;
+  for (const auto& chunk_result : partial_results.per_chunk) {
+    const auto& partial = chunk_result.standard_deviation;
     const auto partial_count = partial[0];
     if (partial_count == 0.0) {
       continue;
@@ -220,17 +277,17 @@ const std::string& AggregateDYOD::name() const {
 // Incrementally computable aggregates (MIN/MAX/SUM/AVG/COUNT), indexed per group. A group with no contributing
 // (non-NULL) value yields NULL, except COUNT which yields 0.
 template <typename ColumnDataType, typename AggregateType, WindowFunction window_function>
-std::pair<ChunkedVector<AggregateType>, ChunkedVector<bool>> _aggregate_grouped(
+std::pair<ChunkedVector<AggregateType, false>, ChunkedVector<bool, false>> _aggregate_grouped(
     const uint64_t* const tickets, const size_t group_count, const std::shared_ptr<const Table>& input_table,
     const ColumnID input_column_id) {
   const auto aggregate_function =
       WindowFunctionBuilder<ColumnDataType, AggregateType, window_function>().get_aggregate_function();
-  auto values = ChunkedVector<AggregateType>(group_count);
+  auto values = ChunkedVector<AggregateType, false>(group_count);
 
   // Only AVG needs a per-group count of contributing (non-NULL) values, for its final division. MIN/MAX/SUM detect
   // their first contributing value via `nulls`, and COUNT accumulates directly into `values`, so neither allocates it.
   auto value_counts = std::vector<size_t>(window_function == WindowFunction::Avg ? group_count : 0, 0);
-  auto nulls = ChunkedVector<bool>(group_count, window_function != WindowFunction::Count);
+  auto nulls = ChunkedVector<bool, false>(group_count, window_function != WindowFunction::Count);
 
   const auto chunk_count = input_table->chunk_count();
   auto row_index = uint32_t{0};  // global row index across chunks, used to look up the group ticket in `tickets`
@@ -275,9 +332,9 @@ std::pair<ChunkedVector<AggregateType>, ChunkedVector<bool>> _aggregate_grouped(
 
 // COUNT(DISTINCT): number of distinct non-NULL values. Never NULL (0 for an all-NULL group).
 template <typename ColumnDataType>
-ChunkedVector<int64_t> _count_distinct_grouped(const uint64_t* const tickets, const size_t group_count,
-                                               const std::shared_ptr<const Table>& input_table,
-                                               const ColumnID input_column_id) {
+ChunkedVector<int64_t, false> _count_distinct_grouped(const uint64_t* const tickets, const size_t group_count,
+                                                      const std::shared_ptr<const Table>& input_table,
+                                                      const ColumnID input_column_id) {
   auto distinct_values = std::vector<std::unordered_set<ColumnDataType>>(group_count);
 
   const auto chunk_count = input_table->chunk_count();
@@ -296,7 +353,7 @@ ChunkedVector<int64_t> _count_distinct_grouped(const uint64_t* const tickets, co
                                                 });
   }
 
-  auto values = ChunkedVector<int64_t>(group_count);
+  auto values = ChunkedVector<int64_t, false>(group_count);
   for (auto i = size_t{0}; i < group_count; ++i) {
     values[i] = static_cast<int64_t>(distinct_values[i].size());
   }
@@ -305,12 +362,12 @@ ChunkedVector<int64_t> _count_distinct_grouped(const uint64_t* const tickets, co
 
 // ANY: the first value seen per group, NULL included (The value is passed through. All-NULL groups stay).
 template <typename ColumnDataType>
-std::pair<ChunkedVector<ColumnDataType>, ChunkedVector<bool>> _any_grouped(
+std::pair<ChunkedVector<ColumnDataType, false>, ChunkedVector<bool, false>> _any_grouped(
     const uint64_t* const tickets, const size_t group_count, const std::shared_ptr<const Table>& input_table,
     const ColumnID input_column_id) {
   auto seen = std::vector<bool>(group_count, false);
-  auto values = ChunkedVector<ColumnDataType>(group_count);
-  auto nulls = ChunkedVector<bool>(group_count, false);
+  auto values = ChunkedVector<ColumnDataType, false>(group_count);
+  auto nulls = ChunkedVector<bool, false>(group_count, false);
 
   const auto chunk_count = input_table->chunk_count();
   auto row_index = uint32_t{0};  // global row index across chunks, used to look up the group ticket in `tickets`
@@ -344,13 +401,13 @@ std::pair<ChunkedVector<ColumnDataType>, ChunkedVector<bool>> _any_grouped(
 // `groupby_index` is the column's position among the group-by columns (its slot in the row's null bitmap and column
 // offsets); `string_col_index` is its position among the string group-by columns (its heap string-pointer slot).
 template <typename ColumnDataType, bool Concurrent>
-std::pair<ChunkedVector<ColumnDataType>, ChunkedVector<bool>> _groupby_from_hash_table(
+std::pair<ChunkedVector<ColumnDataType, false>, ChunkedVector<bool, false>> _groupby_from_hash_table(
     const GroupKeyData<Concurrent>& group_key_data, const size_t group_count, const size_t groupby_index,
     const size_t string_col_index) {
   const auto& format = group_key_data.row_format;
   const auto& hash_table = group_key_data.global_hash_table;
-  auto values = ChunkedVector<ColumnDataType>(group_count);
-  auto nulls = ChunkedVector<bool>(group_count, false);
+  auto values = ChunkedVector<ColumnDataType, false>(group_count);
+  auto nulls = ChunkedVector<bool, false>(group_count, false);
   const auto null_mask_bit = uint64_t{1} << groupby_index;
 
   // Reads one group's representative value from its distinct key row into the output slot addressed by its ticket.
@@ -392,7 +449,7 @@ std::pair<ChunkedVector<ColumnDataType>, ChunkedVector<bool>> _groupby_from_hash
 
 // STDDEV: NULL for groups with fewer than two contributing values.
 template <typename ColumnDataType>
-std::pair<ChunkedVector<double>, ChunkedVector<bool>> _standard_deviation_sample_grouped(
+std::pair<ChunkedVector<double, false>, ChunkedVector<bool, false>> _standard_deviation_sample_grouped(
     const uint64_t* const tickets, const size_t group_count, const std::shared_ptr<const Table>& input_table,
     const ColumnID input_column_id) {
   static_assert(std::is_arithmetic_v<ColumnDataType>, "StandardDeviationSample is only defined on arithmetic types.");
@@ -415,8 +472,8 @@ std::pair<ChunkedVector<double>, ChunkedVector<bool>> _standard_deviation_sample
     });
   }
 
-  auto values = ChunkedVector<double>(group_count);
-  auto nulls = ChunkedVector<bool>(group_count, false);
+  auto values = ChunkedVector<double, false>(group_count);
+  auto nulls = ChunkedVector<bool, false>(group_count, false);
   for (auto i = size_t{0}; i < group_count; ++i) {
     if (accumulators[i][0] < 2) {
       nulls[i] = true;
@@ -427,217 +484,281 @@ std::pair<ChunkedVector<double>, ChunkedVector<bool>> _standard_deviation_sample
   return {std::move(values), std::move(nulls)};
 }
 
+std::shared_ptr<const Table> AggregateDYOD::no_groupby_aggregate() {
+  const auto input_table = left_input_table();
+  const auto aggregate_count = _aggregates.size();
+
+  auto column_definitions = TableColumnDefinitions{};
+  auto result_values = std::vector<AllTypeVariant>{};
+  column_definitions.reserve(aggregate_count);
+  result_values.reserve(aggregate_count);
+
+  const auto chunk_count = input_table->chunk_count();
+  auto partial_results = std::vector<std::shared_ptr<BasePartialResultColumn>>(aggregate_count);
+
+  for (auto aggregate_id = size_t{0}; aggregate_id < aggregate_count; ++aggregate_id) {
+    const auto& aggregate = _aggregates[aggregate_id];
+    const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
+    const auto input_column_id = pqp_column.column_id;
+    const auto data_type =
+        input_column_id == INVALID_COLUMN_ID ? DataType::Long : input_table->column_data_type(input_column_id);
+    resolve_data_type(data_type, [&](const auto data_type_t) {
+      using ColumnDataType = typename decltype(data_type_t)::type;
+      switch (aggregate->window_function) {
+        case WindowFunction::Min:
+          partial_results[aggregate_id] = std::make_shared<RegularPartialResultColumn<ColumnDataType>>(chunk_count);
+          break;
+        case WindowFunction::Max:
+          partial_results[aggregate_id] = std::make_shared<RegularPartialResultColumn<ColumnDataType>>(chunk_count);
+          break;
+        case WindowFunction::Sum:
+          partial_results[aggregate_id] = std::make_shared<RegularPartialResultColumn<ColumnDataType>>(chunk_count);
+          break;
+        case WindowFunction::Avg:
+          partial_results[aggregate_id] = std::make_shared<RegularPartialResultColumn<ColumnDataType>>(chunk_count);
+          break;
+        case WindowFunction::Count:
+          partial_results[aggregate_id] = std::make_shared<RegularPartialResultColumn<int64_t>>(chunk_count);
+          break;
+        case WindowFunction::CountDistinct:
+          partial_results[aggregate_id] =
+              std::make_shared<CountDistinctPartialResultColumn<ColumnDataType>>(chunk_count);
+          break;
+        case WindowFunction::StandardDeviationSample:
+          if constexpr (std::is_arithmetic_v<ColumnDataType>) {
+            partial_results[aggregate_id] = std::make_shared<StandardDeviationSamplePartialResultColumn>(chunk_count);
+          }
+          break;
+        case WindowFunction::Any:
+          partial_results[aggregate_id] = std::make_shared<RegularPartialResultColumn<ColumnDataType>>(chunk_count);
+          break;
+        default:
+          Fail("Unsupported aggregate function.");
+      }
+    });
+  }
+
+  // Compute every aggregate for one chunk. The calling job exclusively owns this chunk's partial-result row.
+  const auto compute_chunk_aggregates = [this, &input_table, &partial_results,
+                                         aggregate_count](const ChunkID chunk_id) {
+    const auto& chunk = input_table->get_chunk(chunk_id);
+    for (auto aggregate_id = size_t{0}; aggregate_id < aggregate_count; ++aggregate_id) {
+      auto& partial_column = partial_results[aggregate_id];
+      const auto& aggregate = this->_aggregates[aggregate_id];
+      const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
+      const auto input_column_id = pqp_column.column_id;
+
+      const auto data_type =
+          input_column_id == INVALID_COLUMN_ID ? DataType::Long : input_table->column_data_type(input_column_id);
+      resolve_data_type(data_type, [&](const auto data_type_t) {
+        using ColumnDataType = typename decltype(data_type_t)::type;
+        switch (aggregate->window_function) {
+          case WindowFunction::Min: {
+            using T = typename WindowFunctionTraits<ColumnDataType, WindowFunction::Min>::ReturnType;
+            const auto partial_column_ptr = std::static_pointer_cast<RegularPartialResultColumn<T>>(partial_column);
+            partial_column_ptr->per_chunk[chunk_id] =
+                _aggregate_chunk<ColumnDataType, T, WindowFunction::Min>(chunk, input_column_id);
+            break;
+          }
+          case WindowFunction::Max: {
+            using T = typename WindowFunctionTraits<ColumnDataType, WindowFunction::Max>::ReturnType;
+            const auto partial_column_ptr = std::static_pointer_cast<RegularPartialResultColumn<T>>(partial_column);
+            partial_column_ptr->per_chunk[chunk_id] =
+                _aggregate_chunk<ColumnDataType, T, WindowFunction::Max>(chunk, input_column_id);
+            break;
+          }
+          case WindowFunction::Sum: {
+            using T = typename WindowFunctionTraits<ColumnDataType, WindowFunction::Sum>::ReturnType;
+            const auto partial_column_ptr = std::static_pointer_cast<RegularPartialResultColumn<T>>(partial_column);
+            partial_column_ptr->per_chunk[chunk_id] =
+                _aggregate_chunk<ColumnDataType, T, WindowFunction::Sum>(chunk, input_column_id);
+            break;
+          }
+          case WindowFunction::Avg: {
+            using T = typename WindowFunctionTraits<ColumnDataType, WindowFunction::Avg>::ReturnType;
+            const auto partial_column_ptr = std::static_pointer_cast<RegularPartialResultColumn<T>>(partial_column);
+            partial_column_ptr->per_chunk[chunk_id] =
+                _aggregate_chunk<ColumnDataType, T, WindowFunction::Avg>(chunk, input_column_id);
+            break;
+          }
+          case WindowFunction::Count: {
+            using T = typename WindowFunctionTraits<ColumnDataType, WindowFunction::Count>::ReturnType;
+            const auto partial_column_ptr = std::static_pointer_cast<RegularPartialResultColumn<T>>(partial_column);
+            partial_column_ptr->per_chunk[chunk_id] =
+                _aggregate_chunk<ColumnDataType, T, WindowFunction::Count>(chunk, input_column_id);
+            break;
+          }
+          case WindowFunction::CountDistinct: {
+            const auto partial_column_ptr =
+                std::static_pointer_cast<CountDistinctPartialResultColumn<ColumnDataType>>(partial_column);
+            partial_column_ptr->per_chunk[chunk_id] = _count_distinct_chunk<ColumnDataType>(chunk, input_column_id);
+            break;
+          }
+          case WindowFunction::StandardDeviationSample:
+            if constexpr (std::is_arithmetic_v<ColumnDataType>) {
+              const auto partial_column_ptr =
+                  std::static_pointer_cast<StandardDeviationSamplePartialResultColumn>(partial_column);
+              partial_column_ptr->per_chunk[chunk_id] =
+                  _standard_deviation_chunk<ColumnDataType>(chunk, input_column_id);
+            }
+            break;
+          case WindowFunction::Any: {
+            using T = typename WindowFunctionTraits<ColumnDataType, WindowFunction::Any>::ReturnType;
+            const auto partial_column_ptr = std::static_pointer_cast<RegularPartialResultColumn<T>>(partial_column);
+            partial_column_ptr->per_chunk[chunk_id] =
+                _aggregate_chunk<ColumnDataType, T, WindowFunction::Any>(chunk, input_column_id);
+            break;
+          }
+          default:
+            Fail("Unsupported aggregate function.");
+        }
+      });
+    }
+  };
+
+  if (chunk_count > 0) {
+    const auto cpu_count = Hyrise::get().topology.num_cpus();
+    const auto worker_count = cpu_count > 1 ? cpu_count - 1 : size_t{1};
+    const auto job_count = std::min(worker_count, static_cast<size_t>(chunk_count));
+    auto next_chunk_id = std::atomic<uint32_t>{0};
+    auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+    jobs.reserve(job_count);
+
+    for (auto job_id = size_t{0}; job_id < job_count; ++job_id) {
+      jobs.emplace_back(std::make_shared<JobTask>([&, chunk_count]() {
+        while (true) {
+          const auto chunk_id = next_chunk_id.fetch_add(1, std::memory_order_relaxed);
+          if (chunk_id >= chunk_count) {
+            break;
+          }
+          compute_chunk_aggregates(ChunkID{chunk_id});
+        }
+      }));
+    }
+    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+  }
+
+  // Merge the per-chunk partial results into a single result row.
+  for (auto aggregate_id = uint32_t{0}; aggregate_id < aggregate_count; ++aggregate_id) {
+    const auto& aggregate = _aggregates[aggregate_id];
+
+    const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
+    const auto input_column_id = pqp_column.column_id;
+
+    if (aggregate->window_function == WindowFunction::Any) {
+      // ANY() passes the source column through, keeping its name, data type, and nullability.
+      column_definitions.emplace_back(input_table->column_name(input_column_id),
+                                      input_table->column_data_type(input_column_id),
+                                      input_table->column_is_nullable(input_column_id));
+    } else if (aggregate->window_function == WindowFunction::Count ||
+               aggregate->window_function == WindowFunction::CountDistinct) {
+      // COUNT and COUNT DISTINCT never produce NULL values.
+      column_definitions.emplace_back(aggregate->as_column_name(), aggregate->data_type(), false);
+    } else {
+      column_definitions.emplace_back(aggregate->as_column_name(), aggregate->data_type(), true);
+    }
+
+    const auto data_type =
+        input_column_id == INVALID_COLUMN_ID ? DataType::Long : input_table->column_data_type(input_column_id);
+    resolve_data_type(data_type, [&](const auto data_type_t) {
+      using ColumnDataType = typename decltype(data_type_t)::type;
+
+      switch (aggregate->window_function) {
+        case WindowFunction::Min: {
+          using AggregateType = typename WindowFunctionTraits<ColumnDataType, WindowFunction::Min>::ReturnType;
+
+          const auto partial_column =
+              std::static_pointer_cast<const RegularPartialResultColumn<AggregateType>>(partial_results[aggregate_id]);
+          const auto [value, is_null] = _merge_no_groupby_partials<AggregateType, WindowFunction::Min>(*partial_column);
+          result_values.emplace_back(is_null ? NULL_VALUE : AllTypeVariant{value});
+          break;
+        }
+        case WindowFunction::Max: {
+          using AggregateType = typename WindowFunctionTraits<ColumnDataType, WindowFunction::Max>::ReturnType;
+          const auto partial_column =
+              std::static_pointer_cast<const RegularPartialResultColumn<AggregateType>>(partial_results[aggregate_id]);
+          const auto [value, is_null] = _merge_no_groupby_partials<AggregateType, WindowFunction::Max>(*partial_column);
+          result_values.emplace_back(is_null ? NULL_VALUE : AllTypeVariant{value});
+          break;
+        }
+        case WindowFunction::Sum: {
+          using AggregateType = typename WindowFunctionTraits<ColumnDataType, WindowFunction::Sum>::ReturnType;
+          const auto partial_column =
+              std::static_pointer_cast<const RegularPartialResultColumn<AggregateType>>(partial_results[aggregate_id]);
+          const auto [value, is_null] = _merge_no_groupby_partials<AggregateType, WindowFunction::Sum>(*partial_column);
+          result_values.emplace_back(is_null ? NULL_VALUE : AllTypeVariant{value});
+          break;
+        }
+        case WindowFunction::Avg: {
+          using AggregateType = typename WindowFunctionTraits<ColumnDataType, WindowFunction::Avg>::ReturnType;
+          const auto partial_column =
+              std::static_pointer_cast<const RegularPartialResultColumn<AggregateType>>(partial_results[aggregate_id]);
+          const auto [value, is_null] = _merge_no_groupby_partials<AggregateType, WindowFunction::Avg>(*partial_column);
+          result_values.emplace_back(is_null ? NULL_VALUE : AllTypeVariant{value});
+          break;
+        }
+        case WindowFunction::Count: {
+          // Special case for COUNT(*): count all rows, ignoring the input column id.
+          if (input_column_id == INVALID_COLUMN_ID || !input_table->column_is_nullable(input_column_id)) {
+            auto row_count = input_table->row_count();
+            result_values.emplace_back(static_cast<int64_t>(row_count));
+            break;
+          }
+          using AggregateType = typename WindowFunctionTraits<ColumnDataType, WindowFunction::Count>::ReturnType;
+          const auto partial_column =
+              std::static_pointer_cast<const RegularPartialResultColumn<AggregateType>>(partial_results[aggregate_id]);
+          const auto [value, _] = _merge_no_groupby_partials<AggregateType, WindowFunction::Count>(*partial_column);
+          result_values.emplace_back(value);
+          break;
+        }
+        case WindowFunction::CountDistinct: {
+          auto distinct_values = std::unordered_set<ColumnDataType>{};
+          auto partial_column =
+              std::static_pointer_cast<CountDistinctPartialResultColumn<ColumnDataType>>(partial_results[aggregate_id]);
+          for (auto& result : partial_column->per_chunk) {
+            distinct_values.merge(result.distinct_values);
+          }
+          result_values.emplace_back(static_cast<int64_t>(distinct_values.size()));
+          break;
+        }
+        case WindowFunction::StandardDeviationSample: {
+          if constexpr (std::is_arithmetic_v<ColumnDataType>) {
+            const auto partial_column = std::static_pointer_cast<const StandardDeviationSamplePartialResultColumn>(
+                partial_results[aggregate_id]);
+            const auto result = _merge_standard_deviation_partials(*partial_column);
+            result_values.emplace_back(result ? AllTypeVariant{*result} : NULL_VALUE);
+          } else {
+            Fail("StandardDeviationSample is not available on non-arithmetic types.");
+          }
+          break;
+        }
+        case WindowFunction::Any: {
+          using AggregateType = typename WindowFunctionTraits<ColumnDataType, WindowFunction::Any>::ReturnType;
+          const auto partial_column =
+              std::static_pointer_cast<const RegularPartialResultColumn<AggregateType>>(partial_results[aggregate_id]);
+          const auto [value, is_null] = _merge_no_groupby_partials<AggregateType, WindowFunction::Any>(*partial_column);
+          result_values.emplace_back(is_null ? NULL_VALUE : AllTypeVariant{value});
+          break;
+        }
+        default:
+          Fail(std::format("Unsupported aggregate function '{}'.",
+                           window_function_to_string.left.at(aggregate->window_function)));
+      }
+    });
+  }
+
+  auto result_table = std::make_shared<Table>(column_definitions, TableType::Data);
+  result_table->append(result_values);
+  return result_table;
+}
+
 std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
   const auto input_table = _left_input->get_output();
 
   _validate_aggregates();
 
   if (_groupby_column_ids.empty()) {
-    const auto aggregate_count = _aggregates.size();
-
-    auto column_definitions = TableColumnDefinitions{};
-    auto result_values = std::vector<AllTypeVariant>{};
-    column_definitions.reserve(aggregate_count);
-    result_values.reserve(aggregate_count);
-
-    const auto chunk_count = input_table->chunk_count();
-    auto partial_results = std::vector<std::vector<NoGroupbyPartialResult>>(
-        chunk_count, std::vector<NoGroupbyPartialResult>(aggregate_count));
-
-    // Compute every aggregate for one chunk. The calling job exclusively owns this chunk's partial-result row.
-    const auto compute_chunk_aggregates = [this, &input_table, &partial_results,
-                                           aggregate_count](const ChunkID chunk_id) {
-      const auto& chunk = input_table->get_chunk(chunk_id);
-      for (auto aggregate_id = size_t{0}; aggregate_id < aggregate_count; ++aggregate_id) {
-        const auto& aggregate = _aggregates[aggregate_id];
-        const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
-        const auto input_column_id = pqp_column.column_id;
-        if (aggregate->window_function == WindowFunction::Count &&
-            (input_column_id == INVALID_COLUMN_ID || !input_table->column_is_nullable(input_column_id))) {
-          continue;
-        }
-
-        const auto data_type = input_table->column_data_type(input_column_id);
-        resolve_data_type(data_type, [&](const auto data_type_t) {
-          using ColumnDataType = typename decltype(data_type_t)::type;
-          switch (aggregate->window_function) {
-            case WindowFunction::Min: {
-              using T = typename WindowFunctionTraits<ColumnDataType, WindowFunction::Min>::ReturnType;
-              partial_results[chunk_id][aggregate_id] =
-                  _aggregate_chunk<ColumnDataType, T, WindowFunction::Min>(chunk, input_column_id);
-              break;
-            }
-            case WindowFunction::Max: {
-              using T = typename WindowFunctionTraits<ColumnDataType, WindowFunction::Max>::ReturnType;
-              partial_results[chunk_id][aggregate_id] =
-                  _aggregate_chunk<ColumnDataType, T, WindowFunction::Max>(chunk, input_column_id);
-              break;
-            }
-            case WindowFunction::Sum: {
-              using T = typename WindowFunctionTraits<ColumnDataType, WindowFunction::Sum>::ReturnType;
-              partial_results[chunk_id][aggregate_id] =
-                  _aggregate_chunk<ColumnDataType, T, WindowFunction::Sum>(chunk, input_column_id);
-              break;
-            }
-            case WindowFunction::Avg: {
-              using T = typename WindowFunctionTraits<ColumnDataType, WindowFunction::Avg>::ReturnType;
-              partial_results[chunk_id][aggregate_id] =
-                  _aggregate_chunk<ColumnDataType, T, WindowFunction::Avg>(chunk, input_column_id);
-              break;
-            }
-            case WindowFunction::Count: {
-              using T = typename WindowFunctionTraits<ColumnDataType, WindowFunction::Count>::ReturnType;
-              partial_results[chunk_id][aggregate_id] =
-                  _aggregate_chunk<ColumnDataType, T, WindowFunction::Count>(chunk, input_column_id);
-              break;
-            }
-            case WindowFunction::CountDistinct: {
-              partial_results[chunk_id][aggregate_id] = _count_distinct_chunk<ColumnDataType>(chunk, input_column_id);
-              break;
-            }
-            case WindowFunction::StandardDeviationSample:
-              if constexpr (std::is_arithmetic_v<ColumnDataType>) {
-                partial_results[chunk_id][aggregate_id] =
-                    _standard_deviation_chunk<ColumnDataType>(chunk, input_column_id);
-              }
-              break;
-            case WindowFunction::Any: {
-              using T = typename WindowFunctionTraits<ColumnDataType, WindowFunction::Any>::ReturnType;
-              partial_results[chunk_id][aggregate_id] =
-                  _aggregate_chunk<ColumnDataType, T, WindowFunction::Any>(chunk, input_column_id);
-              break;
-            }
-            default:
-              Fail("Unsupported aggregate function.");
-          }
-        });
-      }
-    };
-
-    if (chunk_count > 0) {
-      const auto cpu_count = Hyrise::get().topology.num_cpus();
-      const auto worker_count = cpu_count > 1 ? cpu_count - 1 : size_t{1};
-      const auto job_count = std::min(worker_count, static_cast<size_t>(chunk_count));
-      auto next_chunk_id = std::atomic<uint32_t>{0};
-      auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
-      jobs.reserve(job_count);
-
-      for (auto job_id = size_t{0}; job_id < job_count; ++job_id) {
-        jobs.emplace_back(std::make_shared<JobTask>([&, chunk_count]() {
-          while (true) {
-            const auto chunk_id = next_chunk_id.fetch_add(1, std::memory_order_relaxed);
-            if (chunk_id >= chunk_count) {
-              break;
-            }
-            compute_chunk_aggregates(ChunkID{chunk_id});
-          }
-        }));
-      }
-      Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
-    }
-
-    // Merge the per-chunk partial results into a single result row.
-    for (auto aggregate_id = uint32_t{0}; aggregate_id < aggregate_count; ++aggregate_id) {
-      const auto& aggregate = _aggregates[aggregate_id];
-
-      const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
-      const auto input_column_id = pqp_column.column_id;
-
-      if (aggregate->window_function == WindowFunction::Any) {
-        // ANY() passes the source column through, keeping its name, data type, and nullability.
-        column_definitions.emplace_back(input_table->column_name(input_column_id),
-                                        input_table->column_data_type(input_column_id),
-                                        input_table->column_is_nullable(input_column_id));
-      } else if (aggregate->window_function == WindowFunction::Count ||
-                 aggregate->window_function == WindowFunction::CountDistinct) {
-        // COUNT and COUNT DISTINCT never produce NULL values.
-        column_definitions.emplace_back(aggregate->as_column_name(), aggregate->data_type(), false);
-      } else {
-        column_definitions.emplace_back(aggregate->as_column_name(), aggregate->data_type(), true);
-      }
-
-      const auto data_type =
-          input_column_id == INVALID_COLUMN_ID ? DataType::Long : input_table->column_data_type(input_column_id);
-      resolve_data_type(data_type, [&](const auto data_type_t) {
-        using ColumnDataType = typename decltype(data_type_t)::type;
-
-        switch (aggregate->window_function) {
-          case WindowFunction::Min: {
-            using AggregateType = typename WindowFunctionTraits<ColumnDataType, WindowFunction::Min>::ReturnType;
-            const auto [value, is_null] =
-                _merge_no_groupby_partials<AggregateType, WindowFunction::Min>(partial_results, aggregate_id);
-            result_values.emplace_back(is_null ? NULL_VALUE : AllTypeVariant{value});
-            break;
-          }
-          case WindowFunction::Max: {
-            using AggregateType = typename WindowFunctionTraits<ColumnDataType, WindowFunction::Max>::ReturnType;
-            const auto [value, is_null] =
-                _merge_no_groupby_partials<AggregateType, WindowFunction::Max>(partial_results, aggregate_id);
-            result_values.emplace_back(is_null ? NULL_VALUE : AllTypeVariant{value});
-            break;
-          }
-          case WindowFunction::Sum: {
-            using AggregateType = typename WindowFunctionTraits<ColumnDataType, WindowFunction::Sum>::ReturnType;
-            const auto [value, is_null] =
-                _merge_no_groupby_partials<AggregateType, WindowFunction::Sum>(partial_results, aggregate_id);
-            result_values.emplace_back(is_null ? NULL_VALUE : AllTypeVariant{value});
-            break;
-          }
-          case WindowFunction::Avg: {
-            using AggregateType = typename WindowFunctionTraits<ColumnDataType, WindowFunction::Avg>::ReturnType;
-            const auto [value, is_null] =
-                _merge_no_groupby_partials<AggregateType, WindowFunction::Avg>(partial_results, aggregate_id);
-            result_values.emplace_back(is_null ? NULL_VALUE : AllTypeVariant{value});
-            break;
-          }
-          case WindowFunction::Count: {
-            // Special case for COUNT(*): count all rows, ignoring the input column id.
-            if (input_column_id == INVALID_COLUMN_ID || !input_table->column_is_nullable(input_column_id)) {
-              auto row_count = input_table->row_count();
-              result_values.emplace_back(static_cast<int64_t>(row_count));
-              break;
-            }
-            using AggregateType = typename WindowFunctionTraits<ColumnDataType, WindowFunction::Count>::ReturnType;
-            const auto [value, _] =
-                _merge_no_groupby_partials<AggregateType, WindowFunction::Count>(partial_results, aggregate_id);
-            result_values.emplace_back(value);
-            break;
-          }
-          case WindowFunction::CountDistinct: {
-            auto distinct_values = std::unordered_set<AllTypeVariant>{};
-            for (auto& chunk_results : partial_results) {
-              auto& partial_values = chunk_results[aggregate_id].distinct_values;
-              distinct_values.merge(partial_values);
-            }
-            result_values.emplace_back(static_cast<int64_t>(distinct_values.size()));
-            break;
-          }
-          case WindowFunction::StandardDeviationSample: {
-            if constexpr (std::is_arithmetic_v<ColumnDataType>) {
-              const auto result = _merge_standard_deviation_partials(partial_results, aggregate_id);
-              result_values.emplace_back(result ? AllTypeVariant{*result} : NULL_VALUE);
-            } else {
-              Fail("StandardDeviationSample is not available on non-arithmetic types.");
-            }
-            break;
-          }
-          case WindowFunction::Any: {
-            using AggregateType = typename WindowFunctionTraits<ColumnDataType, WindowFunction::Any>::ReturnType;
-            const auto [value, is_null] =
-                _merge_no_groupby_partials<AggregateType, WindowFunction::Any>(partial_results, aggregate_id);
-            result_values.emplace_back(is_null ? NULL_VALUE : AllTypeVariant{value});
-            break;
-          }
-          default:
-            Fail(std::format("Unsupported aggregate function '{}'.",
-                             window_function_to_string.left.at(aggregate->window_function)));
-        }
-      });
-    }
-
-    auto result_table = std::make_shared<Table>(column_definitions, TableType::Data);
-    result_table->append(result_values);
-    return result_table;
+    return no_groupby_aggregate();
   }
 
   // Group-by path. We determine the distinct groups once and then derive every output column (the group-by columns
@@ -720,7 +841,7 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
     // COUNT(*) does not reference an input column. It counts all rows per group (NULLs included). Every input row
     // contributes its group's ticket exactly once, so the per-group count is just a histogram over the tickets.
     if (window_function == WindowFunction::Count && input_column_id == INVALID_COLUMN_ID) {
-      auto values = ChunkedVector<int64_t>(group_count, 0);
+      auto values = ChunkedVector<int64_t, false>(group_count, 0);
       const auto* const tickets = groups->tickets.get();
       const auto row_count = input_table->row_count();
       for (auto row_index = size_t{0}; row_index < row_count; ++row_index) {
@@ -819,7 +940,7 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
     resolve_data_type(input_table->column_data_type(groupby_column_id), [&](const auto data_type_t) {
       using ColumnDataType = typename decltype(data_type_t)::type;
 
-      auto [values, nulls] = [&]() -> std::pair<ChunkedVector<ColumnDataType>, ChunkedVector<bool>> {
+      auto [values, nulls] = [&]() -> std::pair<ChunkedVector<ColumnDataType, false>, ChunkedVector<bool, false>> {
         if (!use_hash_table_for_groupby) {
           // High cardinality: a sequential scan of the source column beats chasing the scattered key rows.
           return _any_grouped<ColumnDataType>(groups->tickets.get(), group_count, input_table, groupby_column_id);
