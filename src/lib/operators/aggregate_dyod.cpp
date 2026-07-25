@@ -815,7 +815,7 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
                                                  &guarantee_single_key, this]() {
       const auto groupby_column_id = _groupby_column_ids.at(group_column_index);
       const auto data_type = input_table->column_data_type(groupby_column_id);
-      const auto is_nullable = input_table->column_is_nullable(groupby_column_id);
+      auto contains_nulls = false;
 
       resolve_data_type(data_type, [&](auto type) {
         using ColumnDataType = typename decltype(type)::type;
@@ -850,6 +850,7 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
                 // Single GROUP BY column
                 if (position.is_null()) {
                   keys[chunk_offset] = 0;
+                  contains_nulls = true;
                 } else {
                   const auto key = int_to_uint(position.value()) + 1;
 
@@ -862,6 +863,7 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
                 // Multiple GROUP BY columns
                 if (position.is_null()) {
                   keys[chunk_offset][group_column_index] = 0;
+                  contains_nulls = true;
                 } else {
                   const auto key = int_to_uint(position.value()) + 1;
                   keys[chunk_offset][group_column_index] = key;
@@ -873,7 +875,7 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
             });
           }
 
-          if (is_nullable) {
+          if (contains_nulls) {
             if (max_key != 0) {
               guarantee_single_key = false;
             }
@@ -896,7 +898,7 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
             if (max_key > 0 &&
                 static_cast<double>(max_key - min_key) < static_cast<double>(input_table->row_count()) * 1.2) {
               // Include space for min, max, and NULL
-              const auto null_offset = is_nullable ? 1 : 0;
+              const auto null_offset = contains_nulls ? 1 : 0;
               expected_result_size = static_cast<size_t>(max_key - min_key) + 1 + null_offset;
               use_immediate_key_shortcut = true;
 
@@ -959,6 +961,7 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
             segment_iterate<ColumnDataType>(*abstract_segment, [&](const auto& position) {
               auto chunk_offset = position.chunk_offset();
               if (position.is_null()) {
+                contains_nulls = true;
                 if constexpr (std::is_same_v<AggregateKey, DYODAggregateKeyEntry>) {
                   keys[chunk_offset] = 0;
                 } else {
@@ -1045,7 +1048,7 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
             });
           }
 
-          if (is_nullable) {
+          if (contains_nulls) {
             if (id_map.size() > 0) {
               guarantee_single_key = false;
             }
@@ -1109,7 +1112,6 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
 
   const auto row_count = input_table->row_count();
   const auto groupby_column_count = _groupby_column_ids.size();
-  // TODO(anyone): parallelize for same keys and merge
   if (groupby_column_count == 0 || row_count == 0) {
     auto contexts_per_column = ContextsPerColumn(aggregate_count);
     _aggregate<AggregateKey>(contexts_per_column, input_table);
