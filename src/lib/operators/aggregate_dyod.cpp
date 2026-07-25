@@ -730,6 +730,7 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
                                                                      std::atomic_size_t& expected_result_size,
                                                                      bool& use_immediate_key_shortcut,
                                                                      bool& guarantee_single_key) {
+  // guarantee_single_key = true;
   return KeysPerChunk<AggregateKey>{};
 }
 
@@ -1064,11 +1065,10 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
   // Check for invalid aggregates
   _validate_aggregates();
 
-  const auto groupby_column_count = _groupby_column_ids.size();
-
   // const auto is_multi_threaded = Hyrise::get().is_multi_threaded();
   const auto is_multi_threaded = true;
   const auto row_count = input_table->row_count();
+  const auto groupby_column_count = _groupby_column_ids.size();
   // TODO(anyone): parallelize for same keys and merge
   if (groupby_column_count == 0 || row_count == 0 || !is_multi_threaded) {
     auto contexts_per_column = ContextsPerColumn(aggregate_count);
@@ -1210,98 +1210,10 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
        * PARTITIONING STEP
        */
 
-      std::atomic_size_t expected_result_size;
-      bool use_immediate_key_shortcut = false;
-      bool guarantee_single_key = false;
-      auto keys_per_chunk = _partition_by_groupby_keys<AggregateKey>(local_input_table, expected_result_size,
-                                                                     use_immediate_key_shortcut, guarantee_single_key);
+      auto contexts_per_column = ContextsPerColumn(aggregate_count);
+      _aggregate<AggregateKey>(contexts_per_column, local_input_table);
 
-      // TODO(anyone): estimate ideal number of threads for this bucket.
-      // If we only have one group, we can easily split this thread, since we have only one result per context.
-      const auto bucket_job_count = guarantee_single_key ? ChunkID{2} : ChunkID{1};
-      const auto local_chunk_count = local_input_table->chunk_count();
-      const auto job_size = local_chunk_count / bucket_job_count;
-
-      auto contexts_per_column_per_job = std::vector<ContextsPerColumn>{};
-      contexts_per_column_per_job.reserve(bucket_job_count);
-
-      auto mini_jobs = std::vector<std::shared_ptr<AbstractTask>>{};
-      mini_jobs.reserve(bucket_job_count);
-
-      for (auto job_id = ChunkID{0}; job_id < bucket_job_count; ++job_id) {
-        contexts_per_column_per_job.emplace_back(aggregate_count);
-        const auto aggregate_bucket = [&, job_id]() {
-          const auto job_start = static_cast<ChunkID>(job_id * job_size);
-          const auto job_end =
-              static_cast<ChunkID>((job_id + 1 == bucket_job_count) ? (local_chunk_count) : ((job_id + 1) * job_size));
-
-          _aggregate<AggregateKey>(contexts_per_column_per_job[job_id], local_input_table, expected_result_size,
-                                   use_immediate_key_shortcut, keys_per_chunk, job_start, job_end);
-        };
-
-        if (bucket_job_count == 1) {
-          aggregate_bucket();
-        } else {
-          mini_jobs.emplace_back(std::make_shared<JobTask>(aggregate_bucket));
-        }
-      }
-      Hyrise::get().scheduler()->schedule_and_wait_for_tasks(mini_jobs);
-
-      // TODO(anyone): parallelize merging ?
-      // TODO(anyone): make more pretty.
-      for (auto aggregate_idx = ColumnID{0}; aggregate_idx < aggregate_count; ++aggregate_idx) {
-        const auto& aggregate = _aggregates[aggregate_idx];
-        const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
-        const auto input_column_id = pqp_column.column_id;
-
-        // Output column for COUNT(*).
-        const auto data_type = input_column_id == INVALID_COLUMN_ID
-                                   ? DataType::Long
-                                   : local_input_table->column_data_type(input_column_id);
-
-        auto& context = contexts_per_column_per_job[0][aggregate_idx];
-        resolve_data_type(data_type, [&](auto type) {
-          using ColumnDataType = typename decltype(type)::type;
-          for (auto job_id = ChunkID{1}; job_id < bucket_job_count; ++job_id) {
-            auto& other = contexts_per_column_per_job[job_id][aggregate_idx];
-            switch (aggregate->window_function) {
-              case WindowFunction::Min:
-                _merge_contexts<ColumnDataType, WindowFunction::Min, AggregateKey>(context, other);
-                break;
-              case WindowFunction::Max:
-                _merge_contexts<ColumnDataType, WindowFunction::Max, AggregateKey>(context, other);
-                break;
-              case WindowFunction::Sum:
-                _merge_contexts<ColumnDataType, WindowFunction::Sum, AggregateKey>(context, other);
-                break;
-              case WindowFunction::Avg:
-                _merge_contexts<ColumnDataType, WindowFunction::Avg, AggregateKey>(context, other);
-                break;
-              case WindowFunction::Count:
-                _merge_contexts<ColumnDataType, WindowFunction::Count, AggregateKey>(context, other);
-                break;
-              case WindowFunction::CountDistinct:
-                _merge_contexts<ColumnDataType, WindowFunction::CountDistinct, AggregateKey>(context, other);
-                break;
-              case WindowFunction::StandardDeviationSample:
-                _merge_contexts<ColumnDataType, WindowFunction::StandardDeviationSample, AggregateKey>(context, other);
-                break;
-              case WindowFunction::Any:
-                _merge_contexts<ColumnDataType, WindowFunction::Any, AggregateKey>(context, other);
-                break;
-              case WindowFunction::CumeDist:
-              case WindowFunction::DenseRank:
-              case WindowFunction::PercentRank:
-              case WindowFunction::Rank:
-              case WindowFunction::RowNumber:
-                Fail(std::format("Unsupported aggregate function '{}'.",
-                                 window_function_to_string.left.at(aggregate->window_function)));
-            }
-          }
-        });
-      }
-
-      const auto& output_table = _create_output_table(contexts_per_column_per_job[0], local_input_table);
+      const auto& output_table = _create_output_table(contexts_per_column, local_input_table);
       const auto lock = std::lock_guard<std::mutex>{output_mutex};
       // we use TableType::Data as an indicator that the final output has not been set yet.
       if (final_output_table->type() == TableType::Data) {
@@ -1322,7 +1234,7 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
   return final_output_table;
 }
 
-// This is the unpartitioned variant
+// This is the unpartitioned variant. It will handle the table partitioning and call the partionined variant below.
 template <typename AggregateKey>
 void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column,
                                const std::shared_ptr<const Table>& input_table) {
@@ -1332,11 +1244,98 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column,
   auto keys_per_chunk = _partition_by_groupby_keys<AggregateKey>(input_table, expected_result_size,
                                                                  use_immediate_key_shortcut, guarantee_single_key);
 
+  // TODO(anyone): estimate ideal number of threads for this bucket.
+  // If we only have one group, we can easily split this thread, since we have only one result per context.
+  const auto bucket_job_count = guarantee_single_key ? ChunkID{2} : ChunkID{1};
+  if (guarantee_single_key) {
+    std::cout << "optimized here, yeah!\n";
+  }
   const auto chunk_count = input_table->chunk_count();
-  _aggregate<AggregateKey>(contexts_per_column, input_table, expected_result_size, use_immediate_key_shortcut,
-                           keys_per_chunk, ChunkID{0}, chunk_count);
+  const auto job_size = chunk_count / bucket_job_count;
+
+  auto contexts_per_column_per_job = std::vector<ContextsPerColumn>{};
+  contexts_per_column_per_job.reserve(bucket_job_count);
+
+  auto mini_jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+  mini_jobs.reserve(bucket_job_count);
+
+  const auto aggregate_count = _aggregates.size();
+  for (auto job_id = ChunkID{0}; job_id < bucket_job_count; ++job_id) {
+    contexts_per_column_per_job.emplace_back(aggregate_count);
+    const auto aggregate_bucket = [&, job_id]() {
+      const auto job_start = static_cast<ChunkID>(job_id * job_size);
+      const auto job_end =
+          static_cast<ChunkID>((job_id + 1 == bucket_job_count) ? (chunk_count) : ((job_id + 1) * job_size));
+
+      _aggregate<AggregateKey>(contexts_per_column_per_job[job_id], input_table, expected_result_size,
+                               use_immediate_key_shortcut, keys_per_chunk, job_start, job_end);
+    };
+
+    if (bucket_job_count == 1) {
+      aggregate_bucket();
+    } else {
+      mini_jobs.emplace_back(std::make_shared<JobTask>(aggregate_bucket));
+    }
+  }
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(mini_jobs);
+
+  // TODO(anyone): parallelize merging ?
+  // TODO(anyone): make more pretty.
+  for (auto aggregate_idx = ColumnID{0}; aggregate_idx < aggregate_count; ++aggregate_idx) {
+    const auto& aggregate = _aggregates[aggregate_idx];
+    const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
+    const auto input_column_id = pqp_column.column_id;
+
+    // Output column for COUNT(*).
+    const auto data_type =
+        input_column_id == INVALID_COLUMN_ID ? DataType::Long : input_table->column_data_type(input_column_id);
+
+    auto& context = contexts_per_column_per_job[0][aggregate_idx];
+    resolve_data_type(data_type, [&](auto type) {
+      using ColumnDataType = typename decltype(type)::type;
+      for (auto job_id = ChunkID{1}; job_id < bucket_job_count; ++job_id) {
+        auto& other = contexts_per_column_per_job[job_id][aggregate_idx];
+        switch (aggregate->window_function) {
+          case WindowFunction::Min:
+            _merge_contexts<ColumnDataType, WindowFunction::Min, AggregateKey>(context, other);
+            break;
+          case WindowFunction::Max:
+            _merge_contexts<ColumnDataType, WindowFunction::Max, AggregateKey>(context, other);
+            break;
+          case WindowFunction::Sum:
+            _merge_contexts<ColumnDataType, WindowFunction::Sum, AggregateKey>(context, other);
+            break;
+          case WindowFunction::Avg:
+            _merge_contexts<ColumnDataType, WindowFunction::Avg, AggregateKey>(context, other);
+            break;
+          case WindowFunction::Count:
+            _merge_contexts<ColumnDataType, WindowFunction::Count, AggregateKey>(context, other);
+            break;
+          case WindowFunction::CountDistinct:
+            _merge_contexts<ColumnDataType, WindowFunction::CountDistinct, AggregateKey>(context, other);
+            break;
+          case WindowFunction::StandardDeviationSample:
+            _merge_contexts<ColumnDataType, WindowFunction::StandardDeviationSample, AggregateKey>(context, other);
+            break;
+          case WindowFunction::Any:
+            _merge_contexts<ColumnDataType, WindowFunction::Any, AggregateKey>(context, other);
+            break;
+          case WindowFunction::CumeDist:
+          case WindowFunction::DenseRank:
+          case WindowFunction::PercentRank:
+          case WindowFunction::Rank:
+          case WindowFunction::RowNumber:
+            Fail(std::format("Unsupported aggregate function '{}'.",
+                             window_function_to_string.left.at(aggregate->window_function)));
+        }
+      }
+    });
+  }
+
+  contexts_per_column = contexts_per_column_per_job[0];
 }
 
+// This is the partioned variant. It will only aggregate on a subset of chunks.
 template <typename AggregateKey>
 void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std::shared_ptr<const Table>& input_table,
                                std::atomic_size_t& expected_result_size, bool& use_immediate_key_shortcut,
