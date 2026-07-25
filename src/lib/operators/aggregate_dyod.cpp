@@ -896,11 +896,9 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
             if (max_key > 0 &&
                 static_cast<double>(max_key - min_key) < static_cast<double>(input_table->row_count()) * 1.2) {
               // Include space for min, max, and NULL
-              expected_result_size = static_cast<size_t>(max_key - min_key) + 2;
+              const auto null_offset = is_nullable ? 1 : 0;
+              expected_result_size = static_cast<size_t>(max_key - min_key) + 1 + null_offset;
               use_immediate_key_shortcut = true;
-
-              // TOOD(anyone): figure out how to deal with immediate key shortcuts
-              guarantee_single_key = false;
 
               // Rewrite the keys and (1) subtract min so that we can also handle consecutive keys that do not start
               // at 1* and (2) set the first bit which indicates that the key is an immediate index into the result
@@ -915,7 +913,7 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
                     // Key that denotes NULL, do not rewrite but set the cached flag
                     key = key | DYOD_CACHE_MASK;
                   } else {
-                    key = (key - min_key + 1) | DYOD_CACHE_MASK;
+                    key = (key - min_key + null_offset) | DYOD_CACHE_MASK;
                   }
                 }
               }
@@ -1109,12 +1107,10 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
   // Check for invalid aggregates
   _validate_aggregates();
 
-  // const auto is_multi_threaded = Hyrise::get().is_multi_threaded();
-  const auto is_multi_threaded = true;
   const auto row_count = input_table->row_count();
   const auto groupby_column_count = _groupby_column_ids.size();
   // TODO(anyone): parallelize for same keys and merge
-  if (groupby_column_count == 0 || row_count == 0 || !is_multi_threaded) {
+  if (groupby_column_count == 0 || row_count == 0) {
     auto contexts_per_column = ContextsPerColumn(aggregate_count);
     _aggregate<AggregateKey>(contexts_per_column, input_table);
     return _create_output_table(contexts_per_column, input_table);
