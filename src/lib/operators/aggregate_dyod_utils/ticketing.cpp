@@ -11,17 +11,14 @@
 #include <utility>
 #include <vector>
 
+#include "cardinality_estimation.hpp"
 #include "hyrise.hpp"
 #include "operators/aggregate_dyod_utils/concurrent_ticket_map.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
-#include "storage/dictionary_segment.hpp"
-#include "storage/reference_segment.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/table.hpp"
-#include "storage/value_segment.hpp"
-#include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 
 namespace hyrise {
 
@@ -226,33 +223,10 @@ std::shared_ptr<GroupKeyData<true>> _compute_groups_single_column_concurrent(
             ticket_offsets[chunk_id] + static_cast<uint64_t>(input_table->get_chunk(chunk_id)->size());
       }
 
-      // `ConcurrentTicketMap` never resizes, so its capacity is fixed up front from the first chunk's group density,
-      // extrapolated to the whole table and capped at `row_count` (a hard upper bound on the number of distinct
-      // groups). We assume this estimate is accurate: the map keeps ~1/load-factor headroom above it, but a gross
-      // undershoot would overfill the fixed table. The first chunk is scanned once here for the estimate and again
-      // (with the real map) in the parallel phase below - one extra chunk of work.
-      const auto& first_chunk = input_table->get_chunk(ChunkID{0});
-      const auto first_chunk_size = size_t{first_chunk->size()};
-      auto estimated_groups = std::max<size_t>(first_chunk_size, 1);
-      {
-        auto estimate_map = ConcurrentTicketMap<ColumnDataType>(first_chunk_size);
-        const auto& segment = first_chunk->get_segment(groupby_column_id);
-        auto counter = uint64_t{0};
-
-        segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
-          if (!position.is_null() && estimate_map.try_emplace(position.value(), counter) == counter) {
-            ++counter;
-          }
-        });
-        if (first_chunk_size > 0) {
-          const auto groups_seen = counter;
-          const auto remaining_rows = input_table->row_count() - first_chunk_size;
-          estimated_groups =
-              std::max<size_t>(1, std::min<size_t>(input_table->row_count(),
-                                                   groups_seen + remaining_rows * groups_seen / first_chunk_size));
-        }
-      }
-
+      // `ConcurrentTicketMap` is sized up front and only resizes as a fallback, which costs a full migration of its
+      // entries. The estimate therefore aims to be close rather than merely cheap: it prefers the free bound the
+      // dictionaries give and otherwise sketches the column's values (see `cardinality_estimation.hpp`).
+      const auto estimated_groups = estimate_group_count_single_column<ColumnDataType>(groupby_column_id, input_table);
       auto value_to_ticket = ConcurrentTicketMap<ColumnDataType>(estimated_groups);
       auto next_ticket_range_start = std::atomic<uint64_t>{0};
 
