@@ -1052,9 +1052,10 @@ template <typename IsReferenceTable, typename AggregateKey>
 std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
   const auto aggregate_count = _aggregates.size();
   const auto& input_table = left_input_table();
+  const auto column_count = input_table->column_count();
   if constexpr (HYRISE_DEBUG) {
     for (const auto& groupby_column_id : _groupby_column_ids) {
-      Assert(groupby_column_id < input_table->column_count(), "GroupBy column index out of bounds.");
+      Assert(groupby_column_id < column_count, "GroupBy column index out of bounds.");
     }
   }
 
@@ -1147,7 +1148,6 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
       const auto local_input_table = std::make_shared<Table>(input_table->column_definitions(), TableType::References);
 
       // Scan input table for radix bucket.
-      const auto column_count = input_table->column_count();
       for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
         auto pos_list = pos_lists->at(chunk_id);
         if (pos_list->empty()) {
@@ -1215,7 +1215,7 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
       auto predicted_size = expected_result_size.load();
       // predicted_size is 1 iff we only have one group in the input.
       // When grouping by strings, the short string optimization skips the map and thus the expected_result_size.
-      auto has_string_keys = false;
+      auto has_shortcut_keys = false;
       auto has_nullable_columns = false;
       for (auto group_column_index = size_t{0}; group_column_index < groupby_column_count; ++group_column_index) {
         const auto groupby_column_id = _groupby_column_ids.at(group_column_index);
@@ -1227,7 +1227,10 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
           using ColumnDataType = typename decltype(type)::type;
 
           if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
-            has_string_keys = true;
+            has_shortcut_keys = true;
+          }
+          if constexpr (std::is_same_v<ColumnDataType, int32_t>) {
+            has_shortcut_keys = true;
           }
         });
       }
@@ -1235,7 +1238,7 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
       // TODO(anyone): estimate ideal number of threads for this bucket.
       // If we only have one group, we can simply split this thread, since we have only one result per context.
       const auto bucket_job_count =
-          (predicted_size == 1 && !has_string_keys && !has_nullable_columns) ? ChunkID{2} : ChunkID{1};
+          (predicted_size == 1 && !has_shortcut_keys && !has_nullable_columns) ? ChunkID{2} : ChunkID{1};
       const auto local_chunk_count = local_input_table->chunk_count();
       const auto job_size = local_chunk_count / bucket_job_count;
 
@@ -1272,8 +1275,9 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
         const auto input_column_id = pqp_column.column_id;
 
         // Output column for COUNT(*).
-        const auto data_type =
-            input_column_id == INVALID_COLUMN_ID ? DataType::Long : input_table->column_data_type(input_column_id);
+        const auto data_type = input_column_id == INVALID_COLUMN_ID
+                                   ? DataType::Long
+                                   : local_input_table->column_data_type(input_column_id);
 
         auto& context = contexts_per_column_per_job[0][aggregate_idx];
         resolve_data_type(data_type, [&](auto type) {
