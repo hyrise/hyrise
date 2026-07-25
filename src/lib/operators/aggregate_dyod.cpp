@@ -638,7 +638,23 @@ struct DYODAggregateContext : public DYODAggregateResultContext<ColumnDataType, 
       Fail("CountDistinct not implemented yet.");
     }
     if constexpr (aggregate_function == WindowFunction::StandardDeviationSample) {
-      Fail("STDDEV not implemented yet.");
+      // TODO(anyone): make more readable
+      // copy old values
+      auto count = target.accumulator[0];
+      auto mean = target.accumulator[1];
+      auto squared_distance_from_mean = target.accumulator[2];
+
+      target.accumulator[0] = count + other.accumulator[0];
+      auto delta = other.accumulator[1] - mean;
+      target.accumulator[1] = (count * mean + other.accumulator[0] * other.accumulator[1]) / target.accumulator[0];
+      target.accumulator[2] = squared_distance_from_mean + other.accumulator[2] +
+                              (delta * delta * count * other.accumulator[0]) / target.accumulator[0];
+
+      if (target.accumulator[0] > 1) {
+        // The SQL standard defines VAR_SAMP (which is the basis of STDDEV_SAMP) as NULL if the number of values is 1.
+        const auto variance = target.accumulator[2] / (target.accumulator[0] - 1);
+        target.accumulator[3] = std::sqrt(variance);
+      }
     }
     target.aggregate_count += other.aggregate_count;
   }
@@ -730,7 +746,7 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
                                                                      std::atomic_size_t& expected_result_size,
                                                                      bool& use_immediate_key_shortcut,
                                                                      bool& guarantee_single_key) {
-  // guarantee_single_key = true;
+  guarantee_single_key = true;
   return KeysPerChunk<AggregateKey>{};
 }
 
@@ -1278,6 +1294,10 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column,
     }
   }
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(mini_jobs);
+  contexts_per_column = contexts_per_column_per_job[0];
+  if (input_table->empty()) {
+    return;
+  }
 
   // TODO(anyone): parallelize merging ?
   // TODO(anyone): make more pretty.
@@ -1331,8 +1351,6 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column,
       }
     });
   }
-
-  contexts_per_column = contexts_per_column_per_job[0];
 }
 
 // This is the partioned variant. It will only aggregate on a subset of chunks.
