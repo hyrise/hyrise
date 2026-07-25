@@ -663,7 +663,8 @@ struct DYODAggregateContext : public DYODAggregateResultContext<ColumnDataType, 
   void merge(std::shared_ptr<DYODAggregateContext<ColumnDataType, aggregate_function, AggregateKey>>& other) {
     DebugAssert(other->results.size() <= 1, "Expected other to have at most one result.");
     DebugAssert(other->results.size() >= 1, "Expected other to have at least one result.");
-    DebugAssert(this->results.size() == 1, "Expected this to have exactly one result.");
+    DebugAssert(this->results.size() <= 1, "Expected this to have at most one result.");
+    DebugAssert(this->results.size() >= 1, "Expected this to have at least one result.");
     auto& other_result = other->results[0];
     auto& result = this->results[0];
     if (result.aggregate_count == 0) {
@@ -809,7 +810,7 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
 
   const auto groupby_column_count = _groupby_column_ids.size();
   for (auto group_column_index = size_t{0}; group_column_index < groupby_column_count; ++group_column_index) {
-    jobs.emplace_back(std::make_shared<JobTask>([&input_table, group_column_index, &keys_per_chunk, chunk_count,
+    jobs.emplace_back(std::make_shared<JobTask>([&input_table, group_column_index, &keys_per_chunk, &chunk_count,
                                                  &expected_result_size, &use_immediate_key_shortcut,
                                                  &guarantee_single_key, this]() {
       const auto groupby_column_id = _groupby_column_ids.at(group_column_index);
@@ -862,16 +863,20 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
                 if (position.is_null()) {
                   keys[chunk_offset][group_column_index] = 0;
                 } else {
-                  keys[chunk_offset][group_column_index] = int_to_uint(position.value()) + 1;
+                  const auto key = int_to_uint(position.value()) + 1;
+                  keys[chunk_offset][group_column_index] = key;
+
+                  min_key = std::min(min_key, key);
+                  max_key = std::max(max_key, key);
                 }
               }
             });
           }
 
           if (is_nullable) {
-            // if (max_key > 0) {
-            guarantee_single_key = false;
-            // }
+            if (max_key != 0) {
+              guarantee_single_key = false;
+            }
           } else if (min_key != max_key) {
             guarantee_single_key = false;
           }
@@ -894,7 +899,7 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
               expected_result_size = static_cast<size_t>(max_key - min_key) + 2;
               use_immediate_key_shortcut = true;
 
-              // TOOD(anyone): figure out how to deal with immediate key short cuts
+              // TOOD(anyone): figure out how to deal with immediate key shortcuts
               guarantee_single_key = false;
 
               // Rewrite the keys and (1) subtract min so that we can also handle consecutive keys that do not start
@@ -1273,6 +1278,8 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
   return final_output_table;
 }
 
+const auto JOB_COUNT_ESTIMATE = ChunkID{16};
+
 // This is the unpartitioned variant. It will handle the table partitioning and call the partionined variant below.
 template <typename AggregateKey>
 void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column,
@@ -1283,13 +1290,16 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column,
   auto keys_per_chunk = _partition_by_groupby_keys<AggregateKey>(input_table, expected_result_size,
                                                                  use_immediate_key_shortcut, guarantee_single_key);
 
+  const auto chunk_count = input_table->chunk_count();
+  if (chunk_count == 0) {
+    _aggregate<AggregateKey>(contexts_per_column, input_table, expected_result_size, use_immediate_key_shortcut,
+                             keys_per_chunk, ChunkID{0}, chunk_count);
+    return;
+  }
+
   // TODO(anyone): estimate ideal number of threads for this bucket.
   // If we only have one group, we can easily split this thread, since we have only one result per context.
-  const auto bucket_job_count = guarantee_single_key ? ChunkID{2} : ChunkID{1};
-  if (guarantee_single_key) {
-    std::cout << "optimized here, yeah!\n";
-  }
-  const auto chunk_count = input_table->chunk_count();
+  auto bucket_job_count = guarantee_single_key ? std::min(JOB_COUNT_ESTIMATE, chunk_count) : ChunkID{1};
   const auto job_size = chunk_count / bucket_job_count;
 
   auto contexts_per_column_per_job = std::vector<ContextsPerColumn>{};
