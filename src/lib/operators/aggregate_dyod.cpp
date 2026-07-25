@@ -48,25 +48,22 @@ struct ChunkedVector {
       chunks.emplace_back(std::min(CHUNK_SIZE, size - begin), initial_value);
     }
     if constexpr (Concurrent) {
-      is_written_to = std::vector<std::atomic_flag>(size);
+      is_in_progress = std::vector<std::atomic_flag>(size);
     }
   }
 
   // This will normally retunr T& but not if T is bool. There bit packing makes it return a proxy object.
   decltype(auto) operator[](const size_t index) {
-    if constexpr (Concurrent) {
-      while (is_written_to[index].test_and_set(std::memory_order_acquire)) {
-        // `test_and_set` returns the previous value. So if we spin here it means another thread is writing.
-      }
-      return chunks[index / CHUNK_SIZE][index % CHUNK_SIZE];
-      is_written_to[index].clear();
-    } else {
-      return chunks[index / CHUNK_SIZE][index % CHUNK_SIZE];
-    }
+    return chunks[index / CHUNK_SIZE][index % CHUNK_SIZE];
+  }
+
+  std::atomic_flag& get_atomic_flag(const size_t index) {
+    DebugAssert(Concurrent, "Atomic flags only exist for concurrent ChunkedVectors");
+    return is_in_progress[index];
   }
 
   std::vector<pmr_vector<T>> chunks;
-  std::vector<std::atomic_flag> is_written_to;  // only used when Concurrent is true
+  std::vector<std::atomic_flag> is_in_progress;  // only used when Concurrent is true
 };
 
 template <typename T, bool Concurrent>
