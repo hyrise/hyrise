@@ -645,7 +645,8 @@ struct DYODAggregateContext : public DYODAggregateResultContext<ColumnDataType, 
 
   // Currently only merges two contexts with a single result i.e., a single group.
   void merge(std::shared_ptr<DYODAggregateContext<ColumnDataType, aggregate_function, AggregateKey>>& other) {
-    DebugAssert(other->results.size() == 1, "Expected other to have exactly one result.");
+    DebugAssert(other->results.size() <= 1, "Expected other to have at most one result.");
+    DebugAssert(other->results.size() >= 1, "Expected other to have at least one result.");
     DebugAssert(this->results.size() == 1, "Expected this to have exactly one result.");
     auto& other_result = other->results[0];
     auto& result = this->results[0];
@@ -1060,13 +1061,13 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
   // Check for invalid aggregates
   _validate_aggregates();
 
-  const auto groupby_keys_count = _groupby_column_ids.size();
+  const auto groupby_column_count = _groupby_column_ids.size();
 
   // const auto is_multi_threaded = Hyrise::get().is_multi_threaded();
   const auto is_multi_threaded = true;
   const auto row_count = input_table->row_count();
   // TODO(anyone): parallelize for same keys and merge
-  if (groupby_keys_count == 0 || row_count == 0 || !is_multi_threaded) {
+  if (groupby_column_count == 0 || row_count == 0 || !is_multi_threaded) {
     auto contexts_per_column = ContextsPerColumn(aggregate_count);
     _aggregate<AggregateKey>(contexts_per_column, input_table);
     return _create_output_table(contexts_per_column, input_table);
@@ -1220,7 +1221,10 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
         const auto aggregate = _aggregates[aggregate_idx];
         const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
         const auto input_column_id = pqp_column.column_id;
-        const auto data_type = input_table->column_data_type(input_column_id);
+        if (input_column_id == INVALID_COLUMN_ID) {
+          continue;
+        }
+        const auto data_type = local_input_table->column_data_type(input_column_id);
 
         resolve_data_type(data_type, [&, aggregate](auto type) {
           using ColumnDataType = typename decltype(type)::type;
@@ -1231,9 +1235,16 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
         });
       }
 
+      auto has_nullable_columns = false;
+      for (auto group_column_index = size_t{0}; group_column_index < groupby_column_count; ++group_column_index) {
+        const auto groupby_column_id = _groupby_column_ids.at(group_column_index);
+        has_nullable_columns |= local_input_table->column_is_nullable(groupby_column_id);
+      }
+
       // TODO(anyone): estimate ideal number of threads for this bucket.
       // If we only have one group, we can simply split this thread, since we have only one result per context.
-      const auto bucket_job_count = (predicted_size == 1 && !has_string_keys) ? ChunkID{2} : ChunkID{1};
+      const auto bucket_job_count =
+          (predicted_size == 1 && !has_string_keys && !has_nullable_columns) ? ChunkID{2} : ChunkID{1};
       const auto local_chunk_count = local_input_table->chunk_count();
       const auto job_size = local_chunk_count / bucket_job_count;
 
