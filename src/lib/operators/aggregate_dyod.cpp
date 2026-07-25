@@ -928,8 +928,9 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
             */
 
           // TODO(anyone): CI compiler does not like that this is unused for some template parameters.
-          // Find a better way.
-          if (use_immediate_key_shortcut) {}
+          if (use_immediate_key_shortcut) {
+            // Find a better way.
+          }
 
           // This time, we have no idea how much space we need, so we take some memory and then rely on the automatic
           // resizing. The size is quite random, but since single memory allocations do not cost too much, we rather
