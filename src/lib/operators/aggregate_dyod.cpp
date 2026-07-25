@@ -761,7 +761,6 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
                                                                      bool& use_immediate_key_shortcut,
                                                                      bool& guarantee_single_key) {
   auto keys_per_chunk = KeysPerChunk<AggregateKey>{};
-
   const auto chunk_count = input_table->chunk_count();
 
   // Create the actual data structure
@@ -806,12 +805,16 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   jobs.reserve(_groupby_column_ids.size());
 
+  guarantee_single_key = true;
+
   const auto groupby_column_count = _groupby_column_ids.size();
   for (auto group_column_index = size_t{0}; group_column_index < groupby_column_count; ++group_column_index) {
     jobs.emplace_back(std::make_shared<JobTask>([&input_table, group_column_index, &keys_per_chunk, chunk_count,
-                                                 &expected_result_size, &use_immediate_key_shortcut, this]() {
+                                                 &expected_result_size, &use_immediate_key_shortcut,
+                                                 &guarantee_single_key, this]() {
       const auto groupby_column_id = _groupby_column_ids.at(group_column_index);
       const auto data_type = input_table->column_data_type(groupby_column_id);
+      const auto is_nullable = input_table->column_is_nullable(groupby_column_id);
 
       resolve_data_type(data_type, [&](auto type) {
         using ColumnDataType = typename decltype(type)::type;
@@ -865,6 +868,14 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
             });
           }
 
+          if (is_nullable) {
+            // if (max_key > 0) {
+            guarantee_single_key = false;
+            // }
+          } else if (min_key != max_key) {
+            guarantee_single_key = false;
+          }
+
           if constexpr (std::is_same_v<AggregateKey, DYODAggregateKeyEntry>) {
             // In some cases (e.g., TPC-H Q18), we aggregate with consecutive int32_t values being used as a GROUP BY
             // key. Notably, this is the case when aggregating on the serial primary key of a table without filtering
@@ -882,6 +893,9 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
               // Include space for min, max, and NULL
               expected_result_size = static_cast<size_t>(max_key - min_key) + 2;
               use_immediate_key_shortcut = true;
+
+              // TOOD(anyone): figure out how to deal with immediate key short cuts
+              guarantee_single_key = false;
 
               // Rewrite the keys and (1) subtract min so that we can also handle consecutive keys that do not start
               // at 1* and (2) set the first bit which indicates that the key is an immediate index into the result
@@ -910,8 +924,7 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
 
           // TODO(anyone): CI compiler does not like that this is unused for some template parameters.
           // Find a better way.
-          use_immediate_key_shortcut = !use_immediate_key_shortcut;
-          use_immediate_key_shortcut = !use_immediate_key_shortcut;
+          if (use_immediate_key_shortcut) {}
 
           // This time, we have no idea how much space we need, so we take some memory and then rely on the automatic
           // resizing. The size is quite random, but since single memory allocations do not cost too much, we rather
@@ -927,6 +940,8 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
             // We store strings shorter than five characters without using the id_map. For that, we need to reserve
             // the IDs used for short strings (see below).
             id_counter = 5'000'000'000;
+            // TODO(anyone): think more about strings.
+            guarantee_single_key = false;
           }
 
           for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
@@ -1025,6 +1040,14 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
                 }
               }
             });
+          }
+
+          if (is_nullable) {
+            if (id_map.size() > 0) {
+              guarantee_single_key = false;
+            }
+          } else if (id_map.size() > 1) {
+            guarantee_single_key = false;
           }
 
           // We will see at least `id_map.size()` different groups. We can use this knowledge to preallocate memory
