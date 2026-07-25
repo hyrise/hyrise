@@ -4,14 +4,18 @@
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
+#include <cstring>
 #include <functional>
 #include <limits>
 #include <memory>
+#include <type_traits>
 #include <vector>
 
 #include "hyrise.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
+#include "utils/assert.hpp"
 
 inline std::uint64_t rotl(std::uint64_t x, int r) {
   return (x << r) | (x >> (64 - r));
@@ -89,39 +93,10 @@ class ConcurrentTicketMap {
     }
     _capacity = capacity;
     _mask = capacity - 1;
-    // Allocate uninitialized storage. Initializing the whole array is for a large high-cardinality table dominated by
-    // page faults. We therefore set every slot to EMPTY in parallel below (partitioning the array across scheduler
-    // jobs) so the page faults spread across cores and land core-locally. `Slot` is trivially destructible, so the
-    //  matching `::operator delete[]` in `SlotArrayDeleter` needs no per-element teardown.
-    _slots = SlotArray{static_cast<Slot*>(::operator new[](capacity * sizeof(Slot)))};
 
-    const auto initialize_slots = [slots = _slots.get()](const size_t begin, const size_t end) {
-      // TODO(@forUnity): Test using std::memset here. This would also set key to 0 and hardcode that EMPTY == 0.
-      // However it might be faster.
-      std::memset(slots + begin, 0, (end - begin) * sizeof(Slot));
-    };
-
-    // Only parallelize once the array is large enough that partitioning beats the scheduling overhead.
-    if (capacity <= PARALLEL_INIT_SLOTS) {
-      initialize_slots(0, capacity);
-      return;
-    }
-
-    // When `capacity` is larger than `PARALLEL_INIT_SLOTS`. We split the range into `PARALLEL_INIT_SLOTS`-sized chunks.
-    const auto max_jobs = (capacity + PARALLEL_INIT_SLOTS - 1) / PARALLEL_INIT_SLOTS;
-    const auto job_count = std::min<size_t>(Hyrise::get().topology.num_cpus(), max_jobs);
-    const auto slots_per_job = capacity / job_count;
-    auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
-    jobs.reserve(job_count);
-
-    for (auto job_id = size_t{0}; job_id < job_count; ++job_id) {
-      const auto begin = job_id * slots_per_job;
-      const auto end = job_id + 1 == job_count ? capacity : begin + slots_per_job;
-      jobs.emplace_back(std::make_shared<JobTask>([initialize_slots, begin, end] {
-        initialize_slots(begin, end);
-      }));
-    }
-    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+    auto* slots_ptr = static_cast<Slot*>(std::calloc(capacity, sizeof(Slot)));
+    Assert(slots_ptr, "Failed to allocate memory for ConcurrentTicketMap.");
+    _slots = SlotArray{slots_ptr};
   }
 
   uint64_t try_emplace(const Key& key, const uint64_t ticket) {
@@ -207,7 +182,7 @@ class ConcurrentTicketMap {
 
   struct SlotArrayDeleter {
     void operator()(Slot* slots) const noexcept {
-      ::operator delete[](static_cast<void*>(slots));
+      std::free(slots);
     }
   };
 
