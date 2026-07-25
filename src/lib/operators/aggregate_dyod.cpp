@@ -945,9 +945,11 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
             // We store strings shorter than five characters without using the id_map. For that, we need to reserve
             // the IDs used for short strings (see below).
             id_counter = 5'000'000'000;
-            // TODO(anyone): think more about strings.
-            guarantee_single_key = false;
           }
+
+          // We check if all value ids are the same to enable the optimization for single key aggregation.
+          auto has_doubled_value_id = false;
+          auto value_id_candidate = DYODAggregateKeyEntry{0};
 
           for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
             const auto chunk_in = input_table->get_chunk(chunk_id);
@@ -1044,15 +1046,20 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
                 } else {
                   keys[chunk_offset][group_column_index] = value_id;
                 }
+                if (value_id_candidate == 0) {
+                  value_id_candidate = value_id;
+                } else if (value_id_candidate != value_id) {
+                  has_doubled_value_id = true;
+                }
               }
             });
           }
 
           if (contains_nulls) {
-            if (id_map.size() > 0) {
+            if (!(id_map.size() == 0 && value_id_candidate == 0)) {
               guarantee_single_key = false;
             }
-          } else if (id_map.size() > 1) {
+          } else if (has_doubled_value_id) {
             guarantee_single_key = false;
           }
 
