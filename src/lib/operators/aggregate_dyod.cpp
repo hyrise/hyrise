@@ -1216,29 +1216,20 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
       // predicted_size is 1 iff we only have one group in the input.
       // When grouping by strings, the short string optimization skips the map and thus the expected_result_size.
       auto has_string_keys = false;
+      auto has_nullable_columns = false;
+      for (auto group_column_index = size_t{0}; group_column_index < groupby_column_count; ++group_column_index) {
+        const auto groupby_column_id = _groupby_column_ids.at(group_column_index);
+        has_nullable_columns |= local_input_table->column_is_nullable(groupby_column_id);
 
-      for (auto aggregate_idx = ColumnID{0}; aggregate_idx < aggregate_count && !has_string_keys; ++aggregate_idx) {
-        const auto aggregate = _aggregates[aggregate_idx];
-        const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
-        const auto input_column_id = pqp_column.column_id;
-        if (input_column_id == INVALID_COLUMN_ID) {
-          continue;
-        }
-        const auto data_type = local_input_table->column_data_type(input_column_id);
+        const auto data_type = local_input_table->column_data_type(groupby_column_id);
 
-        resolve_data_type(data_type, [&, aggregate](auto type) {
+        resolve_data_type(data_type, [&](auto type) {
           using ColumnDataType = typename decltype(type)::type;
 
           if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
             has_string_keys = true;
           }
         });
-      }
-
-      auto has_nullable_columns = false;
-      for (auto group_column_index = size_t{0}; group_column_index < groupby_column_count; ++group_column_index) {
-        const auto groupby_column_id = _groupby_column_ids.at(group_column_index);
-        has_nullable_columns |= local_input_table->column_is_nullable(groupby_column_id);
       }
 
       // TODO(anyone): estimate ideal number of threads for this bucket.
