@@ -728,7 +728,8 @@ template <typename AggregateKey>
   requires(std::is_same_v<AggregateKey, DYODEmptyAggregateKey>)
 KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::shared_ptr<const Table>& input_table,
                                                                      std::atomic_size_t& expected_result_size,
-                                                                     bool& use_immediate_key_shortcut) {
+                                                                     bool& use_immediate_key_shortcut,
+                                                                     bool& guarantee_single_key) {
   return KeysPerChunk<AggregateKey>{};
 }
 
@@ -740,7 +741,8 @@ template <typename AggregateKey>
   requires(!std::is_same_v<AggregateKey, DYODEmptyAggregateKey>)
 KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::shared_ptr<const Table>& input_table,
                                                                      std::atomic_size_t& expected_result_size,
-                                                                     bool& use_immediate_key_shortcut) {
+                                                                     bool& use_immediate_key_shortcut,
+                                                                     bool& guarantee_single_key) {
   auto keys_per_chunk = KeysPerChunk<AggregateKey>{};
 
   const auto chunk_count = input_table->chunk_count();
@@ -1210,35 +1212,13 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
 
       std::atomic_size_t expected_result_size;
       bool use_immediate_key_shortcut = false;
-      auto keys_per_chunk =
-          _partition_by_groupby_keys<AggregateKey>(local_input_table, expected_result_size, use_immediate_key_shortcut);
-      auto predicted_size = expected_result_size.load();
-      // predicted_size is 1 iff we only have one group in the input.
-      // When grouping by strings, the short string optimization skips the map and thus the expected_result_size.
-      auto has_shortcut_keys = false;
-      auto has_nullable_columns = false;
-      for (auto group_column_index = size_t{0}; group_column_index < groupby_column_count; ++group_column_index) {
-        const auto groupby_column_id = _groupby_column_ids.at(group_column_index);
-        has_nullable_columns |= local_input_table->column_is_nullable(groupby_column_id);
-
-        const auto data_type = local_input_table->column_data_type(groupby_column_id);
-
-        resolve_data_type(data_type, [&](auto type) {
-          using ColumnDataType = typename decltype(type)::type;
-
-          if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
-            has_shortcut_keys = true;
-          }
-          if constexpr (std::is_same_v<ColumnDataType, int32_t>) {
-            has_shortcut_keys = true;
-          }
-        });
-      }
+      bool guarantee_single_key = false;
+      auto keys_per_chunk = _partition_by_groupby_keys<AggregateKey>(local_input_table, expected_result_size,
+                                                                     use_immediate_key_shortcut, guarantee_single_key);
 
       // TODO(anyone): estimate ideal number of threads for this bucket.
-      // If we only have one group, we can simply split this thread, since we have only one result per context.
-      const auto bucket_job_count =
-          (predicted_size == 1 && !has_shortcut_keys && !has_nullable_columns) ? ChunkID{2} : ChunkID{1};
+      // If we only have one group, we can easily split this thread, since we have only one result per context.
+      const auto bucket_job_count = guarantee_single_key ? ChunkID{2} : ChunkID{1};
       const auto local_chunk_count = local_input_table->chunk_count();
       const auto job_size = local_chunk_count / bucket_job_count;
 
@@ -1348,8 +1328,9 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column,
                                const std::shared_ptr<const Table>& input_table) {
   std::atomic_size_t expected_result_size;
   bool use_immediate_key_shortcut = false;
-  auto keys_per_chunk =
-      _partition_by_groupby_keys<AggregateKey>(input_table, expected_result_size, use_immediate_key_shortcut);
+  bool guarantee_single_key = false;
+  auto keys_per_chunk = _partition_by_groupby_keys<AggregateKey>(input_table, expected_result_size,
+                                                                 use_immediate_key_shortcut, guarantee_single_key);
 
   const auto chunk_count = input_table->chunk_count();
   _aggregate<AggregateKey>(contexts_per_column, input_table, expected_result_size, use_immediate_key_shortcut,
