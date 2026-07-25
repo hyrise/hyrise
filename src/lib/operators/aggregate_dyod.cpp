@@ -633,6 +633,13 @@ struct DYODAggregateContext : public DYODAggregateResultContext<ColumnDataType, 
     if constexpr (aggregate_function == WindowFunction::Any) {
       target.accumulator = other.accumulator;
     }
+
+    if constexpr (aggregate_function == WindowFunction::CountDistinct) {
+      Fail("CountDistinct not implemented yet.");
+    }
+    if constexpr (aggregate_function == WindowFunction::StandardDeviationSample) {
+      Fail("STDDEV not implemented yet.");
+    }
     target.aggregate_count += other.aggregate_count;
   }
 
@@ -642,6 +649,13 @@ struct DYODAggregateContext : public DYODAggregateResultContext<ColumnDataType, 
     DebugAssert(this->results.size() == 1, "Expected this to have exactly one result.");
     auto& other_result = other->results[0];
     auto& result = this->results[0];
+    if (result.aggregate_count == 0) {
+      result = std::move(other_result);
+      return;
+    }
+    if (other_result.aggregate_count == 0) {
+      return;
+    }
     merge_results(result, other_result);
   }
 };
@@ -1020,8 +1034,8 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
 //  (2) adapt mask recursively based on partition size.
 //  (3) add low cardinality partitioning (all same key).
 
-// 64 threads
-constexpr auto RADIX_MASK = 0x3f;
+// 16 threads
+constexpr auto RADIX_MASK = 0xf;
 constexpr auto RADIX_SPLIT_MAX_BUCKETS = RADIX_MASK + 1;
 
 template <typename AggregateKey>
@@ -1197,9 +1211,29 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
       bool use_immediate_key_shortcut = false;
       auto keys_per_chunk =
           _partition_by_groupby_keys<AggregateKey>(local_input_table, expected_result_size, use_immediate_key_shortcut);
+      auto predicted_size = expected_result_size.load();
+      // predicted_size is 1 iff we only have one group in the input.
+      // When grouping by strings, the short string optimization skips the map and thus the expected_result_size.
+      auto has_string_keys = false;
+
+      for (auto aggregate_idx = ColumnID{0}; aggregate_idx < aggregate_count && !has_string_keys; ++aggregate_idx) {
+        const auto aggregate = _aggregates[aggregate_idx];
+        const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
+        const auto input_column_id = pqp_column.column_id;
+        const auto data_type = input_table->column_data_type(input_column_id);
+
+        resolve_data_type(data_type, [&, aggregate](auto type) {
+          using ColumnDataType = typename decltype(type)::type;
+
+          if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
+            has_string_keys = true;
+          }
+        });
+      }
 
       // TODO(anyone): estimate ideal number of threads for this bucket.
-      const auto bucket_job_count = ChunkID{2};
+      // If we only have one group, we can simply split this thread, since we have only one result per context.
+      const auto bucket_job_count = (predicted_size == 1 && !has_string_keys) ? ChunkID{2} : ChunkID{1};
       const auto local_chunk_count = local_input_table->chunk_count();
       const auto job_size = local_chunk_count / bucket_job_count;
 
