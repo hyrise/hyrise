@@ -1123,9 +1123,10 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
   if (groupby_column_count == 0 || row_count == 0) {
     auto contexts_per_column = ContextsPerColumn(aggregate_count);
     _aggregate<AggregateKey>(contexts_per_column, input_table);
-    auto final_output_table = std::shared_ptr<Table>{};
+    auto output_table = std::shared_ptr<Table>{};
     auto aggregate_columns_result_table = std::shared_ptr<Table>{};
-    return _create_output_table(contexts_per_column, input_table, final_output_table, aggregate_columns_result_table);
+    _write_output(contexts_per_column, input_table, output_table, aggregate_columns_result_table);
+    return output_table;
   }
 
   // If we have a Data table, we directly partion into PosLists and forward these to the thread-local input tables.
@@ -1190,7 +1191,7 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
 
   // SPLIT END
 
-  auto final_output_table = std::shared_ptr<Table>{};
+  auto output_table = std::shared_ptr<Table>{};
   auto aggregate_columns_result_table = std::shared_ptr<Table>{};
 
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
@@ -1265,14 +1266,13 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
       auto contexts_per_column = ContextsPerColumn(aggregate_count);
       _aggregate<AggregateKey>(contexts_per_column, local_input_table);
 
-      const auto& output_table = _create_output_table(contexts_per_column, local_input_table, final_output_table,
-                                                      aggregate_columns_result_table);
+      _write_output(contexts_per_column, local_input_table, output_table, aggregate_columns_result_table);
     }));
   }
 
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 
-  return final_output_table;
+  return output_table;
 }
 
 const auto JOB_COUNT_ESTIMATE = ChunkID{16};
@@ -1615,10 +1615,9 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std
   }
 }  // NOLINT(readability/fn_size)
 
-std::shared_ptr<Table> AggregateDYOD::_create_output_table(ContextsPerColumn& contexts_per_column,
-                                                           const std::shared_ptr<const Table>& input_table,
-                                                           std::shared_ptr<Table>& output_table,
-                                                           std::shared_ptr<Table>& aggregate_columns_result_table) {
+void AggregateDYOD::_write_output(ContextsPerColumn& contexts_per_column,
+                                  const std::shared_ptr<const Table>& input_table, std::shared_ptr<Table>& output_table,
+                                  std::shared_ptr<Table>& aggregate_columns_result_table) {
   const auto num_output_columns = _groupby_column_ids.size() + _aggregates.size();
   auto output_column_definitions = TableColumnDefinitions{};
   output_column_definitions.resize(num_output_columns);
@@ -1797,8 +1796,6 @@ std::shared_ptr<Table> AggregateDYOD::_create_output_table(ContextsPerColumn& co
       output_table->append_chunk(reference_segments);
     }
   }
-
-  return output_table;
 }
 
 std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
