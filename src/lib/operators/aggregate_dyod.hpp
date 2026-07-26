@@ -204,7 +204,8 @@ class AggregateDYOD : public AbstractAggregateOperator {
 
   std::shared_ptr<Table> _create_output_table(ContextsPerColumn& contexts_per_column,
                                               const std::shared_ptr<const Table>& input_table,
-                                              std::shared_ptr<Table>& output_table);
+                                              std::shared_ptr<Table>& output_table,
+                                              std::shared_ptr<Table>& aggregate_columns_result_table);
 
   template <typename ColumnDataType, WindowFunction aggregate_function, typename AggregateKey>
   void _aggregate_segment(ChunkID chunk_id, ColumnID column_index, const AbstractSegment& abstract_segment,
@@ -217,6 +218,7 @@ class AggregateDYOD : public AbstractAggregateOperator {
                                                                        std::atomic_size_t& expected_result_size) const;
 
   bool _has_aggregate_functions;
+  bool _aggregate_writing_started;
   std::mutex _output_mutex;
 };
 

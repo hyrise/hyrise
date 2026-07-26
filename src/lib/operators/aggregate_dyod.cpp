@@ -566,6 +566,7 @@ AggregateDYOD::AggregateDYOD(const std::shared_ptr<AbstractOperator>& input_oper
     : AbstractAggregateOperator(input_operator, aggregates, groupby_column_ids,
                                 std::make_unique<OperatorPerformanceData<OperatorSteps>>()),
       _has_aggregate_functions(has_aggregate_functions(_aggregates)),
+      _aggregate_writing_started(false),
       _output_mutex(std::mutex{}) {}
 
 const std::string& AggregateDYOD::name() const {
@@ -1125,7 +1126,8 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
     auto contexts_per_column = ContextsPerColumn(aggregate_count);
     _aggregate<AggregateKey>(contexts_per_column, input_table);
     auto final_output_table = std::make_shared<Table>(input_table->column_definitions(), TableType::Data);
-    return _create_output_table(contexts_per_column, input_table, final_output_table);
+    auto aggregate_columns_result_table = std::shared_ptr<Table>{};
+    return _create_output_table(contexts_per_column, input_table, final_output_table, aggregate_columns_result_table);
   }
 
   // If we have a Data table, we directly partion into PosLists and forward these to the thread-local input tables.
@@ -1191,6 +1193,7 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
   // SPLIT END
 
   auto final_output_table = std::make_shared<Table>(input_table->column_definitions(), TableType::Data);
+  auto aggregate_columns_result_table = std::shared_ptr<Table>{};
 
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   jobs.reserve(RADIX_SPLIT_MAX_BUCKETS);
@@ -1264,7 +1267,8 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
       auto contexts_per_column = ContextsPerColumn(aggregate_count);
       _aggregate<AggregateKey>(contexts_per_column, local_input_table);
 
-      const auto& output_table = _create_output_table(contexts_per_column, local_input_table, final_output_table);
+      const auto& output_table = _create_output_table(contexts_per_column, local_input_table, final_output_table,
+                                                      aggregate_columns_result_table);
     }));
   }
 
@@ -1615,7 +1619,8 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std
 
 std::shared_ptr<Table> AggregateDYOD::_create_output_table(ContextsPerColumn& contexts_per_column,
                                                            const std::shared_ptr<const Table>& input_table,
-                                                           std::shared_ptr<Table>& output_table) {
+                                                           std::shared_ptr<Table>& output_table,
+                                                           std::shared_ptr<Table>& aggregate_columns_result_table) {
   const auto num_output_columns = _groupby_column_ids.size() + _aggregates.size();
   auto output_column_definitions = TableColumnDefinitions{};
   output_column_definitions.resize(num_output_columns);
@@ -1724,18 +1729,21 @@ std::shared_ptr<Table> AggregateDYOD::_create_output_table(ContextsPerColumn& co
   const auto lock = std::lock_guard<std::mutex>{_output_mutex};
   // Create temporary table storing materialized columns. The operator output references this table's columns via
   // `EntireChunkPosList` reference segments.
-  auto aggregate_columns_result_table = std::shared_ptr<Table>{};
+
   auto first_materialized_chunk_id = ChunkID{0};
   if (!entireposlist_indexes.empty()) {
     const auto materialized_column_count = entireposlist_indexes.size();
-    auto aggregate_column_definitions = std::vector<TableColumnDefinition>{};
-    aggregate_column_definitions.reserve(materialized_column_count);
+    if (!_aggregate_writing_started) {
+      auto aggregate_column_definitions = std::vector<TableColumnDefinition>{};
+      aggregate_column_definitions.reserve(materialized_column_count);
 
-    for (const auto entireposlist_index : entireposlist_indexes) {
-      aggregate_column_definitions.emplace_back(output_column_definitions[entireposlist_index]);
+      for (const auto entireposlist_index : entireposlist_indexes) {
+        aggregate_column_definitions.emplace_back(output_column_definitions[entireposlist_index]);
+      }
+
+      aggregate_columns_result_table = std::make_shared<Table>(aggregate_column_definitions, TableType::Data);
+      _aggregate_writing_started = true;
     }
-
-    aggregate_columns_result_table = std::make_shared<Table>(aggregate_column_definitions, TableType::Data);
     first_materialized_chunk_id = aggregate_columns_result_table->chunk_count();
     for (const auto& materialized_result_chunk : intermediate_result) {
       auto aggregate_segments = Segments{};
@@ -1782,7 +1790,8 @@ std::shared_ptr<Table> AggregateDYOD::_create_output_table(ContextsPerColumn& co
                         aggregate_columns_result_table->get_chunk(ChunkID{first_materialized_chunk_id + chunk_id})
                             ->get_segment(ColumnID{materialized_table_column_id})),
                     "Unexpected reference segment at this position.");
-        const auto entire_chunk_pos_list = std::make_shared<EntireChunkPosList>(chunk_id, chunk_size);
+        const auto entire_chunk_pos_list =
+            std::make_shared<EntireChunkPosList>(ChunkID{first_materialized_chunk_id + chunk_id}, chunk_size);
         reference_segments[entireposlist_indexes[materialized_table_column_id]] = std::make_shared<ReferenceSegment>(
             aggregate_columns_result_table, materialized_table_column_id, entire_chunk_pos_list);
       }
