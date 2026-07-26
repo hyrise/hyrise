@@ -1,60 +1,122 @@
 #pragma once
 
-#include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
+#include <functional>
 #include <memory>
 #include <vector>
 
-#include "all_type_variant.hpp"
-#include "operators/aggregate_dyod_utils/hyperloglog.hpp"
+#include "hyrise.hpp"
 #include "operators/aggregate_dyod_utils/ticketing.hpp"
+#include "operators/operator_state.hpp"
+#include "scheduler/abstract_task.hpp"
+#include "scheduler/job_task.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
 
 namespace hyrise {
 
-// Cardinality estimation for sizing the fixed-capacity `ConcurrentTicketMap`. The map can grow if an estimate turns out
-// to be too small, but only by migrating every entry into a larger table, so the estimates below aim to make that
-// fallback unlikely rather than impossible.
-//
-// Two ingredients are combined:
-//   * A hard upper bound that reads no data at all (`group_count_upper_bound`). For dictionary-encoded columns the sum
-//     of the per-chunk dictionary sizes bounds a column's distinct values, and the product over the group-by columns
-//     bounds the distinct combinations. On low-cardinality group-bys (`GROUP BY l_returnflag, l_linestatus` and the
-//     like) this alone is small and exact enough that no data has to be touched.
-//   * A HyperLogLog sketch over the key hashes that the grouping pass computes anyway. Unlike the throwaway hash table
-//     it replaces, a sketch is 16 KiB regardless of cardinality and merges across threads by element-wise maximum, so
-//     several chunks spread over the table can be sampled in parallel instead of only the first one. That matters for
-//     tables clustered or sorted on a group-by column, where the first chunk sees a small slice of the domain.
-//
-// Note what a sketch does and does not buy: it counts what it is shown almost exactly, but extrapolating from sampled
-// chunks to the whole table remains a guess. Where full coverage is affordable - a single dictionary-encoded column,
-// where feeding the dictionaries costs a fraction of a row-wise pass - the extrapolation is skipped entirely.
+// Cardinality estimation for sizing the fixed-capacity `ConcurrentTicketMap`.
+// We use a precision of 10 bits, so the number of registers for HyperLogLog `m`  is 1024.
+// This gives a relative standard error of 1.04 / sqrt(m) = 0.0325, or 3.25 %.
+// We use a precision of 10 giving 1 KiB of registers per sketch.
+template <uint8_t Precision = 10>
+class HyperLogLog : public Noncopyable {
+ public:
+  static constexpr auto REGISTER_COUNT = size_t{1} << Precision;
 
-// Precision 14: 16 KiB of registers per sketch, ~0.8 % relative standard error.
-using CardinalitySketch = HyperLogLog<14>;
+  void add(const uint64_t hash) {
+    const auto j = static_cast<size_t>(hash >> (64 - Precision));
+    const auto w = (hash << Precision) | (uint64_t{1} << (Precision - 1));
+    const auto rho_w = static_cast<uint8_t>(std::countl_zero(w) + 1);
+    _registers[j] = std::max(_registers[j], rho_w);
+  }
 
-// At most this many chunks are read for an estimate, and never more than a `SAMPLE_CHUNK_DIVISOR`-th of the table, so
-// estimation stays a small fraction of the grouping pass it precedes.
-constexpr auto MAX_SAMPLE_CHUNKS = size_t{4};
-constexpr auto SAMPLE_CHUNK_DIVISOR = size_t{8};
+  void merge(const HyperLogLog& other) {
+    for (auto index = size_t{0}; index < REGISTER_COUNT; ++index) {
+      _registers[index] = std::max(_registers[index], other._registers[index]);
+    }
+  }
 
-// Chunk IDs of an evenly spread sample of `input_table`, always including the first chunk.
-std::vector<ChunkID> sample_chunk_ids(const std::shared_ptr<const Table>& input_table);
+  size_t estimate() const {
+    constexpr auto REGISTERS = static_cast<double>(REGISTER_COUNT);
+    constexpr auto ALPHA = 0.7213 / (1.0 + 1.079 / REGISTERS);
 
-// Estimated number of distinct group-by keys for the multi-column path.
-size_t estimate_group_count_multi_column(const RowFormat& format, const std::vector<ColumnID>& groupby_column_ids,
-                                         const std::shared_ptr<const Table>& input_table, size_t max_chunk_size);
+    auto inverse_sum = 0.0;
+    auto empty_registers = size_t{0};
+    for (const auto rho_w : _registers) {
+      inverse_sum += std::ldexp(1.0, -rho_w);  // 2^-rho_w
+      empty_registers += rho_w == 0 ? 1 : 0;
+    }
 
-// Extrapolates `sampled_groups` distinct groups seen in `sampled_rows` rows to `row_count` rows, assuming the groups
-// per row of the sample carry over to the rest of the table. Capped at `row_count`, which bounds the group count.
-size_t extrapolate_group_count(size_t sampled_groups, size_t sampled_rows, size_t row_count);
+    const auto raw_estimate = ALPHA * REGISTERS * REGISTERS / inverse_sum;
 
-// Estimated number of distinct values of a single non-string group-by column. When every chunk is dictionary-encoded
-// and the summed dictionaries fit the scan budget, the sketch sees every value in the table and the result needs no
-// extrapolation; otherwise a spread sample of chunks is scanned row-wise and extrapolated. Never returns less than
-// one.
+    // TODO(@forUnity): We could apply the 'small range correction' here (for cases) when n < 2.5 * m.
+    // (Not too expensive to skip right now.)
+    return static_cast<size_t>(raw_estimate);
+  }
+
+  // We need an upper bound. Therefore we use the standard error with default 3 sigmas (99.7% confidence interval).
+  size_t estimate_upper_bound(const double sigmas = 3.0) const {
+    const auto standard_error = 1.04 / std::sqrt(static_cast<double>(REGISTER_COUNT));
+    return static_cast<size_t>(static_cast<double>(estimate()) * (1.0 + sigmas * standard_error)) + 1;
+  }
+
+ private:
+  std::array<uint8_t, REGISTER_COUNT> _registers{};
+};
+
+// Per-worker state of the multi-column estimation.
+struct MultiColumnEstimationState : public Noncopyable {
+  void merge(const MultiColumnEstimationState& other) {
+    sketch.merge(other.sketch);
+  }
+
+  HyperLogLog<> sketch;
+  MaterializedRows materialized;
+};
+
+inline size_t estimate_group_count_multi_column(const RowFormat& format,
+                                                const std::vector<ColumnID>& groupby_column_ids,
+                                                const std::shared_ptr<const Table>& input_table,
+                                                const size_t max_chunk_size) {
+  const auto row_count = input_table->row_count();
+  if (row_count == 0) {
+    return 1;
+  }
+
+  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+  auto operator_state = OperatorSharedState<MultiColumnEstimationState>{};
+  const auto chunk_count = input_table->chunk_count();
+  jobs.reserve(chunk_count);
+
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+    jobs.emplace_back(std::make_shared<JobTask>([&, chunk_id]() {
+      auto& worker_state = operator_state.current_worker_state();
+      auto& materialized = worker_state.materialized;
+
+      // The first time this worker is called it needs to allocate the 'materialized' buffer.
+      if (!materialized.rows) {
+        materialized.rows = std::make_unique<uint8_t[]>(max_chunk_size * format.row_size);
+      }
+
+      const auto& chunk = input_table->get_chunk(chunk_id);
+      _materialize_rows(format, chunk, groupby_column_ids, materialized);
+
+      auto* row_ptr = materialized.rows.get();
+      for (auto chunk_offset = uint64_t{0}; chunk_offset < materialized.row_count; ++chunk_offset) {
+        const auto row_view = RowView{row_ptr, format};
+        // NOTE: We only compute the hash of the key bytes here. For strings this can amounts to only hashing the inline prefix!
+        worker_state.sketch.add(compute_hash(row_view.key_bytes(), format.key_length));
+        row_ptr += format.row_size;
+      }
+    }));
+  }
+
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+  return operator_state.merge_worker_states().sketch.estimate_upper_bound();
+}
 
 template <typename ColumnDataType>
 size_t estimate_group_count_single_column(const ColumnID groupby_column_id,
@@ -65,20 +127,24 @@ size_t estimate_group_count_single_column(const ColumnID groupby_column_id,
   }
   const auto hash_function = std::hash<ColumnDataType>{};
 
-  auto sketch = CardinalitySketch{};
-  auto sampled_rows = size_t{0};
-  for (const auto chunk_id : sample_chunk_ids(input_table)) {
-    const auto& chunk = input_table->get_chunk(chunk_id);
-    sampled_rows += chunk->size();
-    segment_iterate<ColumnDataType>(*chunk->get_segment(groupby_column_id), [&](const auto& position) {
-      if (!position.is_null()) {
-        sketch.add(hash_function(position.value()));
-      }
-    });
+  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+  auto operator_state = OperatorSharedState<HyperLogLog<>>{};
+  const auto chunk_count = input_table->chunk_count();
+
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+    jobs.emplace_back(std::make_shared<JobTask>([&, chunk_id]() {
+      auto& worker_state = operator_state.current_worker_state();
+      const auto& chunk = input_table->get_chunk(chunk_id);
+      segment_iterate<ColumnDataType>(*chunk->get_segment(groupby_column_id), [&](const auto& position) {
+        if (!position.is_null()) {
+          worker_state.add(hash_function(position.value()));
+        }
+      });
+    }));
   }
 
-  return std::clamp(extrapolate_group_count(sketch.estimate_upper_bound(), sampled_rows, row_count), size_t{1},
-                    size_t{row_count});
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+  return operator_state.merge_worker_states().estimate_upper_bound();
 }
 
 }  // namespace hyrise
