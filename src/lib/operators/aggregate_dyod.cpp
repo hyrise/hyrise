@@ -1723,37 +1723,40 @@ void AggregateDYOD::_write_output(ContextsPerColumn& contexts_per_column,
     }
     ++output_column_id;
   }
-  const auto lock = std::lock_guard<std::mutex>{_output_mutex};
+
   // Create temporary table storing materialized columns. The operator output references this table's columns via
   // `EntireChunkPosList` reference segments.
 
   auto first_materialized_chunk_id = ChunkID{0};
-  if (!entireposlist_indexes.empty()) {
-    const auto materialized_column_count = entireposlist_indexes.size();
-    if (!_aggregate_writing_started) {
-      auto aggregate_column_definitions = std::vector<TableColumnDefinition>{};
-      aggregate_column_definitions.reserve(materialized_column_count);
+  {
+    const auto lock = std::lock_guard<std::mutex>{_aggregate_mutex};
+    if (!entireposlist_indexes.empty()) {
+      const auto materialized_column_count = entireposlist_indexes.size();
+      if (!_aggregate_writing_started) {
+        auto aggregate_column_definitions = std::vector<TableColumnDefinition>{};
+        aggregate_column_definitions.reserve(materialized_column_count);
 
-      for (const auto entireposlist_index : entireposlist_indexes) {
-        aggregate_column_definitions.emplace_back(output_column_definitions[entireposlist_index]);
+        for (const auto entireposlist_index : entireposlist_indexes) {
+          aggregate_column_definitions.emplace_back(output_column_definitions[entireposlist_index]);
+        }
+
+        aggregate_columns_result_table = std::make_shared<Table>(aggregate_column_definitions, TableType::Data);
+        _aggregate_writing_started = true;
       }
+      first_materialized_chunk_id = aggregate_columns_result_table->chunk_count();
+      for (const auto& materialized_result_chunk : intermediate_result) {
+        auto aggregate_segments = Segments{};
+        aggregate_segments.reserve(materialized_column_count);
 
-      aggregate_columns_result_table = std::make_shared<Table>(aggregate_column_definitions, TableType::Data);
-      _aggregate_writing_started = true;
-    }
-    first_materialized_chunk_id = aggregate_columns_result_table->chunk_count();
-    for (const auto& materialized_result_chunk : intermediate_result) {
-      auto aggregate_segments = Segments{};
-      aggregate_segments.reserve(materialized_column_count);
+        for (const auto entireposlist_index : entireposlist_indexes) {
+          aggregate_segments.emplace_back(materialized_result_chunk[entireposlist_index]);
+        }
 
-      for (const auto entireposlist_index : entireposlist_indexes) {
-        aggregate_segments.emplace_back(materialized_result_chunk[entireposlist_index]);
+        aggregate_columns_result_table->append_chunk(aggregate_segments);
       }
-
-      aggregate_columns_result_table->append_chunk(aggregate_segments);
     }
   }
-
+  const auto lock = std::lock_guard<std::mutex>{_output_mutex};
   // Create final operator output. We now combine actual reference segments (e.g., of GROUP BY columns) with segments
   // that reference the temporary materialized table created above.
 

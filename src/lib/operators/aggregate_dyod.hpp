@@ -218,6 +218,7 @@ class AggregateDYOD : public AbstractAggregateOperator {
   bool _has_aggregate_functions;
   bool _aggregate_writing_started = false;
   bool _output_writing_started = false;
+  std::mutex _aggregate_mutex = std::mutex{};
   std::mutex _output_mutex = std::mutex{};
 };
 
