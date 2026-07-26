@@ -57,7 +57,7 @@ class HyperLogLog : public Noncopyable {
 
     // Small range correction.
     if (raw_estimate <= 2.5 * REGISTERS && empty_registers > 0) {
-      return static_cast<size_t>(REGISTERS * std::log(static_cast<double>(REGISTERS) / empty_registers));
+      return static_cast<size_t>(REGISTERS * std::log(REGISTERS / static_cast<double>(empty_registers)));
     }
 
     // TODO(@forUnity): We could apply the 'small range correction' here (for cases) when n < 2.5 * m.
