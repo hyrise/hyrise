@@ -565,7 +565,8 @@ AggregateDYOD::AggregateDYOD(const std::shared_ptr<AbstractOperator>& input_oper
                              const std::vector<ColumnID>& groupby_column_ids)
     : AbstractAggregateOperator(input_operator, aggregates, groupby_column_ids,
                                 std::make_unique<OperatorPerformanceData<OperatorSteps>>()),
-      _has_aggregate_functions(has_aggregate_functions(_aggregates)) {}
+      _has_aggregate_functions(has_aggregate_functions(_aggregates)),
+      _output_mutex(std::mutex{}) {}
 
 const std::string& AggregateDYOD::name() const {
   static const auto name = std::string{"AggregateDYOD"};
@@ -1123,7 +1124,8 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
   if (groupby_column_count == 0 || row_count == 0) {
     auto contexts_per_column = ContextsPerColumn(aggregate_count);
     _aggregate<AggregateKey>(contexts_per_column, input_table);
-    return _create_output_table(contexts_per_column, input_table);
+    auto final_output_table = std::make_shared<Table>(input_table->column_definitions(), TableType::Data);
+    return _create_output_table(contexts_per_column, input_table, final_output_table);
   }
 
   // If we have a Data table, we directly partion into PosLists and forward these to the thread-local input tables.
@@ -1189,7 +1191,7 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
   // SPLIT END
 
   auto final_output_table = std::make_shared<Table>(input_table->column_definitions(), TableType::Data);
-  auto output_mutex = std::mutex{};
+  // auto output_mutex = std::mutex{};
 
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   jobs.reserve(RADIX_SPLIT_MAX_BUCKETS);
@@ -1263,19 +1265,13 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
       auto contexts_per_column = ContextsPerColumn(aggregate_count);
       _aggregate<AggregateKey>(contexts_per_column, local_input_table);
 
-      const auto& output_table = _create_output_table(contexts_per_column, local_input_table);
-      const auto lock = std::lock_guard<std::mutex>{output_mutex};
-      // we use TableType::Data as an indicator that the final output has not been set yet.
-      if (final_output_table->type() == TableType::Data) {
-        final_output_table = output_table;
-        return;
-      }
+      const auto& output_table = _create_output_table(contexts_per_column, local_input_table, final_output_table);
 
-      const auto output_chunk_count = output_table->chunk_count();
-      for (auto chunk_id = ChunkID{0}; chunk_id < output_chunk_count; chunk_id++) {
-        auto chunk = output_table->get_chunk(chunk_id);
-        final_output_table->append_chunk(chunk->segments());
-      }
+      // const auto output_chunk_count = output_table->chunk_count();
+      // for (auto chunk_id = ChunkID{0}; chunk_id < output_chunk_count; chunk_id++) {
+      //   auto chunk = output_table->get_chunk(chunk_id);
+      //   final_output_table->append_chunk(chunk->segments());
+      // }
     }));
   }
 
@@ -1625,7 +1621,8 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std
 }  // NOLINT(readability/fn_size)
 
 std::shared_ptr<Table> AggregateDYOD::_create_output_table(ContextsPerColumn& contexts_per_column,
-                                                           const std::shared_ptr<const Table>& input_table) {
+                                                           const std::shared_ptr<const Table>& input_table,
+                                                           std::shared_ptr<Table>& output_table) {
   const auto num_output_columns = _groupby_column_ids.size() + _aggregates.size();
   auto output_column_definitions = TableColumnDefinitions{};
   output_column_definitions.resize(num_output_columns);
@@ -1759,7 +1756,11 @@ std::shared_ptr<Table> AggregateDYOD::_create_output_table(ContextsPerColumn& co
 
   // Create final operator output. We now combine actual reference segments (e.g., of GROUP BY columns) with segments
   // that reference the temporary materialized table created above.
-  auto operator_output = std::make_shared<Table>(output_column_definitions, TableType::References);
+  const auto lock = std::lock_guard<std::mutex>{_output_mutex};
+  // we use TableType::Data as an indicator that the final output has not been set yet.
+  if (output_table->type() == TableType::Data) {
+    output_table = std::make_shared<Table>(output_column_definitions, TableType::References);
+  }
   if (!intermediate_result.empty() && intermediate_result.front()[0]->size() > 0) {
     const auto output_table_chunk_count = intermediate_result.size();
     for (auto chunk_id = ChunkID{0}; chunk_id < output_table_chunk_count; ++chunk_id) {
@@ -1790,11 +1791,11 @@ std::shared_ptr<Table> AggregateDYOD::_create_output_table(ContextsPerColumn& co
         reference_segments[entireposlist_indexes[materialized_table_column_id]] = std::make_shared<ReferenceSegment>(
             aggregate_columns_result_table, materialized_table_column_id, entire_chunk_pos_list);
       }
-      operator_output->append_chunk(reference_segments);
+      output_table->append_chunk(reference_segments);
     }
   }
 
-  return operator_output;
+  return output_table;
 }
 
 std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
