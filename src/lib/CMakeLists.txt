@@ -220,6 +220,7 @@ set(
     operators/abstract_read_write_operator.cpp
     operators/abstract_read_write_operator.hpp
     operators/aggregate/window_function_traits.hpp
+    operators/aggregate_dyod_utils/cardinality_estimation.hpp
     operators/aggregate_dyod_utils/ticketing.cpp
     operators/aggregate_dyod_utils/ticketing.hpp
     operators/aggregate_dyod_utils/concurrent_ticket_map.hpp

@@ -4,14 +4,18 @@
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
+#include <cstring>
 #include <functional>
 #include <limits>
 #include <memory>
+#include <shared_mutex>
 #include <vector>
 
 #include "hyrise.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
+#include "utils/assert.hpp"
 
 inline std::uint64_t rotl(std::uint64_t x, int r) {
   return (x << r) | (x >> (64 - r));
@@ -89,78 +93,106 @@ class ConcurrentTicketMap {
     }
     _capacity = capacity;
     _mask = capacity - 1;
-    // Allocate uninitialized storage. Initializing the whole array is for a large high-cardinality table dominated by
-    // page faults. We therefore set every slot to EMPTY in parallel below (partitioning the array across scheduler
-    // jobs) so the page faults spread across cores and land core-locally. `Slot` is trivially destructible, so the
-    //  matching `::operator delete[]` in `SlotArrayDeleter` needs no per-element teardown.
-    _slots = SlotArray{static_cast<Slot*>(::operator new[](capacity * sizeof(Slot)))};
 
-    const auto initialize_slots = [slots = _slots.get()](const size_t begin, const size_t end) {
-      // TODO(@forUnity): Test using std::memset here. This would also set key to 0 and hardcode that EMPTY == 0.
-      // However it might be faster.
-      std::memset(slots + begin, 0, (end - begin) * sizeof(Slot));
-    };
-
-    // Only parallelize once the array is large enough that partitioning beats the scheduling overhead.
-    if (capacity <= PARALLEL_INIT_SLOTS) {
-      initialize_slots(0, capacity);
-      return;
-    }
-
-    // When `capacity` is larger than `PARALLEL_INIT_SLOTS`. We split the range into `PARALLEL_INIT_SLOTS`-sized chunks.
-    const auto max_jobs = (capacity + PARALLEL_INIT_SLOTS - 1) / PARALLEL_INIT_SLOTS;
-    const auto job_count = std::min<size_t>(Hyrise::get().topology.num_cpus(), max_jobs);
-    const auto slots_per_job = capacity / job_count;
-    auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
-    jobs.reserve(job_count);
-
-    for (auto job_id = size_t{0}; job_id < job_count; ++job_id) {
-      const auto begin = job_id * slots_per_job;
-      const auto end = job_id + 1 == job_count ? capacity : begin + slots_per_job;
-      jobs.emplace_back(std::make_shared<JobTask>([initialize_slots, begin, end] {
-        initialize_slots(begin, end);
-      }));
-    }
-    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+    auto* slots_ptr = static_cast<Slot*>(std::calloc(capacity, sizeof(Slot)));
+    Assert(slots_ptr, "Failed to allocate memory for ConcurrentTicketMap.");
+    _slots = SlotArray{slots_ptr};
   }
 
   uint64_t try_emplace(const Key& key, const uint64_t ticket) {
-    auto index = _slot_index(key);
-    while (true) {
-      auto& slot = _slots[index];
-      auto state = slot.state.load();
+    auto probe_counter = size_t{0};
+    {
+      const auto lock =
+          std::shared_lock<std::shared_mutex>(_is_resizing_mutex);  // shared lock to prevent resizing while probing
+      const auto hash = _hash(key);
+      auto index = static_cast<size_t>(hash) & _mask;
+      while (true) {
+        auto& slot = _slots[index];
+        auto state = slot.state.load();
 
-      if (state == EMPTY) {
-        auto expected = EMPTY;
-        if (slot.state.compare_exchange_strong(expected, CLAIMED)) {
-          slot.key = key;
-          slot.state = ticket + TICKET_BIAS;
-          return ticket;
+        if (state == EMPTY) {
+          auto expected = EMPTY;
+          if (slot.state.compare_exchange_strong(expected, CLAIMED)) {
+            slot.key = key;
+            slot.state = ticket + TICKET_BIAS;
+            slot.hash = hash;
+            return ticket;
+          }
+          state = expected;
         }
-        state = expected;
-      }
 
-      while (state == CLAIMED) {
-        state = slot.state.load();
-      }
+        while (state == CLAIMED) {
+          state = slot.state.load();
+        }
 
-      if (_key_equal(slot.key, key)) {
-        return state - TICKET_BIAS;
-      }
+        if (hash == slot.hash && _key_equal(slot.key, key)) {
+          return state - TICKET_BIAS;
+        }
 
-      // Linear probing
-      index = (index + 1) & _mask;
+        // Linear probing
+        index = (index + 1) & _mask;
+        ++probe_counter;
+
+        if (probe_counter >= MAX_PROBE_COUNT) {
+          break;
+        }
+      }
     }
+
+    if (probe_counter >= MAX_PROBE_COUNT) {
+      resize(_capacity * 2);
+    }
+
+    // Retry the insertion after resizing.
+    return try_emplace(key, ticket);
   }
 
-  template <typename Fn>
-  void for_each(Fn&& fn) const {
-    for (auto index = size_t{0}; index < _capacity; ++index) {
-      const auto state = _slots[index].state.load();
+  // NOTE: This is just a fallback and VERY slow. We should never hit it though...
+  void resize(const size_t new_max_groups) {
+    // Prevent probing during the resize.
+    const auto lock = std::unique_lock<std::shared_mutex>(_is_resizing_mutex);
+
+    // If another thread already resized the table we can skip this resize.
+    if (new_max_groups <= static_cast<size_t>(static_cast<double>(_capacity) * MAX_LOAD_FACTOR)) {
+      return;
+    }
+
+    auto new_capacity = MIN_CAPACITY;
+    while (static_cast<double>(new_capacity) * MAX_LOAD_FACTOR < static_cast<double>(new_max_groups + 1)) {
+      new_capacity <<= 1;
+    }
+
+    auto* new_slots_ptr = static_cast<Slot*>(std::calloc(new_capacity, sizeof(Slot)));
+    Assert(new_slots_ptr, "Failed to allocate memory for ConcurrentTicketMap.");
+    SlotArray new_slots{new_slots_ptr};
+    const auto new_mask = new_capacity - 1;
+
+    for (size_t i = 0; i < _capacity; ++i) {
+      auto& old_slot = _slots[i];
+      auto state = old_slot.state.load();
       if (state >= TICKET_BIAS) {
-        fn(_slots[index].key, state - TICKET_BIAS);
+        const auto ticket = state - TICKET_BIAS;
+        const auto& key = old_slot.key;
+        const auto hash = old_slot.hash;
+        auto index = hash & new_mask;
+
+        while (true) {
+          auto& new_slot = new_slots[index];
+          auto expected = EMPTY;
+          if (new_slot.state.compare_exchange_strong(expected, CLAIMED)) {
+            new_slot.key = key;
+            new_slot.state = ticket + TICKET_BIAS;
+            new_slot.hash = hash;
+            break;
+          }
+          index = (index + 1) & new_mask;  // Linear probing
+        }
       }
     }
+
+    _slots.swap(new_slots);
+    _capacity = new_capacity;
+    _mask = new_mask;
   }
 
   template <typename Fn>
@@ -195,19 +227,26 @@ class ConcurrentTicketMap {
     Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
   }
 
-  size_t capacity() const {
-    return _capacity;
+  template <typename Fn>
+  void for_each(Fn&& fn) const {
+    for (auto index = size_t{0}; index < _capacity; ++index) {
+      const auto state = _slots[index].state.load();
+      if (state >= TICKET_BIAS) {
+        fn(_slots[index].key, state - TICKET_BIAS);
+      }
+    }
   }
 
  private:
   struct Slot {
     std::atomic<uint64_t> state;
+    uint64_t hash;
     Key key{};
   };
 
   struct SlotArrayDeleter {
     void operator()(Slot* slots) const noexcept {
-      ::operator delete[](static_cast<void*>(slots));
+      std::free(slots);
     }
   };
 
@@ -220,16 +259,14 @@ class ConcurrentTicketMap {
   static constexpr auto MIN_CAPACITY = size_t{16};
   static constexpr auto MAX_LOAD_FACTOR = 0.7;
   static constexpr auto PARALLEL_INIT_SLOTS = size_t{1} << 18;
-
-  size_t _slot_index(const Key& key) const {
-    return static_cast<size_t>(fmix64(static_cast<uint64_t>(_hash(key)))) & _mask;
-  }
+  static constexpr auto MAX_PROBE_COUNT = size_t{32};
 
   SlotArray _slots;
   size_t _capacity = 0;
   size_t _mask = 0;
   Hash _hash{};
   KeyEqual _key_equal{};
+  std::shared_mutex _is_resizing_mutex{};
 };
 
 }  // namespace hyrise

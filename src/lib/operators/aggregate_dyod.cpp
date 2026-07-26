@@ -48,25 +48,22 @@ struct ChunkedVector {
       chunks.emplace_back(std::min(CHUNK_SIZE, size - begin), initial_value);
     }
     if constexpr (Concurrent) {
-      is_written_to = std::vector<std::atomic_flag>(size);
+      is_in_progress = std::vector<std::atomic_flag>(size);
     }
   }
 
   // This will normally retunr T& but not if T is bool. There bit packing makes it return a proxy object.
   decltype(auto) operator[](const size_t index) {
-    if constexpr (Concurrent) {
-      while (is_written_to[index].test_and_set(std::memory_order_acquire)) {
-        // `test_and_set` returns the previous value. So if we spin here it means another thread is writing.
-      }
-      return chunks[index / CHUNK_SIZE][index % CHUNK_SIZE];
-      is_written_to[index].clear();
-    } else {
-      return chunks[index / CHUNK_SIZE][index % CHUNK_SIZE];
-    }
+    return chunks[index / CHUNK_SIZE][index % CHUNK_SIZE];
+  }
+
+  std::atomic_flag& get_atomic_flag(const size_t index) {
+    DebugAssert(Concurrent, "Atomic flags only exist for concurrent ChunkedVectors");
+    return is_in_progress[index];
   }
 
   std::vector<pmr_vector<T>> chunks;
-  std::vector<std::atomic_flag> is_written_to;  // only used when Concurrent is true
+  std::vector<std::atomic_flag> is_in_progress;  // only used when Concurrent is true
 };
 
 template <typename T, bool Concurrent>
@@ -923,8 +920,9 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
 
   // For low-cardinality group-bys (far fewer groups than input rows), each group-by column is cheaper to build by
   // reading every group's value once from its distinct key row in the hash table than by scanning the whole source
-  // column; above that ratio the scattered key-row access loses to a sequential source scan. Only the byte-row grouping
-  // path exposes a hash table (`has_hash_table`); the single-column fast path recovers group-by values by scanning.
+  // column; above that ratio the scattered key-row access loses to a sequential source scan. Only the multi-column
+  // grouping path exposes a hash table (`has_hash_table`); the single-column fast path recovers group-by values by
+  // scanning.
   const auto input_row_count = input_table->row_count();
 
   // TODO(@V1nce1): Right now the single column fast path has `has_hash_table` set to false, so it always uses
