@@ -100,47 +100,62 @@ class ConcurrentTicketMap {
   }
 
   uint64_t try_emplace(const Key& key, const uint64_t ticket) {
-    const auto lock =
-        std::shared_lock<std::shared_mutex>(_is_resizing_mutex);  // shared lock to prevent resizing while probing
-    const auto hash = _hash(key);
-    auto index = static_cast<size_t>(hash) & _mask;
     auto probe_counter = size_t{0};
-    while (true) {
-      auto& slot = _slots[index];
-      auto state = slot.state.load();
+    {
+      const auto lock =
+          std::shared_lock<std::shared_mutex>(_is_resizing_mutex);  // shared lock to prevent resizing while probing
+      const auto hash = _hash(key);
+      auto index = static_cast<size_t>(hash) & _mask;
+      while (true) {
+        auto& slot = _slots[index];
+        auto state = slot.state.load();
 
-      if (state == EMPTY) {
-        auto expected = EMPTY;
-        if (slot.state.compare_exchange_strong(expected, CLAIMED)) {
-          slot.key = key;
-          slot.state = ticket + TICKET_BIAS;
-          return ticket;
+        if (state == EMPTY) {
+          auto expected = EMPTY;
+          if (slot.state.compare_exchange_strong(expected, CLAIMED)) {
+            slot.key = key;
+            slot.state = ticket + TICKET_BIAS;
+            slot.hash = hash;
+            return ticket;
+          }
+          state = expected;
         }
-        state = expected;
-      }
 
-      while (state == CLAIMED) {
-        state = slot.state.load();
-      }
+        while (state == CLAIMED) {
+          state = slot.state.load();
+        }
 
-      if (hash == slot.hash && _key_equal(slot.key, key)) {
-        return state - TICKET_BIAS;
-      }
+        if (hash == slot.hash && _key_equal(slot.key, key)) {
+          return state - TICKET_BIAS;
+        }
 
-      // Linear probing
-      index = (index + 1) & _mask;
-      ++probe_counter;
+        // Linear probing
+        index = (index + 1) & _mask;
+        ++probe_counter;
+
+        if (probe_counter >= MAX_PROBE_COUNT) {
+          break;
+        }
+      }
     }
 
     if (probe_counter >= MAX_PROBE_COUNT) {
       resize(_capacity * 2);
     }
+
+    // Retry the insertion after resizing.
+    return try_emplace(key, ticket);
   }
 
   // NOTE: This is just a fallback and VERY slow. We should never hit it though...
   void resize(const size_t new_max_groups) {
-    const auto lock =
-        std::unique_lock<std::shared_mutex>(_is_resizing_mutex);  // Exclusive lock to prevent probing while resizing.
+    // Prevent probing during the resize.
+    const auto lock = std::unique_lock<std::shared_mutex>(_is_resizing_mutex);
+
+    // If another thread already resized the table we can skip this resize.
+    if (new_max_groups <= static_cast<size_t>(static_cast<double>(_capacity) * MAX_LOAD_FACTOR)) {
+      return;
+    }
 
     auto new_capacity = MIN_CAPACITY;
     while (static_cast<double>(new_capacity) * MAX_LOAD_FACTOR < static_cast<double>(new_max_groups + 1)) {
@@ -244,7 +259,7 @@ class ConcurrentTicketMap {
   static constexpr auto MIN_CAPACITY = size_t{16};
   static constexpr auto MAX_LOAD_FACTOR = 0.7;
   static constexpr auto PARALLEL_INIT_SLOTS = size_t{1} << 18;
-  static constexpr auto MAX_PROBE_COUNT = size_t{64};
+  static constexpr auto MAX_PROBE_COUNT = size_t{32};
 
   SlotArray _slots;
   size_t _capacity = 0;

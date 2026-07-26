@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -21,6 +22,8 @@ namespace hyrise {
 // We use a precision of 10 bits, so the number of registers for HyperLogLog `m`  is 1024.
 // This gives a relative standard error of 1.04 / sqrt(m) = 0.0325, or 3.25 %.
 // We use a precision of 10 giving 1 KiB of registers per sketch.
+// The entire implementation here is stolen from "HyperLogLog: the analysis of a near-optimal cardinality estimation
+// algorithm" by Philippe Flajolet, Éric Fusy, Olivier Gandouet, and Frédéric Meunier (2007).
 template <uint8_t Precision = 10>
 class HyperLogLog : public Noncopyable {
  public:
@@ -51,6 +54,11 @@ class HyperLogLog : public Noncopyable {
     }
 
     const auto raw_estimate = ALPHA * REGISTERS * REGISTERS / inverse_sum;
+
+    // Small range correction.
+    if (raw_estimate <= 2.5 * REGISTERS && empty_registers > 0) {
+      return static_cast<size_t>(REGISTERS * std::log(static_cast<double>(REGISTERS) / empty_registers));
+    }
 
     // TODO(@forUnity): We could apply the 'small range correction' here (for cases) when n < 2.5 * m.
     // (Not too expensive to skip right now.)
@@ -107,7 +115,8 @@ inline size_t estimate_group_count_multi_column(const RowFormat& format,
       auto* row_ptr = materialized.rows.get();
       for (auto chunk_offset = uint64_t{0}; chunk_offset < materialized.row_count; ++chunk_offset) {
         const auto row_view = RowView{row_ptr, format};
-        // NOTE: We only compute the hash of the key bytes here. For strings this can amounts to only hashing the inline prefix!
+        // NOTE: We only compute the hash of the key bytes here. For strings this can amounts to only hashing the
+        // inline prefix!
         worker_state.sketch.add(compute_hash(row_view.key_bytes(), format.key_length));
         row_ptr += format.row_size;
       }
@@ -125,7 +134,6 @@ size_t estimate_group_count_single_column(const ColumnID groupby_column_id,
   if (row_count == 0) {
     return 1;
   }
-  const auto hash_function = std::hash<ColumnDataType>{};
 
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   auto operator_state = OperatorSharedState<HyperLogLog<>>{};
@@ -137,7 +145,8 @@ size_t estimate_group_count_single_column(const ColumnID groupby_column_id,
       const auto& chunk = input_table->get_chunk(chunk_id);
       segment_iterate<ColumnDataType>(*chunk->get_segment(groupby_column_id), [&](const auto& position) {
         if (!position.is_null()) {
-          worker_state.add(hash_function(position.value()));
+          // NOTE: We only 'mix' here as all the possible values here are less that 64 bits anyway.
+          worker_state.add(fmix64(static_cast<uint64_t>(position.value())));
         }
       });
     }));
