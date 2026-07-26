@@ -1282,7 +1282,7 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
 
 const auto JOB_COUNT_ESTIMATE = ChunkID{16};
 
-// This is the unpartitioned variant. It will handle the table partitioning and call the partionined variant below.
+// This is the unpartitioned variant. It will handle the table partitioning and call the partitioned variant below.
 template <typename AggregateKey>
 void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column,
                                const std::shared_ptr<const Table>& input_table) {
