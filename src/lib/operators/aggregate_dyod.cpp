@@ -1191,7 +1191,6 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
   // SPLIT END
 
   auto final_output_table = std::make_shared<Table>(input_table->column_definitions(), TableType::Data);
-  // auto output_mutex = std::mutex{};
 
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   jobs.reserve(RADIX_SPLIT_MAX_BUCKETS);
@@ -1266,12 +1265,6 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
       _aggregate<AggregateKey>(contexts_per_column, local_input_table);
 
       const auto& output_table = _create_output_table(contexts_per_column, local_input_table, final_output_table);
-
-      // const auto output_chunk_count = output_table->chunk_count();
-      // for (auto chunk_id = ChunkID{0}; chunk_id < output_chunk_count; chunk_id++) {
-      //   auto chunk = output_table->get_chunk(chunk_id);
-      //   final_output_table->append_chunk(chunk->segments());
-      // }
     }));
   }
 
@@ -1728,10 +1721,11 @@ std::shared_ptr<Table> AggregateDYOD::_create_output_table(ContextsPerColumn& co
     }
     ++output_column_id;
   }
-
+  const auto lock = std::lock_guard<std::mutex>{_output_mutex};
   // Create temporary table storing materialized columns. The operator output references this table's columns via
   // `EntireChunkPosList` reference segments.
   auto aggregate_columns_result_table = std::shared_ptr<Table>{};
+  auto first_materialized_chunk_id = ChunkID{0};
   if (!entireposlist_indexes.empty()) {
     const auto materialized_column_count = entireposlist_indexes.size();
     auto aggregate_column_definitions = std::vector<TableColumnDefinition>{};
@@ -1742,6 +1736,7 @@ std::shared_ptr<Table> AggregateDYOD::_create_output_table(ContextsPerColumn& co
     }
 
     aggregate_columns_result_table = std::make_shared<Table>(aggregate_column_definitions, TableType::Data);
+    first_materialized_chunk_id = aggregate_columns_result_table->chunk_count();
     for (const auto& materialized_result_chunk : intermediate_result) {
       auto aggregate_segments = Segments{};
       aggregate_segments.reserve(materialized_column_count);
@@ -1756,7 +1751,7 @@ std::shared_ptr<Table> AggregateDYOD::_create_output_table(ContextsPerColumn& co
 
   // Create final operator output. We now combine actual reference segments (e.g., of GROUP BY columns) with segments
   // that reference the temporary materialized table created above.
-  const auto lock = std::lock_guard<std::mutex>{_output_mutex};
+
   // we use TableType::Data as an indicator that the final output has not been set yet.
   if (output_table->type() == TableType::Data) {
     output_table = std::make_shared<Table>(output_column_definitions, TableType::References);
@@ -1784,8 +1779,8 @@ std::shared_ptr<Table> AggregateDYOD::_create_output_table(ContextsPerColumn& co
       for (auto materialized_table_column_id = ColumnID{0};
            materialized_table_column_id < materialized_table_column_count; ++materialized_table_column_id) {
         DebugAssert(!std::dynamic_pointer_cast<const ReferenceSegment>(
-                        aggregate_columns_result_table->get_chunk(chunk_id)->get_segment(
-                            ColumnID{materialized_table_column_id})),
+                        aggregate_columns_result_table->get_chunk(ChunkID{first_materialized_chunk_id + chunk_id})
+                            ->get_segment(ColumnID{materialized_table_column_id})),
                     "Unexpected reference segment at this position.");
         const auto entire_chunk_pos_list = std::make_shared<EntireChunkPosList>(chunk_id, chunk_size);
         reference_segments[entireposlist_indexes[materialized_table_column_id]] = std::make_shared<ReferenceSegment>(
