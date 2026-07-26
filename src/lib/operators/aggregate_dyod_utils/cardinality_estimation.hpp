@@ -43,18 +43,18 @@ constexpr auto SAMPLE_CHUNK_DIVISOR = size_t{8};
 // Chunk IDs of an evenly spread sample of `input_table`, always including the first chunk.
 std::vector<ChunkID> sample_chunk_ids(const std::shared_ptr<const Table>& input_table);
 
-// Estimated number of distinct group-by keys for the byte-row path: materializes a spread sample of chunks in parallel,
-// sketches their row hashes and extrapolates to the rows not sampled. Never returns less than one.
-size_t estimate_group_count_byte_row(const RowFormat& format, const std::vector<ColumnID>& groupby_column_ids,
-                                     const std::shared_ptr<const Table>& input_table, size_t max_chunk_size);
+// Estimated number of distinct group-by keys for the multi-column path.
+size_t estimate_group_count_multi_column(const RowFormat& format, const std::vector<ColumnID>& groupby_column_ids,
+                                         const std::shared_ptr<const Table>& input_table, size_t max_chunk_size);
 
 // Extrapolates `sampled_groups` distinct groups seen in `sampled_rows` rows to `row_count` rows, assuming the groups
 // per row of the sample carry over to the rest of the table. Capped at `row_count`, which bounds the group count.
 size_t extrapolate_group_count(size_t sampled_groups, size_t sampled_rows, size_t row_count);
 
-// Estimated number of distinct values of a single non-string group-by column. When every chunk is dictionary-encoded and
-// the summed dictionaries fit the scan budget, the sketch sees every value in the table and the result needs no
-// extrapolation; otherwise a spread sample of chunks is scanned row-wise and extrapolated. Never returns less than one.
+// Estimated number of distinct values of a single non-string group-by column. When every chunk is dictionary-encoded
+// and the summed dictionaries fit the scan budget, the sketch sees every value in the table and the result needs no
+// extrapolation; otherwise a spread sample of chunks is scanned row-wise and extrapolated. Never returns less than
+// one.
 
 template <typename ColumnDataType>
 size_t estimate_group_count_single_column(const ColumnID groupby_column_id,
@@ -79,6 +79,6 @@ size_t estimate_group_count_single_column(const ColumnID groupby_column_id,
 
   return std::clamp(extrapolate_group_count(sketch.estimate_upper_bound(), sampled_rows, row_count), size_t{1},
                     size_t{row_count});
-};
+}
 
 }  // namespace hyrise

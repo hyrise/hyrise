@@ -330,9 +330,9 @@ struct GroupKeyData : GroupKeyDataBase {
                                            boost::unordered_flat_map<GroupKey, uint64_t, GroupKeyHash, GroupKeyEqual>>;
   HashTableType global_hash_table;
 
-  explicit GroupKeyData(const RowFormat& _row_format) : GroupKeyDataBase(_row_format) {
+  explicit GroupKeyData(const RowFormat& _row_format, size_t estimated_groups) : GroupKeyDataBase(_row_format) {
     if constexpr (!Concurrent) {
-      global_hash_table = HashTableType(0, GroupKeyHash{}, GroupKeyEqual{&this->row_format});
+      global_hash_table = HashTableType(estimated_groups, GroupKeyHash{}, GroupKeyEqual{&this->row_format});
     }
   }
 };

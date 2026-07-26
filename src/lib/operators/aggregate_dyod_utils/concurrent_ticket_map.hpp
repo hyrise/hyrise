@@ -9,9 +9,7 @@
 #include <functional>
 #include <limits>
 #include <memory>
-#include <mutex>
-#include <type_traits>
-#include <utility>
+#include <shared_mutex>
 #include <vector>
 
 #include "hyrise.hpp"
@@ -78,234 +76,37 @@ namespace hyrise {
 // Slot meanings:
 //   state == EMPTY (0)    : free.
 //   state == CLAIMED (1)  : a thread is writing its key
-//   state == MIGRATED (2) : the entry has been copied into a larger table, this one is retired
 //   state >= TICKET_BIAS  : published, the ticket is `state - TICKET_BIAS`
-//
-// The table is sized up front from a cardinality estimate (see `cardinality_estimation.hpp`) and normally never resizes:
-// inserts are lock-free, keys never move and readers never synchronize beyond the slot they touch. Should the estimate
-// undershoot, the map falls back to migrating every entry into a table of twice the size (see `_grow`). That fallback is
-// deliberately simple rather than fast - one thread copies while the others block - because a good estimate makes it
-// rare. What it buys is that an undershooting estimate merely costs time instead of overfilling the table, which used to
-// spin in `try_emplace` forever.
 template <typename Key, typename Hash = std::hash<Key>, typename KeyEqual = std::equal_to<Key>>
 class ConcurrentTicketMap {
-  // Slots are `calloc`ed and never constructed, and migration copies keys byte-wise between tables.
-  static_assert(std::is_trivially_copyable_v<Key>, "ConcurrentTicketMap keys must be trivially copyable.");
-
  public:
   ConcurrentTicketMap() = default;
 
-  // Sizes the table to hold at least `max_groups` entries below the load factor, rounded up to a power of two. Exceeding
-  // `max_groups` is handled by growing the table, so the value only has to be a good guess, not a hard bound.
+  // Sizes the table to hold at least `max_groups` entries below the load factor, rounded up to a power of two.
+  // The table never grows, `max_groups` MUST!!!!! be a true upper bound on the number of distinct groups.
   explicit ConcurrentTicketMap(const size_t max_groups, const Hash& hash = Hash{},
                                const KeyEqual& key_equal = KeyEqual{})
       : _hash(hash), _key_equal(key_equal) {
-    _publish(_allocate_table(max_groups));
-  }
-
-  ConcurrentTicketMap(const ConcurrentTicketMap&) = delete;
-  ConcurrentTicketMap& operator=(const ConcurrentTicketMap&) = delete;
-
-  // Moving is only safe while no other thread touches either map, i.e. before the grouping pass starts.
-  ConcurrentTicketMap(ConcurrentTicketMap&& other) noexcept {
-    _adopt(std::move(other));
-  }
-
-  ConcurrentTicketMap& operator=(ConcurrentTicketMap&& other) noexcept {
-    if (this != &other) {
-      _adopt(std::move(other));
-    }
-    return *this;
-  }
-
-  // Returns the ticket of `key`: `ticket` if this call inserted it, the stored one otherwise. Callers hand out tickets
-  // from disjoint per-thread ranges, so a return value equal to `ticket` identifies the inserting call.
-  uint64_t try_emplace(const Key& key, const uint64_t ticket) {
-    const auto key_hash = _mixed_hash(key);
-    auto probe_budget = MAX_PROBE_LENGTH;
-
-    while (true) {
-      auto* const table = _table.load(std::memory_order_acquire);
-      const auto result = _try_emplace_in(*table, key, key_hash, ticket, probe_budget);
-
-      if (result == RETIRED) [[unlikely]] {
-        // The table was migrated away under us. Probe the new one.
-        probe_budget = MAX_PROBE_LENGTH;
-        continue;
-      }
-
-      if (result == BUDGET_EXHAUSTED) [[unlikely]] {
-        // A probe this long means either the table is genuinely out of room, or many keys collide into one region and
-        // growing would not help. Only the first case is worth a migration, so check the load before paying for one.
-        if (probe_budget >= table->capacity || _is_overfull(*table)) {
-          _grow(table);
-          probe_budget = MAX_PROBE_LENGTH;
-        } else {
-          probe_budget = table->capacity;  // There is room, our region is just crowded: keep probing.
-        }
-        continue;
-      }
-
-      return result;
-    }
-  }
-
-  template <typename Fn>
-  void for_each(Fn&& fn) const {
-    const auto& table = *_table.load(std::memory_order_acquire);
-    for (auto index = size_t{0}; index < table.capacity; ++index) {
-      const auto state = table.slots[index].state.load();
-      if (state >= TICKET_BIAS) {
-        fn(table.slots[index].key, state - TICKET_BIAS);
-      }
-    }
-  }
-
-  template <typename Fn>
-  void remap_tickets(Fn&& fn) {
-    auto& table = *_table.load(std::memory_order_acquire);
-
-    const auto remap_range = [&table, &fn](const size_t begin, const size_t end) {
-      for (auto index = begin; index < end; ++index) {
-        const auto state = table.slots[index].state.load(std::memory_order_relaxed);
-        if (state >= TICKET_BIAS) {
-          table.slots[index].state.store(fn(state - TICKET_BIAS) + TICKET_BIAS, std::memory_order_relaxed);
-        }
-      }
-    };
-
-    if (table.capacity <= PARALLEL_INIT_SLOTS) {
-      remap_range(0, table.capacity);
-      return;
-    }
-
-    const auto max_jobs = (table.capacity + PARALLEL_INIT_SLOTS - 1) / PARALLEL_INIT_SLOTS;
-    const auto job_count = std::min<size_t>(Hyrise::get().topology.num_cpus(), max_jobs);
-    const auto slots_per_job = table.capacity / job_count;
-    auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
-    jobs.reserve(job_count);
-
-    for (auto job_id = size_t{0}; job_id < job_count; ++job_id) {
-      const auto begin = job_id * slots_per_job;
-      const auto end = job_id + 1 == job_count ? table.capacity : begin + slots_per_job;
-      jobs.emplace_back(std::make_shared<JobTask>([&remap_range, begin, end] {
-        remap_range(begin, end);
-      }));
-    }
-    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
-  }
-
-  size_t capacity() const {
-    return _table.load(std::memory_order_acquire)->capacity;
-  }
-
-  // How often the table had to grow because the cardinality estimate was too low. Zero on a well-estimated query. Only
-  // meaningful once all inserting threads have finished, as growing appends to `_tables`.
-  size_t growth_count() const {
-    return _tables.empty() ? 0 : _tables.size() - 1;
-  }
-
- private:
-  struct Slot {
-    std::atomic<uint64_t> state;
-    Key key{};
-  };
-
-  struct SlotArrayDeleter {
-    void operator()(Slot* slots) const noexcept {
-      std::free(slots);
-    }
-  };
-
-  using SlotArray = std::unique_ptr<Slot[], SlotArrayDeleter>;
-
-  // One generation of the table.
-  struct Table {
-    SlotArray slots;
-    size_t capacity = 0;
-    size_t mask = 0;
-  };
-
-  static constexpr auto EMPTY = uint64_t{0};
-  static constexpr auto CLAIMED = uint64_t{1};
-  static constexpr auto MIGRATED = uint64_t{2};
-  static constexpr auto TICKET_BIAS = uint64_t{3};
-  static constexpr auto MIN_CAPACITY = size_t{16};
-  static constexpr auto MAX_LOAD_FACTOR = 0.7;
-  static constexpr auto PARALLEL_INIT_SLOTS = size_t{1} << 18;
-
-  // How far a single probe may walk before the table is suspected of being out of room. Below the load factor, linear
-  // probing produces runs of a handful of slots and a run this long is astronomically unlikely, while an overfull table
-  // produces them constantly. Checking the probe length costs a loop counter, whereas tracking the occupancy exactly
-  // would put a contended atomic on the insert path.
-  static constexpr auto MAX_PROBE_LENGTH = size_t{256};
-
-  // Slots sampled to decide whether a long probe was caused by an overfull table or by colliding keys.
-  static constexpr auto LOAD_SAMPLE_SLOTS = size_t{1024};
-
-  // Out-of-band results of `_try_emplace_in`. Neither is a valid ticket: tickets are bounded by the group count.
-  static constexpr auto RETIRED = std::numeric_limits<uint64_t>::max();
-  static constexpr auto BUDGET_EXHAUSTED = std::numeric_limits<uint64_t>::max() - 1;
-
-  size_t _mixed_hash(const Key& key) const {
-    return static_cast<size_t>(fmix64(static_cast<uint64_t>(_hash(key))));
-  }
-
-  // Sizes a table to hold `max_groups` entries below the load factor.
-  std::unique_ptr<Table> _allocate_table(const size_t max_groups) const {
     auto capacity = MIN_CAPACITY;
     while (static_cast<double>(capacity) * MAX_LOAD_FACTOR < static_cast<double>(max_groups + 1)) {
       capacity <<= 1;
     }
-    return _allocate_table_with_capacity(capacity);
-  }
+    _capacity = capacity;
+    _mask = capacity - 1;
 
-  std::unique_ptr<Table> _allocate_table_with_capacity(const size_t capacity) const {
-    auto* const slots_ptr = static_cast<Slot*>(std::calloc(capacity, sizeof(Slot)));
+    auto* slots_ptr = static_cast<Slot*>(std::calloc(capacity, sizeof(Slot)));
     Assert(slots_ptr, "Failed to allocate memory for ConcurrentTicketMap.");
-
-    auto table = std::make_unique<Table>();
-    table->slots = SlotArray{slots_ptr};
-    table->capacity = capacity;
-    table->mask = capacity - 1;
-    return table;
+    _slots = SlotArray{slots_ptr};
   }
 
-  // Whether a strided sample of the slots puts the table above its load factor. Only called after a probe ran long: a
-  // crowded region in an otherwise empty table means colliding keys, which a larger table would not spread out.
-  bool _is_overfull(const Table& table) const {
-    const auto sample_slots = std::min(LOAD_SAMPLE_SLOTS, table.capacity);
-    // An odd stride is invertible modulo the power-of-two capacity, so the sample hits `sample_slots` distinct slots.
-    const auto stride = (table.capacity / sample_slots) | size_t{1};
-
-    auto occupied_slots = size_t{0};
-    for (auto sample_index = size_t{0}; sample_index < sample_slots; ++sample_index) {
-      const auto index = (sample_index * stride) & table.mask;
-      if (table.slots[index].state.load(std::memory_order_relaxed) != EMPTY) {
-        ++occupied_slots;
-      }
-    }
-
-    return static_cast<double>(occupied_slots) > static_cast<double>(sample_slots) * MAX_LOAD_FACTOR;
-  }
-
-  // Makes `table` the current generation. Retired generations stay alive in `_tables` until the map is destroyed: a
-  // thread may still be probing one, and keeping a handful of them around is far cheaper than the epoch reclamation
-  // that freeing them safely would need. Only ever called from the constructor or with `_resize_mutex` held.
-  void _publish(std::unique_ptr<Table> table) {
-    auto* const table_ptr = table.get();
-    _tables.emplace_back(std::move(table));
-    _table.store(table_ptr, std::memory_order_release);
-  }
-
-  // Probes at most `probe_budget` slots of `table`. Returns the key's ticket, `RETIRED` if the table was migrated away
-  // mid-probe, or `BUDGET_EXHAUSTED` if the budget ran out before an empty slot or the key showed up.
-  uint64_t _try_emplace_in(Table& table, const Key& key, const size_t key_hash, const uint64_t ticket,
-                           const size_t probe_budget) const {
-    auto index = key_hash & table.mask;
-
-    for (auto probe = size_t{0}; probe < probe_budget; ++probe) {
-      auto& slot = table.slots[index];
+  uint64_t try_emplace(const Key& key, const uint64_t ticket) {
+    const auto lock =
+        std::shared_lock<std::shared_mutex>(_is_resizing_mutex);  // shared lock to prevent resizing while probing
+    const auto hash = _hash(key);
+    auto index = static_cast<size_t>(hash) & _mask;
+    auto probe_counter = size_t{0};
+    while (true) {
+      auto& slot = _slots[index];
       auto state = slot.state.load();
 
       if (state == EMPTY) {
@@ -318,95 +119,139 @@ class ConcurrentTicketMap {
         state = expected;
       }
 
-      // Wait for a concurrent inserter to publish its key before reading it.
       while (state == CLAIMED) {
         state = slot.state.load();
       }
 
-      // Checked before touching the key: a slot retired straight from `EMPTY` carries no key at all.
-      if (state == MIGRATED) {
-        return RETIRED;
-      }
-
-      if (_key_equal(slot.key, key)) {
+      if (hash == slot.hash && _key_equal(slot.key, key)) {
         return state - TICKET_BIAS;
       }
 
       // Linear probing
-      index = (index + 1) & table.mask;
+      index = (index + 1) & _mask;
+      ++probe_counter;
     }
 
-    return BUDGET_EXHAUSTED;
+    if (probe_counter >= MAX_PROBE_COUNT) {
+      resize(_capacity * 2);
+    }
   }
 
-  // Migrates every entry of `stale_table` into a table twice its size, or returns once another thread has done so. The
-  // caller retries its probe on the new table afterwards.
-  void _grow(Table* const stale_table) {
-    const auto lock = std::lock_guard<std::mutex>{*_resize_mutex};
-    if (_table.load(std::memory_order_acquire) != stale_table) {
-      return;  // Another thread already migrated away from `stale_table`.
+  // NOTE: This is just a fallback and VERY slow. We should never hit it though...
+  void resize(const size_t new_max_groups) {
+    const auto lock =
+        std::unique_lock<std::shared_mutex>(_is_resizing_mutex);  // Exclusive lock to prevent probing while resizing.
+
+    auto new_capacity = MIN_CAPACITY;
+    while (static_cast<double>(new_capacity) * MAX_LOAD_FACTOR < static_cast<double>(new_max_groups + 1)) {
+      new_capacity <<= 1;
     }
 
-    auto new_table = _allocate_table_with_capacity(stale_table->capacity * 2);
+    auto* new_slots_ptr = static_cast<Slot*>(std::calloc(new_capacity, sizeof(Slot)));
+    Assert(new_slots_ptr, "Failed to allocate memory for ConcurrentTicketMap.");
+    SlotArray new_slots{new_slots_ptr};
+    const auto new_mask = new_capacity - 1;
 
-    // Retire the slots in index order, waiting for in-flight inserts to publish, and copy the published entries over.
-    // An inserter cannot slip past us: it either publishes into a slot we have not retired yet - which we then migrate -
-    // or its claim fails against `MIGRATED` and it ends up blocked on the mutex above. Because `_table` is published
-    // only after the last slot has been retired, nobody inserts into `new_table` while we fill it, so no group can end
-    // up with two tickets.
-    for (auto index = size_t{0}; index < stale_table->capacity; ++index) {
-      auto& slot = stale_table->slots[index];
-      auto state = slot.state.load(std::memory_order_acquire);
-
-      while (true) {
-        while (state == CLAIMED) {
-          state = slot.state.load(std::memory_order_acquire);
-        }
-        auto expected = state;
-        if (slot.state.compare_exchange_strong(expected, MIGRATED)) {
-          break;
-        }
-        state = expected;
-      }
-
+    for (size_t i = 0; i < _capacity; ++i) {
+      auto& old_slot = _slots[i];
+      auto state = old_slot.state.load();
       if (state >= TICKET_BIAS) {
-        _insert_exclusive(*new_table, slot.key, state - TICKET_BIAS);
+        const auto ticket = state - TICKET_BIAS;
+        const auto& key = old_slot.key;
+        const auto hash = old_slot.hash;
+        auto index = hash & new_mask;
+
+        while (true) {
+          auto& new_slot = new_slots[index];
+          auto expected = EMPTY;
+          if (new_slot.state.compare_exchange_strong(expected, CLAIMED)) {
+            new_slot.key = key;
+            new_slot.state = ticket + TICKET_BIAS;
+            new_slot.hash = hash;
+            break;
+          }
+          index = (index + 1) & new_mask;  // Linear probing
+        }
       }
     }
 
-    _publish(std::move(new_table));
+    _slots.swap(new_slots);
+    _capacity = new_capacity;
+    _mask = new_mask;
   }
 
-  // Inserts into a table that is not published yet, so no other thread can be probing it. The keys migrated out of a
-  // single table are distinct by construction, hence no equality check.
-  void _insert_exclusive(Table& table, const Key& key, const uint64_t ticket) const {
-    auto index = _mixed_hash(key) & table.mask;
-    while (table.slots[index].state.load(std::memory_order_relaxed) != EMPTY) {
-      index = (index + 1) & table.mask;
+  template <typename Fn>
+  void remap_tickets(Fn&& fn) {
+    const auto remap_range = [this, &fn](const size_t begin, const size_t end) {
+      for (auto index = begin; index < end; ++index) {
+        const auto state = _slots[index].state.load(std::memory_order_relaxed);
+        if (state >= TICKET_BIAS) {
+          _slots[index].state.store(fn(state - TICKET_BIAS) + TICKET_BIAS, std::memory_order_relaxed);
+        }
+      }
+    };
+
+    if (_capacity <= PARALLEL_INIT_SLOTS) {
+      remap_range(0, _capacity);
+      return;
     }
-    table.slots[index].key = key;
-    table.slots[index].state.store(ticket + TICKET_BIAS, std::memory_order_relaxed);
+
+    const auto max_jobs = (_capacity + PARALLEL_INIT_SLOTS - 1) / PARALLEL_INIT_SLOTS;
+    const auto job_count = std::min<size_t>(Hyrise::get().topology.num_cpus(), max_jobs);
+    const auto slots_per_job = _capacity / job_count;
+    auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+    jobs.reserve(job_count);
+
+    for (auto job_id = size_t{0}; job_id < job_count; ++job_id) {
+      const auto begin = job_id * slots_per_job;
+      const auto end = job_id + 1 == job_count ? _capacity : begin + slots_per_job;
+      jobs.emplace_back(std::make_shared<JobTask>([&remap_range, begin, end] {
+        remap_range(begin, end);
+      }));
+    }
+    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
   }
 
-  void _adopt(ConcurrentTicketMap&& other) noexcept {
-    _tables = std::move(other._tables);
-    _table.store(other._table.load(std::memory_order_relaxed), std::memory_order_relaxed);
-    other._table.store(nullptr, std::memory_order_relaxed);
-    _resize_mutex = std::move(other._resize_mutex);
-    _hash = std::move(other._hash);
-    _key_equal = std::move(other._key_equal);
+  template <typename Fn>
+  void for_each(Fn&& fn) const {
+    for (auto index = size_t{0}; index < _capacity; ++index) {
+      const auto state = _slots[index].state.load();
+      if (state >= TICKET_BIAS) {
+        fn(_slots[index].key, state - TICKET_BIAS);
+      }
+    }
   }
 
-  // The current generation, and every generation ever published. `_table` always points into `_tables`.
-  std::atomic<Table*> _table{nullptr};
-  std::vector<std::unique_ptr<Table>> _tables;
+ private:
+  struct Slot {
+    std::atomic<uint64_t> state;
+    uint64_t hash;
+    Key key{};
+  };
 
-  // Held while migrating. Threads that ran into a retired or overfull table block here, so the migrating thread has the
-  // old table to itself once they do. Behind a pointer to keep the map movable.
-  std::unique_ptr<std::mutex> _resize_mutex = std::make_unique<std::mutex>();
+  struct SlotArrayDeleter {
+    void operator()(Slot* slots) const noexcept {
+      std::free(slots);
+    }
+  };
 
+  using SlotArray = std::unique_ptr<Slot[], SlotArrayDeleter>;
+
+  static constexpr auto EMPTY = uint64_t{0};
+  static constexpr auto CLAIMED = uint64_t{1};
+  static constexpr auto TICKET_BIAS = uint64_t{2};
+  static constexpr auto PLACE_HOLDER = std::numeric_limits<uint64_t>::max() - TICKET_BIAS;
+  static constexpr auto MIN_CAPACITY = size_t{16};
+  static constexpr auto MAX_LOAD_FACTOR = 0.7;
+  static constexpr auto PARALLEL_INIT_SLOTS = size_t{1} << 18;
+  static constexpr auto MAX_PROBE_COUNT = size_t{64};
+
+  SlotArray _slots;
+  size_t _capacity = 0;
+  size_t _mask = 0;
   Hash _hash{};
   KeyEqual _key_equal{};
+  std::shared_mutex _is_resizing_mutex{};
 };
 
 }  // namespace hyrise

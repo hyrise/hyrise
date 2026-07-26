@@ -920,8 +920,9 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
 
   // For low-cardinality group-bys (far fewer groups than input rows), each group-by column is cheaper to build by
   // reading every group's value once from its distinct key row in the hash table than by scanning the whole source
-  // column; above that ratio the scattered key-row access loses to a sequential source scan. Only the byte-row grouping
-  // path exposes a hash table (`has_hash_table`); the single-column fast path recovers group-by values by scanning.
+  // column; above that ratio the scattered key-row access loses to a sequential source scan. Only the multi-column
+  // grouping path exposes a hash table (`has_hash_table`); the single-column fast path recovers group-by values by
+  // scanning.
   const auto input_row_count = input_table->row_count();
 
   // TODO(@V1nce1): Right now the single column fast path has `has_hash_table` set to false, so it always uses

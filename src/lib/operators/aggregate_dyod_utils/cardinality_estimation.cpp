@@ -49,8 +49,8 @@ size_t extrapolate_group_count(const size_t sampled_groups, const size_t sampled
   return static_cast<size_t>(std::min(extrapolated, static_cast<double>(row_count)));
 }
 
-size_t estimate_group_count_byte_row(const RowFormat& format, const std::vector<ColumnID>& groupby_column_ids,
-                                     const std::shared_ptr<const Table>& input_table, const size_t max_chunk_size) {
+size_t estimate_group_count_multi_column(const RowFormat& format, const std::vector<ColumnID>& groupby_column_ids,
+                                         const std::shared_ptr<const Table>& input_table, const size_t max_chunk_size) {
   const auto row_count = input_table->row_count();
   if (row_count == 0 || input_table->chunk_count() == 0) {
     return 1;
