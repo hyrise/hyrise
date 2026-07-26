@@ -565,9 +565,7 @@ AggregateDYOD::AggregateDYOD(const std::shared_ptr<AbstractOperator>& input_oper
                              const std::vector<ColumnID>& groupby_column_ids)
     : AbstractAggregateOperator(input_operator, aggregates, groupby_column_ids,
                                 std::make_unique<OperatorPerformanceData<OperatorSteps>>()),
-      _has_aggregate_functions(has_aggregate_functions(_aggregates)),
-      _aggregate_writing_started(false),
-      _output_mutex(std::mutex{}) {}
+      _has_aggregate_functions(has_aggregate_functions(_aggregates)) {}
 
 const std::string& AggregateDYOD::name() const {
   static const auto name = std::string{"AggregateDYOD"};
@@ -1125,7 +1123,7 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
   if (groupby_column_count == 0 || row_count == 0) {
     auto contexts_per_column = ContextsPerColumn(aggregate_count);
     _aggregate<AggregateKey>(contexts_per_column, input_table);
-    auto final_output_table = std::make_shared<Table>(input_table->column_definitions(), TableType::Data);
+    auto final_output_table = std::shared_ptr<Table>{};
     auto aggregate_columns_result_table = std::shared_ptr<Table>{};
     return _create_output_table(contexts_per_column, input_table, final_output_table, aggregate_columns_result_table);
   }
@@ -1192,7 +1190,7 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
 
   // SPLIT END
 
-  auto final_output_table = std::make_shared<Table>(input_table->column_definitions(), TableType::Data);
+  auto final_output_table = std::shared_ptr<Table>{};
   auto aggregate_columns_result_table = std::shared_ptr<Table>{};
 
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
@@ -1761,7 +1759,8 @@ std::shared_ptr<Table> AggregateDYOD::_create_output_table(ContextsPerColumn& co
   // that reference the temporary materialized table created above.
 
   // we use TableType::Data as an indicator that the final output has not been set yet.
-  if (output_table->type() == TableType::Data) {
+  if (!_output_writing_started) {
+    _output_writing_started = true;
     output_table = std::make_shared<Table>(output_column_definitions, TableType::References);
   }
   if (!intermediate_result.empty() && intermediate_result.front()[0]->size() > 0) {

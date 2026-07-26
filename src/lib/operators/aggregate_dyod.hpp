@@ -218,8 +218,9 @@ class AggregateDYOD : public AbstractAggregateOperator {
                                                                        std::atomic_size_t& expected_result_size) const;
 
   bool _has_aggregate_functions;
-  bool _aggregate_writing_started;
-  std::mutex _output_mutex;
+  bool _aggregate_writing_started = false;
+  bool _output_writing_started = false;
+  std::mutex _output_mutex = std::mutex{};
 };
 
 }  // namespace hyrise
