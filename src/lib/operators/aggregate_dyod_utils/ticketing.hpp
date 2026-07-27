@@ -331,7 +331,9 @@ struct GroupKeyData : GroupKeyDataBase {
   HashTableType global_hash_table;
 
   explicit GroupKeyData(const RowFormat& _row_format, size_t estimated_groups) : GroupKeyDataBase(_row_format) {
-    if constexpr (!Concurrent) {
+    if constexpr (Concurrent) {
+      global_hash_table.initialize(estimated_groups, GroupKeyHash{}, GroupKeyEqual{&this->row_format});
+    } else {
       global_hash_table = HashTableType(estimated_groups, GroupKeyHash{}, GroupKeyEqual{&this->row_format});
     }
   }
