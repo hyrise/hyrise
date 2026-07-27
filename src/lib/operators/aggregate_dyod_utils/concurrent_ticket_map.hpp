@@ -85,8 +85,14 @@ class ConcurrentTicketMap {
   // Sizes the table to hold at least `max_groups` entries below the load factor, rounded up to a power of two.
   // The table never grows, `max_groups` MUST!!!!! be a true upper bound on the number of distinct groups.
   explicit ConcurrentTicketMap(const size_t max_groups, const Hash& hash = Hash{},
-                               const KeyEqual& key_equal = KeyEqual{})
-      : _hash(hash), _key_equal(key_equal) {
+                               const KeyEqual& key_equal = KeyEqual{}) {
+    initialize(max_groups, hash, key_equal);
+  }
+
+  void initialize(const size_t max_groups, const Hash& hash = Hash{}, const KeyEqual& key_equal = KeyEqual{}) {
+    _hash = hash;
+    _key_equal = key_equal;
+
     auto capacity = MIN_CAPACITY;
     while (static_cast<double>(capacity) * MAX_LOAD_FACTOR < static_cast<double>(max_groups + 1)) {
       capacity <<= 1;

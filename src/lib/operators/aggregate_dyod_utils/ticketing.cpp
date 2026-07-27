@@ -560,8 +560,10 @@ std::shared_ptr<GroupKeyData<true>> _compute_groups_single_column_concurrent(
 
       const auto estimated_groups = estimate_group_count_single_column<ColumnDataType>(groupby_column_id, input_table);
       // The single-column fast path carries no hash table (`has_hash_table` stays false), so `GroupKeyData` here is
-      // only a tickets + group-count carrier and its `row_format`/`global_hash_table` stay unused.
-      auto group_key_data = std::make_shared<GroupKeyData<true>>(RowFormat{}, estimated_groups);
+      // only a tickets + group-count carrier and its `row_format`/`global_hash_table` stay unused. Grouping runs
+      // against the local `value_to_ticket` below, so the carrier's map is sized for nothing rather than for
+      // `estimated_groups`.
+      auto group_key_data = std::make_shared<GroupKeyData<true>>(RowFormat{}, 0);
       auto& tickets = group_key_data->tickets;
       tickets = std::make_unique_for_overwrite<uint64_t[]>(input_table->row_count());
 
