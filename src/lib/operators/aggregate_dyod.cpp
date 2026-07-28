@@ -487,7 +487,6 @@ std::shared_ptr<const Table> AggregateDYOD::no_groupby_aggregate() {
 
   const auto chunk_count = input_table->chunk_count();
   if (chunk_count > 0) {
-    const auto cpu_count = Hyrise::get().topology.num_cpus();
     const auto job_count = chunk_count;
     auto next_chunk_id = std::atomic<uint32_t>{0};
     auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
@@ -872,20 +871,8 @@ std::shared_ptr<const Table> AggregateDYOD::groupby_aggregate() {
     resolve_data_type(data_type, [&](const auto data_type_t) {
       using ColumnDataType = typename decltype(data_type_t)::type;
 
-      if (is_groupby_column) {
-        const auto groupby_index = static_cast<uint32_t>(output_column_id);
-        const auto groupby_column_id = _groupby_column_ids[groupby_index];
-        final_results[output_column_id] = std::make_shared<ChunkedVector<ColumnDataType>>(group_count);
-        final_result_nulls[output_column_id] = std::make_shared<ChunkedVector<bool>>(group_count);
-      } else {
-        const auto aggregate_index = static_cast<uint32_t>(output_column_id - groupby_column_count);
-        const auto& aggregate = _aggregates[aggregate_index];
-
-        // `aggregate->data_type()` is already the window function's return type, so it matches the `AggregateType`
-        // that the accumulation jobs below derive from the *input* column's type.
-        final_results[output_column_id] = std::make_shared<ChunkedVector<ColumnDataType>>(group_count);
-        final_result_nulls[output_column_id] = std::make_shared<ChunkedVector<bool>>(group_count);
-      }
+      final_results[output_column_id] = std::make_shared<ChunkedVector<ColumnDataType>>(group_count);
+      final_result_nulls[output_column_id] = std::make_shared<ChunkedVector<bool>>(group_count);
     });
   }
 
@@ -934,9 +921,6 @@ std::shared_ptr<const Table> AggregateDYOD::groupby_aggregate() {
 
           // Build the local hash table of intermediate results.
           auto local_hash_table = boost::unordered_flat_map<uint64_t, AggregateState>{};
-          auto final_result_vector = std::static_pointer_cast<ChunkedVector<AggregateType>>(
-              final_results[groupby_column_count + current_aggregate_id]);
-          auto& final_result_nulls_vector = final_result_nulls[groupby_column_count + current_aggregate_id];
 
           // for every chunk
           while (true) {
