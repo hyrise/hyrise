@@ -177,6 +177,10 @@ class AggregateDYOD : public AbstractAggregateOperator {
   template <typename KeySchema>
   std::shared_ptr<Table> _aggregate(const KeySchema& key_schema, const AggregateSchema& aggregate_schema,
                                     const Table& input_table);
+  template <typename KeySchema>
+  std::shared_ptr<Table> _aggregate_low_cardinality(const KeySchema& key_schema,
+                                                    const AggregateSchema& aggregate_schema, const Table& input_table,
+                                                    size_t cardinality_estimate);
 
   /**
    * Runs the no-GROUP-BY reduction: folds all input into a single accumulator set and emits exactly one row.

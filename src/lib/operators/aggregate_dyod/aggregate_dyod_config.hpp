@@ -142,4 +142,9 @@ constexpr size_t MERGE_TILE_ROWS = 2048;
  */
 constexpr size_t STRING_BLOB_BYTES_PER_COLUMN = 16;
 
+/**
+ * Number of distinct output groups where the low-cardinality path is taken
+*/
+constexpr size_t LOW_CARDINALITY_THRESHOLD = KEYS_BUDGET / 2;
+
 }  // namespace hyrise

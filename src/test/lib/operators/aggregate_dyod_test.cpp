@@ -65,6 +65,25 @@ std::shared_ptr<TableWrapper> make_input(const size_t row_count) {
   return wrap_input(make_input_table(row_count));
 }
 
+std::shared_ptr<Table> make_low_cardinality_table(const size_t row_count) {
+  const auto definitions = TableColumnDefinitions{{"flag", DataType::Int, false},
+                                                  {"status", DataType::String, false},
+                                                  {"val_i", DataType::Int, true},
+                                                  {"val_d", DataType::Double, true}};
+  const auto table = std::make_shared<Table>(definitions, TableType::Data, ChunkOffset{2048});
+
+  for (auto row = size_t{0}; row < row_count; ++row) {
+    const auto flag = AllTypeVariant{static_cast<int32_t>(row % 4)};
+    const auto status = AllTypeVariant{pmr_string{"s" + std::to_string((row / 7) % 3)}};
+    const auto val_i = row % 11 == 0 ? AllTypeVariant{NullValue{}} : AllTypeVariant{static_cast<int32_t>(row % 100)};
+    const auto val_d =
+        row % 7 == 0 ? AllTypeVariant{NullValue{}} : AllTypeVariant{static_cast<double>(row % 200) * 0.5};
+    table->append({flag, status, val_i, val_d});
+  }
+
+  return table;
+}
+
 void compare_with_aggregate_hash(const std::shared_ptr<AbstractOperator>& input,
                                  const std::vector<std::pair<ColumnID, WindowFunction>>& aggregate_definitions,
                                  const std::vector<ColumnID>& groupby_column_ids) {
@@ -212,6 +231,66 @@ TEST_F(OperatorsAggregateDYODTest, DictionaryEncodedInput) {
 TEST_F(OperatorsAggregateDYODTest, EmptyInput) {
   const auto input = make_input(0);
   compare_with_aggregate_hash(input, {{ColumnID{2}, WindowFunction::Sum}, {INVALID_COLUMN_ID, WindowFunction::Count}},
+                              {ColumnID{0}, ColumnID{1}});
+}
+
+TEST_F(OperatorsAggregateDYODTest, LowCardinalityPathNumericGroupBy) {
+  const auto input = wrap_input(make_low_cardinality_table(100'000));
+  compare_with_aggregate_hash(input,
+                              {{ColumnID{3}, WindowFunction::Sum},
+                               {ColumnID{3}, WindowFunction::Avg},
+                               {ColumnID{3}, WindowFunction::Count},
+                               {ColumnID{2}, WindowFunction::Min},
+                               {ColumnID{2}, WindowFunction::Max},
+                               {INVALID_COLUMN_ID, WindowFunction::Count}},
+                              {ColumnID{0}});
+}
+
+TEST_F(OperatorsAggregateDYODTest, LowCardinalityPathStringGroupBy) {
+  const auto input = wrap_input(make_low_cardinality_table(100'000));
+  compare_with_aggregate_hash(input,
+                              {{ColumnID{3}, WindowFunction::Sum},
+                               {ColumnID{3}, WindowFunction::Avg},
+                               {INVALID_COLUMN_ID, WindowFunction::Count}},
+                              {ColumnID{1}});
+}
+
+TEST_F(OperatorsAggregateDYODTest, LowCardinalityPathMixedGroupBy) {
+  const auto input = wrap_input(make_low_cardinality_table(100'000));
+  compare_with_aggregate_hash(input,
+                              {{ColumnID{3}, WindowFunction::Sum},
+                               {ColumnID{2}, WindowFunction::Min},
+                               {INVALID_COLUMN_ID, WindowFunction::Count}},
+                              {ColumnID{0}, ColumnID{1}});
+}
+
+TEST_F(OperatorsAggregateDYODTest, LowCardinalityPathDictionaryEncoded) {
+  const auto table = make_low_cardinality_table(100'000);
+  table->last_chunk()->set_immutable();
+  ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{EncodingType::Dictionary});
+  compare_with_aggregate_hash(
+      wrap_input(table),
+      {{ColumnID{3}, WindowFunction::Sum}, {ColumnID{3}, WindowFunction::Avg}, {ColumnID{2}, WindowFunction::Max}},
+      {ColumnID{0}, ColumnID{1}});
+}
+
+TEST_F(OperatorsAggregateDYODTest, LowCardinalityPathReferenceInput) {
+  const auto input = wrap_input(to_simple_reference_table(make_low_cardinality_table(100'000)));
+  compare_with_aggregate_hash(input,
+                              {{ColumnID{3}, WindowFunction::Sum},
+                               {ColumnID{2}, WindowFunction::Min},
+                               {INVALID_COLUMN_ID, WindowFunction::Count}},
+                              {ColumnID{0}});
+}
+
+TEST_F(OperatorsAggregateDYODTest, LowCardinalityPathSingleChunkNoCombine) {
+  const auto input = wrap_input(make_low_cardinality_table(1500));
+  compare_with_aggregate_hash(input,
+                              {{ColumnID{3}, WindowFunction::Sum},
+                               {ColumnID{3}, WindowFunction::Avg},
+                               {ColumnID{2}, WindowFunction::Min},
+                               {ColumnID{2}, WindowFunction::Max},
+                               {INVALID_COLUMN_ID, WindowFunction::Count}},
                               {ColumnID{0}, ColumnID{1}});
 }
 
