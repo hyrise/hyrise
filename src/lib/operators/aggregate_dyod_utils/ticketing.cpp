@@ -5,7 +5,6 @@
 #include <atomic>
 #include <cstdint>
 #include <cstring>
-#include <limits>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -19,6 +18,7 @@
 #include "scheduler/job_task.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/table.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
@@ -387,6 +387,15 @@ std::shared_ptr<GroupKeyData<true>> _compute_groups_multi_column_concurrent(
   const auto chunk_count = input_table->chunk_count();
   const auto key_equal = GroupKeyEqual{&row_format};
 
+  // Guard the offset computation below, which would underflow `chunk_count - 1` on an empty table.
+  if (chunk_count == 0) {
+    auto group_key_data = std::make_shared<GroupKeyData<true>>(row_format, 0);
+    group_key_data->tickets = std::make_unique_for_overwrite<uint64_t[]>(0);
+    group_key_data->group_count = 0;
+    group_key_data->has_hash_table = true;
+    return group_key_data;
+  }
+
   auto max_chunk_size = size_t{0};
   auto ticket_offsets = std::vector<uint64_t>(chunk_count, 0);
   // Compute the starting offset into the ticket vector for each chunk.
@@ -398,14 +407,6 @@ std::shared_ptr<GroupKeyData<true>> _compute_groups_multi_column_concurrent(
     }
     max_chunk_size =
         std::max(max_chunk_size, static_cast<size_t>(input_table->get_chunk(ChunkID{chunk_count - 1})->size()));
-  }
-
-  if (chunk_count == 0) {
-    auto group_key_data = std::make_shared<GroupKeyData<true>>(row_format, 0);
-    group_key_data->tickets = std::make_unique_for_overwrite<uint64_t[]>(0);
-    group_key_data->group_count = 0;
-    group_key_data->has_hash_table = true;
-    return group_key_data;
   }
 
   const auto row_count = input_table->row_count();
@@ -547,15 +548,20 @@ std::shared_ptr<GroupKeyData<true>> _compute_groups_single_column_concurrent(
       // The value is the key, so no rows are materialized: the hot loop only grows a `value -> ticket` map and emits
       // tickets. Fuzzy ticketing is preserved - each thread hands out tickets from its own claimed range - so the map
       // just stores and returns the caller's candidate ticket (see `ConcurrentTicketMap`).
-      constexpr auto null_ticket =
-          std::numeric_limits<uint64_t>::max() - 1;  // NULL rows carry this sentinel until compaction; never inserted.
+      // NULL is a group of its own, but the threads cannot agree on a ticket for it without synchronizing. We
+      // therefore reserve ticket 0 for it up front whenever the column can contain NULLs, so every thread can emit it
+      // without coordination. If no NULL shows up, the reserved ticket is compacted away like any other unused ticket
+      // (see the gap we register below).
+      const auto reserves_null_ticket = input_table->column_is_nullable(groupby_column_id);
+      constexpr auto null_ticket = uint64_t{0};
       auto has_null = std::atomic<bool>{false};
 
       // Row index of each chunk's first row, so `(chunk_id, chunk_offset)` maps into the flat `tickets` vector.
       auto ticket_offsets = std::vector<uint64_t>(chunk_count, 0);
-      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count - 1; ++chunk_id) {
-        ticket_offsets[chunk_id + 1] =
-            ticket_offsets[chunk_id] + static_cast<uint64_t>(input_table->get_chunk(chunk_id)->size());
+      for (auto chunk_id = ChunkID{1}; chunk_id < chunk_count; ++chunk_id) {
+        const auto previous_chunk_id = ChunkID{chunk_id - 1};
+        ticket_offsets[chunk_id] = ticket_offsets[previous_chunk_id] +
+                                   static_cast<uint64_t>(input_table->get_chunk(previous_chunk_id)->size());
       }
 
       const auto estimated_groups = estimate_group_count_single_column<ColumnDataType>(groupby_column_id, input_table);
@@ -575,7 +581,7 @@ std::shared_ptr<GroupKeyData<true>> _compute_groups_single_column_concurrent(
       }
 
       auto value_to_ticket = ConcurrentTicketMap<ColumnDataType>(estimated_groups);
-      auto next_ticket_range_start = std::atomic<uint64_t>{0};
+      auto next_ticket_range_start = std::atomic<uint64_t>{reserves_null_ticket ? uint64_t{1} : uint64_t{0}};
 
       const auto process_chunk = [&](const ChunkID chunk_id, uint64_t& next_ticket, uint64_t& ticket_range_end) {
         const auto& chunk = input_table->get_chunk(chunk_id);
@@ -587,6 +593,7 @@ std::shared_ptr<GroupKeyData<true>> _compute_groups_single_column_concurrent(
         segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
           auto current_ticket = null_ticket;
           if (position.is_null()) {
+            DebugAssert(reserves_null_ticket, "Found a NULL in a column that the table declares as non-nullable.");
             has_null.store(true, std::memory_order_relaxed);
           } else {
             // Offer the candidate ticket `next_ticket`; the map returns this group's ticket. Because ticket ranges are
@@ -633,6 +640,12 @@ std::shared_ptr<GroupKeyData<true>> _compute_groups_single_column_concurrent(
         }));
       }
       Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+
+      if (reserves_null_ticket && !has_null.load(std::memory_order_relaxed)) {
+        // The column is nullable, but holds no NULL: hand the reserved ticket to the compaction as an unused range so
+        // that it neither ends up in `group_count` nor leaves a hole in the [0, group_count) ticket range.
+        ticket_gaps.emplace_back(null_ticket, null_ticket + 1);
+      }
 
       group_key_data->group_count =
           next_ticket_range_start.load(std::memory_order_relaxed) -

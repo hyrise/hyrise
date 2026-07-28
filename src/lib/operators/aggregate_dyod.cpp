@@ -93,17 +93,17 @@ const std::string& AggregateDYOD::name() const {
 // Incrementally computable aggregates (MIN/MAX/SUM/AVG/COUNT), indexed per group. A group with no contributing
 // (non-NULL) value yields NULL, except COUNT which yields 0.
 template <typename ColumnDataType, typename AggregateType, WindowFunction window_function>
-std::pair<ChunkedVector<AggregateType, false>, ChunkedVector<bool, false>> _aggregate_grouped(
+std::pair<ChunkedVector<AggregateType>, ChunkedVector<bool>> _aggregate_grouped(
     const uint64_t* const tickets, const size_t group_count, const std::shared_ptr<const Table>& input_table,
     const ColumnID input_column_id) {
   const auto aggregate_function =
       WindowFunctionBuilder<ColumnDataType, AggregateType, window_function>().get_aggregate_function();
-  auto values = ChunkedVector<AggregateType, false>(group_count);
+  auto values = ChunkedVector<AggregateType>(group_count);
 
   // Only AVG needs a per-group count of contributing (non-NULL) values, for its final division. MIN/MAX/SUM detect
   // their first contributing value via `nulls`, and COUNT accumulates directly into `values`, so neither allocates it.
   auto value_counts = std::vector<size_t>(window_function == WindowFunction::Avg ? group_count : 0, 0);
-  auto nulls = ChunkedVector<bool, false>(group_count, window_function != WindowFunction::Count);
+  auto nulls = ChunkedVector<bool>(group_count, window_function != WindowFunction::Count);
 
   const auto chunk_count = input_table->chunk_count();
   auto row_index = uint32_t{0};  // global row index across chunks, used to look up the group ticket in `tickets`
@@ -146,11 +146,99 @@ std::pair<ChunkedVector<AggregateType, false>, ChunkedVector<bool, false>> _aggr
   return {std::move(values), std::move(nulls)};
 }
 
+constexpr auto MAX_LOCAL_HASH_TABLE_SIZE = size_t{1 << 12};  // 4096 entries
+
+template <typename ColumnDataType, typename AggregateType, WindowFunction window_function, typename AggregateState,
+          bool force_spill = false>
+void spill_local_hash_table_to_global_aggregate_result(
+    boost::unordered_flat_map<uint64_t, AggregateState>& local_hash_table,
+    std::shared_ptr<std::vector<AggregateState>>& global_aggregate_result,
+    std::vector<std::atomic_flag>& intermediate_result_atomics) {
+  if constexpr (force_spill) {
+    for (auto& [ticket, state] : local_hash_table) {
+      while (intermediate_result_atomics[ticket].test_and_set()) {
+        // Spin until the atomic flag is cleared by the thread that is currently merging this ticket's state.
+      }
+      global_aggregate_result->operator[](ticket).merge(state);
+      intermediate_result_atomics[ticket].clear();
+    }
+    local_hash_table.clear();
+  } else {
+    boost::unordered::erase_if(local_hash_table, [&](auto& entry) {
+      auto& [ticket, state] = entry;
+      if (intermediate_result_atomics[ticket].test_and_set()) {
+        return false;  // we do not spill and skip this entry.
+      }
+      global_aggregate_result->operator[](ticket).merge(state);
+      intermediate_result_atomics[ticket].clear();
+      return true;  // sucessfully spilled - erase the entry.
+    });
+  }
+}
+
+// COUNT(*) does not reference an input column. It counts all rows per group (NULLs included), so every row of the
+// chunk contributes to its group's count. `RegularAggregateState::finalize` derives COUNT from `value_count` alone.
+template <typename ColumnDataType, typename AggregateType, WindowFunction window_function, typename AggregateState>
+void _accumulate_count_star_concurrently(const uint64_t* const tickets, const size_t row_index, const size_t chunk_size,
+                                         boost::unordered_flat_map<uint64_t, AggregateState>& local_hash_table,
+                                         std::shared_ptr<std::vector<AggregateState>>& global_aggregate_result,
+                                         std::vector<std::atomic_flag>& intermediate_result_atomics) {
+  for (auto chunk_offset = size_t{0}; chunk_offset < chunk_size; ++chunk_offset) {
+    ++local_hash_table[tickets[row_index + chunk_offset]].value_count;
+
+    if (local_hash_table.size() >= MAX_LOCAL_HASH_TABLE_SIZE) {
+      spill_local_hash_table_to_global_aggregate_result<ColumnDataType, AggregateType, window_function, AggregateState>(
+          local_hash_table, global_aggregate_result, intermediate_result_atomics);
+    }
+  }
+}
+
+template <typename ColumnDataType, typename AggregateType, WindowFunction window_function, typename AggregateState>
+void _accumulate_concurrently(const uint64_t* const tickets, uint32_t row_index,
+                              const std::shared_ptr<AbstractSegment> aggregate_segment,
+                              boost::unordered_flat_map<uint64_t, AggregateState>& local_hash_table,
+                              std::shared_ptr<std::vector<AggregateState>>& global_aggregate_result,
+                              std::vector<std::atomic_flag>& intermediate_result_atomics) {
+  auto hash_table_size = local_hash_table.size();
+  const auto aggregate_function =
+      WindowFunctionBuilder<ColumnDataType, AggregateType, window_function>().get_aggregate_function();
+  with_string_segment_iterate<ColumnDataType>(
+      aggregate_segment, [&](auto& value, const bool is_null, const auto needs_copy) {
+        if (is_null) {
+          ++row_index;
+          return;
+        }
+        const auto ticket = tickets[row_index++];
+
+        if (local_hash_table.find(ticket) == local_hash_table.end()) {
+          local_hash_table[ticket] = AggregateState();
+          hash_table_size += 1;
+        }
+
+        if constexpr (window_function != WindowFunction::StandardDeviationSample &&
+                      window_function != WindowFunction::CountDistinct) {
+          aggregate_function(value, local_hash_table[ticket].value_count, local_hash_table[ticket].accumulator);
+          local_hash_table[ticket].value_count += 1;
+        } else if constexpr (window_function == WindowFunction::CountDistinct) {
+          local_hash_table[ticket].distinct_values.insert(value);
+        } else if constexpr (window_function == WindowFunction::StandardDeviationSample) {
+          aggregate_function(value, size_t{0}, local_hash_table[ticket].standard_deviation);
+        }
+
+        if (hash_table_size >= MAX_LOCAL_HASH_TABLE_SIZE) {
+          spill_local_hash_table_to_global_aggregate_result<ColumnDataType, AggregateType, window_function,
+                                                            AggregateState, true>(
+              local_hash_table, global_aggregate_result, intermediate_result_atomics);
+          hash_table_size = local_hash_table.size();
+        }
+      });
+}
+
 // COUNT(DISTINCT): number of distinct non-NULL values. Never NULL (0 for an all-NULL group).
 template <typename ColumnDataType>
-ChunkedVector<int64_t, false> _count_distinct_grouped(const uint64_t* const tickets, const size_t group_count,
-                                                      const std::shared_ptr<const Table>& input_table,
-                                                      const ColumnID input_column_id) {
+ChunkedVector<int64_t> _count_distinct_grouped(const uint64_t* const tickets, const size_t group_count,
+                                               const std::shared_ptr<const Table>& input_table,
+                                               const ColumnID input_column_id) {
   auto distinct_values = std::vector<std::unordered_set<ColumnDataType>>(group_count);
 
   const auto chunk_count = input_table->chunk_count();
@@ -169,7 +257,7 @@ ChunkedVector<int64_t, false> _count_distinct_grouped(const uint64_t* const tick
                                                 });
   }
 
-  auto values = ChunkedVector<int64_t, false>(group_count);
+  auto values = ChunkedVector<int64_t>(group_count);
   for (auto i = size_t{0}; i < group_count; ++i) {
     values[i] = static_cast<int64_t>(distinct_values[i].size());
   }
@@ -178,12 +266,12 @@ ChunkedVector<int64_t, false> _count_distinct_grouped(const uint64_t* const tick
 
 // ANY: the first value seen per group, NULL included (The value is passed through. All-NULL groups stay).
 template <typename ColumnDataType>
-std::pair<ChunkedVector<ColumnDataType, false>, ChunkedVector<bool, false>> _any_grouped(
+std::pair<ChunkedVector<ColumnDataType>, ChunkedVector<bool>> _any_grouped(
     const uint64_t* const tickets, const size_t group_count, const std::shared_ptr<const Table>& input_table,
     const ColumnID input_column_id) {
   auto seen = std::vector<bool>(group_count, false);
-  auto values = ChunkedVector<ColumnDataType, false>(group_count);
-  auto nulls = ChunkedVector<bool, false>(group_count, false);
+  auto values = ChunkedVector<ColumnDataType>(group_count);
+  auto nulls = ChunkedVector<bool>(group_count, false);
 
   const auto chunk_count = input_table->chunk_count();
   auto row_index = uint32_t{0};  // global row index across chunks, used to look up the group ticket in `tickets`
@@ -217,13 +305,13 @@ std::pair<ChunkedVector<ColumnDataType, false>, ChunkedVector<bool, false>> _any
 // `groupby_index` is the column's position among the group-by columns (its slot in the row's null bitmap and column
 // offsets); `string_col_index` is its position among the string group-by columns (its heap string-pointer slot).
 template <typename ColumnDataType, bool Concurrent>
-std::pair<ChunkedVector<ColumnDataType, false>, ChunkedVector<bool, false>> _groupby_from_hash_table(
+std::pair<ChunkedVector<ColumnDataType>, ChunkedVector<bool>> _groupby_from_hash_table(
     const GroupKeyData<Concurrent>& group_key_data, const size_t group_count, const size_t groupby_index,
     const size_t string_col_index) {
   const auto& format = group_key_data.row_format;
   const auto& hash_table = group_key_data.global_hash_table;
-  auto values = ChunkedVector<ColumnDataType, false>(group_count);
-  auto nulls = ChunkedVector<bool, false>(group_count, false);
+  auto values = ChunkedVector<ColumnDataType>(group_count);
+  auto nulls = ChunkedVector<bool>(group_count, false);
   const auto null_mask_bit = uint64_t{1} << groupby_index;
 
   // Reads one group's representative value from its distinct key row into the output slot addressed by its ticket.
@@ -265,7 +353,7 @@ std::pair<ChunkedVector<ColumnDataType, false>, ChunkedVector<bool, false>> _gro
 
 // STDDEV: NULL for groups with fewer than two contributing values.
 template <typename ColumnDataType>
-std::pair<ChunkedVector<double, false>, ChunkedVector<bool, false>> _standard_deviation_sample_grouped(
+std::pair<ChunkedVector<double>, ChunkedVector<bool>> _standard_deviation_sample_grouped(
     const uint64_t* const tickets, const size_t group_count, const std::shared_ptr<const Table>& input_table,
     const ColumnID input_column_id) {
   static_assert(std::is_arithmetic_v<ColumnDataType>, "StandardDeviationSample is only defined on arithmetic types.");
@@ -288,8 +376,8 @@ std::pair<ChunkedVector<double, false>, ChunkedVector<bool, false>> _standard_de
     });
   }
 
-  auto values = ChunkedVector<double, false>(group_count);
-  auto nulls = ChunkedVector<bool, false>(group_count, false);
+  auto values = ChunkedVector<double>(group_count);
+  auto nulls = ChunkedVector<bool>(group_count, false);
   for (auto i = size_t{0}; i < group_count; ++i) {
     if (accumulators[i][0] < 2) {
       nulls[i] = true;
@@ -449,7 +537,8 @@ std::shared_ptr<const Table> AggregateDYOD::groupby_aggregate() {
       Hyrise::get().topology.num_cpus() - 1;  // TODO(@forUnity): decide this elsewhere and make sure this is correct
   const auto is_not_immediate_scheduler =
       std::dynamic_pointer_cast<ImmediateExecutionScheduler>(Hyrise::get().scheduler()) == nullptr;
-  const auto CONCURRENT = THREAD_COUNT > 1 && is_not_immediate_scheduler;
+  // const auto CONCURRENT = THREAD_COUNT > 1 && is_not_immediate_scheduler;
+  const auto CONCURRENT = true;
 
   // -- Create ticketed groups. The underlying hash table differs in the concurrent versus non-concurrent case --
   std::shared_ptr<GroupKeyDataBase> groups;
@@ -509,121 +598,380 @@ std::shared_ptr<const Table> AggregateDYOD::groupby_aggregate() {
   }
 
   // -- Compute aggregates --
-  // Each aggregate column is computed independently from the shared grouping structure (`groups->tickets`) and
-  // input table, and writes into its own `output_chunks` column slot. There are no cross-column dependencies, so we
-  // compute one aggregate per job.
-  const auto compute_aggregate = [&](const uint32_t aggregate_id) {
+  // Old version that easily shares code between concurrent and non-concurrent.
+  if (!CONCURRENT) {
+    // Each aggregate column is computed independently from the shared grouping structure (`groups->tickets`) and
+    // input table, and writes into its own `output_chunks` column slot. There are no cross-column dependencies, so we
+    // compute one aggregate per job.
+    const auto compute_aggregate = [&](const uint32_t aggregate_id) {
+      const auto& aggregate = _aggregates[aggregate_id];
+      const auto window_function = aggregate->window_function;
+
+      const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
+      const auto input_column_id = pqp_column.column_id;
+      const auto target_index = groupby_column_count + aggregate_id;
+
+      // COUNT(*) does not reference an input column. It counts all rows per group (NULLs included). Every input row
+      // contributes its group's ticket exactly once, so the per-group count is just a histogram over the tickets.
+      if (window_function == WindowFunction::Count && input_column_id == INVALID_COLUMN_ID) {
+        auto values = ChunkedVector<int64_t>(group_count, 0);
+        const auto* const tickets = groups->tickets.get();
+        const auto row_count = input_table->row_count();
+        for (auto row_index = size_t{0}; row_index < row_count; ++row_index) {
+          ++values[tickets[row_index]];
+        }
+        _emit_output_column(std::move(values), {}, false, output_chunks, target_index);
+        return;
+      }
+
+      resolve_data_type(input_table->column_data_type(input_column_id), [&](const auto data_type_t) {
+        using ColumnDataType = typename decltype(data_type_t)::type;
+
+        switch (window_function) {
+          case WindowFunction::Min: {
+            using AggregateType = typename WindowFunctionTraits<ColumnDataType, WindowFunction::Min>::ReturnType;
+            auto [values, nulls] = _aggregate_grouped<ColumnDataType, AggregateType, WindowFunction::Min>(
+                groups->tickets.get(), group_count, input_table, input_column_id);
+            _emit_output_column(std::move(values), std::move(nulls), true, output_chunks, target_index);
+            break;
+          }
+          case WindowFunction::Max: {
+            using AggregateType = typename WindowFunctionTraits<ColumnDataType, WindowFunction::Max>::ReturnType;
+            auto [values, nulls] = _aggregate_grouped<ColumnDataType, AggregateType, WindowFunction::Max>(
+                groups->tickets.get(), group_count, input_table, input_column_id);
+            _emit_output_column(std::move(values), std::move(nulls), true, output_chunks, target_index);
+            break;
+          }
+          case WindowFunction::Sum: {
+            using AggregateType = typename WindowFunctionTraits<ColumnDataType, WindowFunction::Sum>::ReturnType;
+            auto [values, nulls] = _aggregate_grouped<ColumnDataType, AggregateType, WindowFunction::Sum>(
+                groups->tickets.get(), group_count, input_table, input_column_id);
+            _emit_output_column(std::move(values), std::move(nulls), true, output_chunks, target_index);
+            break;
+          }
+          case WindowFunction::Avg: {
+            using AggregateType = typename WindowFunctionTraits<ColumnDataType, WindowFunction::Avg>::ReturnType;
+            auto [values, nulls] = _aggregate_grouped<ColumnDataType, AggregateType, WindowFunction::Avg>(
+                groups->tickets.get(), group_count, input_table, input_column_id);
+            _emit_output_column(std::move(values), std::move(nulls), true, output_chunks, target_index);
+            break;
+          }
+          case WindowFunction::Count: {
+            using AggregateType = typename WindowFunctionTraits<ColumnDataType, WindowFunction::Count>::ReturnType;
+            auto [values, nulls] = _aggregate_grouped<ColumnDataType, AggregateType, WindowFunction::Count>(
+                groups->tickets.get(), group_count, input_table, input_column_id);
+            // COUNT never produces NULL.
+            _emit_output_column(std::move(values), std::move(nulls), false, output_chunks, target_index);
+            break;
+          }
+          case WindowFunction::CountDistinct: {
+            auto values = _count_distinct_grouped<ColumnDataType>(groups->tickets.get(), group_count, input_table,
+                                                                  input_column_id);
+            _emit_output_column(std::move(values), {}, false, output_chunks, target_index);
+            break;
+          }
+          case WindowFunction::StandardDeviationSample: {
+            if constexpr (std::is_arithmetic_v<ColumnDataType>) {
+              auto [values, nulls] = _standard_deviation_sample_grouped<ColumnDataType>(
+                  groups->tickets.get(), group_count, input_table, input_column_id);
+              _emit_output_column(std::move(values), std::move(nulls), true, output_chunks, target_index);
+            } else {
+              Fail("StandardDeviationSample is not available on non-arithmetic types.");
+            }
+            break;
+          }
+          case WindowFunction::Any: {
+            auto [values, nulls] =
+                _any_grouped<ColumnDataType>(groups->tickets.get(), group_count, input_table, input_column_id);
+            // ANY() passes the source column through, so the output keeps its nullability.
+            _emit_output_column(std::move(values), std::move(nulls), input_table->column_is_nullable(input_column_id),
+                                output_chunks, target_index);
+            break;
+          }
+          default:
+            Fail(std::format("Unsupported aggregate function '{}'.",
+                             window_function_to_string.left.at(window_function)));
+        }
+      });
+    };
+
+    // For low-cardinality group-bys (far fewer groups than input rows), each group-by column is cheaper to build by
+    // reading every group's value once from its distinct key row in the hash table than by scanning the whole source
+    // column; above that ratio the scattered key-row access loses to a sequential source scan. Only the multi-column
+    // grouping path exposes a hash table (`has_hash_table`); the single-column fast path recovers group-by values by
+    // scanning.
+    const auto input_row_count = input_table->row_count();
+
+    // TODO(@V1nce1): Right now the single column fast path has `has_hash_table` set to false, so it always uses
+    // the sequential scan. We could change that.
+    const auto use_hash_table_for_groupby =
+        groups->has_hash_table && group_count * GROUPBY_HASH_TABLE_MIN_ROWS_PER_GROUP <= input_row_count;
+
+    // Builds one group-by output column. Every row in a group carries the same group-by value, so we only need one value
+    // per group. Depending on cardinality (`use_hash_table_for_groupby`) we either read it from the group's hash-table
+    // key row or recover it with a sequential ANY scan of the source column (the first row seen per group wins).
+    const auto build_groupby_column = [&](const uint32_t groupby_index) {
+      const auto groupby_column_id = _groupby_column_ids[groupby_index];
+      resolve_data_type(input_table->column_data_type(groupby_column_id), [&](const auto data_type_t) {
+        using ColumnDataType = typename decltype(data_type_t)::type;
+
+        auto [values, nulls] = [&]() -> std::pair<ChunkedVector<ColumnDataType>, ChunkedVector<bool>> {
+          if (!use_hash_table_for_groupby) {
+            // High cardinality: a sequential scan of the source column beats chasing the scattered key rows.
+            return _any_grouped<ColumnDataType>(groups->tickets.get(), group_count, input_table, groupby_column_id);
+          }
+          // Low cardinality: read each group's value straight from its hash-table key row. `string_col_index` locates
+          // this column among the string group-by columns (see `RowView::string_ptr`).
+          auto string_col_index = size_t{0};
+          for (auto index = uint32_t{0}; index < groupby_index; ++index) {
+            if (input_table->column_data_type(_groupby_column_ids[index]) == DataType::String) {
+              ++string_col_index;
+            }
+          }
+          if (CONCURRENT) {
+            return _groupby_from_hash_table<ColumnDataType, true>(*concurrent_groups, group_count, groupby_index,
+                                                                  string_col_index);
+          } else {
+            return _groupby_from_hash_table<ColumnDataType, false>(*nonconcurrent_groups, group_count, groupby_index,
+                                                                   string_col_index);
+          }
+        }();
+
+        _emit_output_column(std::move(values), std::move(nulls), input_table->column_is_nullable(groupby_column_id),
+                            output_chunks, groupby_index);
+      });
+    };
+
+    // One job per output column: build each group-by column and compute each aggregate. They all read the
+    // shared, read-only grouping structure and input table and write disjoint output slots, so there are no
+    // dependencies between them. With fewer than two units we run inline to avoid the scheduling overhead.
+    const auto unit_count = groupby_column_count + aggregate_count;
+    const auto run_unit = [&](const size_t unit) {
+      if (unit < groupby_column_count) {
+        build_groupby_column(static_cast<uint32_t>(unit));
+      } else {
+        compute_aggregate(static_cast<uint32_t>(unit - groupby_column_count));
+      }
+    };
+
+    if (unit_count < 2) {
+      for (auto unit = size_t{0}; unit < unit_count; ++unit) {
+        run_unit(unit);
+      }
+    } else {
+      auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+      jobs.reserve(unit_count);
+      for (auto unit = size_t{0}; unit < unit_count; ++unit) {
+        jobs.emplace_back(std::make_shared<JobTask>([&run_unit, unit]() {
+          run_unit(unit);
+        }));
+      }
+      Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+    }
+
+    if (CONCURRENT) {
+      auto cleanup_job =
+          std::make_shared<JobTask>([groups = std::move(groups), concurrent_groups = std::move(concurrent_groups),
+                                     nonconcurrent_groups = std::move(nonconcurrent_groups)]() mutable {
+            groups.reset();
+            concurrent_groups.reset();
+            nonconcurrent_groups.reset();
+          });
+      cleanup_job->schedule();
+    }
+
+    // Every output column was already produced as chunk-sized segments by its own job, so assembling the result table
+    // is move-only: no values are copied here.
+    auto result_table = std::make_shared<Table>(column_definitions, TableType::Data);
+    for (auto& chunk_segments : output_chunks) {
+      result_table->append_chunk(std::move(chunk_segments));
+    }
+    return result_table;
+  }
+
+  // -- New more concurrent version --
+
+  // Each aggregate has its own intermediate result state, which is shared between the jobs that process its chunks and
+  // the jobs that finalize its results.
+  auto intermediate_results = std::vector<std::shared_ptr<void>>{};
+  for (auto aggregate_id = size_t{0}; aggregate_id < aggregate_count; ++aggregate_id) {
     const auto& aggregate = _aggregates[aggregate_id];
     const auto window_function = aggregate->window_function;
 
     const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
     const auto input_column_id = pqp_column.column_id;
-    const auto target_index = groupby_column_count + aggregate_id;
+    const auto data_type =
+        input_column_id == INVALID_COLUMN_ID ? DataType::Long : input_table->column_data_type(input_column_id);
 
-    // COUNT(*) does not reference an input column. It counts all rows per group (NULLs included). Every input row
-    // contributes its group's ticket exactly once, so the per-group count is just a histogram over the tickets.
-    if (window_function == WindowFunction::Count && input_column_id == INVALID_COLUMN_ID) {
-      auto values = ChunkedVector<int64_t, false>(group_count, 0);
-      const auto* const tickets = groups->tickets.get();
-      const auto row_count = input_table->row_count();
-      for (auto row_index = size_t{0}; row_index < row_count; ++row_index) {
-        ++values[tickets[row_index]];
-      }
-      _emit_output_column(std::move(values), {}, false, output_chunks, target_index);
-      return;
-    }
+    intermediate_results.emplace_back(_make_global_aggregate_state(window_function, data_type, group_count));
+  }
 
-    resolve_data_type(input_table->column_data_type(input_column_id), [&](const auto data_type_t) {
+  const auto result_column_count = groupby_column_count + aggregate_count;
+
+  // The final results are built from the intermediate results once all chunks have been processed.
+  auto final_results = std::vector<std::shared_ptr<BaseChunkedVector>>(result_column_count);
+  auto final_result_nulls = std::vector<std::shared_ptr<ChunkedVector<bool>>>(result_column_count);
+
+  for (auto output_column_id = size_t{0}; output_column_id < result_column_count; ++output_column_id) {
+    const auto is_groupby_column = output_column_id < groupby_column_count;
+    const auto data_type = is_groupby_column ? input_table->column_data_type(_groupby_column_ids[output_column_id])
+                                             : _aggregates[output_column_id - groupby_column_count]->data_type();
+
+    resolve_data_type(data_type, [&](const auto data_type_t) {
       using ColumnDataType = typename decltype(data_type_t)::type;
 
-      switch (window_function) {
-        case WindowFunction::Min: {
-          using AggregateType = typename WindowFunctionTraits<ColumnDataType, WindowFunction::Min>::ReturnType;
-          auto [values, nulls] = _aggregate_grouped<ColumnDataType, AggregateType, WindowFunction::Min>(
-              groups->tickets.get(), group_count, input_table, input_column_id);
-          _emit_output_column(std::move(values), std::move(nulls), true, output_chunks, target_index);
-          break;
-        }
-        case WindowFunction::Max: {
-          using AggregateType = typename WindowFunctionTraits<ColumnDataType, WindowFunction::Max>::ReturnType;
-          auto [values, nulls] = _aggregate_grouped<ColumnDataType, AggregateType, WindowFunction::Max>(
-              groups->tickets.get(), group_count, input_table, input_column_id);
-          _emit_output_column(std::move(values), std::move(nulls), true, output_chunks, target_index);
-          break;
-        }
-        case WindowFunction::Sum: {
-          using AggregateType = typename WindowFunctionTraits<ColumnDataType, WindowFunction::Sum>::ReturnType;
-          auto [values, nulls] = _aggregate_grouped<ColumnDataType, AggregateType, WindowFunction::Sum>(
-              groups->tickets.get(), group_count, input_table, input_column_id);
-          _emit_output_column(std::move(values), std::move(nulls), true, output_chunks, target_index);
-          break;
-        }
-        case WindowFunction::Avg: {
-          using AggregateType = typename WindowFunctionTraits<ColumnDataType, WindowFunction::Avg>::ReturnType;
-          auto [values, nulls] = _aggregate_grouped<ColumnDataType, AggregateType, WindowFunction::Avg>(
-              groups->tickets.get(), group_count, input_table, input_column_id);
-          _emit_output_column(std::move(values), std::move(nulls), true, output_chunks, target_index);
-          break;
-        }
-        case WindowFunction::Count: {
-          using AggregateType = typename WindowFunctionTraits<ColumnDataType, WindowFunction::Count>::ReturnType;
-          auto [values, nulls] = _aggregate_grouped<ColumnDataType, AggregateType, WindowFunction::Count>(
-              groups->tickets.get(), group_count, input_table, input_column_id);
-          // COUNT never produces NULL.
-          _emit_output_column(std::move(values), std::move(nulls), false, output_chunks, target_index);
-          break;
-        }
-        case WindowFunction::CountDistinct: {
-          auto values =
-              _count_distinct_grouped<ColumnDataType>(groups->tickets.get(), group_count, input_table, input_column_id);
-          _emit_output_column(std::move(values), {}, false, output_chunks, target_index);
-          break;
-        }
-        case WindowFunction::StandardDeviationSample: {
-          if constexpr (std::is_arithmetic_v<ColumnDataType>) {
-            auto [values, nulls] = _standard_deviation_sample_grouped<ColumnDataType>(
-                groups->tickets.get(), group_count, input_table, input_column_id);
-            _emit_output_column(std::move(values), std::move(nulls), true, output_chunks, target_index);
-          } else {
-            Fail("StandardDeviationSample is not available on non-arithmetic types.");
-          }
-          break;
-        }
-        case WindowFunction::Any: {
-          auto [values, nulls] =
-              _any_grouped<ColumnDataType>(groups->tickets.get(), group_count, input_table, input_column_id);
-          // ANY() passes the source column through, so the output keeps its nullability.
-          _emit_output_column(std::move(values), std::move(nulls), input_table->column_is_nullable(input_column_id),
-                              output_chunks, target_index);
-          break;
-        }
-        default:
-          Fail(std::format("Unsupported aggregate function '{}'.", window_function_to_string.left.at(window_function)));
+      if (is_groupby_column) {
+        const auto groupby_index = static_cast<uint32_t>(output_column_id);
+        const auto groupby_column_id = _groupby_column_ids[groupby_index];
+        final_results[output_column_id] = std::make_shared<ChunkedVector<ColumnDataType>>(group_count);
+        final_result_nulls[output_column_id] = std::make_shared<ChunkedVector<bool>>(group_count);
+      } else {
+        const auto aggregate_index = static_cast<uint32_t>(output_column_id - groupby_column_count);
+        const auto& aggregate = _aggregates[aggregate_index];
+
+        // `aggregate->data_type()` is already the window function's return type, so it matches the `AggregateType`
+        // that the accumulation jobs below derive from the *input* column's type.
+        final_results[output_column_id] = std::make_shared<ChunkedVector<ColumnDataType>>(group_count);
+        final_result_nulls[output_column_id] = std::make_shared<ChunkedVector<bool>>(group_count);
       }
     });
+  }
+
+  // Exclusive prefix sum of the chunk sizes: `chunk_offsets[chunk_id]` is the global row index of the chunk's first
+  // row, which is where the chunk starts indexing into `tickets`.
+  auto chunk_offsets = std::vector<size_t>(input_table->chunk_count(), 0);
+  auto row_offset = size_t{0};
+  for (auto chunk_id = ChunkID{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
+    chunk_offsets[chunk_id] = row_offset;
+    row_offset += input_table->get_chunk(chunk_id)->size();
+  }
+
+  const auto* const tickets = groups->tickets.get();
+
+  auto chunk_id_per_aggregate = std::vector<std::atomic<size_t>>(aggregate_count);  // ChunkID
+  const auto FINALIZE_ROWS_BATCH_SIZE = size_t{10000};
+  auto finalize_row_id_per_aggregate = std::vector<std::atomic<size_t>>(aggregate_count);  // RowID
+  // One flag per (aggregate, group): guards the merge of a local hash table entry into the global state.
+  auto intermediate_result_atomics = std::vector<std::vector<std::atomic_flag>>(aggregate_count);
+  for (auto& per_aggregate_atomics : intermediate_result_atomics) {
+    per_aggregate_atomics = std::vector<std::atomic_flag>(group_count);
+  }
+
+  // const auto get_next_chunk_id = [&](const uint32_t aggregate_id) {
+  //   return chunk_id_per_aggregate[aggregate_id].fetch_add(1);
+  // };
+
+  // we have one job as a worker. This creates virtual sub-jobs per aggregate and per chunk.
+  const auto job_main = [&](const uint32_t job_id) {
+    const auto chunk_count = input_table->chunk_count();
+    const auto initial_aggregate_id = job_id % aggregate_count;
+    auto current_aggregate_id = initial_aggregate_id;
+    do {
+      // resolve data type for current aggregate
+      const auto& aggregate = _aggregates[current_aggregate_id];
+      auto& this_column_intermediate_result_atomics = intermediate_result_atomics[current_aggregate_id];
+      const auto window_function = aggregate->window_function;
+      const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
+      const auto input_column_id = pqp_column.column_id;
+      const auto data_type =
+          input_column_id == INVALID_COLUMN_ID ? DataType::Long : input_table->column_data_type(input_column_id);
+      resolve_data_type(data_type, [&](const auto data_type_t) {
+        using ColumnDataType = typename decltype(data_type_t)::type;
+        resolve_window_function(window_function, [&](const auto window_function_t) {
+          const auto window_function = decltype(window_function_t)::value;
+          using AggregateType = typename WindowFunctionTraits<ColumnDataType, window_function>::ReturnType;
+
+          // resolve the intermediate result type for the current aggregate
+          using AggregateState = IntermediateState<ColumnDataType, window_function>;
+          auto this_column_intermediate_results =
+              std::static_pointer_cast<std::vector<AggregateState>>(intermediate_results[current_aggregate_id]);
+
+          // Build the local hash table of intermediate results.
+          auto local_hash_table = boost::unordered_flat_map<uint64_t, AggregateState>{};
+          auto final_result_vector = std::static_pointer_cast<ChunkedVector<AggregateType>>(
+              final_results[groupby_column_count + current_aggregate_id]);
+          auto& final_result_nulls_vector = final_result_nulls[groupby_column_count + current_aggregate_id];
+
+          // for every chunk
+          while (true) {
+            const auto next_chunk = chunk_id_per_aggregate[current_aggregate_id].fetch_add(1);
+            if (next_chunk >= static_cast<size_t>(chunk_count)) {
+              break;
+            }
+            const auto chunk_id = static_cast<ChunkID::base_type>(next_chunk);
+            const auto& chunk = input_table->get_chunk(ChunkID{chunk_id});
+            const auto row_index = chunk_offsets[chunk_id];
+
+            if constexpr (window_function == WindowFunction::Count) {
+              // COUNT(*) references no input column, so there is no segment to iterate.
+              if (input_column_id == INVALID_COLUMN_ID) {
+                _accumulate_count_star_concurrently<ColumnDataType, AggregateType, window_function, AggregateState>(
+                    tickets, row_index, chunk->size(), local_hash_table, this_column_intermediate_results,
+                    this_column_intermediate_result_atomics);
+                continue;
+              }
+            }
+
+            _accumulate_concurrently<ColumnDataType, AggregateType, window_function, AggregateState>(
+                tickets, row_index, chunk->get_segment(input_column_id), local_hash_table,
+                this_column_intermediate_results, this_column_intermediate_result_atomics);
+          }
+          // Finally, force a spill of all entries that remain in the local hash table. This also clears the local hash table.
+          spill_local_hash_table_to_global_aggregate_result<ColumnDataType, AggregateType, window_function,
+                                                            AggregateState, true>(
+              local_hash_table, this_column_intermediate_results, this_column_intermediate_result_atomics);
+
+          // Finalize the global aggregate result of the current aggregate
+          auto& next_row = finalize_row_id_per_aggregate[current_aggregate_id];
+          for (auto row_id = next_row.fetch_add(FINALIZE_ROWS_BATCH_SIZE); row_id < group_count;
+               row_id = next_row.fetch_add(FINALIZE_ROWS_BATCH_SIZE)) {
+            const auto last_row_id_to_finalize = std::min(row_id + FINALIZE_ROWS_BATCH_SIZE, group_count);
+
+            for (auto row_id_to_finalize = row_id; row_id_to_finalize < last_row_id_to_finalize; ++row_id_to_finalize) {
+              auto& intermediate_result = this_column_intermediate_results->operator[](row_id_to_finalize);
+              const auto [value, is_null] = intermediate_result.finalize();
+              final_result_vector->operator[](row_id_to_finalize) = value;
+              final_result_nulls_vector->operator[](row_id_to_finalize) = is_null;
+            }
+          }
+        });
+      });
+
+      // move on to next aggregate
+      current_aggregate_id = (current_aggregate_id + 1) % aggregate_count;
+    } while (current_aggregate_id != initial_aggregate_id);
   };
+
+  // A pure DISTINCT (group-by without any aggregate) has nothing to accumulate. `job_main` also assumes at least one
+  // aggregate, as it round-robins over them modulo `aggregate_count`.
+  if (aggregate_count > 0) {
+    auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+    jobs.reserve(THREAD_COUNT);
+
+    for (auto job_id = size_t{0}; job_id < THREAD_COUNT; ++job_id) {
+      jobs.emplace_back(std::make_shared<JobTask>([&, job_id]() {
+        job_main(static_cast<uint32_t>(job_id));
+      }));
+    }
+    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+  }
 
   // For low-cardinality group-bys (far fewer groups than input rows), each group-by column is cheaper to build by
   // reading every group's value once from its distinct key row in the hash table than by scanning the whole source
   // column; above that ratio the scattered key-row access loses to a sequential source scan. Only the multi-column
   // grouping path exposes a hash table (`has_hash_table`); the single-column fast path recovers group-by values by
   // scanning.
-  const auto input_row_count = input_table->row_count();
-
-  // TODO(@V1nce1): Right now the single column fast path has `has_hash_table` set to false, so it always uses
-  // the sequential scan. We could change that.
   const auto use_hash_table_for_groupby =
-      groups->has_hash_table && group_count * GROUPBY_HASH_TABLE_MIN_ROWS_PER_GROUP <= input_row_count;
+      groups->has_hash_table && group_count * GROUPBY_HASH_TABLE_MIN_ROWS_PER_GROUP <= input_table->row_count();
 
-  // Builds one group-by output column. Every row in a group carries the same group-by value, so we only need one value
-  // per group. Depending on cardinality (`use_hash_table_for_groupby`) we either read it from the group's hash-table
-  // key row or recover it with a sequential ANY scan of the source column (the first row seen per group wins).
-  const auto build_groupby_column = [&](const uint32_t groupby_index) {
+  // TODO(@V1nce1): we could also parallelize this.
+  // Build and emit the group-by columns.
+  for (auto groupby_index = uint32_t{0}; groupby_index < groupby_column_count; ++groupby_index) {
     const auto groupby_column_id = _groupby_column_ids[groupby_index];
     resolve_data_type(input_table->column_data_type(groupby_column_id), [&](const auto data_type_t) {
       using ColumnDataType = typename decltype(data_type_t)::type;
 
-      auto [values, nulls] = [&]() -> std::pair<ChunkedVector<ColumnDataType, false>, ChunkedVector<bool, false>> {
+      auto [values, nulls] = [&]() -> std::pair<ChunkedVector<ColumnDataType>, ChunkedVector<bool>> {
         if (!use_hash_table_for_groupby) {
           // High cardinality: a sequential scan of the source column beats chasing the scattered key rows.
           return _any_grouped<ColumnDataType>(groups->tickets.get(), group_count, input_table, groupby_column_id);
@@ -650,32 +998,39 @@ std::shared_ptr<const Table> AggregateDYOD::groupby_aggregate() {
     });
   };
 
-  // One job per output column: build each group-by column and compute each aggregate. They all read the
-  // shared, read-only grouping structure and input table and write disjoint output slots, so there are no
-  // dependencies between them. With fewer than two units we run inline to avoid the scheduling overhead.
-  const auto unit_count = groupby_column_count + aggregate_count;
-  const auto run_unit = [&](const size_t unit) {
-    if (unit < groupby_column_count) {
-      build_groupby_column(static_cast<uint32_t>(unit));
-    } else {
-      compute_aggregate(static_cast<uint32_t>(unit - groupby_column_count));
-    }
-  };
+  // Also emit the aggregate columns
+  for (auto aggregate_column_id = groupby_column_count; aggregate_column_id < result_column_count;
+       ++aggregate_column_id) {
+    const auto aggregate_index = static_cast<uint32_t>(aggregate_column_id - groupby_column_count);
+    const auto& aggregate = _aggregates[aggregate_index];
+    const auto window_function = aggregate->window_function;
 
-  if (unit_count < 2) {
-    for (auto unit = size_t{0}; unit < unit_count; ++unit) {
-      run_unit(unit);
-    }
-  } else {
-    auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
-    jobs.reserve(unit_count);
-    for (auto unit = size_t{0}; unit < unit_count; ++unit) {
-      jobs.emplace_back(std::make_shared<JobTask>([&run_unit, unit]() {
-        run_unit(unit);
-      }));
-    }
-    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+    const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
+    const auto input_column_id = pqp_column.column_id;
+    const auto data_type =
+        input_column_id == INVALID_COLUMN_ID ? DataType::Long : input_table->column_data_type(input_column_id);
+
+    resolve_data_type(data_type, [&](const auto data_type_t) {
+      using ColumnDataType = typename decltype(data_type_t)::type;
+      resolve_window_function(window_function, [&](const auto window_function_t) {
+        using AggregateType =
+            typename WindowFunctionTraits<ColumnDataType, decltype(window_function_t)::value>::ReturnType;
+        auto final_result_vector =
+            std::static_pointer_cast<ChunkedVector<AggregateType>>(final_results[aggregate_column_id]);
+        auto& final_result_nulls_vector = final_result_nulls[aggregate_column_id];
+        // Must match the nullability declared in `column_definitions` above: COUNT and COUNT DISTINCT never produce
+        // NULL, ANY passes the source column's nullability through, everything else can produce NULL.
+        const auto column_is_nullable =
+            window_function != WindowFunction::Count && window_function != WindowFunction::CountDistinct &&
+            (window_function != WindowFunction::Any || input_table->column_is_nullable(input_column_id));
+
+        _emit_output_column(std::move(*final_result_vector), std::move(*final_result_nulls_vector), column_is_nullable,
+                            output_chunks, aggregate_column_id);
+      });
+    });
   }
+
+  // --- COPYPASTA from old version wrap up ---
 
   if (CONCURRENT) {
     auto cleanup_job =
