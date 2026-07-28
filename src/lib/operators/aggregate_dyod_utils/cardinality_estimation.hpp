@@ -67,11 +67,11 @@ class HyperLogLog : public Noncopyable {
 
   // We need an upper bound. Therefore we use the standard error with default 3 sigmas (99.7% confidence interval).
   size_t estimate_upper_bound(const double sigmas = 3.0) const {
-    const auto standard_error = 1.04 / std::sqrt(static_cast<double>(REGISTER_COUNT));
-    return static_cast<size_t>(static_cast<double>(estimate()) * (1.0 + sigmas * standard_error)) + 1;
+    return static_cast<size_t>(static_cast<double>(estimate()) * (1.0 + sigmas * _standard_error)) + 1;
   }
 
  private:
+  const double _standard_error = 1.04 / std::sqrt(static_cast<double>(REGISTER_COUNT));
   std::array<uint8_t, REGISTER_COUNT> _registers{};
 };
 

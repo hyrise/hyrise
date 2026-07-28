@@ -29,6 +29,7 @@ class AggregateDYOD : public AbstractAggregateOperator {
       std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const override;
 
   std::shared_ptr<const Table> no_groupby_aggregate();
+  std::shared_ptr<const Table> groupby_aggregate();
 
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
