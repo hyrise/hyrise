@@ -1761,15 +1761,8 @@ void AggregateDYOD::_write_output(ContextsPerColumn& contexts_per_column,
       aggregate_columns_result_table->append_chunk(aggregate_segments);
     }
   }
-  const auto lock = std::lock_guard<std::mutex>{_output_mutex};
-  // Create final operator output. We now combine actual reference segments (e.g., of GROUP BY columns) with segments
-  // that reference the temporary materialized table created above.
 
-  // we use TableType::Data as an indicator that the final output has not been set yet.
-  if (!_output_writing_started) {
-    _output_writing_started = true;
-    output_table = std::make_shared<Table>(output_column_definitions, TableType::References);
-  }
+  auto output_chunks = std::vector<Segments>();
   if (!intermediate_result.empty() && intermediate_result.front()[0]->size() > 0) {
     const auto output_table_chunk_count = intermediate_result.size();
     for (auto chunk_id = ChunkID{0}; chunk_id < output_table_chunk_count; ++chunk_id) {
@@ -1801,7 +1794,21 @@ void AggregateDYOD::_write_output(ContextsPerColumn& contexts_per_column,
         reference_segments[entireposlist_indexes[materialized_table_column_id]] = std::make_shared<ReferenceSegment>(
             aggregate_columns_result_table, materialized_table_column_id, entire_chunk_pos_list);
       }
-      output_table->append_chunk(reference_segments);
+      output_chunks.push_back(reference_segments);
+    }
+  }
+  const auto lock = std::lock_guard<std::mutex>{_output_mutex};
+  // Create final operator output. We now combine actual reference segments (e.g., of GROUP BY columns) with segments
+  // that reference the temporary materialized table created above.
+
+  // we use TableType::Data as an indicator that the final output has not been set yet.
+  if (!_output_writing_started) {
+    _output_writing_started = true;
+    output_table = std::make_shared<Table>(output_column_definitions, TableType::References);
+  }
+  if (!intermediate_result.empty() && intermediate_result.front()[0]->size() > 0) {
+    for (const auto& output_segments : output_chunks) {
+      output_table->append_chunk(output_segments);
     }
   }
 }
