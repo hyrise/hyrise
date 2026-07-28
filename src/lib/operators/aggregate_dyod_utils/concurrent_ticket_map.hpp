@@ -10,6 +10,7 @@
 #include <limits>
 #include <memory>
 #include <shared_mutex>
+#include <utility>
 #include <vector>
 
 #include "hyrise.hpp"
@@ -233,14 +234,23 @@ class ConcurrentTicketMap {
     Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
   }
 
+  size_t capacity() const {
+    return _capacity;
+  }
+
   template <typename Fn>
-  void for_each(Fn&& fn) const {
-    for (auto index = size_t{0}; index < _capacity; ++index) {
+  void for_each_slot_range(const size_t first_slot, const size_t end_slot, Fn&& fn) const {
+    for (auto index = first_slot; index < end_slot; ++index) {
       const auto state = _slots[index].state.load();
       if (state >= TICKET_BIAS) {
         fn(_slots[index].key, state - TICKET_BIAS);
       }
     }
+  }
+
+  template <typename Fn>
+  void for_each(Fn&& fn) const {
+    for_each_slot_range(0, _capacity, std::forward<Fn>(fn));
   }
 
  private:
