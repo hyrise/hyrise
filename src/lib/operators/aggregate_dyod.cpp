@@ -1740,7 +1740,7 @@ void AggregateDYOD::_write_output(ContextsPerColumn& contexts_per_column,
       for (const auto entireposlist_index : entireposlist_indexes) {
         aggregate_segments.emplace_back(materialized_result_chunk[entireposlist_index]);
       }
-      aggregate_chunks.push_back(aggregate_segments);
+      aggregate_chunks.push_back(std::move(aggregate_segments));
     }
     const auto lock = std::lock_guard<std::mutex>{_aggregate_mutex};
 
@@ -1794,7 +1794,7 @@ void AggregateDYOD::_write_output(ContextsPerColumn& contexts_per_column,
         reference_segments[entireposlist_indexes[materialized_table_column_id]] = std::make_shared<ReferenceSegment>(
             aggregate_columns_result_table, materialized_table_column_id, entire_chunk_pos_list);
       }
-      output_chunks.push_back(reference_segments);
+      output_chunks.push_back(std::move(reference_segments));
     }
   }
   const auto lock = std::lock_guard<std::mutex>{_output_mutex};
