@@ -16,6 +16,12 @@
 namespace hyrise {
 
 struct BaseChunkedVector {
+  BaseChunkedVector() = default;
+  BaseChunkedVector(const BaseChunkedVector&) = default;
+  BaseChunkedVector(BaseChunkedVector&&) = default;
+  BaseChunkedVector& operator=(const BaseChunkedVector&) = default;
+  BaseChunkedVector& operator=(BaseChunkedVector&&) = default;
+
   virtual ~BaseChunkedVector() = default;
 };
 
@@ -58,6 +64,12 @@ void _emit_output_column(ChunkedVector<T>&& values, ChunkedVector<bool>&& nulls,
 template <typename ColumnDataType, WindowFunction window_function>
 struct BaseAggregateState {
   using AggregateType = typename WindowFunctionTraits<ColumnDataType, window_function>::ReturnType;
+
+  BaseAggregateState() = default;
+  BaseAggregateState(const BaseAggregateState&) = default;
+  BaseAggregateState(BaseAggregateState&&) = default;
+  BaseAggregateState& operator=(const BaseAggregateState&) = default;
+  BaseAggregateState& operator=(BaseAggregateState&&) = default;
 
   virtual void accumulate_entire_chunk(const std::shared_ptr<const Chunk>& chunk, const ColumnID input_column_id) = 0;
 
