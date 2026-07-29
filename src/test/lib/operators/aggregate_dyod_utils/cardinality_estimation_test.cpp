@@ -18,7 +18,7 @@ namespace {
 
 void add_range(HyperLogLog<>& sketch, const uint64_t begin, const uint64_t end) {
   for (auto value = begin; value < end; ++value) {
-    sketch.add(compute_hash(&value, sizeof(value)));
+    sketch.add(fmix64(compute_hash(&value, sizeof(value))));
   }
 }
 
