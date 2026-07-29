@@ -50,14 +50,15 @@ constexpr auto JOB_COUNT = uint64_t{8};
 
 TEST_F(ConcurrentTicketMapTest, KeyKeepsTicket) {
   auto map = TestMap{KEY_COUNT};
+  auto scope = map.probe_scope();
 
   for (auto key = uint64_t{0}; key < KEY_COUNT; ++key) {
-    EXPECT_EQ(map.try_emplace(key, key), key);
+    EXPECT_EQ(map.try_emplace(key, key, scope), key);
   }
 
   // A second pass must hand back the original tickets and ignore the 'proposed' ones.
   for (auto key = uint64_t{0}; key < KEY_COUNT; ++key) {
-    EXPECT_EQ(map.try_emplace(key, KEY_COUNT + key), key);
+    EXPECT_EQ(map.try_emplace(key, KEY_COUNT + key, scope), key);
   }
 
   EXPECT_EQ(extract(map).size(), KEY_COUNT);
@@ -65,17 +66,21 @@ TEST_F(ConcurrentTicketMapTest, KeyKeepsTicket) {
 
 TEST_F(ConcurrentTicketMapTest, ResizeKeepsEntriesAndLookups) {
   auto map = TestMap{KEY_COUNT};
-  for (auto key = uint64_t{0}; key < KEY_COUNT; ++key) {
-    map.try_emplace(key, key);
+  {
+    auto scope = map.probe_scope();
+    for (auto key = uint64_t{0}; key < KEY_COUNT; ++key) {
+      map.try_emplace(key, key, scope);
+    }
   }
 
   map.resize(KEY_COUNT * 4);
 
   const auto entries = extract_unique(map);
   ASSERT_EQ(entries.size(), KEY_COUNT);
+  auto scope = map.probe_scope();
   for (auto key = uint64_t{0}; key < KEY_COUNT; ++key) {
     EXPECT_EQ(entries.at(key), key);
-    EXPECT_EQ(map.try_emplace(key, KEY_COUNT + key), key);
+    EXPECT_EQ(map.try_emplace(key, KEY_COUNT + key, scope), key);
   }
 }
 
@@ -83,15 +88,19 @@ TEST_F(ConcurrentTicketMapTest, InsertWithBadSizeEstimate) {
   // We only reserve 1/10 of the keys, so during the insertions the map will have to grow.
   auto map = TestMap{KEY_COUNT / 10};
 
-  for (auto key = uint64_t{0}; key < KEY_COUNT; ++key) {
-    EXPECT_EQ(map.try_emplace(key, key), key);
+  {
+    auto scope = map.probe_scope();
+    for (auto key = uint64_t{0}; key < KEY_COUNT; ++key) {
+      EXPECT_EQ(map.try_emplace(key, key, scope), key);
+    }
   }
 
   const auto entries = extract_unique(map);
   ASSERT_EQ(entries.size(), KEY_COUNT);
+  auto scope = map.probe_scope();
   for (auto key = uint64_t{0}; key < KEY_COUNT; ++key) {
     EXPECT_EQ(entries.at(key), key);
-    EXPECT_EQ(map.try_emplace(key, KEY_COUNT + key), key);
+    EXPECT_EQ(map.try_emplace(key, KEY_COUNT + key, scope), key);
   }
 }
 
@@ -107,8 +116,9 @@ TEST_F(ConcurrentTicketMapTest, ConcurrentInsertsAssignOneTicketPerKey) {
   for (auto job_id = uint64_t{0}; job_id < JOB_COUNT; ++job_id) {
     jobs.emplace_back(std::make_shared<JobTask>([&, job_id] {
       auto next_ticket = job_id * KEY_COUNT;
+      auto scope = map.probe_scope();
       for (auto key = uint64_t{0}; key < KEY_COUNT; ++key) {
-        const auto ticket = map.try_emplace(key, next_ticket);
+        const auto ticket = map.try_emplace(key, next_ticket, scope);
         returned_tickets[job_id][key] = ticket;
         next_ticket += ticket == next_ticket ? 1 : 0;
       }

@@ -427,6 +427,9 @@ std::shared_ptr<GroupKeyData<true>> _compute_groups_multi_column_concurrent(
     const auto& chunk = input_table->get_chunk(chunk_id);
     _materialize_rows(row_format, chunk, groupby_column_ids, materialized);
 
+    // One registration for the whole chunk. Taking it per row would put a contended atomic RMW on the hot path (see
+    // `ConcurrentTicketMap::try_emplace`).
+    auto probe_scope = global_hash_table.probe_scope();
     auto* row_ptr = materialized.rows.get();
     const auto chunk_start = ticket_offsets[chunk_id];
     for (auto chunk_offset = size_t{0}; chunk_offset < materialized.row_count; ++chunk_offset) {
@@ -447,7 +450,7 @@ std::shared_ptr<GroupKeyData<true>> _compute_groups_multi_column_concurrent(
       // consume the candidate and refill the range when it runs out. On a hit the map keeps the winner's copy and ours
       // is simply left unused in the arena.
       const auto group_key = _promote_key_row(row_format, row_ptr, row_hash, materialized, arena);
-      const auto ticket = global_hash_table.try_emplace(group_key, next_ticket);
+      const auto ticket = global_hash_table.try_emplace(group_key, next_ticket, probe_scope);
       if (ticket == next_ticket) {
         ++next_ticket;
         if (next_ticket >= ticket_range_end) {
@@ -589,6 +592,9 @@ std::shared_ptr<GroupKeyData<true>> _compute_groups_single_column_concurrent(
         const auto chunk_start = ticket_offsets[chunk_id];
         auto chunk_offset =
             size_t{0};  // local row index within the chunk, used to look up the global row index in `tickets`
+        // One registration for the whole chunk. Taking it per row would put a contended atomic RMW on the hot path
+        // (see `ConcurrentTicketMap::try_emplace`).
+        auto probe_scope = value_to_ticket.probe_scope();
 
         segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
           auto current_ticket = null_ticket;
@@ -599,7 +605,7 @@ std::shared_ptr<GroupKeyData<true>> _compute_groups_single_column_concurrent(
             // Offer the candidate ticket `next_ticket`; the map returns this group's ticket. Because ticket ranges are
             // disjoint across threads, the returned ticket equals `next_ticket` exactly when this call inserted, in
             // which case we consume the candidate and refill the range when it runs out.
-            current_ticket = value_to_ticket.try_emplace(position.value(), next_ticket);
+            current_ticket = value_to_ticket.try_emplace(position.value(), next_ticket, probe_scope);
             if (current_ticket == next_ticket) {
               ++next_ticket;
               if (next_ticket >= ticket_range_end) {

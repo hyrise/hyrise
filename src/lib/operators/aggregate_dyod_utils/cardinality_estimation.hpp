@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <atomic>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -94,31 +95,44 @@ inline size_t estimate_group_count_multi_column(const RowFormat& format,
     return 1;
   }
 
-  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   auto operator_state = OperatorSharedState<MultiColumnEstimationState>{};
   const auto chunk_count = input_table->chunk_count();
-  jobs.reserve(chunk_count);
 
-  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-    jobs.emplace_back(std::make_shared<JobTask>([&, chunk_id]() {
-      auto& worker_state = operator_state.current_worker_state();
-      auto& materialized = worker_state.materialized;
+  const auto process_chunk = [&](const ChunkID chunk_id) {
+    auto& worker_state = operator_state.current_worker_state();
+    auto& materialized = worker_state.materialized;
 
-      // The first time this worker is called it needs to allocate the 'materialized' buffer.
-      if (!materialized.rows) {
-        materialized.rows = std::make_unique<uint8_t[]>(max_chunk_size * format.row_size);
-      }
+    // The first time this worker is called it needs to allocate the 'materialized' buffer.
+    if (!materialized.rows) {
+      materialized.rows = std::make_unique<uint8_t[]>(max_chunk_size * format.row_size);
+    }
 
-      const auto& chunk = input_table->get_chunk(chunk_id);
-      _materialize_rows(format, chunk, groupby_column_ids, materialized);
+    const auto& chunk = input_table->get_chunk(chunk_id);
+    _materialize_rows(format, chunk, groupby_column_ids, materialized);
 
-      auto* row_ptr = materialized.rows.get();
-      for (auto chunk_offset = uint64_t{0}; chunk_offset < materialized.row_count; ++chunk_offset) {
-        const auto row_view = RowView{row_ptr, format};
-        // NOTE: We only compute the hash of the key bytes here. For strings this can amounts to only hashing the
-        // inline prefix!
-        worker_state.sketch.add(compute_hash(row_view.key_bytes(), format.key_length));
-        row_ptr += format.row_size;
+    auto* row_ptr = materialized.rows.get();
+    for (auto chunk_offset = uint64_t{0}; chunk_offset < materialized.row_count; ++chunk_offset) {
+      const auto row_view = RowView{row_ptr, format};
+      // NOTE: We only compute the hash of the key bytes here. For strings this can amounts to only hashing the
+      // inline prefix!
+      worker_state.sketch.add(fmix64(compute_hash(row_view.key_bytes(), format.key_length)));
+      row_ptr += format.row_size;
+    }
+  };
+
+  const auto job_count = std::min<size_t>(Hyrise::get().topology.num_cpus(), chunk_count);
+  auto next_chunk_id = std::atomic<uint32_t>{0};
+  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+  jobs.reserve(job_count);
+
+  for (auto job_id = size_t{0}; job_id < job_count; ++job_id) {
+    jobs.emplace_back(std::make_shared<JobTask>([&] {
+      while (true) {
+        const auto chunk_id = next_chunk_id.fetch_add(1);
+        if (chunk_id >= chunk_count) {
+          break;
+        }
+        process_chunk(ChunkID{chunk_id});
       }
     }));
   }
@@ -135,20 +149,36 @@ size_t estimate_group_count_single_column(const ColumnID groupby_column_id,
     return 1;
   }
 
-  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   auto operator_state = OperatorSharedState<HyperLogLog<>>{};
   const auto chunk_count = input_table->chunk_count();
 
-  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-    jobs.emplace_back(std::make_shared<JobTask>([&, chunk_id]() {
-      auto& worker_state = operator_state.current_worker_state();
-      const auto& chunk = input_table->get_chunk(chunk_id);
-      segment_iterate<ColumnDataType>(*chunk->get_segment(groupby_column_id), [&](const auto& position) {
-        if (!position.is_null()) {
-          // NOTE: We only 'mix' here as all the possible values here are less that 64 bits anyway.
-          worker_state.add(fmix64(static_cast<uint64_t>(position.value())));
+  const auto process_chunk = [&](const ChunkID chunk_id) {
+    auto& worker_state = operator_state.current_worker_state();
+    const auto& chunk = input_table->get_chunk(chunk_id);
+    segment_iterate<ColumnDataType>(*chunk->get_segment(groupby_column_id), [&](const auto& position) {
+      if (!position.is_null()) {
+        // NOTE: We only 'mix' here as all the possible values here are less that 64 bits anyway.
+        worker_state.add(fmix64(static_cast<uint64_t>(position.value())));
+      }
+    });
+  };
+
+  // One job per worker stealing chunks from a shared cursor, not one job per chunk - see the multi-column path above
+  // for why the per-chunk variant serializes a large prologue onto the main thread.
+  const auto job_count = std::min<size_t>(Hyrise::get().topology.num_cpus(), chunk_count);
+  auto next_chunk_id = std::atomic<uint32_t>{0};
+  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+  jobs.reserve(job_count);
+
+  for (auto job_id = size_t{0}; job_id < job_count; ++job_id) {
+    jobs.emplace_back(std::make_shared<JobTask>([&] {
+      while (true) {
+        const auto chunk_id = next_chunk_id.fetch_add(1);
+        if (chunk_id >= chunk_count) {
+          break;
         }
-      });
+        process_chunk(ChunkID{chunk_id});
+      }
     }));
   }
 
