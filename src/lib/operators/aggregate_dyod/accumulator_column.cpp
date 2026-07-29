@@ -238,6 +238,42 @@ void TypedAccumulatorColumn<ColumnType, Function>::clear() {
 }
 
 template <typename ColumnType, WindowFunction Function>
+void TypedAccumulatorColumn<ColumnType, Function>::combine_from(const AbstractAccumulatorColumn& other_base,
+                                                                const size_t other_first_slot,
+                                                                const std::span<const uint32_t> destination_slots) {
+  const auto& other = static_cast<const TypedAccumulatorColumn&>(other_base);
+  const auto row_count = destination_slots.size();
+  for (auto row = size_t{0}; row < row_count; ++row) {
+    const auto source_slot = other_first_slot + row;
+    const auto slot = destination_slots[row];
+    if constexpr (Function == WindowFunction::Count) {
+      _accumulators[slot] += other._accumulators[source_slot];
+    } else if constexpr (Function == WindowFunction::Sum || Function == WindowFunction::Avg) {
+      _accumulators[slot] += other._accumulators[source_slot];
+      _non_null_counts[slot] += other._non_null_counts[source_slot];
+    } else if constexpr (Function == WindowFunction::Min || Function == WindowFunction::Max) {
+      const auto source_count = other._non_null_counts[source_slot];
+      if (source_count > 0) {
+        if (_non_null_counts[slot] == 0) {
+          _accumulators[slot] = other._accumulators[source_slot];
+        } else if constexpr (Function == WindowFunction::Min) {
+          if (other._accumulators[source_slot] < _accumulators[slot]) {
+            _accumulators[slot] = other._accumulators[source_slot];
+          }
+        } else {
+          if (other._accumulators[source_slot] > _accumulators[slot]) {
+            _accumulators[slot] = other._accumulators[source_slot];
+          }
+        }
+        _non_null_counts[slot] += source_count;
+      }
+    } else {
+      Fail("Unsupported aggregate function.");
+    }
+  }
+}
+
+template <typename ColumnType, WindowFunction Function>
 void TypedAccumulatorColumn<ColumnType, Function>::finalize_into(const size_t first_slot, const size_t last_slot,
                                                                  const size_t output_column_index,
                                                                  OutputColumns& output) const {
@@ -292,6 +328,13 @@ void AnyAccumulatorColumn<ColumnType>::fold(std::span<const uint32_t> slots, std
 template <typename ColumnType>
 void AnyAccumulatorColumn<ColumnType>::clear() {
   _row_ids.clear();
+}
+
+template <typename ColumnType>
+void AnyAccumulatorColumn<ColumnType>::combine_from(const AbstractAccumulatorColumn& /*other*/,
+                                                    const size_t /*other_first_slot*/,
+                                                    std::span<const uint32_t> /*destination_slots*/) {
+  Fail("ANY is not eligible for the low-cardinality fast path and must not be combined.");
 }
 
 template <typename ColumnType>
@@ -356,6 +399,13 @@ template <typename ColumnType>
 void DistinctAccumulatorColumn<ColumnType>::clear() {
   _counts.clear();
   _distinct.clear();
+}
+
+template <typename ColumnType>
+void DistinctAccumulatorColumn<ColumnType>::combine_from(const AbstractAccumulatorColumn& /*other*/,
+                                                         const size_t /*other_first_slot*/,
+                                                         std::span<const uint32_t> /*destination_slots*/) {
+  Fail("COUNT(DISTINCT) is not eligible for the low-cardinality fast path and must not be combined.");
 }
 
 template <typename ColumnType>

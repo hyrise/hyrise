@@ -215,6 +215,14 @@ class AbstractAccumulatorColumn {
   virtual void clear() = 0;
 
   /**
+   * Merge another accumulator column's per-slot state into this one, used by the low-cardinality path to combine
+   * per-worker private maps. For each row i, the source slot (other_first_slot + i) of `other` is folded into this
+   * column's dense slot destination_slots[i].
+   */
+  virtual void combine_from(const AbstractAccumulatorColumn& other, size_t other_first_slot,
+                            std::span<const uint32_t> destination_slots) = 0;
+
+  /**
    * Append the finalized results for dense slots [first_slot, last_slot) as one contiguous run of output rows.
    *
    * Applies per-aggregate finalization: AVG divides its running sum by the non-null count; a group with zero non-null
@@ -263,6 +271,8 @@ class TypedAccumulatorColumn : public AbstractAccumulatorColumn {
   void fold(std::span<const uint32_t> slots, std::span<const std::byte> value_bytes,
             std::span<const std::byte> value_null_bitmap) override;
   void clear() override;
+  void combine_from(const AbstractAccumulatorColumn& other, size_t other_first_slot,
+                    std::span<const uint32_t> destination_slots) override;
   void finalize_into(size_t first_slot, size_t last_slot, size_t output_column_index,
                      OutputColumns& output) const override;
 
@@ -286,6 +296,8 @@ class AnyAccumulatorColumn : public AbstractAccumulatorColumn {
   void fold(std::span<const uint32_t> slots, std::span<const std::byte> value_bytes,
             std::span<const std::byte> value_null_bitmap) override;
   void clear() override;
+  void combine_from(const AbstractAccumulatorColumn& other, size_t other_first_slot,
+                    std::span<const uint32_t> destination_slots) override;
   void finalize_into(size_t first_slot, size_t last_slot, size_t output_column_index,
                      OutputColumns& output) const override;
 
@@ -306,6 +318,8 @@ class DistinctAccumulatorColumn : public AbstractAccumulatorColumn {
   void fold(std::span<const uint32_t> slots, std::span<const std::byte> value_bytes,
             std::span<const std::byte> value_null_bitmap) override;
   void clear() override;
+  void combine_from(const AbstractAccumulatorColumn& other, size_t other_first_slot,
+                    std::span<const uint32_t> destination_slots) override;
   void finalize_into(size_t first_slot, size_t last_slot, size_t output_column_index,
                      OutputColumns& output) const override;
 
