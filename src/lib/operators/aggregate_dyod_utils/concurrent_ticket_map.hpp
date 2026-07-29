@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <bit>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -98,6 +99,7 @@ class ConcurrentTicketMap {
     }
     _capacity = capacity;
     _mask = capacity - 1;
+    _probe_limit = _max_probe_count(capacity);
 
     _slots = _allocate_zeroed_slots(capacity, true);
   }
@@ -136,13 +138,13 @@ class ConcurrentTicketMap {
         index = (index + 1) & _mask;
         ++probe_counter;
 
-        if (probe_counter >= MAX_PROBE_COUNT) {
+        if (probe_counter >= _probe_limit) {
           break;
         }
       }
     }
 
-    if (probe_counter >= MAX_PROBE_COUNT) {
+    if (probe_counter >= _probe_limit) {
       resize(_capacity * 2);
     }
 
@@ -196,6 +198,7 @@ class ConcurrentTicketMap {
     _slots.swap(new_slots);
     _capacity = new_capacity;
     _mask = new_mask;
+    _probe_limit = _max_probe_count(new_capacity);
   }
 
   template <typename Fn>
@@ -271,7 +274,20 @@ class ConcurrentTicketMap {
   static constexpr auto MIN_CAPACITY = size_t{16};
   static constexpr auto MAX_LOAD_FACTOR = 0.7;
   static constexpr auto PARALLEL_INIT_SLOTS = size_t{1} << 18;
-  static constexpr auto MAX_PROBE_COUNT = size_t{32};
+  static constexpr auto MIN_PROBE_COUNT = size_t{8};
+
+  // Number of slots we probe before we give up and resize. Under linear probing, an unsuccessful lookup at load factor
+  // `load_factor` needs 0.5 * (1 + 1 / (1 - load_factor)^2) probes on average (Knuth, TAOCP 3, 6.4), i.e., ~6 probes
+  // at 0.7. The worst-case cluster grows with the table size, so we scale the average by log2(capacity) instead of
+  // using a fixed bound: that way a small table does not resize on a single unlucky cluster and a large one still
+  // bails out long before it degrades into a linear scan.
+  static constexpr size_t _max_probe_count(const size_t capacity, const double load_factor = MAX_LOAD_FACTOR) {
+    const auto average_probes = 0.5 * (1.0 + 1.0 / ((1.0 - load_factor) * (1.0 - load_factor)));
+    // `capacity` is a power of two, so `bit_width - 1` is an exact log2.
+    const auto log2_capacity = static_cast<double>(std::bit_width(capacity) - 1);
+    const auto probe_count = static_cast<size_t>(average_probes * log2_capacity);
+    return std::min(capacity, std::max(MIN_PROBE_COUNT, probe_count));
+  }
 
   static SlotArray _allocate_zeroed_slots(const size_t capacity, const bool parallel_init) {
     auto slots = SlotArray{static_cast<Slot*>(::operator new[](capacity * sizeof(Slot)))};
@@ -307,6 +323,7 @@ class ConcurrentTicketMap {
   SlotArray _slots;
   size_t _capacity = 0;
   size_t _mask = 0;
+  size_t _probe_limit = 0;
   Hash _hash{};
   KeyEqual _key_equal{};
   std::shared_mutex _is_resizing_mutex{};
