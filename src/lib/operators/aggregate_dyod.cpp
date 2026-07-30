@@ -1194,7 +1194,7 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
   const auto groupby_column_count = _groupby_column_ids.size();
   // If we only work on a single thread, have an empty table, or only a single group,
   // we don't bother splitting by groupby groups.
-  if (is_multi_threaded || row_count == 0 || groupby_column_count == 0) {
+  if (!is_multi_threaded || row_count == 0 || groupby_column_count == 0) {
     auto contexts_per_column = ContextsPerColumn(aggregate_count);
     // We only enable the single group optimization if we have threads.
     _aggregate<AggregateKey>(contexts_per_column, input_table, is_multi_threaded);
