@@ -85,8 +85,26 @@ class StandardAggregator : public AbstractAggregator {
   void accumulate(const size_t worker_id, const Chunk& chunk) override {
     auto& state = _states[worker_id].state;
     const auto fold = WindowFunctionBuilder<ColumnDataType, AggregateType, window_function>{}.get_aggregate_function();
+    const auto& segment = *chunk.get_segment(_column_id);
 
-    segment_iterate<ColumnDataType>(*chunk.get_segment(_column_id), [&](const auto& position) {
+    if constexpr (window_function == WindowFunction::Min || window_function == WindowFunction::Max) {
+      if (const auto* dictionary = dynamic_cast<const BaseDictionarySegment*>(&segment)) {
+        const auto distinct_count = dictionary->unique_values_count();
+
+        if (distinct_count == 0) {
+          return;
+        }
+
+        const auto candidate_id = (window_function == WindowFunction::Min) ? ValueID{0} : ValueID{distinct_count - 1};
+        const auto candidate = boost::get<ColumnDataType>(dictionary->value_of_value_id(candidate_id));
+
+        fold(candidate, state.count, state.accumulator);
+        ++state.count;
+        return;
+      }
+    }
+
+    segment_iterate<ColumnDataType>(segment, [&](const auto& position) {
       if (position.is_null()) {
         return;
       }
