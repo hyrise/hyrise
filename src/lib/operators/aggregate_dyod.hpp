@@ -155,20 +155,21 @@ class AggregateDYOD : public AbstractAggregateOperator {
  protected:
   std::shared_ptr<const Table> _on_execute() override;
 
-  template <typename AggregateKey>
+  template <typename CheckForSingleKey, typename AggregateKey>
     requires(std::is_same_v<AggregateKey, DYODEmptyAggregateKey>)
   KeysPerChunk<AggregateKey> _partition_by_groupby_keys(const std::shared_ptr<const Table>& input_table,
                                                         std::atomic_size_t& expected_result_size,
                                                         bool& use_immediate_key_shortcut, bool& guarantee_single_key);
 
-  template <typename AggregateKey>
+  template <typename CheckForSingleKey, typename AggregateKey>
     requires(!std::is_same_v<AggregateKey, DYODEmptyAggregateKey>)
   KeysPerChunk<AggregateKey> _partition_by_groupby_keys(const std::shared_ptr<const Table>& input_table,
                                                         std::atomic_size_t& expected_result_size,
                                                         bool& use_immediate_key_shortcut, bool& guarantee_single_key);
 
   template <typename AggregateKey>
-  void _aggregate(ContextsPerColumn& contexts_per_column, const std::shared_ptr<const Table>& input_table);
+  void _aggregate(ContextsPerColumn& contexts_per_column, const std::shared_ptr<const Table>& input_table,
+                  bool check_for_single_keys);
 
   template <typename AggregateKey>
   void _aggregate(ContextsPerColumn& contexts_per_column, const std::shared_ptr<const Table>& input_table,

@@ -785,13 +785,15 @@ void AggregateDYOD::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, 
   }
 }
 
-template <typename AggregateKey>
+template <typename CheckForSingleKey, typename AggregateKey>
   requires(std::is_same_v<AggregateKey, DYODEmptyAggregateKey>)
 KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::shared_ptr<const Table>& input_table,
                                                                      std::atomic_size_t& expected_result_size,
                                                                      bool& use_immediate_key_shortcut,
                                                                      bool& guarantee_single_key) {
-  guarantee_single_key = true;
+  if constexpr (std::is_same_v<CheckForSingleKey, std::true_type>) {
+    guarantee_single_key = true;
+  }
   return KeysPerChunk<AggregateKey>{};
 }
 
@@ -799,7 +801,7 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
  * Partition the input chunks by the given group key(s). This is done by creating a vector that contains the
  * AggregateKey for each row. It is gradually built by visitors, one for each group segment.
  */
-template <typename AggregateKey>
+template <typename CheckForSingleKey, typename AggregateKey>
   requires(!std::is_same_v<AggregateKey, DYODEmptyAggregateKey>)
 KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::shared_ptr<const Table>& input_table,
                                                                      std::atomic_size_t& expected_result_size,
@@ -850,7 +852,9 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   jobs.reserve(_groupby_column_ids.size());
 
-  guarantee_single_key = true;
+  if constexpr (std::is_same_v<CheckForSingleKey, std::true_type>) {
+    guarantee_single_key = true;
+  }
 
   const auto groupby_column_count = _groupby_column_ids.size();
   for (auto group_column_index = size_t{0}; group_column_index < groupby_column_count; ++group_column_index) {
@@ -860,6 +864,11 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
       const auto groupby_column_id = _groupby_column_ids.at(group_column_index);
       const auto data_type = input_table->column_data_type(groupby_column_id);
       auto contains_nulls = false;
+
+      // If we don't check for a singular key, we skip the overhead of null checks and just assume there are nulls.
+      if constexpr (std::is_same_v<CheckForSingleKey, std::false_type>) {
+        contains_nulls = input_table->column_is_nullable(groupby_column_id);
+      }
 
       resolve_data_type(data_type, [&](auto type) {
         using ColumnDataType = typename decltype(type)::type;
@@ -890,31 +899,30 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
                 return static_cast<uint64_t>(shifted_value);
               };
 
-              if constexpr (std::is_same_v<AggregateKey, DYODAggregateKeyEntry>) {
-                // Single GROUP BY column
-                if (position.is_null()) {
+              if (position.is_null()) {
+                if constexpr (std::is_same_v<AggregateKey, DYODAggregateKeyEntry>) {
+                  // Single GROUP BY column
                   keys[chunk_offset] = 0;
-                  contains_nulls = true;
                 } else {
-                  const auto key = int_to_uint(position.value()) + 1;
-
-                  keys[chunk_offset] = key;
-
-                  min_key = std::min(min_key, key);
-                  max_key = std::max(max_key, key);
+                  // Multiple GROUP BY columns
+                  keys[chunk_offset][group_column_index] = 0;
+                }
+                if constexpr (std::is_same_v<CheckForSingleKey, std::true_type>) {
+                  contains_nulls = true;
                 }
               } else {
-                // Multiple GROUP BY columns
-                if (position.is_null()) {
-                  keys[chunk_offset][group_column_index] = 0;
-                  contains_nulls = true;
-                } else {
-                  const auto key = int_to_uint(position.value()) + 1;
-                  keys[chunk_offset][group_column_index] = key;
+                const auto key = int_to_uint(position.value()) + 1;
 
-                  min_key = std::min(min_key, key);
-                  max_key = std::max(max_key, key);
+                if constexpr (std::is_same_v<AggregateKey, DYODAggregateKeyEntry>) {
+                  // Single GROUP BY column
+                  keys[chunk_offset] = key;
+                } else {
+                  // Multiple GROUP BY columns
+                  keys[chunk_offset][group_column_index] = key;
                 }
+
+                min_key = std::min(min_key, key);
+                max_key = std::max(max_key, key);
               }
             });
           }
@@ -1008,7 +1016,9 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
             segment_iterate<ColumnDataType>(*abstract_segment, [&](const auto& position) {
               auto chunk_offset = position.chunk_offset();
               if (position.is_null()) {
-                contains_nulls = true;
+                if constexpr (std::is_same_v<CheckForSingleKey, std::true_type>) {
+                  contains_nulls = true;
+                }
                 if constexpr (std::is_same_v<AggregateKey, DYODAggregateKeyEntry>) {
                   keys[chunk_offset] = 0;
                 } else {
@@ -1091,10 +1101,13 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
                 } else {
                   keys[chunk_offset][group_column_index] = value_id;
                 }
-                if (value_id_candidate == 0) {
-                  value_id_candidate = value_id;
-                } else if (value_id_candidate != value_id) {
-                  has_doubled_value_id = true;
+
+                if constexpr (std::is_same_v<CheckForSingleKey, std::true_type>) {
+                  if (value_id_candidate == 0) {
+                    value_id_candidate = value_id;
+                  } else if (value_id_candidate != value_id) {
+                    has_doubled_value_id = true;
+                  }
                 }
               }
             });
@@ -1135,9 +1148,23 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
 //  (2) adapt mask recursively based on partition size.
 //  (3) add low cardinality partitioning (all same key).
 
-// 16 threads
-constexpr auto RADIX_MASK = 0xf;
+// 32 buckets
+constexpr auto RADIX_MASK = 0x1f;
 constexpr auto RADIX_SPLIT_MAX_BUCKETS = RADIX_MASK + 1;
+
+// Ideally, we have num_cpus jobs with a size of row_count/num_cpus each (assuming unit time per row).
+// We do guesstimation and try to limit jobs to a size of row_count/(num_cpus * IDEAL_CPU_JOB_COUNT).
+// This should give a pretty good cpu usage.
+constexpr auto IDEAL_CPU_JOB_COUNT = 4;
+
+// More in-depth theoretical analysis: Assume we a workload of M rows for N cpus. The ideal time would then be M/N.
+// We assume zero time for switching, and a scheduler that randomly assigns queued jobs to any free cpu.
+// Let's say we split the jobs recursively such that each job has a size of at most M/(N*k).
+// At time M/N (aka the ideal finish time), every job has been either finished or is being worked on.
+// (The argument is: When the last job is assigned, every cpu has worked full time up that point. Since the total work
+// is M, this has to be before M/N. Thus at time M/N, there is no unassigned job)
+// So in the worst case we finished M/(N*k) later than the ideal time. We are at least (1+1/k)-optimal.
+// In pratice, we have to consider preprocessing and postprocessing time, as well as non unit time per row.
 
 template <typename AggregateKey>
 std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
@@ -1162,20 +1189,26 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
   // Check for invalid aggregates
   _validate_aggregates();
 
+  const auto is_multi_threaded = Hyrise::get().is_multi_threaded();
   const auto row_count = input_table->row_count();
   const auto groupby_column_count = _groupby_column_ids.size();
-  if (groupby_column_count == 0 || row_count == 0) {
+  // If we only work on a single thread, have an empty table, or only a single group,
+  // we don't bother splitting by groupby groups.
+  if (is_multi_threaded || row_count == 0 || groupby_column_count == 0) {
     auto contexts_per_column = ContextsPerColumn(aggregate_count);
-    _aggregate<AggregateKey>(contexts_per_column, input_table);
+    // We only enable the single group optimization if we have threads.
+    _aggregate<AggregateKey>(contexts_per_column, input_table, is_multi_threaded);
     auto output_table = std::shared_ptr<Table>{};
     auto aggregate_columns_result_table = std::shared_ptr<Table>{};
     _write_output(contexts_per_column, input_table, output_table, aggregate_columns_result_table);
     return output_table;
   }
+  const auto num_cpus = Hyrise::get().topology.num_cpus();
+  const auto max_job_size = row_count / (num_cpus * IDEAL_CPU_JOB_COUNT);
 
-  // If we have a Data table, we directly partion into PosLists and forward these to the thread-local input tables.
+  // If we have a Data table, we directly partition into PosLists and forward these to the thread-local input tables.
   // For a Reference table, we only store the ChunkOffsets since we have to resolve the PosList anyway later.
-  // TODO(anyone): figure out how pmr_vector works and if we want to use that instead on std::vector.
+  // TODO(anyone): figure out how pmr_vector works and if we want to use that instead of std::vector.
   using ReferenceList =
       std::conditional_t<std::is_same_v<IsReferenceTable, std::true_type>, std::vector<ChunkOffset>, RowIDPosList>;
   using PosLists = std::vector<std::shared_ptr<ReferenceList>>;
@@ -1307,8 +1340,10 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
        * PARTITIONING STEP
        */
 
+      const auto local_row_count = local_input_table->row_count();
+
       auto contexts_per_column = ContextsPerColumn(aggregate_count);
-      _aggregate<AggregateKey>(contexts_per_column, local_input_table);
+      _aggregate<AggregateKey>(contexts_per_column, local_input_table, local_row_count > max_job_size);
 
       _write_output(contexts_per_column, local_input_table, output_table, aggregate_columns_result_table);
     }));
@@ -1323,24 +1358,29 @@ const auto JOB_COUNT_ESTIMATE = ChunkID{16};
 
 // This is the unpartitioned variant. It will handle the table partitioning and call the partitioned variant below.
 template <typename AggregateKey>
-void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column,
-                               const std::shared_ptr<const Table>& input_table) {
+void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std::shared_ptr<const Table>& input_table,
+                               bool check_for_single_keys) {
   std::atomic_size_t expected_result_size;
   bool use_immediate_key_shortcut = false;
   bool guarantee_single_key = false;
-  auto keys_per_chunk = _partition_by_groupby_keys<AggregateKey>(input_table, expected_result_size,
-                                                                 use_immediate_key_shortcut, guarantee_single_key);
+  auto keys_per_chunk = check_for_single_keys
+                            ? _partition_by_groupby_keys<std::true_type, AggregateKey>(
+                                  input_table, expected_result_size, use_immediate_key_shortcut, guarantee_single_key)
+                            : _partition_by_groupby_keys<std::false_type, AggregateKey>(
+                                  input_table, expected_result_size, use_immediate_key_shortcut, guarantee_single_key);
 
+  // TODO(anyone): estimate ideal number of threads for this bucket.
+  // If we only have one group, we can easily split this thread, since we have only one result per context.
   const auto chunk_count = input_table->chunk_count();
-  if (chunk_count == 0) {
+  auto bucket_job_count = guarantee_single_key ? std::min(JOB_COUNT_ESTIMATE, chunk_count) : ChunkID{1};
+
+  // We have an empty table or cannot enable single key optimization, so just skip the rest.
+  if (bucket_job_count < 2) {
     _aggregate<AggregateKey>(contexts_per_column, input_table, expected_result_size, use_immediate_key_shortcut,
                              keys_per_chunk, ChunkID{0}, chunk_count);
     return;
   }
 
-  // TODO(anyone): estimate ideal number of threads for this bucket.
-  // If we only have one group, we can easily split this thread, since we have only one result per context.
-  auto bucket_job_count = guarantee_single_key ? std::min(JOB_COUNT_ESTIMATE, chunk_count) : ChunkID{1};
   const auto job_size = chunk_count / bucket_job_count;
 
   auto contexts_per_column_per_job = std::vector<ContextsPerColumn>{};
@@ -1368,7 +1408,6 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column,
     }
   }
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(mini_jobs);
-  contexts_per_column = contexts_per_column_per_job[0];
   if (input_table->empty()) {
     return;
   }
@@ -1395,6 +1434,8 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column,
       }
     });
   }
+
+  contexts_per_column = std::move(contexts_per_column_per_job[0]);
 }
 
 // This is the partioned variant. It will only aggregate on a subset of chunks.
