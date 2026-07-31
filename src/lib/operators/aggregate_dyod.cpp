@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <tuple>
 #include <type_traits>
 #include <unordered_map>
 #include <utility>
@@ -22,6 +23,7 @@
 #include "operators/aggregate/window_function_traits.hpp"
 #include "operators/operator_state.hpp"
 #include "resolve_type.hpp"
+#include "scheduler/abstract_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/chunk.hpp"
 #include "storage/table.hpp"
@@ -278,24 +280,23 @@ std::vector<std::shared_ptr<void>> _allocate_intermediate_results(const std::vec
 }
 
 std::pair<std::vector<std::shared_ptr<BaseChunkedVector>>, std::vector<std::shared_ptr<ChunkedVector<bool>>>>
-_allocate_final_results(const Table& input_table, const std::vector<ColumnID>& groupby_column_ids,
-                        const std::vector<std::shared_ptr<WindowFunctionExpression>>& aggregates,
-                        const size_t group_count) {
-  const auto groupby_column_count = groupby_column_ids.size();
-  const auto result_column_count = groupby_column_count + aggregates.size();
+_allocate_final_results(const TableColumnDefinitions& column_definitions, const size_t group_count) {
+  const auto result_column_count = column_definitions.size();
   auto final_results = std::vector<std::shared_ptr<BaseChunkedVector>>(result_column_count);
   auto final_result_nulls = std::vector<std::shared_ptr<ChunkedVector<bool>>>(result_column_count);
 
   for (auto output_column_id = size_t{0}; output_column_id < result_column_count; ++output_column_id) {
-    const auto is_groupby_column = output_column_id < groupby_column_count;
-    const auto data_type = is_groupby_column ? input_table.column_data_type(groupby_column_ids[output_column_id])
-                                             : aggregates[output_column_id - groupby_column_count]->data_type();
+    const auto& column_definition = column_definitions[output_column_id];
 
-    resolve_data_type(data_type, [&](const auto data_type_t) {
+    resolve_data_type(column_definition.data_type, [&](const auto data_type_t) {
       using ColumnDataType = typename decltype(data_type_t)::type;
 
       final_results[output_column_id] = std::make_shared<ChunkedVector<ColumnDataType>>(group_count);
-      final_result_nulls[output_column_id] = std::make_shared<ChunkedVector<bool>>(group_count);
+      // Non-nullable output columns (COUNT, non-nullable group-by keys) never read their nulls vector
+      // (see `_emit_output_column`), so it stays unallocated (nullptr).
+      if (column_definition.nullable) {
+        final_result_nulls[output_column_id] = std::make_shared<ChunkedVector<bool>>(group_count);
+      }
     });
   }
   return {std::move(final_results), std::move(final_result_nulls)};
@@ -639,16 +640,20 @@ void _build_groupby_output_columns(const std::shared_ptr<const Table>& input_tab
     resolve_data_type(input_table->column_data_type(groupby_column_id), [&](const auto data_type_t) {
       using ColumnDataType = typename decltype(data_type_t)::type;
       auto& values = *std::static_pointer_cast<ChunkedVector<ColumnDataType>>(final_results[groupby_index]);
-      auto& nulls = *final_result_nulls[groupby_index];
 
-      if (column_is_nullable) {
-        const auto& null_bytes = groupby_nulls[groupby_index];
-        for (auto group_id = size_t{0}; group_id < group_count; ++group_id) {
-          nulls[group_id] = null_bytes[group_id] != 0;
-        }
+      if (!column_is_nullable) {
+        // Non-nullable columns have no nulls vector (see `_allocate_final_results`).
+        _emit_output_column(std::move(values), ChunkedVector<bool>{}, false, output_chunks, groupby_index);
+        return;
       }
 
-      _emit_output_column(std::move(values), std::move(nulls), column_is_nullable, output_chunks, groupby_index);
+      auto& nulls = *final_result_nulls[groupby_index];
+      const auto& null_bytes = groupby_nulls[groupby_index];
+      for (auto group_id = size_t{0}; group_id < group_count; ++group_id) {
+        nulls[group_id] = null_bytes[group_id] != 0;
+      }
+
+      _emit_output_column(std::move(values), std::move(nulls), true, output_chunks, groupby_index);
     });
   }
 }
@@ -679,13 +684,17 @@ void _finalize_grouped_aggregates(const std::vector<AggregateInfo>& aggregate_in
             std::static_pointer_cast<std::vector<AggregateState>>(intermediate_results[aggregate_id]);
         const auto final_result_vector =
             std::static_pointer_cast<ChunkedVector<AggregateType>>(final_results[groupby_column_count + aggregate_id]);
+        // nullptr for aggregates whose output column is not nullable (COUNT, COUNT DISTINCT); their `is_null` is
+        // always false.
         const auto& final_result_nulls_vector = final_result_nulls[groupby_column_count + aggregate_id];
 
         for (auto row_id = start_row_id; row_id < end_row_id; ++row_id) {
           const auto& intermediate_result = (*this_column_intermediate_results)[row_id];
           const auto [value, is_null] = intermediate_result.finalize();
           (*final_result_vector)[row_id] = value;
-          (*final_result_nulls_vector)[row_id] = is_null;
+          if (final_result_nulls_vector) {
+            (*final_result_nulls_vector)[row_id] = is_null;
+          }
         }
       });
     });
@@ -721,7 +730,8 @@ void _emit_aggregate_columns(const std::vector<AggregateInfo>& aggregate_infos,
             std::static_pointer_cast<ChunkedVector<AggregateType>>(final_results[output_column_id]);
         const auto& final_result_nulls_vector = final_result_nulls[output_column_id];
 
-        _emit_output_column(std::move(*final_result_vector), std::move(*final_result_nulls_vector),
+        _emit_output_column(std::move(*final_result_vector),
+                            final_result_nulls_vector ? std::move(*final_result_nulls_vector) : ChunkedVector<bool>{},
                             column_definitions[output_column_id].nullable, output_chunks, output_column_id);
       });
     });
@@ -756,8 +766,15 @@ std::shared_ptr<const Table> AggregateDYOD::groupby_aggregate() {
   auto output_chunks = std::vector<Segments>(output_chunk_count, Segments(result_column_count));
 
   const auto intermediate_results = _allocate_intermediate_results(aggregate_infos, group_count);
-  const auto [final_results, final_result_nulls] =
-      _allocate_final_results(*input_table, _groupby_column_ids, _aggregates, group_count);
+
+  // The final result columns are first read after the accumulate phase (by `_build_groupby_output_columns` and
+  // `_finalize_grouped_aggregates`), so their allocation runs concurrently with it and stays off the critical path.
+  auto final_results = std::vector<std::shared_ptr<BaseChunkedVector>>{};
+  auto final_result_nulls = std::vector<std::shared_ptr<ChunkedVector<bool>>>{};
+  const auto allocate_final_results_job = std::static_pointer_cast<AbstractTask>(std::make_shared<JobTask>([&]() {
+    std::tie(final_results, final_result_nulls) = _allocate_final_results(column_definitions, group_count);
+  }));
+  allocate_final_results_job->schedule();
 
   const auto chunk_count = input_table->chunk_count();
   auto chunk_offsets = std::vector<size_t>(chunk_count, 0);
@@ -769,6 +786,8 @@ std::shared_ptr<const Table> AggregateDYOD::groupby_aggregate() {
 
   _delegate_accumulate(input_table, aggregate_infos, tickets, chunk_offsets, intermediate_results, group_count,
                        thread_count);
+
+  AbstractScheduler::wait_for_tasks({allocate_final_results_job});
 
   _build_groupby_output_columns(input_table, _groupby_column_ids, *groups, tickets, chunk_offsets, final_results,
                                 final_result_nulls, output_chunks);

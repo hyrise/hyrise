@@ -31,10 +31,10 @@ struct ChunkedVector : public BaseChunkedVector {
 
   ChunkedVector() = default;
 
-  explicit ChunkedVector(const size_t size, const T initial_value = T{}) {
+  explicit ChunkedVector(const size_t size) {
     chunks.reserve((size + CHUNK_SIZE - 1) / CHUNK_SIZE);
     for (auto begin = size_t{0}; begin < size; begin += CHUNK_SIZE) {
-      chunks.emplace_back(std::min(CHUNK_SIZE, size - begin), initial_value);
+      chunks.emplace_back(std::min(CHUNK_SIZE, size - begin));
     }
   }
 
