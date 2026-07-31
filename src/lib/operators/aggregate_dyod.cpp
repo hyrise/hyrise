@@ -6,7 +6,6 @@
 #include <cstdint>
 #include <memory>
 #include <string>
-#include <tuple>
 #include <type_traits>
 #include <unordered_map>
 #include <utility>
@@ -262,6 +261,21 @@ std::shared_ptr<const Table> AggregateDYOD::no_groupby_aggregate() {
 
 // ------------------------------------------------ Group-by path ------------------------------------------------
 
+// Emits one job per chunk of `vector`, each value-initializing its chunk's storage. This spreads the zeroing and the
+// first-touch page faults of the large per-group containers over all cores instead of a single allocating thread.
+template <typename T>
+void _emplace_chunk_allocation_jobs(const std::shared_ptr<ChunkedVector<T>>& vector, const size_t size,
+                                    std::vector<std::shared_ptr<AbstractTask>>& jobs) {
+  constexpr auto CHUNK_SIZE = ChunkedVector<T>::CHUNK_SIZE;
+  vector->chunks.resize((size + CHUNK_SIZE - 1) / CHUNK_SIZE);
+  const auto chunk_count = vector->chunks.size();
+  for (auto chunk_index = size_t{0}; chunk_index < chunk_count; ++chunk_index) {
+    jobs.emplace_back(std::make_shared<JobTask>([vector, chunk_index, size, CHUNK_SIZE]() {
+      vector->chunks[chunk_index] = pmr_vector<T>(std::min(CHUNK_SIZE, size - chunk_index * CHUNK_SIZE));
+    }));
+  }
+}
+
 std::vector<std::shared_ptr<void>> _allocate_intermediate_results(const std::vector<AggregateInfo>& aggregate_infos,
                                                                   const size_t group_count) {
   auto intermediate_results = std::vector<std::shared_ptr<void>>{};
@@ -279,8 +293,11 @@ std::vector<std::shared_ptr<void>> _allocate_intermediate_results(const std::vec
   return intermediate_results;
 }
 
+// The returned vectors' chunks are only allocated once the emitted `allocation_jobs` have run; the caller schedules
+// them so that they overlap with the accumulate phase.
 std::pair<std::vector<std::shared_ptr<BaseChunkedVector>>, std::vector<std::shared_ptr<ChunkedVector<bool>>>>
-_allocate_final_results(const TableColumnDefinitions& column_definitions, const size_t group_count) {
+_allocate_final_results(const TableColumnDefinitions& column_definitions, const size_t group_count,
+                        std::vector<std::shared_ptr<AbstractTask>>& allocation_jobs) {
   const auto result_column_count = column_definitions.size();
   auto final_results = std::vector<std::shared_ptr<BaseChunkedVector>>(result_column_count);
   auto final_result_nulls = std::vector<std::shared_ptr<ChunkedVector<bool>>>(result_column_count);
@@ -291,11 +308,16 @@ _allocate_final_results(const TableColumnDefinitions& column_definitions, const 
     resolve_data_type(column_definition.data_type, [&](const auto data_type_t) {
       using ColumnDataType = typename decltype(data_type_t)::type;
 
-      final_results[output_column_id] = std::make_shared<ChunkedVector<ColumnDataType>>(group_count);
+      const auto values = std::make_shared<ChunkedVector<ColumnDataType>>();
+      _emplace_chunk_allocation_jobs(values, group_count, allocation_jobs);
+      final_results[output_column_id] = values;
+
       // Non-nullable output columns (COUNT, non-nullable group-by keys) never read their nulls vector
       // (see `_emit_output_column`), so it stays unallocated (nullptr).
       if (column_definition.nullable) {
-        final_result_nulls[output_column_id] = std::make_shared<ChunkedVector<bool>>(group_count);
+        const auto nulls = std::make_shared<ChunkedVector<bool>>();
+        _emplace_chunk_allocation_jobs(nulls, group_count, allocation_jobs);
+        final_result_nulls[output_column_id] = nulls;
       }
     });
   }
@@ -768,13 +790,13 @@ std::shared_ptr<const Table> AggregateDYOD::groupby_aggregate() {
   const auto intermediate_results = _allocate_intermediate_results(aggregate_infos, group_count);
 
   // The final result columns are first read after the accumulate phase (by `_build_groupby_output_columns` and
-  // `_finalize_grouped_aggregates`), so their allocation runs concurrently with it and stays off the critical path.
-  auto final_results = std::vector<std::shared_ptr<BaseChunkedVector>>{};
-  auto final_result_nulls = std::vector<std::shared_ptr<ChunkedVector<bool>>>{};
-  const auto allocate_final_results_job = std::static_pointer_cast<AbstractTask>(std::make_shared<JobTask>([&]() {
-    std::tie(final_results, final_result_nulls) = _allocate_final_results(column_definitions, group_count);
-  }));
-  allocate_final_results_job->schedule();
+  // `_finalize_grouped_aggregates`), so their allocation jobs run concurrently with it and stay off the critical path.
+  auto final_result_allocation_jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+  const auto [final_results, final_result_nulls] =
+      _allocate_final_results(column_definitions, group_count, final_result_allocation_jobs);
+  for (const auto& job : final_result_allocation_jobs) {
+    job->schedule();
+  }
 
   const auto chunk_count = input_table->chunk_count();
   auto chunk_offsets = std::vector<size_t>(chunk_count, 0);
@@ -787,7 +809,7 @@ std::shared_ptr<const Table> AggregateDYOD::groupby_aggregate() {
   _delegate_accumulate(input_table, aggregate_infos, tickets, chunk_offsets, intermediate_results, group_count,
                        thread_count);
 
-  AbstractScheduler::wait_for_tasks({allocate_final_results_job});
+  AbstractScheduler::wait_for_tasks(final_result_allocation_jobs);
 
   _build_groupby_output_columns(input_table, _groupby_column_ids, *groups, tickets, chunk_offsets, final_results,
                                 final_result_nulls, output_chunks);

@@ -120,7 +120,6 @@ class ConcurrentTicketMap {
           auto expected = EMPTY;
           if (slot.state.compare_exchange_strong(expected, CLAIMED)) {
             slot.key = key;
-            slot.hash = hash;
             slot.state = ticket + TICKET_BIAS;
             return ticket;
           }
@@ -131,7 +130,7 @@ class ConcurrentTicketMap {
           state = slot.state.load();
         }
 
-        if (hash == slot.hash && _key_equal(slot.key, key)) {
+        if (_key_equal(slot.key, key)) {
           return state - TICKET_BIAS;
         }
 
@@ -176,7 +175,7 @@ class ConcurrentTicketMap {
       if (state >= TICKET_BIAS) {
         const auto ticket = state - TICKET_BIAS;
         const auto& key = old_slot.key;
-        const auto hash = old_slot.hash;
+        const auto hash = fmix64(static_cast<uint64_t>(_hash(key)));
         auto index = hash & new_mask;
 
         while (true) {
@@ -184,7 +183,6 @@ class ConcurrentTicketMap {
           auto expected = EMPTY;
           if (new_slot.state.compare_exchange_strong(expected, CLAIMED)) {
             new_slot.key = key;
-            new_slot.hash = hash;
             new_slot.state = ticket + TICKET_BIAS;
             break;
           }
@@ -248,9 +246,9 @@ class ConcurrentTicketMap {
   }
 
  private:
+  // The slot deliberately caches no hash.
   struct Slot {
     std::atomic<uint64_t> state;
-    uint64_t hash;
     Key key{};
   };
 

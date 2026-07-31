@@ -281,6 +281,10 @@ struct GroupKeyEqual {
   const RowFormat* format;
 
   bool operator()(const GroupKey& lhs, const GroupKey& rhs) const {
+    if (lhs.hash != rhs.hash) {
+      return false;
+    }
+
     const auto lhs_view = RowView{lhs.row, *format};
     const auto rhs_view = RowView{rhs.row, *format};
 
