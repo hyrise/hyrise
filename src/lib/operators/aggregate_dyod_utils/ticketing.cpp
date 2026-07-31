@@ -264,7 +264,6 @@ std::shared_ptr<GroupKeyData> _compute_groups_multi_column(const std::vector<Col
                                                            const std::shared_ptr<const Table>& input_table) {
   const auto row_format = _create_row_format(input_table->column_definitions(), groupby_column_ids);
   const auto chunk_count = input_table->chunk_count();
-  const auto key_equal = GroupKeyEqual{&row_format};
 
   // Guard the offset computation below, which would underflow `chunk_count - 1` on an empty table.
   if (chunk_count == 0) {
@@ -312,7 +311,6 @@ std::shared_ptr<GroupKeyData> _compute_groups_multi_column(const std::vector<Col
     for (auto chunk_offset = size_t{0}; chunk_offset < materialized.row_count; ++chunk_offset) {
       const auto row_view = RowView{row_ptr, row_format};
       const auto row_hash = compute_hash(row_view.key_bytes(), row_format.key_length);
-      const auto probe_key = GroupKey{.row = row_ptr, .hash = row_hash};
 
       // Copy the key row into this thread's arena up front (the map stores the key verbatim on insert and
       // the probe row is transient), then offer the candidate ticket `next_ticket`. Because ticket ranges are disjoint
