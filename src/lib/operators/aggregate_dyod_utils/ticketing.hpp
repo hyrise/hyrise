@@ -324,24 +324,16 @@ struct GroupKeyDataBase {
   explicit GroupKeyDataBase(const RowFormat& _row_format) : row_format(_row_format) {}
 };
 
-template <bool Concurrent>
 struct GroupKeyData : GroupKeyDataBase {
-  using HashTableType = std::conditional_t<Concurrent, ConcurrentTicketMap<GroupKey, GroupKeyHash, GroupKeyEqual>,
-                                           boost::unordered_flat_map<GroupKey, uint64_t, GroupKeyHash, GroupKeyEqual>>;
-  HashTableType global_hash_table;
+  ConcurrentTicketMap<GroupKey, GroupKeyHash, GroupKeyEqual> global_hash_table;
 
   explicit GroupKeyData(const RowFormat& _row_format, size_t estimated_groups) : GroupKeyDataBase(_row_format) {
-    if constexpr (Concurrent) {
-      global_hash_table.initialize(estimated_groups, GroupKeyHash{}, GroupKeyEqual{&this->row_format});
-    } else {
-      global_hash_table = HashTableType(estimated_groups, GroupKeyHash{}, GroupKeyEqual{&this->row_format});
-    }
+    global_hash_table.initialize(estimated_groups, GroupKeyHash{}, GroupKeyEqual{&this->row_format});
   }
 };
 
 // Determines the distinct groups. The returned hash table and key-row arena outlive this call.
-template <bool Concurrent>
-std::shared_ptr<GroupKeyData<Concurrent>> _compute_groups(const std::vector<ColumnID>& groupby_column_ids,
-                                                          const std::shared_ptr<const Table>& input_table);
+std::shared_ptr<GroupKeyData> _compute_groups(const std::vector<ColumnID>& groupby_column_ids,
+                                              const std::shared_ptr<const Table>& input_table);
 
 }  // namespace hyrise
