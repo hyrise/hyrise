@@ -12,6 +12,7 @@
 #include "operators/aggregate/window_function_traits.hpp"
 #include "operators/aggregate_dyod_utils/ticketing.hpp"
 #include "storage/chunk.hpp"
+#include "storage/dictionary_segment.hpp"
 
 namespace hyrise {
 
@@ -31,10 +32,10 @@ struct ChunkedVector : public BaseChunkedVector {
 
   ChunkedVector() = default;
 
-  explicit ChunkedVector(const size_t size, const T initial_value = T{}) {
+  explicit ChunkedVector(const size_t size) {
     chunks.reserve((size + CHUNK_SIZE - 1) / CHUNK_SIZE);
     for (auto begin = size_t{0}; begin < size; begin += CHUNK_SIZE) {
-      chunks.emplace_back(std::min(CHUNK_SIZE, size - begin), initial_value);
+      chunks.emplace_back(std::min(CHUNK_SIZE, size - begin));
     }
   }
 
@@ -61,36 +62,30 @@ void _emit_output_column(ChunkedVector<T>&& values, ChunkedVector<bool>&& nulls,
   }
 }
 
-template <typename ColumnDataType, WindowFunction window_function>
-struct BaseAggregateState {
-  using AggregateType = typename WindowFunctionTraits<ColumnDataType, window_function>::ReturnType;
-
-  BaseAggregateState() = default;
-  BaseAggregateState(const BaseAggregateState&) = default;
-  BaseAggregateState(BaseAggregateState&&) = default;
-  BaseAggregateState& operator=(const BaseAggregateState&) = default;
-  BaseAggregateState& operator=(BaseAggregateState&&) = default;
-
-  virtual void accumulate_entire_chunk(const std::shared_ptr<const Chunk>& chunk, const ColumnID input_column_id) = 0;
-
-  virtual void merge(BaseAggregateState<ColumnDataType, window_function>& other) = 0;
-
-  virtual std::pair<AggregateType, bool> finalize() const = 0;
-
-  virtual ~BaseAggregateState() = default;
-};
-
 // Incrementally computable aggregates (MIN/MAX/SUM/AVG/COUNT/ANY). NULL input values never contribute; an aggregate
 // without a single contributing value yields NULL, except COUNT which yields 0.
 template <typename ColumnDataType, WindowFunction window_function>
-struct RegularAggregateState : public BaseAggregateState<ColumnDataType, window_function> {
+struct RegularAggregateState {
   using AggregateType = typename WindowFunctionTraits<ColumnDataType, window_function>::ReturnType;
 
-  virtual void accumulate_entire_chunk(const std::shared_ptr<const Chunk>& chunk,
-                                       const ColumnID input_column_id) override final {
+  void accumulate_entire_chunk(const std::shared_ptr<const Chunk>& chunk, const ColumnID input_column_id) {
     const auto aggregate_function =
         WindowFunctionBuilder<ColumnDataType, AggregateType, window_function>().get_aggregate_function();
     const auto& segment = chunk->get_segment(input_column_id);
+
+    // A dictionary holds exactly the segment's distinct non-NULL values in ascending order, so its first/last entry
+    // already is the segment's minimum/maximum and the rows need not be scanned.
+    if constexpr (window_function == WindowFunction::Min || window_function == WindowFunction::Max) {
+      if (const auto dictionary_segment = std::dynamic_pointer_cast<DictionarySegment<ColumnDataType>>(segment)) {
+        const auto& dictionary = *dictionary_segment->dictionary();
+        if (!dictionary.empty()) {
+          aggregate_function(window_function == WindowFunction::Min ? dictionary.front() : dictionary.back(),
+                             value_count, accumulator);
+          ++value_count;
+        }
+        return;
+      }
+    }
 
     with_string_segment_iterate<ColumnDataType>(segment,
                                                 [&](const auto& value, const bool is_null, const auto needs_copy) {
@@ -104,8 +99,7 @@ struct RegularAggregateState : public BaseAggregateState<ColumnDataType, window_
                                                 });
   }
 
-  virtual void merge(BaseAggregateState<ColumnDataType, window_function>& other) override final {
-    const auto& other_state = static_cast<RegularAggregateState<ColumnDataType, window_function>&>(other);
+  void merge(RegularAggregateState& other_state) {
     if (other_state.value_count == 0) {
       return;
     }
@@ -130,7 +124,7 @@ struct RegularAggregateState : public BaseAggregateState<ColumnDataType, window_
   }
 
   // Returns the aggregate's result value, or NULL if the aggregate is undefined for the values seen.
-  virtual std::pair<AggregateType, bool> finalize() const override final {
+  std::pair<AggregateType, bool> finalize() const {
     if constexpr (window_function == WindowFunction::Count) {
       // COUNT never produces NULL: an input without contributing values counts zero of them.
       return {static_cast<AggregateType>(value_count), false};
@@ -153,11 +147,10 @@ struct RegularAggregateState : public BaseAggregateState<ColumnDataType, window_
 
 // COUNT(DISTINCT): number of distinct non-NULL values. Never NULL (0 for an all-NULL input).
 template <typename ColumnDataType>
-struct CountDistinctAggregateState : public BaseAggregateState<ColumnDataType, WindowFunction::CountDistinct> {
+struct CountDistinctAggregateState {
   using AggregateType = typename WindowFunctionTraits<ColumnDataType, WindowFunction::CountDistinct>::ReturnType;
 
-  virtual void accumulate_entire_chunk(const std::shared_ptr<const Chunk>& chunk,
-                                       const ColumnID input_column_id) override final {
+  void accumulate_entire_chunk(const std::shared_ptr<const Chunk>& chunk, const ColumnID input_column_id) {
     const auto& segment = chunk->get_segment(input_column_id);
     with_string_segment_iterate<ColumnDataType>(segment,
                                                 [&](const auto& value, const bool is_null, const auto needs_copy) {
@@ -168,11 +161,11 @@ struct CountDistinctAggregateState : public BaseAggregateState<ColumnDataType, W
                                                 });
   }
 
-  virtual void merge(BaseAggregateState<ColumnDataType, WindowFunction::CountDistinct>& other) override final {
-    distinct_values.merge(static_cast<CountDistinctAggregateState<ColumnDataType>&>(other).distinct_values);
+  void merge(CountDistinctAggregateState& other) {
+    distinct_values.merge(other.distinct_values);
   }
 
-  virtual std::pair<AggregateType, bool> finalize() const override final {
+  std::pair<AggregateType, bool> finalize() const {
     return {static_cast<AggregateType>(distinct_values.size()), false};
   }
 
@@ -181,13 +174,11 @@ struct CountDistinctAggregateState : public BaseAggregateState<ColumnDataType, W
 
 // STDDEV_SAMP: NULL for fewer than two contributing values.
 template <typename ColumnDataType>
-struct StandardDeviationSampleAggregateState
-    : public BaseAggregateState<ColumnDataType, WindowFunction::StandardDeviationSample> {
+struct StandardDeviationSampleAggregateState {
   using AggregateType =
       typename WindowFunctionTraits<ColumnDataType, WindowFunction::StandardDeviationSample>::ReturnType;
 
-  virtual void accumulate_entire_chunk(const std::shared_ptr<const Chunk>& chunk,
-                                       const ColumnID input_column_id) override final {
+  void accumulate_entire_chunk(const std::shared_ptr<const Chunk>& chunk, const ColumnID input_column_id) {
     if constexpr (std::is_arithmetic_v<ColumnDataType>) {
       const auto aggregate_function =
           WindowFunctionBuilder<ColumnDataType, AggregateType, WindowFunction::StandardDeviationSample>()
@@ -205,10 +196,8 @@ struct StandardDeviationSampleAggregateState
   }
 
   // Combines two Welford states (Chan et al.'s parallel variance algorithm).
-  virtual void merge(
-      BaseAggregateState<ColumnDataType, WindowFunction::StandardDeviationSample>& other) override final {
-    const auto& other_data =
-        static_cast<StandardDeviationSampleAggregateState<ColumnDataType>&>(other).standard_deviation;
+  void merge(StandardDeviationSampleAggregateState& other) {
+    const auto& other_data = other.standard_deviation;
     const auto other_count = other_data[0];
     if (other_count == 0.0) {
       return;
@@ -224,7 +213,7 @@ struct StandardDeviationSampleAggregateState
     // count and squared distance.
   }
 
-  virtual std::pair<AggregateType, bool> finalize() const override final {
+  std::pair<AggregateType, bool> finalize() const {
     // The SQL standard defines STDDEV_SAMP as NULL for fewer than two values.
     if (standard_deviation[0] < 2.0) {
       return {AggregateType{}, true};
@@ -308,57 +297,13 @@ struct AggregateInfo {
 };
 
 // Creates the aggregation state matching the aggregate's input data type and window function.
-std::shared_ptr<void> _make_no_groupby_aggregate_state(const DataType data_type, const WindowFunction window_function) {
-  auto state = std::shared_ptr<void>{};
-  resolve_data_type(data_type, [&](const auto data_type_t) {
-    using ColumnDataType = typename decltype(data_type_t)::type;
-    switch (window_function) {
-      case WindowFunction::Min:
-        state = std::make_shared<RegularAggregateState<ColumnDataType, WindowFunction::Min>>();
-        break;
-      case WindowFunction::Max:
-        state = std::make_shared<RegularAggregateState<ColumnDataType, WindowFunction::Max>>();
-        break;
-      case WindowFunction::Sum:
-        state = std::make_shared<RegularAggregateState<ColumnDataType, WindowFunction::Sum>>();
-        break;
-      case WindowFunction::Avg:
-        state = std::make_shared<RegularAggregateState<ColumnDataType, WindowFunction::Avg>>();
-        break;
-      case WindowFunction::Count:
-        state = std::make_shared<RegularAggregateState<ColumnDataType, WindowFunction::Count>>();
-        break;
-      case WindowFunction::Any:
-        state = std::make_shared<RegularAggregateState<ColumnDataType, WindowFunction::Any>>();
-        break;
-      case WindowFunction::CountDistinct:
-        state = std::make_shared<CountDistinctAggregateState<ColumnDataType>>();
-        break;
-      case WindowFunction::StandardDeviationSample:
-        state = std::make_shared<StandardDeviationSampleAggregateState<ColumnDataType>>();
-        break;
-      default:
-        Fail(std::format("Unsupported aggregate function '{}'.", window_function_to_string.left.at(window_function)));
-    }
-  });
-  return state;
-}
-
-std::shared_ptr<void> _make_global_aggregate_state(const WindowFunction window_function, const DataType data_type,
-                                                   const size_t group_count) {
+inline std::shared_ptr<void> _make_no_groupby_aggregate_state(const DataType data_type,
+                                                              const WindowFunction window_function) {
   auto state = std::shared_ptr<void>{};
   resolve_data_type(data_type, [&](const auto data_type_t) {
     using ColumnDataType = typename decltype(data_type_t)::type;
     resolve_window_function(window_function, [&](const auto window_function_t) {
-      const auto window_function = decltype(window_function_t)::value;
-
-      if constexpr (window_function == WindowFunction::CountDistinct) {
-        state = std::make_shared<std::vector<CountDistinctAggregateState<ColumnDataType>>>(group_count);
-      } else if constexpr (window_function == WindowFunction::StandardDeviationSample) {
-        state = std::make_shared<std::vector<StandardDeviationSampleAggregateState<ColumnDataType>>>(group_count);
-      } else {
-        state = std::make_shared<std::vector<RegularAggregateState<ColumnDataType, window_function>>>(group_count);
-      }
+      state = std::make_shared<IntermediateState<ColumnDataType, decltype(window_function_t)::value>>();
     });
   });
   return state;

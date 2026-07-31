@@ -5,7 +5,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
-#include <functional>
 #include <memory>
 #include <vector>
 
@@ -61,8 +60,6 @@ class HyperLogLog : public Noncopyable {
       return static_cast<size_t>(REGISTERS * std::log(REGISTERS / static_cast<double>(empty_registers)));
     }
 
-    // TODO(@forUnity): We could apply the 'small range correction' here (for cases) when n < 2.5 * m.
-    // (Not too expensive to skip right now.)
     return static_cast<size_t>(raw_estimate);
   }
 
@@ -163,8 +160,6 @@ size_t estimate_group_count_single_column(const ColumnID groupby_column_id,
     });
   };
 
-  // One job per worker stealing chunks from a shared cursor, not one job per chunk - see the multi-column path above
-  // for why the per-chunk variant serializes a large prologue onto the main thread.
   const auto job_count = std::min<size_t>(Hyrise::get().topology.num_cpus(), chunk_count);
   auto next_chunk_id = std::atomic<uint32_t>{0};
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
