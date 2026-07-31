@@ -739,10 +739,6 @@ template <typename ColumnDataType, WindowFunction aggregate_function, typename A
 void AggregateDYOD::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, const AbstractSegment& abstract_segment,
                                        KeysPerChunk<AggregateKey>& keys_per_chunk,
                                        ContextsPerColumn& contexts_per_column, bool use_immediate_key_shortcut) {
-  using AggregateType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
-
-  auto aggregator = WindowFunctionBuilder<ColumnDataType, AggregateType, aggregate_function>().get_aggregate_function();
-
   auto& context = *std::static_pointer_cast<DYODAggregateContext<ColumnDataType, aggregate_function, AggregateKey>>(
       contexts_per_column[column_index]);
 
@@ -757,6 +753,9 @@ void AggregateDYOD::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, 
                                         dyod_get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
                                         RowID{chunk_id, chunk_offset});
 
+    using AggregateType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
+    constexpr auto aggregator =
+        WindowFunctionBuilder<ColumnDataType, AggregateType, aggregate_function>().get_aggregate_function();
     // If the value is NULL, the current aggregate value does not change.
     if (!position.is_null()) {
       if constexpr (aggregate_function == WindowFunction::CountDistinct) {
