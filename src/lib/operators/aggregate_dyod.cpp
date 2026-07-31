@@ -2,15 +2,12 @@
 
 #include <algorithm>
 #include <atomic>
-#include <cmath>
 #include <cstddef>
 #include <cstdint>
-#include <format>
 #include <memory>
 #include <string>
 #include <type_traits>
 #include <unordered_map>
-#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -28,11 +25,8 @@
 #include "scheduler/immediate_execution_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/chunk.hpp"
-#include "storage/segment_iterate.hpp"
 #include "storage/table.hpp"
-#include "storage/value_segment.hpp"
 #include "types.hpp"
-#include "utils/assert.hpp"
 
 namespace hyrise {
 
@@ -43,6 +37,8 @@ constexpr auto GROUPBY_HASH_TABLE_MIN_ROWS_PER_GROUP = size_t{4};
 
 // Slots of the grouping hash table that one job reads when a group-by output column is built from it.
 constexpr auto GROUPBY_HASH_TABLE_SLOTS_PER_JOB = size_t{1} << 16;
+
+constexpr auto MAX_LOCAL_HASH_TABLE_SIZE = size_t{1 << 12};  // 4096 entries
 
 // State of one worker of the no-group-by aggregation: one aggregation state per aggregate of the operator. The states
 // are created lazily on the worker's first chunk, as `OperatorSharedState` default-constructs the worker states, which
@@ -68,10 +64,9 @@ struct NoGroupByWorkerState : public Noncopyable {
       resolve_data_type(current_aggregate_info.data_type, [&](const auto data_type_t) {
         using ColumnDataType = typename decltype(data_type_t)::type;
         resolve_window_function(window_function, [&](const auto window_function_t) {
-          const auto window_function = decltype(window_function_t)::value;
-          auto& state = *std::static_pointer_cast<BaseAggregateState<ColumnDataType, window_function>>(aggregate_state);
-          auto& other_state = *std::static_pointer_cast<BaseAggregateState<ColumnDataType, window_function>>(
-              other.aggregate_states[aggregate_id]);
+          using AggregateState = IntermediateState<ColumnDataType, decltype(window_function_t)::value>;
+          auto& state = *std::static_pointer_cast<AggregateState>(aggregate_state);
+          auto& other_state = *std::static_pointer_cast<AggregateState>(other.aggregate_states[aggregate_id]);
 
           state.merge(other_state);
         });
@@ -92,8 +87,6 @@ const std::string& AggregateDYOD::name() const {
   static const auto name = std::string{"AggregateDYOD"};
   return name;
 }
-
-constexpr auto MAX_LOCAL_HASH_TABLE_SIZE = size_t{1 << 12};  // 4096 entries
 
 template <typename ColumnDataType, typename AggregateType, WindowFunction window_function, typename AggregateState,
           bool force_spill = false>
@@ -124,7 +117,7 @@ void spill_local_hash_table_to_global_aggregate_result(
 }
 
 // COUNT(*) does not reference an input column. It counts all rows per group (NULLs included), so every row of the
-// chunk contributes to its group's count. `RegularAggregateState::finalize` derives COUNT from `value_count` alone.
+// chunk contributes to its group's count.
 template <typename ColumnDataType, typename AggregateType, WindowFunction window_function, typename AggregateState>
 void _accumulate_count_star_concurrently(const uint64_t* const tickets, const size_t row_index, const size_t chunk_size,
                                          boost::unordered_flat_map<uint64_t, AggregateState>& local_hash_table,
@@ -140,6 +133,7 @@ void _accumulate_count_star_concurrently(const uint64_t* const tickets, const si
   }
 }
 
+// Aggregate a single chunk of a single aggregate.
 template <typename ColumnDataType, typename AggregateType, WindowFunction window_function, typename AggregateState>
 void _accumulate_concurrently(const uint64_t* const tickets, uint32_t row_index,
                               const std::shared_ptr<AbstractSegment> aggregate_segment,
@@ -250,11 +244,7 @@ void _groupby_from_hash_table_slots(const GroupKeyData& group_key_data, const si
       });
 }
 
-// Builds the part of a group-by output column that one chunk of the source column covers. Every row of a group carries
-// the same group-by value, so the first row seen per group wins; `seen` claims a group for exactly one job, so that no
-// two jobs write the same output slot. NULLs are recorded as one byte per group rather than in a packed
-// `ChunkedVector<bool>`: the jobs write scattered tickets, and neighbouring bits of a packed bitmap share a word,
-// which cannot be written concurrently. The caller folds the bytes into the output bitmap once the jobs joined.
+// Performs ANY(column) on a single chunk. Now it is only used for group-by columns with high cardinality.
 template <typename ColumnDataType>
 void _any_grouped_chunk(const uint64_t* const tickets, const std::shared_ptr<const Table>& input_table,
                         const ColumnID input_column_id, const ChunkID chunk_id, const size_t first_row_index,
@@ -277,7 +267,6 @@ void _any_grouped_chunk(const uint64_t* const tickets, const std::shared_ptr<con
         }
       });
 }
-
 
 std::shared_ptr<const Table> AggregateDYOD::no_groupby_aggregate() {
   const auto input_table = left_input_table();
@@ -350,9 +339,8 @@ std::shared_ptr<const Table> AggregateDYOD::no_groupby_aggregate() {
                 using ColumnDataType = typename decltype(data_type_t)::type;
                 resolve_window_function(
                     aggregate_infos[aggregate_id].window_function, [&](const auto window_function_t) {
-                      const auto window_function = decltype(window_function_t)::value;
-                      auto& state = *std::static_pointer_cast<BaseAggregateState<ColumnDataType, window_function>>(
-                          aggregate_states[aggregate_id]);
+                      using AggregateState = IntermediateState<ColumnDataType, decltype(window_function_t)::value>;
+                      auto& state = *std::static_pointer_cast<AggregateState>(aggregate_states[aggregate_id]);
                       state.accumulate_entire_chunk(chunk, aggregate_infos[aggregate_id].input_column_id);
                     });
               });
@@ -401,9 +389,8 @@ std::shared_ptr<const Table> AggregateDYOD::no_groupby_aggregate() {
     resolve_data_type(aggregate_infos[aggregate_id].data_type, [&](const auto data_type_t) {
       using ColumnDataType = typename decltype(data_type_t)::type;
       resolve_window_function(aggregate_infos[aggregate_id].window_function, [&](const auto window_function_t) {
-        const auto window_function = decltype(window_function_t)::value;
-        auto& state = *std::static_pointer_cast<BaseAggregateState<ColumnDataType, window_function>>(
-            aggregate_states[aggregate_id]);
+        using AggregateState = IntermediateState<ColumnDataType, decltype(window_function_t)::value>;
+        auto& state = *std::static_pointer_cast<AggregateState>(aggregate_states[aggregate_id]);
         const auto [value, is_null] = state.finalize();
         result_values.emplace_back(is_null ? AllTypeVariant{} : AllTypeVariant{value});
       });
@@ -833,8 +820,6 @@ std::shared_ptr<AbstractOperator> AggregateDYOD::_on_deep_copy(
 }
 
 std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
-  // const auto input_table = _left_input->get_output();
-
   _validate_aggregates();
 
   if (_groupby_column_ids.empty()) {
