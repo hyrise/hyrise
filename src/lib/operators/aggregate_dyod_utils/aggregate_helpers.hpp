@@ -294,17 +294,4 @@ inline std::shared_ptr<void> _make_no_groupby_aggregate_state(const DataType dat
   return state;
 }
 
-inline std::shared_ptr<void> _make_global_aggregate_state(const WindowFunction window_function,
-                                                          const DataType data_type, const size_t group_count) {
-  auto state = std::shared_ptr<void>{};
-  resolve_data_type(data_type, [&](const auto data_type_t) {
-    using ColumnDataType = typename decltype(data_type_t)::type;
-    resolve_window_function(window_function, [&](const auto window_function_t) {
-      state = std::make_shared<std::vector<IntermediateState<ColumnDataType, decltype(window_function_t)::value>>>(
-          group_count);
-    });
-  });
-  return state;
-}
-
 }  // namespace hyrise
