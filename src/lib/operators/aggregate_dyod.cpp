@@ -20,9 +20,11 @@
 #include "operators/abstract_aggregate_operator.hpp"
 #include "operators/abstract_operator.hpp"
 #include "operators/aggregate/window_function_traits.hpp"
+#include "operators/aggregate_hash.hpp"
 #include "operators/operator_state.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_scheduler.hpp"
+#include "scheduler/immediate_execution_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/chunk.hpp"
 #include "storage/table.hpp"
@@ -852,6 +854,15 @@ std::shared_ptr<AbstractOperator> AggregateDYOD::_on_deep_copy(
 }
 
 std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
+  // Fallback to the standard aggregate operator if the code is running concurrently.
+  const auto is_not_immediate_scheduler =
+      std::dynamic_pointer_cast<ImmediateExecutionScheduler>(Hyrise::get().scheduler()) == nullptr;
+  if (is_not_immediate_scheduler) {
+    const auto fallback_operator =
+        std::make_shared<AggregateHash>(mutable_left_input(), _aggregates, _groupby_column_ids);
+    fallback_operator->execute();
+    return fallback_operator->get_output();
+  }
   _validate_aggregates();
 
   if (_groupby_column_ids.empty()) {
