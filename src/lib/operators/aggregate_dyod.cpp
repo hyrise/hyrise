@@ -278,42 +278,6 @@ void _any_grouped_chunk(const uint64_t* const tickets, const std::shared_ptr<con
       });
 }
 
-// STDDEV: NULL for groups with fewer than two contributing values.
-template <typename ColumnDataType>
-std::pair<ChunkedVector<double>, ChunkedVector<bool>> _standard_deviation_sample_grouped(
-    const uint64_t* const tickets, const size_t group_count, const std::shared_ptr<const Table>& input_table,
-    const ColumnID input_column_id) {
-  static_assert(std::is_arithmetic_v<ColumnDataType>, "StandardDeviationSample is only defined on arithmetic types.");
-  const auto aggregate_function =
-      WindowFunctionBuilder<ColumnDataType, double, WindowFunction::StandardDeviationSample>().get_aggregate_function();
-  auto accumulators = std::vector<StandardDeviationSampleData>(group_count);
-
-  const auto chunk_count = input_table->chunk_count();
-  auto row_index = uint32_t{0};  // global row index across chunks, used to look up the group ticket in `tickets`
-  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-    const auto& chunk = input_table->get_chunk(chunk_id);
-    const auto& aggregate_segment = chunk->get_segment(input_column_id);
-    segment_iterate<ColumnDataType>(*aggregate_segment, [&](const auto& position) {
-      if (position.is_null()) {
-        ++row_index;
-        return;
-      }
-      // Welford's algorithm tracks its own count in `accumulator[0]`, so the `aggregate_count` argument is unused.
-      aggregate_function(std::move(position.value()), size_t{0}, accumulators[tickets[row_index++]]);
-    });
-  }
-
-  auto values = ChunkedVector<double>(group_count);
-  auto nulls = ChunkedVector<bool>(group_count, false);
-  for (auto i = size_t{0}; i < group_count; ++i) {
-    if (accumulators[i][0] < 2) {
-      nulls[i] = true;
-    } else {
-      values[i] = accumulators[i][3];
-    }
-  }
-  return {std::move(values), std::move(nulls)};
-}
 
 std::shared_ptr<const Table> AggregateDYOD::no_groupby_aggregate() {
   const auto input_table = left_input_table();
