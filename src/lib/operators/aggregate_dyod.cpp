@@ -855,9 +855,9 @@ std::shared_ptr<AbstractOperator> AggregateDYOD::_on_deep_copy(
 
 std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
   // Fallback to the standard aggregate operator if the code is running concurrently.
-  const auto is_not_immediate_scheduler =
-      std::dynamic_pointer_cast<ImmediateExecutionScheduler>(Hyrise::get().scheduler()) == nullptr;
-  if (is_not_immediate_scheduler && !_groupby_column_ids.empty()) {
+  const auto is_immediate_scheduler =
+      std::dynamic_pointer_cast<ImmediateExecutionScheduler>(Hyrise::get().scheduler()) != nullptr;
+  if (is_immediate_scheduler && !_groupby_column_ids.empty()) {
     const auto fallback_operator =
         std::make_shared<AggregateHash>(mutable_left_input(), _aggregates, _groupby_column_ids);
     fallback_operator->execute();
