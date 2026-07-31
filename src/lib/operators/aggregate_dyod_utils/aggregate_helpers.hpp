@@ -12,6 +12,7 @@
 #include "operators/aggregate/window_function_traits.hpp"
 #include "operators/aggregate_dyod_utils/ticketing.hpp"
 #include "storage/chunk.hpp"
+#include "storage/dictionary_segment.hpp"
 
 namespace hyrise {
 
@@ -71,6 +72,20 @@ struct RegularAggregateState {
     const auto aggregate_function =
         WindowFunctionBuilder<ColumnDataType, AggregateType, window_function>().get_aggregate_function();
     const auto& segment = chunk->get_segment(input_column_id);
+
+    // A dictionary holds exactly the segment's distinct non-NULL values in ascending order, so its first/last entry
+    // already is the segment's minimum/maximum and the rows need not be scanned.
+    if constexpr (window_function == WindowFunction::Min || window_function == WindowFunction::Max) {
+      if (const auto dictionary_segment = std::dynamic_pointer_cast<DictionarySegment<ColumnDataType>>(segment)) {
+        const auto& dictionary = *dictionary_segment->dictionary();
+        if (!dictionary.empty()) {
+          aggregate_function(window_function == WindowFunction::Min ? dictionary.front() : dictionary.back(),
+                             value_count, accumulator);
+          ++value_count;
+        }
+        return;
+      }
+    }
 
     with_string_segment_iterate<ColumnDataType>(segment,
                                                 [&](const auto& value, const bool is_null, const auto needs_copy) {
