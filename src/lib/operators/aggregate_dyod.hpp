@@ -212,7 +212,7 @@ class AggregateDYOD : public AbstractAggregateOperator {
                                TableColumnDefinitions& output_column_definitions);
 
   void _write_output(ContextsPerColumn& contexts_per_column, const std::shared_ptr<const Table>& input_table,
-                     std::shared_ptr<Table>& output_table, std::shared_ptr<Table>& aggregate_columns_result_table);
+                     std::shared_ptr<Table>& output_table, std::shared_ptr<Table>& aggregate_result_table);
 
   template <typename ColumnDataType, WindowFunction aggregate_function, typename AggregateKey>
     requires(aggregate_function == WindowFunction::Any)
