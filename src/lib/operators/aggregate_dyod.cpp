@@ -1709,15 +1709,15 @@ void AggregateDYOD::_write_output(ContextsPerColumn& contexts_per_column,
   if (!entireposlist_indexes.empty()) {
     const auto materialized_column_count = entireposlist_indexes.size();
 
-    auto aggregate_chunks = std::vector<Segments>();
+    auto aggregate_chunks = std::vector<std::shared_ptr<Segments>>();
     for (const auto& materialized_result_chunk : intermediate_result) {
-      auto aggregate_segments = Segments{};
-      aggregate_segments.reserve(materialized_column_count);
+      auto aggregate_segments = std::make_shared<Segments>();
+      aggregate_segments->reserve(materialized_column_count);
 
       for (const auto entireposlist_index : entireposlist_indexes) {
-        aggregate_segments.emplace_back(materialized_result_chunk[entireposlist_index]);
+        aggregate_segments->emplace_back(materialized_result_chunk[entireposlist_index]);
       }
-      aggregate_chunks.push_back(std::move(aggregate_segments));
+      aggregate_chunks.push_back(aggregate_segments);
     }
     const auto lock = std::lock_guard<std::mutex>{_aggregate_mutex};
 
@@ -1734,12 +1734,12 @@ void AggregateDYOD::_write_output(ContextsPerColumn& contexts_per_column,
     }
     first_materialized_chunk_id = aggregate_columns_result_table->chunk_count();
 
-    for (auto aggregate_segments : aggregate_chunks) {
-      aggregate_columns_result_table->append_chunk(aggregate_segments);
+    for (auto& aggregate_segments : aggregate_chunks) {
+      aggregate_columns_result_table->append_chunk(*aggregate_segments);
     }
   }
 
-  auto output_chunks = std::vector<Segments>();
+  auto output_chunks = std::vector<std::shared_ptr<Segments>>();
   if (!intermediate_result.empty() && intermediate_result.front()[0]->size() > 0) {
     const auto output_table_chunk_count = intermediate_result.size();
     for (auto chunk_id = ChunkID{0}; chunk_id < output_table_chunk_count; ++chunk_id) {
@@ -1748,12 +1748,13 @@ void AggregateDYOD::_write_output(ContextsPerColumn& contexts_per_column,
         continue;
       }
 
-      auto reference_segments = Segments(num_output_columns);
+      auto reference_segments = std::make_shared<Segments>();
+      reference_segments->reserver(num_output_columns);
 
       for (const auto column_id : reference_segment_indexes) {
         DebugAssert(std::dynamic_pointer_cast<const ReferenceSegment>(intermediate_result[chunk_id][column_id]),
                     "Expected a ReferenceSegment at this position.");
-        reference_segments[column_id] = intermediate_result[chunk_id][column_id];
+        (*reference_segments)[column_id] = intermediate_result[chunk_id][column_id];
       }
 
       const auto materialized_table_column_count = entireposlist_indexes.size();
@@ -1768,10 +1769,10 @@ void AggregateDYOD::_write_output(ContextsPerColumn& contexts_per_column,
                     "Unexpected reference segment at this position.");
         const auto entire_chunk_pos_list =
             std::make_shared<EntireChunkPosList>(ChunkID{first_materialized_chunk_id + chunk_id}, chunk_size);
-        reference_segments[entireposlist_indexes[materialized_table_column_id]] = std::make_shared<ReferenceSegment>(
+        (*reference_segments)[entireposlist_indexes[materialized_table_column_id]] = std::make_shared<ReferenceSegment>(
             aggregate_columns_result_table, materialized_table_column_id, entire_chunk_pos_list);
       }
-      output_chunks.push_back(std::move(reference_segments));
+      output_chunks.emplace_back(reference_segments);
     }
   }
   const auto lock = std::lock_guard<std::mutex>{_output_mutex};
@@ -1785,7 +1786,7 @@ void AggregateDYOD::_write_output(ContextsPerColumn& contexts_per_column,
   }
   if (!intermediate_result.empty() && intermediate_result.front()[0]->size() > 0) {
     for (const auto& output_segments : output_chunks) {
-      output_table->append_chunk(output_segments);
+      output_table->append_chunk(*output_segments);
     }
   }
 }
