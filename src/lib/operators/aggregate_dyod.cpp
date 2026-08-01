@@ -1741,9 +1741,9 @@ void AggregateDYOD::_write_output(ContextsPerColumn& contexts_per_column,
     }
   }
 
-  // Write the final output to the output_table. We now combine actual reference segments (e.g., of GROUP BY columns) with
-  // segments that reference the temporary materialized table created above. All chunks are first created before writing to
-  // the table starts to reduce the amount of time the table is locked.
+  // Write the final output to the output_table. We now combine actual reference segments (e.g., of GROUP BY columns)
+  // with segments that reference the temporary materialized table created above. All chunks are first created before
+  // writing to the table starts to reduce the amount of time the table is locked.
   auto output_chunks = std::vector<std::shared_ptr<Segments>>();
 
   if (!intermediate_result.empty() && intermediate_result.front()[0]->size() > 0) {
