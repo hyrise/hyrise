@@ -73,6 +73,7 @@ struct DYODAggregateResult {
 
   AccumulatorType accumulator{};
   size_t aggregate_count = 0;
+  bool has_aggregates = false;
 
   // As described above, this stores a pointer into the input data that is used to later restore the GROUP BY values.
   // A NULL_ROW_ID means that the aggregate result is not (yet) valid and should be skipped when materializing the

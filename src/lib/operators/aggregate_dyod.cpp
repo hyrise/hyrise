@@ -85,7 +85,7 @@ bool dyod_write_aggregate_values(const DYODAggregateResults<ColumnDataType, aggr
                                       continue;
                                     }
 
-                                    if (result.aggregate_count > 0) {
+                                    if (result.has_aggregates) {
                                       values.emplace_back(result.accumulator);
                                       null_values.emplace_back(false);
                                     } else {
@@ -171,7 +171,7 @@ bool dyod_write_aggregate_values(const DYODAggregateResults<ColumnDataType, aggr
             continue;
           }
 
-          if (result.aggregate_count > 0) {
+          if (result.has_aggregates) {
             values.emplace_back(result.accumulator / static_cast<AggregateType>(result.aggregate_count));
             null_values.emplace_back(false);
           } else {
@@ -215,7 +215,8 @@ bool dyod_write_aggregate_values(const DYODAggregateResults<ColumnDataType, aggr
                                       continue;
                                     }
 
-                                    if (result.aggregate_count > 1) {
+                                    // We have the count at index 0
+                                    if (result.accumulator[0] > 1) {
                                       values.emplace_back(result.accumulator[3]);
                                       null_values.emplace_back(false);
                                     } else {
@@ -700,6 +701,7 @@ struct DYODAggregateContext : public DYODAggregateResultContext<ColumnDataType, 
       }
     }
     target.aggregate_count += other.aggregate_count;
+    target.has_aggregates |= other.has_aggregates;
   }
 
   // Currently only merges two contexts with a single result i.e., a single group.
@@ -710,11 +712,11 @@ struct DYODAggregateContext : public DYODAggregateResultContext<ColumnDataType, 
     DebugAssert(this->results.size() >= 1, "Expected this to have at least one result.");
     auto& other_result = other->results[0];
     auto& result = this->results[0];
-    if (result.aggregate_count == 0) {
+    if (!result.has_aggregates) {
       result = std::move(other_result);
       return;
     }
-    if (other_result.aggregate_count == 0) {
+    if (!other_result.has_aggregates) {
       return;
     }
     merge_results(result, other_result);
@@ -765,6 +767,7 @@ void AggregateDYOD::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, 
       }
 
       ++result.aggregate_count;
+      result.has_aggregates = true;
     }
   };
 
@@ -1560,6 +1563,7 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std
               // Not grouped by anything, simply count the number of rows.
               results.resize(1);
               results[0].aggregate_count += input_chunk_size;
+              results[0].has_aggregates = input_chunk_size > 0;
 
               // We need to set any RowID because the default value (NULL_ROW_ID) would later be skipped. As we are not
               // reconstructing the GROUP BY values later, the exact value of this row_id does not matter, as long as it
@@ -1577,6 +1581,7 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std
                                            dyod_get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
                                            RowID{chunk_id, chunk_offset});
                   ++result.aggregate_count;
+                  result.has_aggregates = true;
                 }
               } else {
                 for (auto chunk_offset = ChunkOffset{0}; chunk_offset < input_chunk_size; ++chunk_offset) {
@@ -1585,6 +1590,7 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std
                                            dyod_get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
                                            RowID{chunk_id, chunk_offset});
                   ++result.aggregate_count;
+                  result.has_aggregates = true;
                 }
               }
             }
