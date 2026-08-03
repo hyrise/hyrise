@@ -31,6 +31,7 @@
 #include "hyrise.hpp"
 #include "operators/abstract_aggregate_operator.hpp"
 #include "operators/abstract_operator.hpp"
+#include "operators/dyod_window_function_builder.hpp"
 #include "operators/operator_performance_data.hpp"
 #include "operators/print.hpp"
 #include "resolve_type.hpp"
@@ -118,7 +119,7 @@ bool dyod_write_aggregate_values(const DYODAggregateResults<ColumnDataType, aggr
                                       continue;
                                     }
 
-                                    values.emplace_back(result.aggregate_count);
+                                    values.emplace_back(result.accumulator);
                                   }
                                 });
   return false;
@@ -672,8 +673,10 @@ struct DYODAggregateContext : public DYODAggregateResultContext<ColumnDataType, 
         target.accumulator = other.accumulator;
       }
     }
-    if constexpr (aggregate_function == WindowFunction::Sum || aggregate_function == WindowFunction::Avg) {
+    if constexpr (aggregate_function == WindowFunction::Sum || aggregate_function == WindowFunction::Avg ||
+                  aggregate_function == WindowFunction::Count) {
       target.accumulator += other.accumulator;
+      target.aggregate_count += other.aggregate_count;
     }
     if constexpr (aggregate_function == WindowFunction::Any) {
       target.accumulator = other.accumulator;
@@ -700,7 +703,6 @@ struct DYODAggregateContext : public DYODAggregateResultContext<ColumnDataType, 
         target.accumulator[3] = std::sqrt(variance);
       }
     }
-    target.aggregate_count += other.aggregate_count;
     target.has_aggregates |= other.has_aggregates;
   }
 
@@ -756,14 +758,14 @@ void AggregateDYOD::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, 
 
     using AggregateType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
     constexpr auto aggregator =
-        WindowFunctionBuilder<ColumnDataType, AggregateType, aggregate_function>().get_aggregate_function();
+        DYODWindowFunctionBuilder<ColumnDataType, AggregateType, aggregate_function>().get_aggregate_function();
     // If the value is NULL, the current aggregate value does not change.
     if (!position.is_null()) {
       if constexpr (aggregate_function == WindowFunction::CountDistinct) {
         // For the case of CountDistinct, insert the current value into the set to keep track of distinct values.
         result.accumulator.emplace(position.value());
       } else {
-        aggregator(ColumnDataType{position.value()}, result.aggregate_count, result.accumulator);
+        aggregator(ColumnDataType{position.value()}, result.has_aggregates, result.accumulator);
       }
 
       ++result.aggregate_count;
@@ -1563,6 +1565,7 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std
               // Not grouped by anything, simply count the number of rows.
               results.resize(1);
               results[0].aggregate_count += input_chunk_size;
+              results[0].accumulator += input_chunk_size;
               results[0].has_aggregates = input_chunk_size > 0;
 
               // We need to set any RowID because the default value (NULL_ROW_ID) would later be skipped. As we are not
@@ -1581,6 +1584,7 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std
                                            dyod_get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
                                            RowID{chunk_id, chunk_offset});
                   ++result.aggregate_count;
+                  ++result.accumulator;
                   result.has_aggregates = true;
                 }
               } else {
@@ -1590,6 +1594,7 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std
                                            dyod_get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
                                            RowID{chunk_id, chunk_offset});
                   ++result.aggregate_count;
+                  ++result.accumulator;
                   result.has_aggregates = true;
                 }
               }
