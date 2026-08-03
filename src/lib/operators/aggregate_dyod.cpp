@@ -318,7 +318,7 @@ void dyod_prepare_output(std::vector<Segments>& output, const size_t chunk_count
 }
 
 template <typename Functor>
-void resolve_window_function(WindowFunction window_function, const Functor& functor) {
+void resolve_window_function_without_any(WindowFunction window_function, const Functor& functor) {
   switch (window_function) {
     case WindowFunction::Min:
       functor.template operator()<WindowFunction::Min>();
@@ -342,7 +342,6 @@ void resolve_window_function(WindowFunction window_function, const Functor& func
       functor.template operator()<WindowFunction::StandardDeviationSample>();
       break;
     case WindowFunction::Any:
-      functor.template operator()<WindowFunction::Any>();
       break;
     case WindowFunction::CumeDist:
     case WindowFunction::DenseRank:
@@ -350,6 +349,15 @@ void resolve_window_function(WindowFunction window_function, const Functor& func
     case WindowFunction::Rank:
     case WindowFunction::RowNumber:
       Fail(std::format("Unsupported aggregate function '{}'.", window_function_to_string.left.at(window_function)));
+  }
+}
+
+template <typename Functor>
+void resolve_window_function(WindowFunction window_function, const Functor& functor) {
+  if (window_function == WindowFunction::Any) {
+    functor.template operator()<WindowFunction::Any>();
+  } else {
+    resolve_window_function_without_any(window_function, functor);
   }
 }
 
@@ -417,8 +425,8 @@ typename Results::reference visit_and_get_result(CacheResultIds /*cache_result_i
         return results[result_id];
       }
     } else {
-      Assert(!(*first_key_entry & DYOD_CACHE_MASK),
-             "CacheResultIds is set to false, but a cached or immediate key shortcut entry was found.");
+      DebugAssert(!(*first_key_entry & DYOD_CACHE_MASK),
+                  "CacheResultIds is set to false, but a cached or immediate key shortcut entry was found.");
     }
 
     // Lookup the key in the result_ids map
@@ -669,9 +677,8 @@ struct DYODAggregateContext : public DYODAggregateResultContext<ColumnDataType, 
     if constexpr (aggregate_function == WindowFunction::Any) {
       target.accumulator = other.accumulator;
     }
-
     if constexpr (aggregate_function == WindowFunction::CountDistinct) {
-      Fail("CountDistinct not implemented yet.");
+      target.accumulator.merge(other.accumulator);
     }
     if constexpr (aggregate_function == WindowFunction::StandardDeviationSample) {
       // TODO(anyone): make more readable
@@ -727,15 +734,7 @@ void AggregateDYOD::_merge_contexts(std::shared_ptr<DYODSegmentVisitorContext>& 
   cast_target->merge(cast_other);
 }
 
-// ANY is a pseudo-function and is handled by `dyod_get_aggregate_key`.
 template <typename ColumnDataType, WindowFunction aggregate_function, typename AggregateKey>
-  requires(aggregate_function == WindowFunction::Any)
-void AggregateDYOD::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, const AbstractSegment& abstract_segment,
-                                       KeysPerChunk<AggregateKey>& keys_per_chunk,
-                                       ContextsPerColumn& contexts_per_column, bool use_immediate_key_shortcut) {}
-
-template <typename ColumnDataType, WindowFunction aggregate_function, typename AggregateKey>
-  requires(aggregate_function != WindowFunction::Any)
 void AggregateDYOD::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, const AbstractSegment& abstract_segment,
                                        KeysPerChunk<AggregateKey>& keys_per_chunk,
                                        ContextsPerColumn& contexts_per_column, bool use_immediate_key_shortcut) {
@@ -1471,7 +1470,7 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std
     const auto input_column_id = pqp_column.column_id;
 
     if (input_column_id == INVALID_COLUMN_ID) {
-      Assert(aggregate->window_function == WindowFunction::Count, "Only COUNT may have an invalid ColumnID.");
+      DebugAssert(aggregate->window_function == WindowFunction::Count, "Only COUNT may have an invalid ColumnID.");
       // SELECT COUNT(*) - we know the template arguments, so we do not need a visitor.
       auto context = std::make_shared<DYODAggregateContext<CountColumnType, WindowFunction::Count, AggregateKey>>(
           expected_result_size);
@@ -1605,7 +1604,8 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std
           resolve_data_type(data_type, [&, aggregate](auto type) {
             using ColumnDataType = typename decltype(type)::type;
 
-            resolve_window_function(aggregate->window_function, [&]<WindowFunction aggregate_func>() {
+            // ANY is a pseudo-function and is handled by `dyod_get_aggregate_key`.
+            resolve_window_function_without_any(aggregate->window_function, [&]<WindowFunction aggregate_func>() {
               _aggregate_segment<ColumnDataType, aggregate_func, AggregateKey>(
                   chunk_id, aggregate_idx, *abstract_segment, keys_per_chunk, contexts_per_column,
                   use_immediate_key_shortcut);
@@ -1665,7 +1665,8 @@ void AggregateDYOD::_write_output(ContextsPerColumn& contexts_per_column,
     resolve_data_type(data_type, [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
 
-      resolve_window_function(aggregate->window_function, [&]<WindowFunction aggregate_func>() {
+      // Pseudo-aggregates are written by dyod_write_output_group_columns.
+      resolve_window_function_without_any(aggregate->window_function, [&]<WindowFunction aggregate_func>() {
         _write_aggregate_output<ColumnDataType, aggregate_func>(aggregate_idx, contexts_per_column, intermediate_result,
                                                                 input_table, output_column_definitions);
       });
@@ -1814,16 +1815,7 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
   }
 }
 
-// Pseudo-aggregates are written by dyod_write_output_group_columns.
 template <typename ColumnDataType, WindowFunction aggregate_function>
-  requires(aggregate_function == WindowFunction::Any)
-void AggregateDYOD::_write_aggregate_output(ColumnID aggregate_index, ContextsPerColumn& contexts_per_column,
-                                            std::vector<Segments>& intermediate_result,
-                                            const std::shared_ptr<const Table>& input_table,
-                                            TableColumnDefinitions& output_column_definitions) {}
-
-template <typename ColumnDataType, WindowFunction aggregate_function>
-  requires(aggregate_function != WindowFunction::Any)
 void AggregateDYOD::_write_aggregate_output(ColumnID aggregate_index, ContextsPerColumn& contexts_per_column,
                                             std::vector<Segments>& intermediate_result,
                                             const std::shared_ptr<const Table>& input_table,

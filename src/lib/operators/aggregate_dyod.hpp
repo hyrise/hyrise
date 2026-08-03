@@ -198,14 +198,6 @@ class AggregateDYOD : public AbstractAggregateOperator {
   void _write_groupby_output(RowIDPosList& pos_list);
 
   template <typename ColumnDataType, WindowFunction aggregate_function>
-    requires(aggregate_function == WindowFunction::Any)
-  void _write_aggregate_output(ColumnID aggregate_index, ContextsPerColumn& contexts_per_column,
-                               std::vector<Segments>& intermediate_result,
-                               const std::shared_ptr<const Table>& input_table,
-                               TableColumnDefinitions& output_column_definitions);
-
-  template <typename ColumnDataType, WindowFunction aggregate_function>
-    requires(aggregate_function != WindowFunction::Any)
   void _write_aggregate_output(ColumnID aggregate_index, ContextsPerColumn& contexts_per_column,
                                std::vector<Segments>& intermediate_result,
                                const std::shared_ptr<const Table>& input_table,
@@ -215,13 +207,6 @@ class AggregateDYOD : public AbstractAggregateOperator {
                      std::shared_ptr<Table>& output_table, std::shared_ptr<Table>& aggregate_result_table);
 
   template <typename ColumnDataType, WindowFunction aggregate_function, typename AggregateKey>
-    requires(aggregate_function == WindowFunction::Any)
-  void _aggregate_segment(ChunkID chunk_id, ColumnID column_index, const AbstractSegment& abstract_segment,
-                          KeysPerChunk<AggregateKey>& keys_per_chunk, ContextsPerColumn& contexts_per_column,
-                          bool use_immediate_key_shortcut);
-
-  template <typename ColumnDataType, WindowFunction aggregate_function, typename AggregateKey>
-    requires(aggregate_function != WindowFunction::Any)
   void _aggregate_segment(ChunkID chunk_id, ColumnID column_index, const AbstractSegment& abstract_segment,
                           KeysPerChunk<AggregateKey>& keys_per_chunk, ContextsPerColumn& contexts_per_column,
                           bool use_immediate_key_shortcut);
