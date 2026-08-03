@@ -1412,8 +1412,8 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std
 
   // TODO(anyone): parallelize merging ?
   // TODO(anyone): make more pretty.
-  for (auto aggregate_idx = ColumnID{0}; aggregate_idx < aggregate_count; ++aggregate_idx) {
-    const auto& aggregate = _aggregates[aggregate_idx];
+  for (auto aggregate_index = ColumnID{0}; aggregate_index < aggregate_count; ++aggregate_index) {
+    const auto& aggregate = _aggregates[aggregate_index];
     const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
     const auto input_column_id = pqp_column.column_id;
 
@@ -1421,11 +1421,11 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std
     const auto data_type =
         input_column_id == INVALID_COLUMN_ID ? DataType::Long : input_table->column_data_type(input_column_id);
 
-    auto& context = contexts_per_column_per_job[0][aggregate_idx];
+    auto& context = contexts_per_column_per_job[0][aggregate_index];
     resolve_data_type(data_type, [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
       for (auto job_id = ChunkID{1}; job_id < bucket_job_count; ++job_id) {
-        auto& other = contexts_per_column_per_job[job_id][aggregate_idx];
+        auto& other = contexts_per_column_per_job[job_id][aggregate_index];
         resolve_window_function(aggregate->window_function, [&]<WindowFunction aggregate_func>() {
           _merge_contexts<ColumnDataType, aggregate_func, AggregateKey>(context, other);
         });
@@ -1463,8 +1463,8 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std
    * and _write_aggregate_output() needs these contexts anyway.
    */
   const auto aggregate_count = _aggregates.size();
-  for (auto aggregate_idx = ColumnID{0}; aggregate_idx < aggregate_count; ++aggregate_idx) {
-    const auto& aggregate = _aggregates[aggregate_idx];
+  for (auto aggregate_index = ColumnID{0}; aggregate_index < aggregate_count; ++aggregate_index) {
+    const auto& aggregate = _aggregates[aggregate_index];
 
     const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
     const auto input_column_id = pqp_column.column_id;
@@ -1475,11 +1475,11 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std
       auto context = std::make_shared<DYODAggregateContext<CountColumnType, WindowFunction::Count, AggregateKey>>(
           expected_result_size);
 
-      contexts_per_column[aggregate_idx] = context;
+      contexts_per_column[aggregate_index] = context;
       continue;
     }
     const auto data_type = input_table->column_data_type(input_column_id);
-    contexts_per_column[aggregate_idx] =
+    contexts_per_column[aggregate_index] =
         _create_aggregate_context<AggregateKey>(data_type, aggregate->window_function, expected_result_size);
   }
 
@@ -1536,9 +1536,9 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std
       auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
       jobs.reserve(aggregate_count);
 
-      for (auto aggregate_idx = ColumnID{0}; aggregate_idx < aggregate_count; ++aggregate_idx) {
-        const auto perform_aggregation = [&, aggregate_idx]() {
-          const auto aggregate = _aggregates[aggregate_idx];
+      for (auto aggregate_index = ColumnID{0}; aggregate_index < aggregate_count; ++aggregate_index) {
+        const auto perform_aggregation = [&, aggregate_index]() {
+          const auto aggregate = _aggregates[aggregate_index];
           /**
            * Special COUNT(*) implementation.
            * Because COUNT(*) does not have a specific target column, we use the maximum ColumnID. We then go through the
@@ -1553,7 +1553,7 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std
             Assert(aggregate->window_function == WindowFunction::Count, "Only COUNT may have an invalid ColumnID.");
             auto context =
                 std::static_pointer_cast<DYODAggregateContext<CountColumnType, WindowFunction::Count, AggregateKey>>(
-                    contexts_per_column[aggregate_idx]);
+                    contexts_per_column[aggregate_index]);
 
             auto& result_ids = *context->result_ids;
             auto& results = context->results;
@@ -1607,7 +1607,7 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std
             // ANY is a pseudo-function and is handled by `dyod_get_aggregate_key`.
             resolve_window_function_without_any(aggregate->window_function, [&]<WindowFunction aggregate_func>() {
               _aggregate_segment<ColumnDataType, aggregate_func, AggregateKey>(
-                  chunk_id, aggregate_idx, *abstract_segment, keys_per_chunk, contexts_per_column,
+                  chunk_id, aggregate_index, *abstract_segment, keys_per_chunk, contexts_per_column,
                   use_immediate_key_shortcut);
             });
           });
@@ -1615,7 +1615,7 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std
         // If we cache the lookups, we do one run single threaded to write the cached results.
         // If there are only 1 or 2 aggregates, we don't bother creating an extra thread.
         // If we use immediate key shortcuts, key_per_chunk should remain const and thus thread safe.
-        if ((aggregate_idx == size_t{0} && contexts_per_column.size() > 1) || aggregate_count <= 2) {
+        if ((aggregate_index == size_t{0} && contexts_per_column.size() > 1) || aggregate_count <= 2) {
           perform_aggregation();
         } else {
           jobs.emplace_back(std::make_shared<JobTask>(perform_aggregation));
@@ -1653,7 +1653,7 @@ void AggregateDYOD::_write_output(ContextsPerColumn& contexts_per_column,
   /*
   Write the aggregated columns to the output.
   */
-  auto aggregate_idx = ColumnID{0};
+  auto aggregate_index = ColumnID{0};
   for (const auto& aggregate : _aggregates) {
     const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
     const auto input_column_id = pqp_column.column_id;
@@ -1667,12 +1667,12 @@ void AggregateDYOD::_write_output(ContextsPerColumn& contexts_per_column,
 
       // Pseudo-aggregates are written by dyod_write_output_group_columns.
       resolve_window_function_without_any(aggregate->window_function, [&]<WindowFunction aggregate_func>() {
-        _write_aggregate_output<ColumnDataType, aggregate_func>(aggregate_idx, contexts_per_column, intermediate_result,
-                                                                input_table, output_column_definitions);
+        _write_aggregate_output<ColumnDataType, aggregate_func>(
+            aggregate_index, contexts_per_column, intermediate_result, input_table, output_column_definitions);
       });
     });
 
-    ++aggregate_idx;
+    ++aggregate_index;
   }
 
   /**
