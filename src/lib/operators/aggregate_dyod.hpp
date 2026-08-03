@@ -76,7 +76,6 @@ struct DYODAggregateResult {
           std::conditional_t<aggregate_function == WindowFunction::CountDistinct, DistinctValues, AggregateType>>>;
 
   AccumulatorType accumulator{};
-  bool has_aggregates = false;
 
   // As described above, this stores a pointer into the input data that is used to later restore the GROUP BY values.
   // A NULL_ROW_ID means that the aggregate result is not (yet) valid and should be skipped when materializing the
@@ -85,6 +84,7 @@ struct DYODAggregateResult {
   // a valid RowID may *point to* a row that is NULL.
   RowID row_id{NULL_ROW_ID};
 
+  bool has_aggregates = false;
   // Note that the size of this struct is a significant performance factor (see #2252). Be careful when adding fields or
   // changing data types.
 };
