@@ -21,6 +21,7 @@
 #include "abstract_aggregate_operator.hpp"
 #include "abstract_read_only_operator.hpp"
 #include "aggregate/window_function_traits.hpp"
+#include "dyod_window_function_builder.hpp"
 #include "expression/window_function_expression.hpp"
 #include "resolve_type.hpp"
 #include "storage/reference_segment.hpp"
@@ -66,10 +67,13 @@ struct DYODAggregateResult {
 
   // Find the correct accumulator type using nested conditionals.
   using AccumulatorType = std::conditional_t<
-      // For StandardDeviationSample, use StandardDeviationSampleData as the accumulator,
-      aggregate_function == WindowFunction::StandardDeviationSample, StandardDeviationSampleData,
-      // for CountDistinct, use DistinctValues, otherwise use AggregateType
-      std::conditional_t<aggregate_function == WindowFunction::CountDistinct, DistinctValues, AggregateType>>;
+      // For StandardDeviationSample, use DYODStandardDeviationSampleData as the accumulator,
+      aggregate_function == WindowFunction::StandardDeviationSample, DYODStandardDeviationSampleData,
+      // for Avg, use DYODAvgData
+      std::conditional_t<
+          aggregate_function == WindowFunction::Avg, DYODAvgData<AggregateType>,
+          // for CountDistinct, use DistinctValues, otherwise use AggregateType
+          std::conditional_t<aggregate_function == WindowFunction::CountDistinct, DistinctValues, AggregateType>>>;
 
   AccumulatorType accumulator{};
   size_t aggregate_count = 0;

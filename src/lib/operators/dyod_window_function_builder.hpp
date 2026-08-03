@@ -26,11 +26,11 @@ template <typename ColumnDataType, typename AggregateType>
 class DYODWindowFunctionBuilder<ColumnDataType, AggregateType, WindowFunction::Min> {
  public:
   constexpr auto get_aggregate_function() {
-    return [](const ColumnDataType& new_value, const size_t aggregate_count, AggregateType& accumulator) {
-      // We need to check if we have already seen a value before (`aggregate_count > 0`) - otherwise, `accumulator`
+    return [](const ColumnDataType& new_value, const bool has_aggregates, AggregateType& accumulator) {
+      // We need to check if we have already seen a value before (`!has_aggregates`) - otherwise, `accumulator`
       // holds an invalid value. While we might initialize `accumulator` with the smallest possible numerical value,
-      // this approach does not work for `max` on strings. To keep the code simple, we check `aggregate_count` here.
-      if (aggregate_count == 0 || value_smaller(new_value, accumulator)) {
+      // this approach does not work for `max` on strings. To keep the code simple, we check `has_aggregates` here.
+      if (!has_aggregates || value_smaller(new_value, accumulator)) {
         // New minimum found
         accumulator = new_value;
       }
@@ -42,8 +42,8 @@ template <typename ColumnDataType, typename AggregateType>
 class DYODWindowFunctionBuilder<ColumnDataType, AggregateType, WindowFunction::Max> {
  public:
   constexpr auto get_aggregate_function() {
-    return [](const ColumnDataType& new_value, const size_t aggregate_count, AggregateType& accumulator) {
-      if (aggregate_count == 0 || value_greater(new_value, accumulator)) {
+    return [](const ColumnDataType& new_value, const bool has_aggregates, AggregateType& accumulator) {
+      if (!has_aggregates || value_greater(new_value, accumulator)) {
         // New maximum found
         accumulator = new_value;
       }
@@ -55,13 +55,16 @@ template <typename ColumnDataType, typename AggregateType>
 class DYODWindowFunctionBuilder<ColumnDataType, AggregateType, WindowFunction::Sum> {
  public:
   constexpr auto get_aggregate_function() {
-    return [](const ColumnDataType& new_value, const size_t /*aggregate_count*/, AggregateType& accumulator) {
+    return [](const ColumnDataType& new_value, const bool /*has_aggregates*/, AggregateType& accumulator) {
       // Add new value to sum - no need to check if this is the first value as `sum` is only defined on numerical values
       // and the accumulator is initialized with 0.
       accumulator += static_cast<AggregateType>(new_value);
     };
   }
 };
+
+template <typename AggregateType>
+using DYODAvgData = std::pair<AggregateType, size_t>;
 
 template <typename ColumnDataType, typename AggregateType>
 class DYODWindowFunctionBuilder<ColumnDataType, AggregateType, WindowFunction::Avg> {
@@ -70,23 +73,30 @@ class DYODWindowFunctionBuilder<ColumnDataType, AggregateType, WindowFunction::A
     // We reuse Sum here, as updating an average value for every row is costly and prone to problems regarding
     // precision. To get the average, the aggregate operator needs to count the number of elements contributing to this
     // sum, and divide the final sum by that number.
-    return DYODWindowFunctionBuilder<ColumnDataType, AggregateType, WindowFunction::Sum>{}.get_aggregate_function();
+    return [](const ColumnDataType& new_value, const bool /*has_aggregates*/, DYODAvgData<AggregateType>& accumulator) {
+      // Add new value to sum - no need to check if this is the first value as `sum` is only defined on numerical values
+      // and the accumulator is initialized with 0.
+      accumulator.first += static_cast<AggregateType>(new_value);
+      ++accumulator.second;
+    };
   }
 };
+
+using DYODStandardDeviationSampleData = std::array<double, 4>;
 
 template <typename ColumnDataType, typename AggregateType>
 class DYODWindowFunctionBuilder<ColumnDataType, AggregateType, WindowFunction::StandardDeviationSample> {
  public:
   constexpr auto get_aggregate_function() {
-    return [](const ColumnDataType& new_value, const size_t /*aggregate_count*/,
-              StandardDeviationSampleData& accumulator) {
+    return [](const ColumnDataType& new_value, const bool /*has_aggregate*/,
+              DYODStandardDeviationSampleData& accumulator) {
       if constexpr (std::is_arithmetic_v<ColumnDataType>) {
         // Welford's online algorithm
         // https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Welford's_online_algorithm
         // For a new value, compute the new count, new mean and the new squared_distance_from_mean.
 
         // get values
-        auto& count = accumulator[0];  // We could probably reuse aggregate_count here
+        auto& count = accumulator[0];
         auto& mean = accumulator[1];
         auto& squared_distance_from_mean = accumulator[2];
         auto& result = accumulator[3];
@@ -115,7 +125,7 @@ template <typename ColumnDataType, typename AggregateType>
 class DYODWindowFunctionBuilder<ColumnDataType, AggregateType, WindowFunction::Count> {
  public:
   constexpr auto get_aggregate_function() {
-    return [](const ColumnDataType&, const size_t aggregate_count, AggregateType& accumulator) {
+    return [](const ColumnDataType&, const bool has_aggregates, AggregateType& accumulator) {
       ++accumulator;
     };
   }
@@ -125,7 +135,7 @@ template <typename ColumnDataType, typename AggregateType>
 class DYODWindowFunctionBuilder<ColumnDataType, AggregateType, WindowFunction::CountDistinct> {
  public:
   constexpr auto get_aggregate_function() {
-    return [](const ColumnDataType&, const size_t aggregate_count, AggregateType& accumulator) {};
+    return [](const ColumnDataType&, const bool has_aggregates, AggregateType& accumulator) {};
   }
 };
 

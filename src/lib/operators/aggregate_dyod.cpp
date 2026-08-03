@@ -173,7 +173,7 @@ bool dyod_write_aggregate_values(const DYODAggregateResults<ColumnDataType, aggr
           }
 
           if (result.has_aggregates) {
-            values.emplace_back(result.accumulator / static_cast<AggregateType>(result.aggregate_count));
+            values.emplace_back(result.accumulator.first / static_cast<AggregateType>(result.accumulator.second));
             null_values.emplace_back(false);
           } else {
             values.emplace_back();
@@ -673,8 +673,12 @@ struct DYODAggregateContext : public DYODAggregateResultContext<ColumnDataType, 
         target.accumulator = other.accumulator;
       }
     }
-    if constexpr (aggregate_function == WindowFunction::Sum || aggregate_function == WindowFunction::Avg ||
-                  aggregate_function == WindowFunction::Count) {
+    if constexpr (aggregate_function == WindowFunction::Avg) {
+      target.accumulator.first += other.accumulator.first;
+      target.accumulator.second += other.accumulator.second;
+      target.aggregate_count += other.aggregate_count;
+    }
+    if constexpr (aggregate_function == WindowFunction::Sum || aggregate_function == WindowFunction::Count) {
       target.accumulator += other.accumulator;
       target.aggregate_count += other.aggregate_count;
     }
