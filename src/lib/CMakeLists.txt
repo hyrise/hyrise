@@ -222,6 +222,7 @@ set(
     operators/aggregate/window_function_traits.hpp
     operators/aggregate_dyod.cpp
     operators/aggregate_dyod.hpp
+    operators/dyod_window_function_builder.hpp
     operators/aggregate_hash.cpp
     operators/aggregate_hash.hpp
     operators/aggregate_sort.cpp
