@@ -76,7 +76,6 @@ struct DYODAggregateResult {
           std::conditional_t<aggregate_function == WindowFunction::CountDistinct, DistinctValues, AggregateType>>>;
 
   AccumulatorType accumulator{};
-  size_t aggregate_count = 0;
   bool has_aggregates = false;
 
   // As described above, this stores a pointer into the input data that is used to later restore the GROUP BY values.

@@ -676,11 +676,9 @@ struct DYODAggregateContext : public DYODAggregateResultContext<ColumnDataType, 
     if constexpr (aggregate_function == WindowFunction::Avg) {
       target.accumulator.first += other.accumulator.first;
       target.accumulator.second += other.accumulator.second;
-      target.aggregate_count += other.aggregate_count;
     }
     if constexpr (aggregate_function == WindowFunction::Sum || aggregate_function == WindowFunction::Count) {
       target.accumulator += other.accumulator;
-      target.aggregate_count += other.aggregate_count;
     }
     if constexpr (aggregate_function == WindowFunction::Any) {
       target.accumulator = other.accumulator;
@@ -772,7 +770,6 @@ void AggregateDYOD::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, 
         aggregator(ColumnDataType{position.value()}, result.has_aggregates, result.accumulator);
       }
 
-      ++result.aggregate_count;
       result.has_aggregates = true;
     }
   };
@@ -1550,7 +1547,7 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std
            * Special COUNT(*) implementation.
            * Because COUNT(*) does not have a specific target column, we use the maximum ColumnID. We then go through the
            * `keys_per_chunk` map and count the occurrences of each group key. The results are saved in the regular
-           * `aggregate_count` variable so that we do not need a specific output logic for COUNT(*).
+           * `accumulator` variable so that we do not need a specific output logic for COUNT(*).
            */
 
           const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
@@ -1568,7 +1565,6 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std
             if constexpr (std::is_same_v<AggregateKey, DYODEmptyAggregateKey>) {
               // Not grouped by anything, simply count the number of rows.
               results.resize(1);
-              results[0].aggregate_count += input_chunk_size;
               results[0].accumulator += input_chunk_size;
               results[0].has_aggregates = input_chunk_size > 0;
 
@@ -1587,7 +1583,7 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std
                       visit_and_get_result(std::true_type{}, result_ids, results,
                                            dyod_get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
                                            RowID{chunk_id, chunk_offset});
-                  ++result.aggregate_count;
+
                   ++result.accumulator;
                   result.has_aggregates = true;
                 }
@@ -1597,7 +1593,6 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std
                       visit_and_get_result(std::false_type{}, result_ids, results,
                                            dyod_get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
                                            RowID{chunk_id, chunk_offset});
-                  ++result.aggregate_count;
                   ++result.accumulator;
                   result.has_aggregates = true;
                 }
