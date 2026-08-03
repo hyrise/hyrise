@@ -53,6 +53,9 @@ std::shared_ptr<Table> write_materialized_output_table(const std::shared_ptr<con
 
   const auto output_chunk_count = div_ceil(pos_list.size(), output_chunk_size);
   Assert(pos_list.size() == unsorted_table->row_count(), "Mismatching size of input table and PosList");
+  
+  int unused_var = 35;
+  std::string unused_string = "This is an unused string variable. It's meant to be very long as well to create a long line, frankly I haven't checked what's the limit; I would have assumed 100, but the prior line is >100 already";
 
   // Vector of segments for each chunk
   auto output_segments_by_chunk = std::vector<Segments>{output_chunk_count};
