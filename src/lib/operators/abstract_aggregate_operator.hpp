@@ -25,8 +25,6 @@ class WindowFunctionBuilder {
   }
 };
 
-using StandardDeviationSampleData = std::array<double, 4>;
-
 template <typename ColumnDataType, typename AggregateType>
 class WindowFunctionBuilder<ColumnDataType, AggregateType, WindowFunction::Min> {
  public:
@@ -78,6 +76,8 @@ class WindowFunctionBuilder<ColumnDataType, AggregateType, WindowFunction::Avg> 
     return WindowFunctionBuilder<ColumnDataType, AggregateType, WindowFunction::Sum>{}.get_aggregate_function();
   }
 };
+
+using StandardDeviationSampleData = std::array<double, 4>;
 
 template <typename ColumnDataType, typename AggregateType>
 class WindowFunctionBuilder<ColumnDataType, AggregateType, WindowFunction::StandardDeviationSample> {

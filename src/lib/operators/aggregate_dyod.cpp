@@ -1175,7 +1175,7 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
 
 template <typename IsReferenceTable, typename AggregateKey>
 std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
-  const auto aggregate_count = _aggregates.size();
+  const auto aggregates_count = _aggregates.size();
   const auto& input_table = left_input_table();
   const auto column_count = input_table->column_count();
   if constexpr (HYRISE_DEBUG) {
@@ -1193,7 +1193,7 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
   // If we only work on a single thread, have an empty table, or only a single group,
   // we don't bother splitting by groupby groups.
   if (!is_multi_threaded || row_count == 0 || groupby_column_count == 0) {
-    auto contexts_per_column = ContextsPerColumn(aggregate_count);
+    auto contexts_per_column = ContextsPerColumn(aggregates_count);
     // We only enable the single group optimization if we have threads.
     _aggregate<AggregateKey>(contexts_per_column, input_table, is_multi_threaded);
     auto output_table = std::shared_ptr<Table>{};
@@ -1340,7 +1340,7 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
 
       const auto local_row_count = local_input_table->row_count();
 
-      auto contexts_per_column = ContextsPerColumn(aggregate_count);
+      auto contexts_per_column = ContextsPerColumn(aggregates_count);
       _aggregate<AggregateKey>(contexts_per_column, local_input_table, local_row_count > max_job_size);
 
       _write_output(contexts_per_column, local_input_table, output_table, aggregate_result_table);
@@ -1387,9 +1387,9 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std
   auto mini_jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   mini_jobs.reserve(bucket_job_count);
 
-  const auto aggregate_count = _aggregates.size();
+  const auto aggregates_count = _aggregates.size();
   for (auto job_id = ChunkID{0}; job_id < bucket_job_count; ++job_id) {
-    contexts_per_column_per_job.emplace_back(aggregate_count);
+    contexts_per_column_per_job.emplace_back(aggregates_count);
     const auto aggregate_bucket = [&, job_id]() {
       const auto job_start = static_cast<ChunkID>(job_id * job_size);
       const auto job_end =
@@ -1412,7 +1412,7 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std
 
   // TODO(anyone): parallelize merging ?
   // TODO(anyone): make more pretty.
-  for (auto aggregate_index = ColumnID{0}; aggregate_index < aggregate_count; ++aggregate_index) {
+  for (auto aggregate_index = ColumnID{0}; aggregate_index < aggregates_count; ++aggregate_index) {
     const auto& aggregate = _aggregates[aggregate_index];
     const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
     const auto input_column_id = pqp_column.column_id;
@@ -1462,8 +1462,8 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std
    * created on. We do this here, and not in the per-chunk-loop below, because there might be no Chunks in the input
    * and _write_aggregate_output() needs these contexts anyway.
    */
-  const auto aggregate_count = _aggregates.size();
-  for (auto aggregate_index = ColumnID{0}; aggregate_index < aggregate_count; ++aggregate_index) {
+  const auto aggregates_count = _aggregates.size();
+  for (auto aggregate_index = ColumnID{0}; aggregate_index < aggregates_count; ++aggregate_index) {
     const auto& aggregate = _aggregates[aggregate_index];
 
     const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
@@ -1531,12 +1531,10 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std
         }
       }
     } else {
-      const auto aggregate_count = _aggregates.size();
-
       auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
-      jobs.reserve(aggregate_count);
+      jobs.reserve(aggregates_count);
 
-      for (auto aggregate_index = ColumnID{0}; aggregate_index < aggregate_count; ++aggregate_index) {
+      for (auto aggregate_index = ColumnID{0}; aggregate_index < aggregates_count; ++aggregate_index) {
         const auto perform_aggregation = [&, aggregate_index]() {
           const auto aggregate = _aggregates[aggregate_index];
           /**
@@ -1615,7 +1613,7 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std
         // If we cache the lookups, we do one run single threaded to write the cached results.
         // If there are only 1 or 2 aggregates, we don't bother creating an extra thread.
         // If we use immediate key shortcuts, key_per_chunk should remain const and thus thread safe.
-        if ((aggregate_index == size_t{0} && contexts_per_column.size() > 1) || aggregate_count <= 2) {
+        if ((aggregate_index == size_t{0} && contexts_per_column.size() > 1) || aggregates_count <= 2) {
           perform_aggregation();
         } else {
           jobs.emplace_back(std::make_shared<JobTask>(perform_aggregation));
