@@ -318,10 +318,12 @@ static void JOBlikeMINMAX(const EncodingConfig encoding_config) {
       }
 
       auto mvcc_data = std::make_shared<MvccData>(Chunk::DEFAULT_SIZE, UNSET_COMMIT_ID);
+      auto invalid_rows = ChunkOffset{0};
       if (is_encoded) {
         for (auto chunk_offset = ChunkOffset{0}; chunk_offset < Chunk::DEFAULT_SIZE; ++chunk_offset) {
           if (col_1_segment[chunk_offset] == min_date || col_1_segment[chunk_offset] == max_date) {
             mvcc_data->set_end_cid(chunk_offset, CommitID{1});
+            ++invalid_rows;
           }
         }
       }
@@ -333,6 +335,8 @@ static void JOBlikeMINMAX(const EncodingConfig encoding_config) {
 
       table->append_chunk(segments, mvcc_data);
       table->last_chunk()->set_immutable();
+      table->last_chunk()->mvcc_data()->max_end_cid = CommitID{1};
+      table->last_chunk()->increase_invalid_row_count(invalid_rows);
     }
 
     const auto encoding_spec = *encoding_config.preferred_encoding_spec;
@@ -345,9 +349,10 @@ static void JOBlikeMINMAX(const EncodingConfig encoding_config) {
     const auto validate = std::make_shared<Validate>(table_wrapper);
     const auto transaction_context =
         std::make_shared<TransactionContext>(TransactionID{1}, CommitID{2}, AutoCommit::Yes);
-    validate->set_transaction_context_recursively(transaction_context);
+    validate->set_transaction_context(transaction_context);
     validate->never_clear_output();
     validate->execute();
+    const auto input = is_encoded ? validate->shared_from_this() : table_wrapper->shared_from_this();
 
     // We measure the time it takes to aggregate the input table `agg_execution_count` times.
     auto runtimes = std::vector<size_t>{};
@@ -361,7 +366,6 @@ static void JOBlikeMINMAX(const EncodingConfig encoding_config) {
 
       const auto aggregates = std::vector<std::shared_ptr<WindowFunctionExpression>>{min_(col_1), max_(col_1)};
       const auto groupby_column_ids = std::vector<ColumnID>{};
-      const auto input = is_encoded ? validate->shared_from_this() : table_wrapper->shared_from_this();
 
       auto end = std::chrono::steady_clock::now();
       const auto start = std::chrono::steady_clock::now();
