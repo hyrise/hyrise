@@ -272,13 +272,9 @@ static void TPCHQ18(const float scale_factor, const EncodingConfig encoding_conf
   }
 }
 
-static void JOBlikeMINMAX(const EncodingConfig encoding_config) {
-  const auto chunk_count = ChunkID{512};  // ~33 M rows.
+static void JOBlikeMINMAX(const EncodingConfig encoding_config, const std::shared_ptr<Table>& table, bool filter_rows) {
   const auto agg_execution_count = size_t{16};
   const auto thread_count = size_t{4};
-
-  auto pseudorandom_engine = std::mt19937{17};
-  auto probability_dist = std::uniform_int_distribution{1, 31};
 
   for (const auto use_scheduler : {true, false}) {
     const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
@@ -286,57 +282,6 @@ static void JOBlikeMINMAX(const EncodingConfig encoding_config) {
       Hyrise::get().set_scheduler(node_queue_scheduler);
     } else {
       Hyrise::get().set_scheduler(std::make_shared<ImmediateExecutionScheduler>());
-    }
-
-    auto column_definitions = TableColumnDefinitions{
-        {"col_0", DataType::Int, true}, {"col_1", DataType::String, true}, {"col_2", DataType::Long, true}};
-    auto table = std::make_shared<Table>(column_definitions, TableType::Data, Chunk::DEFAULT_SIZE, UseMvcc::Yes);
-    const auto is_encoded = encoding_config.preferred_encoding_spec != SegmentEncodingSpec{EncodingType::Unencoded};
-
-    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-      auto col_0_segment = pmr_vector<int32_t>{};
-      auto col_1_segment = pmr_vector<pmr_string>{};
-      auto col_2_segment = pmr_vector<int64_t>{};
-
-      auto min_date = pmr_string{"2026"};
-      auto max_date = pmr_string{"2024"};
-
-      for (auto row_id = ChunkOffset{0}; row_id < Chunk::DEFAULT_SIZE; ++row_id) {
-        col_0_segment.emplace_back(static_cast<int32_t>(probability_dist(pseudorandom_engine)));
-        auto string_value = "2025-07-" + std::format("{:02} 12:{:02}:17", probability_dist(pseudorandom_engine),
-                                                     probability_dist(pseudorandom_engine));
-        if (row_id == 4'913) {
-          string_value +=
-              " // Important note: for unknown reasons there is a long string comment appended to this"
-              " row. People are still not sure what the purpose is.";
-        }
-
-        col_1_segment.emplace_back(string_value);
-        col_2_segment.emplace_back(static_cast<int64_t>(probability_dist(pseudorandom_engine)));
-        min_date = std::min(col_1_segment.back(), min_date);
-        max_date = std::max(col_1_segment.back(), max_date);
-      }
-
-      auto mvcc_data = std::make_shared<MvccData>(Chunk::DEFAULT_SIZE, UNSET_COMMIT_ID);
-      auto invalid_rows = ChunkOffset{0};
-      if (is_encoded) {
-        for (auto chunk_offset = ChunkOffset{0}; chunk_offset < Chunk::DEFAULT_SIZE; ++chunk_offset) {
-          if (col_1_segment[chunk_offset] == min_date || col_1_segment[chunk_offset] == max_date) {
-            mvcc_data->set_end_cid(chunk_offset, CommitID{1});
-            ++invalid_rows;
-          }
-        }
-      }
-
-      auto segments = pmr_vector<std::shared_ptr<AbstractSegment>>{};
-      segments.emplace_back(std::make_shared<ValueSegment<int32_t>>(std::move(col_0_segment)));
-      segments.emplace_back(std::make_shared<ValueSegment<pmr_string>>(std::move(col_1_segment)));
-      segments.emplace_back(std::make_shared<ValueSegment<int64_t>>(std::move(col_2_segment)));
-
-      table->append_chunk(segments, mvcc_data);
-      table->last_chunk()->set_immutable();
-      table->last_chunk()->mvcc_data()->max_end_cid = CommitID{1};
-      table->last_chunk()->increase_invalid_row_count(invalid_rows);
     }
 
     const auto encoding_spec = *encoding_config.preferred_encoding_spec;
@@ -352,7 +297,7 @@ static void JOBlikeMINMAX(const EncodingConfig encoding_config) {
     validate->set_transaction_context(transaction_context);
     validate->never_clear_output();
     validate->execute();
-    const auto input = is_encoded ? validate->shared_from_this() : table_wrapper->shared_from_this();
+    const auto input = filter_rows ? validate->shared_from_this() : table_wrapper->shared_from_this();
 
     // We measure the time it takes to aggregate the input table `agg_execution_count` times.
     auto runtimes = std::vector<size_t>{};
@@ -398,7 +343,8 @@ static void JOBlikeMINMAX(const EncodingConfig encoding_config) {
 
     auto sstream = std::stringstream{};
     sstream << encoding_spec;
-    append_to_csv("JOBlikeMINMAX", static_cast<float>(table->row_count()), sstream.str(), runtimes,
+    const auto name = "JOBlikeMINMAX" + (filter_rows ? std::string{"Filtered"} : std::string{});
+    append_to_csv(name, static_cast<float>(input->get_output()->row_count()), sstream.str(), runtimes,
                   use_scheduler ? "multi-threaded" : "single-threaded");
 
     if (use_scheduler) {
@@ -458,8 +404,61 @@ int main(int argc, char* argv[]) {
     return 0;
   }
 
+  const auto chunk_count = ChunkID{512};  // ~33 M rows
+  auto pseudorandom_engine = std::mt19937{17};
+  auto probability_dist = std::uniform_int_distribution{1, 31};
+
+  auto column_definitions = TableColumnDefinitions{
+      {"col_0", DataType::Int, true}, {"col_1", DataType::String, true}, {"col_2", DataType::Long, true}};
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, Chunk::DEFAULT_SIZE, UseMvcc::Yes);
+
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+    auto col_0_segment = pmr_vector<int32_t>{};
+    auto col_1_segment = pmr_vector<pmr_string>{};
+    auto col_2_segment = pmr_vector<int64_t>{};
+
+    auto min_date = pmr_string{"2026"};
+    auto max_date = pmr_string{"2024"};
+
+    for (auto row_id = ChunkOffset{0}; row_id < Chunk::DEFAULT_SIZE; ++row_id) {
+      col_0_segment.emplace_back(static_cast<int32_t>(probability_dist(pseudorandom_engine)));
+      auto string_value = "2025-07-" + std::format("{:02} 12:{:02}:17", probability_dist(pseudorandom_engine),
+                                                   probability_dist(pseudorandom_engine));
+      if (row_id == 4'913) {
+        string_value +=
+            " // Important note: for unknown reasons there is a long string comment appended to this"
+            " row. People are still not sure what the purpose is.";
+      }
+
+      col_1_segment.emplace_back(string_value);
+      col_2_segment.emplace_back(static_cast<int64_t>(probability_dist(pseudorandom_engine)));
+      min_date = std::min(col_1_segment.back(), min_date);
+      max_date = std::max(col_1_segment.back(), max_date);
+    }
+
+    auto mvcc_data = std::make_shared<MvccData>(Chunk::DEFAULT_SIZE, UNSET_COMMIT_ID);
+    auto invalid_rows = ChunkOffset{0};
+    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < Chunk::DEFAULT_SIZE; ++chunk_offset) {
+      if (col_1_segment[chunk_offset] == min_date || col_1_segment[chunk_offset] == max_date) {
+        mvcc_data->set_end_cid(chunk_offset, CommitID{1});
+        ++invalid_rows;
+      }
+    }
+
+    auto segments = pmr_vector<std::shared_ptr<AbstractSegment>>{};
+    segments.emplace_back(std::make_shared<ValueSegment<int32_t>>(std::move(col_0_segment)));
+    segments.emplace_back(std::make_shared<ValueSegment<pmr_string>>(std::move(col_1_segment)));
+    segments.emplace_back(std::make_shared<ValueSegment<int64_t>>(std::move(col_2_segment)));
+
+    table->append_chunk(segments, mvcc_data);
+    table->last_chunk()->set_immutable();
+    table->last_chunk()->mvcc_data()->max_end_cid = CommitID{1};
+    table->last_chunk()->increase_invalid_row_count(invalid_rows);
+  }
+
   for (const auto& encoding_config : ENCODING_CONFIGS) {
-    JOBlikeMINMAX(encoding_config);
+    JOBlikeMINMAX(encoding_config, table, false);
+    JOBlikeMINMAX(encoding_config, table, true);
   }
 
   return 0;
