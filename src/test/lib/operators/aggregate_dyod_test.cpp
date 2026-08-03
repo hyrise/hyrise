@@ -1,6 +1,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -12,6 +13,7 @@
 #include "operators/aggregate_dyod.hpp"
 #include "operators/aggregate_hash.hpp"
 #include "operators/table_wrapper.hpp"
+#include "storage/chunk_encoder.hpp"
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
 #include "testing_assert.hpp"
@@ -23,8 +25,20 @@ using namespace expression_functional;
 
 namespace {
 
+void encode(const std::shared_ptr<Table>& table, const EncodingType encoding_type) {
+  // Encoding immutable chunks also creates the pruning statistics exercised by the MIN/MAX fast path.
+  for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+    const auto chunk = table->get_chunk(chunk_id);
+    if (chunk->is_mutable()) {
+      chunk->set_immutable();
+    }
+  }
+  ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{encoding_type});
+}
+
 // The d values are multiples of 0.5, so per-group sums are exact regardless of fold order.
-std::shared_ptr<TableWrapper> make_input(const size_t row_count) {
+std::shared_ptr<TableWrapper> make_input(const size_t row_count,
+                                         const std::optional<EncodingType> encoding_type = std::nullopt) {
   const auto definitions = TableColumnDefinitions{{"a", DataType::Int, true},
                                                   {"b", DataType::String, true},
                                                   {"c", DataType::Int, false},
@@ -45,6 +59,10 @@ std::shared_ptr<TableWrapper> make_input(const size_t row_count) {
     const auto d = row % 7 == 0 ? AllTypeVariant{NullValue{}} : AllTypeVariant{static_cast<double>(row % 2003) * 0.5};
     const auto e = AllTypeVariant{pmr_string{"v" + std::to_string(row % 501)}};
     table->append({a, b, c, d, e});
+  }
+
+  if (encoding_type) {
+    encode(table, *encoding_type);
   }
 
   const auto wrapper = std::make_shared<TableWrapper>(table);
@@ -151,6 +169,40 @@ TEST_F(OperatorsAggregateDYODTest, CountDistinctWithoutGroupBy) {
                                {ColumnID{1}, WindowFunction::CountDistinct},
                                {ColumnID{3}, WindowFunction::CountDistinct}},
                               {});
+}
+
+TEST_F(OperatorsAggregateDYODTest, MinMaxWithoutGroupBy) {
+  const auto input = make_input(30'000);
+  compare_with_aggregate_hash(input, {{ColumnID{1}, WindowFunction::Min}, {ColumnID{1}, WindowFunction::Max}}, {});
+}
+
+TEST_F(OperatorsAggregateDYODTest, DictionaryMaxMinWithoutGroupBy) {
+  const auto input = make_input(30'000, EncodingType::Dictionary);
+  compare_with_aggregate_hash(input, {{ColumnID{1}, WindowFunction::Max}, {ColumnID{1}, WindowFunction::Min}}, {});
+}
+
+TEST_F(OperatorsAggregateDYODTest, UnencodedPruningStatisticsMinMaxWithoutGroupBy) {
+  const auto input = make_input(30'000, EncodingType::Unencoded);
+  compare_with_aggregate_hash(input,
+                              {{ColumnID{0}, WindowFunction::Min},
+                               {ColumnID{0}, WindowFunction::Max},
+                               {ColumnID{1}, WindowFunction::Min},
+                               {ColumnID{1}, WindowFunction::Max}},
+                              {});
+}
+
+TEST_F(OperatorsAggregateDYODTest, DictionaryMinMaxWithoutGroupByOnAllNullColumn) {
+  const auto table =
+      std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, true}}, TableType::Data, ChunkOffset{2});
+  for (auto row = size_t{0}; row < 5; ++row) {
+    table->append({NullValue{}});
+  }
+  encode(table, EncodingType::Dictionary);
+
+  const auto input = std::make_shared<TableWrapper>(table);
+  input->never_clear_output();
+  input->execute();
+  compare_with_aggregate_hash(input, {{ColumnID{0}, WindowFunction::Min}, {ColumnID{0}, WindowFunction::Max}}, {});
 }
 
 TEST_F(OperatorsAggregateDYODTest, EmptyInput) {
