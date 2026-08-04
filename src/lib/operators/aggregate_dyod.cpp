@@ -39,6 +39,7 @@
 #include "operators/operator_performance_data.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
+#include "statistics/attribute_statistics.hpp"
 #include "storage/abstract_segment.hpp"
 #include "storage/chunk.hpp"
 #include "storage/segment_iterate.hpp"
@@ -85,8 +86,40 @@ class StandardAggregator : public AbstractAggregator {
   void accumulate(const size_t worker_id, const Chunk& chunk) override {
     auto& state = _states[worker_id].state;
     const auto fold = WindowFunctionBuilder<ColumnDataType, AggregateType, window_function>{}.get_aggregate_function();
-    const auto& segment = *chunk.get_segment(_column_id);
 
+    if constexpr (window_function == WindowFunction::Min || window_function == WindowFunction::Max) {
+      // Pruning statistics store exact chunk extrema, so MIN/MAX usually need no segment scan.
+      const auto pruning_statistics = chunk.pruning_statistics();
+      if (pruning_statistics && static_cast<size_t>(_column_id) < pruning_statistics->size()) {
+        const auto& attribute_statistics =
+            static_cast<const AttributeStatistics<ColumnDataType>&>(*(*pruning_statistics)[_column_id]);
+        // For MIN/MAX, count only records whether a value was seen; one exact extremum represents the whole chunk.
+        if (attribute_statistics.min_max_filter) {
+          const auto& filter = *attribute_statistics.min_max_filter;
+          const auto& value = window_function == WindowFunction::Min ? filter.min : filter.max;
+          fold(value, state.count, state.accumulator);
+          ++state.count;
+          return;
+        }
+
+        if constexpr (std::is_arithmetic_v<ColumnDataType>) {
+          if (attribute_statistics.range_filter) {
+            const auto& ranges = attribute_statistics.range_filter->ranges;
+            Assert(!ranges.empty(), "A RangeFilter used for MIN/MAX must contain at least one range.");
+            const auto& value = window_function == WindowFunction::Min ? ranges.front().first : ranges.back().second;
+            fold(value, state.count, state.accumulator);
+            ++state.count;
+            return;
+          }
+        }
+
+        if (attribute_statistics.distinct_value_count && attribute_statistics.distinct_value_count->count == 0) {
+          return;
+        }
+      }
+    }
+
+    const auto& segment = *chunk.get_segment(_column_id);
     if constexpr (window_function == WindowFunction::Min || window_function == WindowFunction::Max) {
       if (const auto* dictionary = dynamic_cast<const BaseDictionarySegment*>(&segment)) {
         const auto distinct_count = dictionary->unique_values_count();
@@ -421,6 +454,14 @@ std::vector<std::unique_ptr<AbstractAggregator>> build_aggregators(
 
 template <typename Worker>
 void run_workers(const size_t worker_count, const Worker& worker) {
+  // The immediate scheduler executes JobTasks sequentially; direct calls avoid their setup overhead.
+  if (!Hyrise::get().is_multi_threaded()) {
+    for (auto worker_id = size_t{0}; worker_id < worker_count; ++worker_id) {
+      worker(worker_id);
+    }
+    return;
+  }
+
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   jobs.reserve(worker_count);
   for (auto worker_id = size_t{0}; worker_id < worker_count; ++worker_id) {
@@ -942,7 +983,9 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate_without_group_by(const Aggregat
 
   // TODO(anyone): currently morsel_count == chunk_count, this has to be adjusted
   const auto morsel_count = static_cast<size_t>(input_table.chunk_count());
-  const auto worker_count = std::clamp(morsel_count, size_t{1}, Hyrise::get().topology.num_cpus());
+  // The immediate scheduler cannot run logical workers concurrently and therefore needs only one state.
+  const auto max_worker_count = Hyrise::get().is_multi_threaded() ? Hyrise::get().topology.num_cpus() : size_t{1};
+  const auto worker_count = std::clamp(morsel_count, size_t{1}, max_worker_count);
 
   for (const auto& aggregator : aggregators) {
     aggregator->set_worker_count(worker_count);
