@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <memory>
 #include <random>
 #include <string>
@@ -17,6 +18,7 @@
 #include "operators/join_hash.hpp"
 #include "operators/operator_join_predicate.hpp"
 #include "operators/print.hpp"
+#include "operators/projection.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/validate.hpp"
@@ -48,6 +50,8 @@ static void silent_tpcx_table_generation(const BenchmarkType benchmark_type, flo
                                          std::shared_ptr<BenchmarkConfig> config) {
   auto* initial_buffer = std::cout.rdbuf();
 
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+
   std::cout.rdbuf(nullptr);
   if (benchmark_type == BenchmarkType::tpch) {
     TPCHTableGenerator(scale_factor, ClusteringConfiguration::None, config).generate_and_store();
@@ -55,6 +59,8 @@ static void silent_tpcx_table_generation(const BenchmarkType benchmark_type, flo
     TPCDSTableGenerator(static_cast<uint32_t>(scale_factor), config).generate_and_store();
   }
   std::cout.rdbuf(initial_buffer);
+
+  Hyrise::get().set_scheduler(std::make_shared<ImmediateExecutionScheduler>());
 }
 
 void append_to_csv(const std::string& benchmark, const float scale, const std::string& encoding,
@@ -272,9 +278,14 @@ static void TPCHQ18(const float scale_factor, const EncodingConfig encoding_conf
   }
 }
 
-static void JOBlikeMINMAX(const EncodingConfig encoding_config, const std::shared_ptr<Table>& table, bool filter_rows) {
+static void JOBlikeMINMAX(const EncodingConfig encoding_config, std::shared_ptr<Table>& table, bool filter_rows) {
   const auto agg_execution_count = size_t{16};
   const auto thread_count = size_t{4};
+
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+  const auto encoding_spec = *encoding_config.preferred_encoding_spec;
+  ChunkEncoder::encode_all_chunks(table, encoding_spec);
+  Hyrise::get().set_scheduler(std::make_shared<ImmediateExecutionScheduler>());
 
   for (const auto use_scheduler : {true, false}) {
     const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
@@ -283,9 +294,6 @@ static void JOBlikeMINMAX(const EncodingConfig encoding_config, const std::share
     } else {
       Hyrise::get().set_scheduler(std::make_shared<ImmediateExecutionScheduler>());
     }
-
-    const auto encoding_spec = *encoding_config.preferred_encoding_spec;
-    ChunkEncoder::encode_all_chunks(table, encoding_spec);
 
     const auto table_wrapper = std::make_shared<TableWrapper>(table);
     table_wrapper->never_clear_output();
@@ -355,11 +363,15 @@ static void JOBlikeMINMAX(const EncodingConfig encoding_config, const std::share
 
 static void HiddenTest1() {}
 
-static void HiddenTest2() {}
+static void HiddenTest2AggOnAgg() {}
 
-static void HiddenTest3() {}
+static void HiddenTest350Rest() {}
 
-static void HiddenTest4() {}
+static void HiddenTest4JOBlikeButHeavy() {}
+
+static void HiddenTest5AggAggAggAggAggAggAggAggAgg() {}
+
+static void HiddenTest6SingleChar() {}
 
 int main(int argc, char* argv[]) {
   if (std::filesystem::exists(FILENAME)) {
@@ -378,7 +390,7 @@ int main(int argc, char* argv[]) {
 
       for (const auto& encoding_config : ENCODING_CONFIGS) {
         auto benchmark_config = std::make_shared<BenchmarkConfig>();
-        benchmark_config->cache_binary_tables = false;
+        benchmark_config->cache_binary_tables = true;
         benchmark_config->encoding_config = encoding_config;
 
         silent_tpcx_table_generation(BenchmarkType::tpch, scale_factor, benchmark_config);
@@ -396,15 +408,17 @@ int main(int argc, char* argv[]) {
       }
 
       HiddenTest1();
-      HiddenTest2();
-      HiddenTest3();
-      HiddenTest4();
+      HiddenTest2AggOnAgg();
+      HiddenTest350Rest();
+      HiddenTest4JOBlikeButHeavy();
+      HiddenTest5AggAggAggAggAggAggAggAggAgg();
+      HiddenTest6SingleChar();
     }
 
     return 0;
   }
 
-  const auto chunk_count = ChunkID{512};  // ~33 M rows
+  const auto chunk_count = ChunkID{512};  // ~33 M rows.
   auto pseudorandom_engine = std::mt19937{17};
   auto probability_dist = std::uniform_int_distribution{1, 31};
 
@@ -436,8 +450,8 @@ int main(int argc, char* argv[]) {
       max_date = std::max(col_1_segment.back(), max_date);
     }
 
-    auto mvcc_data = std::make_shared<MvccData>(Chunk::DEFAULT_SIZE, UNSET_COMMIT_ID);
     auto invalid_rows = ChunkOffset{0};
+    auto mvcc_data = std::make_shared<MvccData>(Chunk::DEFAULT_SIZE, UNSET_COMMIT_ID);
     for (auto chunk_offset = ChunkOffset{0}; chunk_offset < Chunk::DEFAULT_SIZE; ++chunk_offset) {
       if (col_1_segment[chunk_offset] == min_date || col_1_segment[chunk_offset] == max_date) {
         mvcc_data->set_end_cid(chunk_offset, CommitID{1});
