@@ -11,7 +11,7 @@ env:
 
   LEADERBOARD: http://192.168.30.164
 
-  CURL_CMD: "curl -X POST --fail-with-body -F github_user=${{github.actor}} -F ci_id=1 -F github_repository=${{github.repository}} -F project_id=2 -F secret=${{secrets.DYOD2026_SECRET}} -F git_commit=${{github.sha}}"
+  CURL_CMD: "curl -X POST --fail-with-body -F github_user=${{github.actor}} -F ci_id=2 -F github_repository=${{github.repository}} -F project_id=2 -F secret=${{secrets.DYOD2026_SECRET}} -F git_commit=${{github.sha}}"
 
   BM_RESULT_FILE: RESULTS.csv
 
