@@ -32,7 +32,7 @@ add_subdirectory(perf-cpp)
 add_library(perf-cpp-wrapper INTERFACE)
 target_link_libraries(perf-cpp-wrapper INTERFACE perf-cpp)
 target_include_directories(perf-cpp-wrapper INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/perf-cpp/include)
-target_compile_options(perf-cpp-wrapper INTERFACE -Wno-deprecated-copy-with-dtor -Wno-extra-semi-stmt)
+target_compile_options(perf-cpp-wrapper INTERFACE -Wno-deprecated-copy-with-dtor -Wno-extra-semi-stmt -Wno-newline-eof)
 
 # Perfetto
 add_library(perfetto STATIC
