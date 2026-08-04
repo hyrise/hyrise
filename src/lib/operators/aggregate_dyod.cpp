@@ -42,7 +42,6 @@
 #include "statistics/attribute_statistics.hpp"
 #include "storage/abstract_segment.hpp"
 #include "storage/chunk.hpp"
-#include "storage/dictionary_segment.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
@@ -120,23 +119,25 @@ class StandardAggregator : public AbstractAggregator {
       }
     }
 
-    const auto segment = chunk.get_segment(_column_id);
+    const auto& segment = *chunk.get_segment(_column_id);
     if constexpr (window_function == WindowFunction::Min || window_function == WindowFunction::Max) {
-      // Dictionaries are sorted and contain no NULL value, so an endpoint is the exact chunk extremum.
-      if (const auto* dictionary_segment = dynamic_cast<const DictionarySegment<ColumnDataType>*>(segment.get())) {
-        const auto dictionary = dictionary_segment->dictionary();
-        if (dictionary->empty()) {
+      if (const auto* dictionary = dynamic_cast<const BaseDictionarySegment*>(&segment)) {
+        const auto distinct_count = dictionary->unique_values_count();
+
+        if (distinct_count == 0) {
           return;
         }
 
-        const auto& value = window_function == WindowFunction::Min ? dictionary->front() : dictionary->back();
-        fold(value, state.count, state.accumulator);
+        const auto candidate_id = (window_function == WindowFunction::Min) ? ValueID{0} : ValueID{distinct_count - 1};
+        const auto candidate = boost::get<ColumnDataType>(dictionary->value_of_value_id(candidate_id));
+
+        fold(candidate, state.count, state.accumulator);
         ++state.count;
         return;
       }
     }
 
-    segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
+    segment_iterate<ColumnDataType>(segment, [&](const auto& position) {
       if (position.is_null()) {
         return;
       }
@@ -471,6 +472,40 @@ void run_workers(const size_t worker_count, const Worker& worker) {
 
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 }
+
+bool low_cardinality_eligible(const AggregateSchema& schema, const Table& input) {
+  for (auto i = size_t{0}; i < schema.aggregate_count(); ++i) {
+    if (const auto fn = schema.function(i); fn == WindowFunction::Any || fn == WindowFunction::CountDistinct)
+      return false;
+    if (const auto col = schema.source_column(i);
+        col != INVALID_COLUMN_ID && input.column_data_type(col) == DataType::String)
+      return false;
+  }
+  return true;
+}
+
+void gather_value_column(const AbstractSegment& segment, const DataType type, const bool nullable,
+                         std::vector<std::byte>& out_bytes, std::vector<std::byte>& out_null, const size_t row_count) {
+  resolve_data_type(type, [&](const auto data_type) {
+    using ColumnDataType = typename decltype(data_type)::type;
+    out_bytes.assign(row_count * sizeof(ColumnDataType), std::byte{0});
+    if (nullable) {
+      out_null.assign((row_count + 7) / 8, std::byte{0});
+    }
+    auto row = size_t{0};
+    segment_iterate<ColumnDataType>(segment, [&](const auto& position) {
+      if (position.is_null()) {
+        if (nullable) {
+          out_null[row / 8] |= std::byte{1} << (row % 8);
+        }
+      } else {
+        const auto value = position.value();
+        std::memcpy(out_bytes.data() + row * sizeof(ColumnDataType), &value, sizeof(ColumnDataType));
+      }
+      ++row;
+    });
+  });
+}
 }  // namespace
 
 AggregateDYOD::AggregateDYOD(const std::shared_ptr<AbstractOperator>& input_operator,
@@ -512,6 +547,139 @@ AggregateSchema AggregateDYOD::_prepare(const Table& input_table) {
 }
 
 template <typename KeySchema>
+std::shared_ptr<Table> AggregateDYOD::_aggregate_low_cardinality(const KeySchema& key_schema,
+                                                                 const AggregateSchema& aggregate_schema,
+                                                                 const Table& input_table,
+                                                                 const size_t cardinality_estimate) {
+  auto& step_performance_data = dynamic_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
+  auto timer = Timer{};
+
+  const auto chunk_count = static_cast<size_t>(input_table.chunk_count());
+  const auto num_cpus = std::max(size_t{1}, Hyrise::get().topology.num_cpus());
+  const auto worker_count = std::clamp(chunk_count, size_t{1}, num_cpus);
+  const auto aggregate_count = aggregate_schema.aggregate_count();
+  const auto key_width = key_schema.packed_width();
+
+  auto per_worker_private_maps = std::vector<MergeMap<KeySchema>>{};
+  per_worker_private_maps.reserve(worker_count);
+  for (auto worker = size_t{0}; worker < worker_count; worker++) {
+    per_worker_private_maps.emplace_back(key_schema, uint32_t{0}, aggregate_schema.make_accumulator_columns());
+  }
+
+  {
+    auto chunk_cursor = std::atomic<size_t>{0};
+    run_workers(worker_count, [&](const size_t worker_id) {
+      auto& merge_map = per_worker_private_maps[worker_id];
+      merge_map.reserve(cardinality_estimate);
+
+      auto decode_scratch = KeyDecodeScratch{};
+      auto spill_scratch = StringSpillBuffer{};
+      auto key_buffer = std::vector<std::byte>{};
+      auto slots = std::vector<uint32_t>{};
+      auto value_buffers = std::vector<std::vector<std::byte>>(aggregate_count);
+      auto null_buffers = std::vector<std::vector<std::byte>>(aggregate_count);
+      auto owners = std::vector<std::shared_ptr<AbstractSegment>>{};
+      auto segments = std::vector<const AbstractSegment*>{};
+
+      while (true) {
+        const auto chunk_index = chunk_cursor.fetch_add(1, std::memory_order_relaxed);
+        if (chunk_index >= chunk_count) {
+          break;
+        }
+        const auto chunk = input_table.get_chunk(ChunkID{static_cast<ChunkID::base_type>(chunk_index)});
+        if (!chunk) {
+          continue;
+        }
+
+        const auto row_count = chunk->size();
+        if (row_count == 0) {
+          continue;
+        }
+
+        owners.clear();
+        segments.clear();
+        for (const auto column_id : _groupby_column_ids) {
+          owners.emplace_back(chunk->get_segment(column_id));
+          segments.emplace_back(owners.back().get());
+        }
+        key_schema.decode(segments, decode_scratch);
+        key_buffer.resize(size_t{row_count} * key_width);
+        for (auto offset = ChunkOffset{0}; offset < row_count; ++offset) {
+          key_schema.pack(decode_scratch, offset, key_buffer.data() + size_t{offset} * key_width, spill_scratch);
+        }
+
+        for (auto aggregate_index = size_t{0}; aggregate_index < aggregate_count; ++aggregate_index) {
+          const auto stream = aggregate_schema.aggregate_value_stream(aggregate_index);
+          if (stream == AggregateSchema::NO_VALUE_STREAM) {
+            continue;
+          }
+          const auto source = aggregate_schema.source_column(aggregate_index);
+          const auto nullable = aggregate_schema.value_stream(stream).is_nullable();
+          gather_value_column(*chunk->get_segment(source), input_table.column_data_type(source), nullable,
+                              value_buffers[aggregate_index], null_buffers[aggregate_index], row_count);
+        }
+
+        for (auto tile_start = size_t{0}; tile_start < row_count; tile_start += MERGE_TILE_ROWS) {
+          const auto tile_rows = std::min(MERGE_TILE_ROWS, size_t{row_count} - tile_start);
+          slots.clear();
+          merge_map.resolve({key_buffer.data() + tile_start * key_width, tile_rows * key_width}, slots);
+
+          for (auto aggregate_index = size_t{0}; aggregate_index < aggregate_count; ++aggregate_index) {
+            const auto stream = aggregate_schema.aggregate_value_stream(aggregate_index);
+            if (stream == AggregateSchema::NO_VALUE_STREAM) {
+              merge_map.fold(aggregate_index, slots, {}, {});
+              continue;
+            }
+            const auto width = aggregate_schema.value_stream(stream).element_width();
+            const auto nullable = aggregate_schema.value_stream(stream).is_nullable();
+            const auto value_span = std::span<const std::byte>{
+                value_buffers[aggregate_index].data() + tile_start * width, tile_rows * width};
+            auto null_span = std::span<const std::byte>{};
+            if (nullable) {
+              null_span = {null_buffers[aggregate_index].data() + tile_start / 8, (tile_rows + 7) / 8};
+            }
+            merge_map.fold(aggregate_index, slots, value_span, null_span);
+          }
+        }
+        spill_scratch.clear();
+      }
+    });
+  }
+  step_performance_data.set_step_runtime(OperatorSteps::Scatter, timer.lap());
+
+  // reduce the per-worker private maps into map 0, then emit its groups as the result.
+  {
+    auto& combined = per_worker_private_maps.front();
+    for (auto worker = size_t{1}; worker < worker_count; ++worker) {
+      combined.combine(per_worker_private_maps[worker]);
+    }
+  }
+
+  auto output_column_definitions = TableColumnDefinitions{};
+  output_column_definitions.reserve(_groupby_column_ids.size() + aggregate_count);
+  for (const auto column_id : _groupby_column_ids) {
+    output_column_definitions.emplace_back(input_table.column_name(column_id), input_table.column_data_type(column_id),
+                                           input_table.column_is_nullable(column_id));
+  }
+  for (auto aggregate_index = size_t{0}; aggregate_index < aggregate_count; ++aggregate_index) {
+    const auto function = aggregate_schema.function(aggregate_index);
+    output_column_definitions.emplace_back(
+        _aggregates[aggregate_index]->as_column_name(), aggregate_schema.result_type(aggregate_index),
+        function != WindowFunction::Count && function != WindowFunction::CountDistinct);
+  }
+
+  auto per_worker_outputs = std::vector<OutputColumns>{};
+  per_worker_outputs.emplace_back(output_column_definitions, Chunk::DEFAULT_SIZE);
+  {
+    per_worker_private_maps.front().flush_into(per_worker_outputs.front());
+    per_worker_outputs.front().seal_all();
+  }
+  auto output_table = build_output_table(output_column_definitions, per_worker_outputs);
+  step_performance_data.set_step_runtime(OperatorSteps::Merge, timer.lap());
+  return output_table;
+}
+
+template <typename KeySchema>
 std::shared_ptr<Table> AggregateDYOD::_aggregate(const KeySchema& key_schema, const AggregateSchema& aggregate_schema,
                                                  const Table& input_table) {
   auto& step_performance_data = dynamic_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
@@ -541,6 +709,7 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate(const KeySchema& key_schema, co
     run_workers(estimate_worker_count, [&](const size_t worker_id) {
       auto& sketch = sketches[worker_id];
       auto key_scratch = std::vector<std::byte>(key_width);
+      auto decode_scratch = KeyDecodeScratch{};
       auto spill_scratch = StringSpillBuffer{};
       auto segment_owners = std::vector<std::shared_ptr<AbstractSegment>>{};
       auto segments = std::vector<const AbstractSegment*>{};
@@ -554,9 +723,10 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate(const KeySchema& key_schema, co
           continue;
         }
         gather_group_by_segments(*chunk, segment_owners, segments);
+        key_schema.decode(segments, decode_scratch);
         const auto row_count = chunk->size();
         for (auto chunk_offset = ChunkOffset{0}; chunk_offset < row_count; ++chunk_offset) {
-          key_schema.pack(segments, chunk_offset, key_scratch.data(), spill_scratch);
+          key_schema.pack(decode_scratch, chunk_offset, key_scratch.data(), spill_scratch);
           sketch.add(key_schema.hash(key_scratch.data()));
         }
         spill_scratch.clear();
@@ -567,9 +737,15 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate(const KeySchema& key_schema, co
     sketches.front().merge(sketches[worker_id]);
   }
   const auto cardinality_estimate = sketches.front().estimate();
+
+  step_performance_data.set_step_runtime(OperatorSteps::Estimate, timer.lap());
+
+  if (cardinality_estimate <= LOW_CARDINALITY_THRESHOLD && low_cardinality_eligible(aggregate_schema, input_table)) {
+    return _aggregate_low_cardinality(key_schema, aggregate_schema, input_table, cardinality_estimate);
+  }
+
   const auto partition_count = choose_partition_count(cardinality_estimate, num_cpus);
   const auto shift = static_cast<uint32_t>(std::countr_zero(partition_count));
-  step_performance_data.set_step_runtime(OperatorSteps::Estimate, timer.lap());
 
   const auto value_stream_count = aggregate_schema.value_stream_count();
   auto value_stream_widths = std::vector<size_t>(value_stream_count);
@@ -596,8 +772,6 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate(const KeySchema& key_schema, co
   const auto value_null_bitmap_width = aggregate_schema.value_null_bitmap_width();
   const auto has_value_null_bitmap = value_null_bitmap_width > 0;
   const auto needs_value_arena = aggregate_schema.needs_value_arena();
-  const auto max_value_width =
-      value_stream_count == 0 ? size_t{0} : *std::max_element(value_stream_widths.begin(), value_stream_widths.end());
 
   // ANY aggregates scatter no value; they read one shared row-id stream instead.
   const auto needs_row_id_stream = aggregate_schema.needs_row_id_stream();
@@ -624,17 +798,19 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate(const KeySchema& key_schema, co
                                 needs_value_arena);
   }
 
-  // Scatter: buffer raw (key, values...) rows into per-worker stores across the partitions.
+  // Scatter: buffer raw (key, values...) rows into per-worker stores across the partitions. The key pass packs and
+  // routes each row and records its partition; the value streams, the row-id stream, and the value-null bitmap then
+  // run as separate column-wise passes over the same chunk.
   {
     auto chunk_cursor = std::atomic<size_t>{0};
     run_workers(scatter_worker_count, [&](const size_t worker_id) {
       auto& store = scatter_stores[worker_id];
       auto heads = ScatterHeads{partition_count, stream_widths.size(), stream_widths, has_value_null_bitmap};
       auto key_scratch = std::vector<std::byte>(key_width);
-      auto bitmap_scratch = std::vector<std::byte>(value_null_bitmap_width);
-      auto value_scratch = std::vector<std::byte>(max_value_width);
+      auto decode_scratch = KeyDecodeScratch{};
+      auto row_partitions = std::vector<PartitionId>{};
+      auto bitmap_scratch = std::vector<std::byte>{};
       auto pack_spill = StringSpillBuffer{};
-      auto dummy_arena = StringSpillBuffer{};
       auto segment_owners = std::vector<std::shared_ptr<AbstractSegment>>{};
       auto segments = std::vector<const AbstractSegment*>{};
       auto value_segment_owners = std::vector<std::shared_ptr<AbstractSegment>>{};
@@ -656,10 +832,14 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate(const KeySchema& key_schema, co
           value_segments.emplace_back(value_segment_owners.back().get());
         }
         const auto row_count = chunk->size();
+
+        key_schema.decode(segments, decode_scratch);
+        row_partitions.resize(row_count);
         for (auto chunk_offset = ChunkOffset{0}; chunk_offset < row_count; ++chunk_offset) {
-          key_schema.pack(segments, chunk_offset, key_scratch.data(), pack_spill);
+          key_schema.pack(decode_scratch, chunk_offset, key_scratch.data(), pack_spill);
           const auto key_hash = key_schema.hash(key_scratch.data());
           const auto partition = static_cast<PartitionId>(key_hash & (partition_count - 1));
+          row_partitions[chunk_offset] = partition;
           if constexpr (KeySchema::HAS_STRINGS) {
             key_schema.reintern_spill(key_scratch.data(), store.key_spill_buffer(partition));
             pack_spill.clear();
@@ -667,25 +847,30 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate(const KeySchema& key_schema, co
           for (auto piece_offset = size_t{0}; piece_offset < key_width; piece_offset += 4) {
             heads.push(store, 0, partition, key_scratch.data() + piece_offset, 4);
           }
-          if (has_value_null_bitmap) {
-            std::memset(bitmap_scratch.data(), 0, value_null_bitmap_width);
-          }
-          for (auto stream_index = size_t{0}; stream_index < value_stream_count; ++stream_index) {
-            const auto width = value_stream_widths[stream_index];
-            std::memset(value_scratch.data(), 0, width);
-            auto& value_arena = needs_value_arena ? store.value_arena(partition) : dummy_arena;
-            aggregate_schema.value_stream(stream_index)
-                .pack(*value_segments[stream_index], chunk_offset, value_scratch.data(), bitmap_scratch.data(),
-                      value_stream_null_bits[stream_index], value_arena);
-            heads.push(store, 1 + stream_index, partition, value_scratch.data(), width);
-          }
-          if (needs_row_id_stream) {
+        }
+
+        if (has_value_null_bitmap) {
+          bitmap_scratch.assign(row_count * value_null_bitmap_width, std::byte{0});
+        }
+        for (auto stream_index = size_t{0}; stream_index < value_stream_count; ++stream_index) {
+          aggregate_schema.value_stream(stream_index)
+              .scatter(*value_segments[stream_index], row_partitions, 1 + stream_index, heads, store,
+                       bitmap_scratch.data(), value_null_bitmap_width, value_stream_null_bits[stream_index]);
+        }
+        if (needs_row_id_stream) {
+          for (auto chunk_offset = ChunkOffset{0}; chunk_offset < row_count; ++chunk_offset) {
             const auto row_id = RowID{ChunkID{static_cast<ChunkID::base_type>(chunk_index)}, chunk_offset};
-            heads.push(store, 1 + row_id_stream_index, partition, reinterpret_cast<const std::byte*>(&row_id),
-                       sizeof(row_id));
+            heads.push(store, 1 + row_id_stream_index, row_partitions[chunk_offset],
+                       reinterpret_cast<const std::byte*>(&row_id), sizeof(row_id));
           }
-          for (auto byte_index = size_t{0}; byte_index < value_null_bitmap_width; ++byte_index) {
-            heads.push(store, value_null_bitmap_stream_index, partition, bitmap_scratch.data() + byte_index, 1);
+        }
+        if (has_value_null_bitmap) {
+          for (auto chunk_offset = ChunkOffset{0}; chunk_offset < row_count; ++chunk_offset) {
+            const auto* row_bitmap = bitmap_scratch.data() + size_t{chunk_offset} * value_null_bitmap_width;
+            for (auto byte_index = size_t{0}; byte_index < value_null_bitmap_width; ++byte_index) {
+              heads.push(store, value_null_bitmap_stream_index, row_partitions[chunk_offset], row_bitmap + byte_index,
+                         1);
+            }
           }
         }
       }

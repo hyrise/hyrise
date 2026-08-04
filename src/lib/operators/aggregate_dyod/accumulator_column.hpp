@@ -20,7 +20,8 @@ namespace hyrise {
 class AbstractSegment;
 class Table;
 class OutputColumns;
-class StringSpillBuffer;
+class ScatterHeads;
+class ScatterStore;
 
 // ============================================================================================================
 // Aggregate value handling for AggregateDYOD: the value side of the operator, symmetric to the packed-key KeySchema.
@@ -42,15 +43,15 @@ class StringSpillBuffer;
 /**
  * One value stream's packing behavior, resolved once per distinct source column at schema build.
  *
- * A value stream reads a source column cell and serializes it into the per-worker scatter store's value lane during
- * the scatter phase, so the merge phase can later fold the raw bytes without touching the input table again. Numeric
+ * A value stream reads a source column and serializes it into the per-worker scatter store's value lane during the
+ * scatter phase, so the merge phase can later fold the raw bytes without touching the input table again. Numeric
  * streams write the value's native bytes; string streams write a (pointer, length) reference into the per-partition
  * value arena. The concrete subclass is chosen per source column from its data type.
  *
- * Invariants: element_width() and is_nullable() are fixed for the stream's lifetime; every pack() call writes exactly
- *   element_width() bytes to value_dest for a non-NULL cell.
+ * Invariants: element_width() and is_nullable() are fixed for the stream's lifetime; scatter() writes exactly
+ *   element_width() bytes to the stream's value lane per row.
  * Ownership/lifetime/threading: owned by AggregateSchema; immutable after build and shared read-only by all scatter
- *   workers, which call pack() concurrently on their own destinations. Must outlive the scatter phase.
+ *   workers, which call scatter() concurrently on their own destinations. Must outlive the scatter phase.
  * See also: NumericValueScatterColumn, StringValueScatterColumn; AbstractAccumulatorColumn (merge-side counterpart).
  */
 class AbstractValueScatterColumn {
@@ -67,20 +68,26 @@ class AbstractValueScatterColumn {
   virtual bool is_nullable() const = 0;
 
   /**
-   * Read one source cell and serialize it into this worker's scatter store for the merge phase to fold later.
+   * Scatter one chunk's source column into the worker's store, one typed segment_iterate pass over the whole column.
    *
-   * @param segment input segment holding the source cell; borrowed, not retained.
-   * @param chunk_offset row position of the cell within segment.
-   * @param value_dest destination for the packed value; borrowed, must be writable for at least element_width() bytes.
-   * @param null_bitmap the value-null bitmap; borrowed, written only when the cell is NULL.
-   * @param null_bit_index bit position within null_bitmap for this row.
-   * @param value_arena per-partition string arena; string payload bytes are appended here. Unused by numeric streams.
-   * @pre runs in the scatter phase, single-threaded per worker on that worker's own destinations.
-   * @post for a non-NULL cell, value_dest holds the packed value (native bytes for numeric, a (pointer, length)
-   *   reference for string); for a NULL cell, bit null_bit_index of null_bitmap is set and value_dest is unspecified.
+   * NULL cells push a zeroed value and set their bit in the row's field of the chunk's value-null-bitmap scratch,
+   * which the caller pushes row-wise after all value streams ran.
+   *
+   * @param segment input segment holding the source column for the current chunk; borrowed, not retained.
+   * @param row_partitions destination partition per chunk row, computed by the key pass; borrowed.
+   * @param stream the ScatterHeads stream index of this value stream.
+   * @param heads the worker's SWWC staging front-end; borrowed, mutated.
+   * @param store the worker's scatter store; borrowed, mutated. String streams append payload bytes to the
+   *   destination partition's value arena.
+   * @param null_bitmap the chunk's value-null-bitmap scratch, null_bitmap_width bytes per row; written only for NULL
+   *   cells. May be null when no value stream is nullable.
+   * @param null_bitmap_width per-row width of the bitmap scratch in bytes.
+   * @param null_bit_index bit position of this stream within a row's bitmap field.
+   * @pre runs in the scatter phase, single-threaded per worker on that worker's own store and scratch.
    */
-  virtual void pack(const AbstractSegment& segment, ChunkOffset chunk_offset, std::byte* value_dest,
-                    std::byte* null_bitmap, uint32_t null_bit_index, StringSpillBuffer& value_arena) const = 0;
+  virtual void scatter(const AbstractSegment& segment, std::span<const PartitionId> row_partitions, size_t stream,
+                       ScatterHeads& heads, ScatterStore& store, std::byte* null_bitmap, size_t null_bitmap_width,
+                       uint32_t null_bit_index) const = 0;
 };
 
 /**
@@ -104,8 +111,9 @@ class NumericValueScatterColumn : public AbstractValueScatterColumn {
 
   uint32_t element_width() const override;  // sizeof(T)
   bool is_nullable() const override;
-  void pack(const AbstractSegment& segment, ChunkOffset chunk_offset, std::byte* value_dest, std::byte* null_bitmap,
-            uint32_t null_bit_index, StringSpillBuffer& value_arena) const override;
+  void scatter(const AbstractSegment& segment, std::span<const PartitionId> row_partitions, size_t stream,
+               ScatterHeads& heads, ScatterStore& store, std::byte* null_bitmap, size_t null_bitmap_width,
+               uint32_t null_bit_index) const override;
 
  private:
   ColumnID _source_column;
@@ -122,7 +130,7 @@ class NumericValueScatterColumn : public AbstractValueScatterColumn {
  * time. element_width() is therefore the size of the (pointer, length) reference, not of the string payload.
  *
  * Ownership/lifetime/threading: see AbstractValueScatterColumn -- immutable after construction, shared read-only
- *   across scatter workers; the referenced payload lives in the value arena passed to pack().
+ *   across scatter workers; the referenced payload lives in the per-partition value arena.
  * See also: TypedAccumulatorColumn for string MIN/MAX, which decodes these references from the arena at fold time.
  */
 class StringValueScatterColumn : public AbstractValueScatterColumn {
@@ -135,8 +143,9 @@ class StringValueScatterColumn : public AbstractValueScatterColumn {
 
   uint32_t element_width() const override;  // sizeof(pointer, length) reference
   bool is_nullable() const override;
-  void pack(const AbstractSegment& segment, ChunkOffset chunk_offset, std::byte* value_dest, std::byte* null_bitmap,
-            uint32_t null_bit_index, StringSpillBuffer& value_arena) const override;
+  void scatter(const AbstractSegment& segment, std::span<const PartitionId> row_partitions, size_t stream,
+               ScatterHeads& heads, ScatterStore& store, std::byte* null_bitmap, size_t null_bitmap_width,
+               uint32_t null_bit_index) const override;
 
  private:
   ColumnID _source_column;
@@ -206,6 +215,14 @@ class AbstractAccumulatorColumn {
   virtual void clear() = 0;
 
   /**
+   * Merge another accumulator column's per-slot state into this one, used by the low-cardinality path to combine
+   * per-worker private maps. For each row i, the source slot (other_first_slot + i) of `other` is folded into this
+   * column's dense slot destination_slots[i].
+   */
+  virtual void combine_from(const AbstractAccumulatorColumn& other, size_t other_first_slot,
+                            std::span<const uint32_t> destination_slots) = 0;
+
+  /**
    * Append the finalized results for dense slots [first_slot, last_slot) as one contiguous run of output rows.
    *
    * Applies per-aggregate finalization: AVG divides its running sum by the non-null count; a group with zero non-null
@@ -254,6 +271,8 @@ class TypedAccumulatorColumn : public AbstractAccumulatorColumn {
   void fold(std::span<const uint32_t> slots, std::span<const std::byte> value_bytes,
             std::span<const std::byte> value_null_bitmap) override;
   void clear() override;
+  void combine_from(const AbstractAccumulatorColumn& other, size_t other_first_slot,
+                    std::span<const uint32_t> destination_slots) override;
   void finalize_into(size_t first_slot, size_t last_slot, size_t output_column_index,
                      OutputColumns& output) const override;
 
@@ -277,6 +296,8 @@ class AnyAccumulatorColumn : public AbstractAccumulatorColumn {
   void fold(std::span<const uint32_t> slots, std::span<const std::byte> value_bytes,
             std::span<const std::byte> value_null_bitmap) override;
   void clear() override;
+  void combine_from(const AbstractAccumulatorColumn& other, size_t other_first_slot,
+                    std::span<const uint32_t> destination_slots) override;
   void finalize_into(size_t first_slot, size_t last_slot, size_t output_column_index,
                      OutputColumns& output) const override;
 
@@ -297,6 +318,8 @@ class DistinctAccumulatorColumn : public AbstractAccumulatorColumn {
   void fold(std::span<const uint32_t> slots, std::span<const std::byte> value_bytes,
             std::span<const std::byte> value_null_bitmap) override;
   void clear() override;
+  void combine_from(const AbstractAccumulatorColumn& other, size_t other_first_slot,
+                    std::span<const uint32_t> destination_slots) override;
   void finalize_into(size_t first_slot, size_t last_slot, size_t output_column_index,
                      OutputColumns& output) const override;
 

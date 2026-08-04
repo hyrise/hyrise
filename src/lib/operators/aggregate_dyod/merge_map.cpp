@@ -114,6 +114,23 @@ size_t MergeMap<KeySchema>::size() const {
 }
 
 template <typename KeySchema>
+void MergeMap<KeySchema>::combine(const MergeMap& other) {
+  DebugAssert(!_table.empty(), "reserve() must run before combine().");
+  const auto width = _key_schema->packed_width();
+  const auto other_slot_count = other.size();
+  auto slots = std::vector<uint32_t>{};
+  for (auto tile_start = size_t{0}; tile_start < other_slot_count; tile_start += MERGE_TILE_ROWS) {
+    const auto tile_rows = std::min(MERGE_TILE_ROWS, other_slot_count - tile_start);
+    slots.clear();
+    resolve({other._keys.data() + tile_start * width, tile_rows * width}, slots);
+    const auto column_count = _columns.size();
+    for (auto index = size_t{0}; index < column_count; ++index) {
+      _columns[index]->combine_from(*other._columns[index], tile_start, slots);
+    }
+  }
+}
+
+template <typename KeySchema>
 void MergeMap<KeySchema>::clear() {
   std::fill(_table.begin(), _table.end(), uint32_t{0});
   _keys.clear();

@@ -61,8 +61,10 @@ std::vector<std::byte> pack_key_tile(const KeySchema& schema, const MergeInput& 
   const auto row_count = input.table->row_count();
   auto tile = std::vector<std::byte>(row_count * width);
   const auto segments = std::span<const AbstractSegment* const>{input.segments}.first(group_by_count);
+  auto scratch = KeyDecodeScratch{};
+  schema.decode(segments, scratch);
   for (auto row = uint32_t{0}; row < row_count; ++row) {
-    schema.pack(segments, ChunkOffset{row}, tile.data() + row * width, spill_buffer);
+    schema.pack(scratch, ChunkOffset{row}, tile.data() + row * width, spill_buffer);
   }
   return tile;
 }

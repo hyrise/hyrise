@@ -1,7 +1,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
-#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -14,6 +13,9 @@
 #include "operators/aggregate_hash.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk_encoder.hpp"
+#include "storage/encoding_type.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
+#include "storage/reference_segment.hpp"
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
 #include "testing_assert.hpp"
@@ -37,8 +39,7 @@ void encode(const std::shared_ptr<Table>& table, const EncodingType encoding_typ
 }
 
 // The d values are multiples of 0.5, so per-group sums are exact regardless of fold order.
-std::shared_ptr<TableWrapper> make_input(const size_t row_count,
-                                         const std::optional<EncodingType> encoding_type = std::nullopt) {
+std::shared_ptr<Table> make_input_table(const size_t row_count) {
   const auto definitions = TableColumnDefinitions{{"a", DataType::Int, true},
                                                   {"b", DataType::String, true},
                                                   {"c", DataType::Int, false},
@@ -61,14 +62,37 @@ std::shared_ptr<TableWrapper> make_input(const size_t row_count,
     table->append({a, b, c, d, e});
   }
 
-  if (encoding_type) {
-    encode(table, *encoding_type);
-  }
+  return table;
+}
 
+std::shared_ptr<TableWrapper> wrap_input(const std::shared_ptr<const Table>& table) {
   const auto wrapper = std::make_shared<TableWrapper>(table);
   wrapper->never_clear_output();
   wrapper->execute();
   return wrapper;
+}
+
+std::shared_ptr<TableWrapper> make_input(const size_t row_count) {
+  return wrap_input(make_input_table(row_count));
+}
+
+std::shared_ptr<Table> make_low_cardinality_table(const size_t row_count) {
+  const auto definitions = TableColumnDefinitions{{"flag", DataType::Int, false},
+                                                  {"status", DataType::String, false},
+                                                  {"val_i", DataType::Int, true},
+                                                  {"val_d", DataType::Double, true}};
+  const auto table = std::make_shared<Table>(definitions, TableType::Data, ChunkOffset{2048});
+
+  for (auto row = size_t{0}; row < row_count; ++row) {
+    const auto flag = AllTypeVariant{static_cast<int32_t>(row % 4)};
+    const auto status = AllTypeVariant{pmr_string{"s" + std::to_string((row / 7) % 3)}};
+    const auto val_i = row % 11 == 0 ? AllTypeVariant{NullValue{}} : AllTypeVariant{static_cast<int32_t>(row % 100)};
+    const auto val_d =
+        row % 7 == 0 ? AllTypeVariant{NullValue{}} : AllTypeVariant{static_cast<double>(row % 200) * 0.5};
+    table->append({flag, status, val_i, val_d});
+  }
+
+  return table;
 }
 
 void compare_with_aggregate_hash(const std::shared_ptr<AbstractOperator>& input,
@@ -177,13 +201,16 @@ TEST_F(OperatorsAggregateDYODTest, MinMaxWithoutGroupBy) {
 }
 
 TEST_F(OperatorsAggregateDYODTest, DictionaryMaxMinWithoutGroupBy) {
-  const auto input = make_input(30'000, EncodingType::Dictionary);
-  compare_with_aggregate_hash(input, {{ColumnID{1}, WindowFunction::Max}, {ColumnID{1}, WindowFunction::Min}}, {});
+  const auto table = make_input_table(30'000);
+  encode(table, EncodingType::Dictionary);
+  compare_with_aggregate_hash(wrap_input(table),
+                              {{ColumnID{1}, WindowFunction::Max}, {ColumnID{1}, WindowFunction::Min}}, {});
 }
 
 TEST_F(OperatorsAggregateDYODTest, UnencodedPruningStatisticsMinMaxWithoutGroupBy) {
-  const auto input = make_input(30'000, EncodingType::Unencoded);
-  compare_with_aggregate_hash(input,
+  const auto table = make_input_table(30'000);
+  encode(table, EncodingType::Unencoded);
+  compare_with_aggregate_hash(wrap_input(table),
                               {{ColumnID{0}, WindowFunction::Min},
                                {ColumnID{0}, WindowFunction::Max},
                                {ColumnID{1}, WindowFunction::Min},
@@ -199,15 +226,117 @@ TEST_F(OperatorsAggregateDYODTest, DictionaryMinMaxWithoutGroupByOnAllNullColumn
   }
   encode(table, EncodingType::Dictionary);
 
-  const auto input = std::make_shared<TableWrapper>(table);
-  input->never_clear_output();
-  input->execute();
-  compare_with_aggregate_hash(input, {{ColumnID{0}, WindowFunction::Min}, {ColumnID{0}, WindowFunction::Max}}, {});
+  compare_with_aggregate_hash(wrap_input(table),
+                              {{ColumnID{0}, WindowFunction::Min}, {ColumnID{0}, WindowFunction::Max}}, {});
+}
+
+TEST_F(OperatorsAggregateDYODTest, ReferenceInputSpanningChunks) {
+  const auto input = wrap_input(to_simple_reference_table(make_input_table(30'000)));
+  compare_with_aggregate_hash(
+      input,
+      {{ColumnID{2}, WindowFunction::Sum}, {ColumnID{4}, WindowFunction::Min}, {ColumnID{0}, WindowFunction::Any}},
+      {ColumnID{0}, ColumnID{1}});
+}
+
+TEST_F(OperatorsAggregateDYODTest, NullRowIdsInPosList) {
+  const auto data = make_input_table(5'000);
+  auto pos_list = std::make_shared<RowIDPosList>();
+  for (auto chunk_id = ChunkID{0}; chunk_id < data->chunk_count(); ++chunk_id) {
+    const auto chunk_size = data->get_chunk(chunk_id)->size();
+    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
+      pos_list->emplace_back(pos_list->size() % 10 == 9 ? NULL_ROW_ID : RowID{chunk_id, chunk_offset});
+    }
+  }
+
+  auto definitions = TableColumnDefinitions{};
+  auto segments = Segments{};
+  const auto column_count = data->column_count();
+  for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+    definitions.emplace_back(data->column_name(column_id), data->column_data_type(column_id), true);
+    segments.emplace_back(std::make_shared<ReferenceSegment>(data, column_id, pos_list));
+  }
+  const auto reference_table = std::make_shared<Table>(definitions, TableType::References);
+  reference_table->append_chunk(segments);
+
+  compare_with_aggregate_hash(
+      wrap_input(reference_table),
+      {{ColumnID{2}, WindowFunction::Sum}, {ColumnID{4}, WindowFunction::Min}, {ColumnID{0}, WindowFunction::Any}},
+      {ColumnID{0}, ColumnID{1}});
+}
+
+TEST_F(OperatorsAggregateDYODTest, DictionaryEncodedInput) {
+  const auto table = make_input_table(30'000);
+  table->last_chunk()->set_immutable();
+  ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{EncodingType::Dictionary});
+  compare_with_aggregate_hash(
+      wrap_input(table),
+      {{ColumnID{2}, WindowFunction::Sum}, {ColumnID{4}, WindowFunction::Min}, {ColumnID{3}, WindowFunction::Avg}},
+      {ColumnID{0}, ColumnID{1}});
 }
 
 TEST_F(OperatorsAggregateDYODTest, EmptyInput) {
   const auto input = make_input(0);
   compare_with_aggregate_hash(input, {{ColumnID{2}, WindowFunction::Sum}, {INVALID_COLUMN_ID, WindowFunction::Count}},
+                              {ColumnID{0}, ColumnID{1}});
+}
+
+TEST_F(OperatorsAggregateDYODTest, LowCardinalityPathNumericGroupBy) {
+  const auto input = wrap_input(make_low_cardinality_table(100'000));
+  compare_with_aggregate_hash(input,
+                              {{ColumnID{3}, WindowFunction::Sum},
+                               {ColumnID{3}, WindowFunction::Avg},
+                               {ColumnID{3}, WindowFunction::Count},
+                               {ColumnID{2}, WindowFunction::Min},
+                               {ColumnID{2}, WindowFunction::Max},
+                               {INVALID_COLUMN_ID, WindowFunction::Count}},
+                              {ColumnID{0}});
+}
+
+TEST_F(OperatorsAggregateDYODTest, LowCardinalityPathStringGroupBy) {
+  const auto input = wrap_input(make_low_cardinality_table(100'000));
+  compare_with_aggregate_hash(input,
+                              {{ColumnID{3}, WindowFunction::Sum},
+                               {ColumnID{3}, WindowFunction::Avg},
+                               {INVALID_COLUMN_ID, WindowFunction::Count}},
+                              {ColumnID{1}});
+}
+
+TEST_F(OperatorsAggregateDYODTest, LowCardinalityPathMixedGroupBy) {
+  const auto input = wrap_input(make_low_cardinality_table(100'000));
+  compare_with_aggregate_hash(input,
+                              {{ColumnID{3}, WindowFunction::Sum},
+                               {ColumnID{2}, WindowFunction::Min},
+                               {INVALID_COLUMN_ID, WindowFunction::Count}},
+                              {ColumnID{0}, ColumnID{1}});
+}
+
+TEST_F(OperatorsAggregateDYODTest, LowCardinalityPathDictionaryEncoded) {
+  const auto table = make_low_cardinality_table(100'000);
+  table->last_chunk()->set_immutable();
+  ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{EncodingType::Dictionary});
+  compare_with_aggregate_hash(
+      wrap_input(table),
+      {{ColumnID{3}, WindowFunction::Sum}, {ColumnID{3}, WindowFunction::Avg}, {ColumnID{2}, WindowFunction::Max}},
+      {ColumnID{0}, ColumnID{1}});
+}
+
+TEST_F(OperatorsAggregateDYODTest, LowCardinalityPathReferenceInput) {
+  const auto input = wrap_input(to_simple_reference_table(make_low_cardinality_table(100'000)));
+  compare_with_aggregate_hash(input,
+                              {{ColumnID{3}, WindowFunction::Sum},
+                               {ColumnID{2}, WindowFunction::Min},
+                               {INVALID_COLUMN_ID, WindowFunction::Count}},
+                              {ColumnID{0}});
+}
+
+TEST_F(OperatorsAggregateDYODTest, LowCardinalityPathSingleChunkNoCombine) {
+  const auto input = wrap_input(make_low_cardinality_table(1500));
+  compare_with_aggregate_hash(input,
+                              {{ColumnID{3}, WindowFunction::Sum},
+                               {ColumnID{3}, WindowFunction::Avg},
+                               {ColumnID{2}, WindowFunction::Min},
+                               {ColumnID{2}, WindowFunction::Max},
+                               {INVALID_COLUMN_ID, WindowFunction::Count}},
                               {ColumnID{0}, ColumnID{1}});
 }
 

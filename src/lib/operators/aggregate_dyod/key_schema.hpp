@@ -144,15 +144,46 @@ class StringSpillBuffer : private Noncopyable {
 // Marks a column that has no bit in the null bitmap because it is not nullable.
 constexpr uint32_t NO_NULL_BIT = std::numeric_limits<uint32_t>::max();
 
+// Inline capacity for the per-schema lane/column vectors: most group-bys have at most this many columns, so the lanes
+// stay inline (no heap allocation) in the common case.
+constexpr size_t EXPECTED_GROUP_BY_COLUMNS = 4;
+
+/**
+ * Worker-local decoded copy of one chunk's group-by columns, filled by KeySchema::decode() and consumed row-wise by
+ * KeySchema::pack().
+ *
+ * Packing a row needs all group-by columns of that row at once, so the columns are decoded chunk-wise into these flat
+ * buffers first (one typed segment_iterate pass per column), and the per-row pack then only touches flat memory.
+ * Numeric lanes hold the equality-canonical encoded bytes (sign-bit bias / float canonicalization applied during
+ * decode), zeroed for NULL rows; string columns hold the decoded values, empty for NULL rows.
+ *
+ * Ownership/lifetime/threading: owned by one worker and reused across the chunks it claims; capacity only grows.
+ * Valid until the next decode() call.
+ */
+struct KeyDecodeScratch {
+  struct NumericLane {
+    std::vector<std::byte> values;  // Encoded lane bytes, row-major; zero for NULL rows.
+    std::vector<uint8_t> nulls;     // One flag per row.
+  };
+
+  struct StringColumn {
+    std::vector<pmr_string> values;  // Decoded values; empty for NULL rows.
+    std::vector<uint8_t> nulls;      // One flag per row.
+  };
+
+  boost::container::small_vector<NumericLane, EXPECTED_GROUP_BY_COLUMNS> numeric_lanes;
+  boost::container::small_vector<StringColumn, EXPECTED_GROUP_BY_COLUMNS> string_columns;
+};
+
 /**
  * Polymorphic handler for one numeric group-by column: a fixed-width lane at a byte offset in the numeric prefix.
  *
  * One instance is resolved per numeric group-by column at schema build (concrete subclass NumericKeyLane<T> per
- * DataType) and held by the schema; pack()/unpack() are then called once per row over the resolved lanes.
+ * DataType) and held by the schema; decode() is then called once per chunk and unpack() once per output row.
  *
  * Ownership/lifetime/threading: owned by the schema (via unique_ptr in NumericKeyLanes) and lives for the whole query;
- * stateless and const after construction, so any worker may call pack()/unpack() concurrently on distinct buffers.
- * pack() runs in the scatter phase, unpack() in the merge phase.
+ * stateless and const after construction, so any worker may call decode()/unpack() concurrently on distinct buffers.
+ * decode() runs in the estimate and scatter phases, unpack() in the merge phase.
  *
  * See NumericKeyLane (the concrete templated lane) and StringKeyColumn (the string-column descriptor).
  */
@@ -161,22 +192,17 @@ class AbstractNumericKeyLane {
   virtual ~AbstractNumericKeyLane() = default;
 
   /**
-   * Read one cell and write its equality-canonical bytes into this lane's fixed field of the key buffer.
+   * Decode one chunk's column into the lane's flat scratch buffer.
    *
    * Integer lanes apply the sign-bit-XOR bias; float/double lanes canonicalize -0.0 and NaN, so whole-buffer
-   * byte-equality matches value-equality (see the file banner).
+   * byte-equality matches value-equality (see the file banner). The schema's per-row pack loop copies the stored
+   * bytes into the key. NULL rows store zero bytes and set their null flag.
    *
-   * @param segment Input segment holding this lane's group-by column; borrowed, read only.
-   * @param chunk_offset Row within `segment` to read.
-   * @param key Start of the destination key buffer; borrowed, written. Must have room for this lane's field offset
-   *   plus its width within the numeric prefix.
-   * @param null_bitmap Start of the key's null bitmap region; borrowed, written. If the cell is NULL, this lane sets
-   *   its own bit here and leaves the lane bytes untouched -- they stay zero because the schema's pack() zero-fills
-   *   the key first, which whole-buffer equality relies on; otherwise the bit is left untouched.
-   * @pre Runs in the scatter phase, single-threaded per worker on that worker's own buffer.
+   * @param segment Input segment holding this lane's group-by column for the current chunk; borrowed, read only.
+   * @param lane Destination scratch buffers; borrowed, resized to the chunk's row count and overwritten.
+   * @pre Runs in the estimate and scatter phases, single-threaded per worker on that worker's own scratch.
    */
-  virtual void pack(const AbstractSegment& segment, ChunkOffset chunk_offset, std::byte* key,
-                    std::byte* null_bitmap) const = 0;
+  virtual void decode(const AbstractSegment& segment, KeyDecodeScratch::NumericLane& lane) const = 0;
 
   /**
    * Reverse of pack(): decode this lane's value and append it (or a NULL) to its output column.
@@ -197,7 +223,7 @@ class AbstractNumericKeyLane {
 /**
  * Concrete numeric lane, monomorphized over the column's C++ type T (int32_t/int64_t/float/double).
  *
- * Implements AbstractNumericKeyLane: pack() applies the sign-bit-XOR bias for integers or the -0.0/NaN
+ * Implements AbstractNumericKeyLane: decode() applies the sign-bit-XOR bias for integers or the -0.0/NaN
  * canonicalization for floats, and unpack() inverts it. See the file banner for why these transforms exist.
  *
  * Ownership/lifetime/threading: as AbstractNumericKeyLane -- owned by the schema, const after construction, safely
@@ -214,8 +240,7 @@ class NumericKeyLane : public AbstractNumericKeyLane {
    */
   NumericKeyLane(ColumnID column_id, uint32_t field_offset, uint32_t null_bit_index);
 
-  void pack(const AbstractSegment& segment, ChunkOffset chunk_offset, std::byte* key,
-            std::byte* null_bitmap) const override;
+  void decode(const AbstractSegment& segment, KeyDecodeScratch::NumericLane& lane) const override;
   void unpack(const std::byte* key, const std::byte* null_bitmap, OutputColumns& output, size_t output_column_index,
               size_t output_row) const override;
 
@@ -239,11 +264,20 @@ struct StringKeyColumn {
   uint32_t null_bit_index;       // Bit in the key's null bitmap; NO_NULL_BIT if the column is not nullable.
 };
 
-// Inline capacity for the per-schema lane/column vectors: most group-bys have at most this many columns, so the lanes
-// stay inline (no heap allocation) in the common case.
-constexpr size_t EXPECTED_GROUP_BY_COLUMNS = 4;
-using NumericKeyLanes =
-    boost::container::small_vector<std::unique_ptr<AbstractNumericKeyLane>, EXPECTED_GROUP_BY_COLUMNS>;
+// Per-lane layout facts the schemas' pack() loops read directly.
+struct NumericLaneField {
+  uint32_t field_offset;    // Byte offset of the lane's field within the key buffer.
+  uint32_t width;           // Lane width in bytes (4 or 8).
+  uint32_t null_bit_index;  // Bit in the key's null bitmap; NO_NULL_BIT if the column is not nullable.
+};
+
+// One resolved numeric group-by column: the polymorphic lane plus its layout facts.
+struct NumericKeyLaneEntry {
+  std::unique_ptr<AbstractNumericKeyLane> lane;
+  NumericLaneField field;
+};
+
+using NumericKeyLanes = boost::container::small_vector<NumericKeyLaneEntry, EXPECTED_GROUP_BY_COLUMNS>;
 using StringKeyColumns = boost::container::small_vector<StringKeyColumn, EXPECTED_GROUP_BY_COLUMNS>;
 using KeyTupleIndices = boost::container::small_vector<uint32_t, EXPECTED_GROUP_BY_COLUMNS>;
 
@@ -287,19 +321,26 @@ class NumericShortKeySchema {
   size_t column_count() const;
 
   /**
-   * Pack one input row's group-by tuple into a key buffer.
+   * Decode one chunk's group-by columns into the worker's scratch, one pass per column.
    *
    * @param group_by_segments Segments for the group-by columns of the current chunk, in schema order; borrowed, read
    *   only.
-   * @param chunk_offset Row within those segments to pack.
+   * @param scratch Destination scratch; borrowed, resized and overwritten. Must be the calling worker's own.
+   * @pre Runs in the estimate and scatter phases, single-threaded per worker on that worker's own scratch.
+   */
+  void decode(std::span<const AbstractSegment* const> group_by_segments, KeyDecodeScratch& scratch) const;
+  /**
+   * Pack one decoded row's group-by tuple into a key buffer.
+   *
+   * @param scratch Decoded columns of the current chunk, filled by decode(); borrowed, read only.
+   * @param chunk_offset Row within the decoded chunk to pack.
    * @param key_out Destination key buffer; borrowed, written. Must be at least PackedWidth bytes.
-   * @param spill_buffer Unused for numeric-only keys (there are no strings); present only so the call site is uniform
-   *   across schema variants.
-   * @pre Runs in the scatter phase, single-threaded per worker on that worker's own store.
+   * @param spill_buffer Unused for numeric-only keys; present only for a uniform call site across schema variants.
+   * @pre Runs in the estimate and scatter phases, single-threaded per worker on that worker's own store.
    * @post Every one of the packed_width() destination bytes is initialized; bytes not covered by a value (NULL lanes,
    *   padding) are zero, which whole-buffer equality and hashing rely on.
    */
-  void pack(std::span<const AbstractSegment* const> group_by_segments, ChunkOffset chunk_offset, std::byte* key_out,
+  void pack(const KeyDecodeScratch& scratch, ChunkOffset chunk_offset, std::byte* key_out,
             StringSpillBuffer& spill_buffer) const;
   /**
    * Unpack a packed key back into typed output values, one appended cell per group-by column.
@@ -368,18 +409,13 @@ class NumericArbitraryKeySchema {
   size_t column_count() const;
 
   /**
-   * Pack one input row's group-by tuple into a key buffer.
-   *
-   * @param group_by_segments Segments for the group-by columns of the current chunk, in schema order; borrowed, read
-   *   only.
-   * @param chunk_offset Row within those segments to pack.
-   * @param key_out Destination key buffer; borrowed, written. Must be at least packed_width() bytes.
-   * @param spill_buffer Unused for numeric-only keys; present only for a uniform call site across schema variants.
-   * @pre Runs in the scatter phase, single-threaded per worker on that worker's own store.
-   * @post Every one of the packed_width() destination bytes is initialized; bytes not covered by a value (NULL lanes,
-   *   padding) are zero, which whole-buffer equality and hashing rely on.
+   * Decode one chunk's group-by columns into the worker's scratch; see NumericShortKeySchema::decode.
    */
-  void pack(std::span<const AbstractSegment* const> group_by_segments, ChunkOffset chunk_offset, std::byte* key_out,
+  void decode(std::span<const AbstractSegment* const> group_by_segments, KeyDecodeScratch& scratch) const;
+  /**
+   * Pack one decoded row's group-by tuple into a key buffer; see NumericShortKeySchema::pack.
+   */
+  void pack(const KeyDecodeScratch& scratch, ChunkOffset chunk_offset, std::byte* key_out,
             StringSpillBuffer& spill_buffer) const;
   /**
    * Unpack a packed key back into typed output values, one appended cell per group-by column.
@@ -472,19 +508,23 @@ class MixedKeySchema {
   size_t column_count() const;
 
   /**
-   * Pack one input row's group-by tuple into a key buffer, spilling overlong strings as needed.
+   * Decode one chunk's group-by columns into the worker's scratch; see NumericShortKeySchema::decode.
+   */
+  void decode(std::span<const AbstractSegment* const> group_by_segments, KeyDecodeScratch& scratch) const;
+  /**
+   * Pack one decoded row's group-by tuple into a key buffer, spilling overlong strings as needed.
    *
-   * @param group_by_segments Segments for the group-by columns of the current chunk, in schema order; borrowed, read
-   *   only.
-   * @param chunk_offset Row within those segments to pack.
+   * @param scratch Decoded columns of the current chunk, filled by decode(); borrowed, read only.
+   * @param chunk_offset Row within the decoded chunk to pack.
    * @param key_out Destination key buffer; borrowed, written. Must be at least packed_width() bytes.
    * @param spill_buffer Per-partition overflow buffer for string content that does not fit the inline blob; borrowed,
    *   may be appended to. Must be the buffer owned by the calling worker/partition.
-   * @pre Runs in the scatter phase, single-threaded per worker on that worker's own store and spill buffer.
+   * @pre Runs in the estimate and scatter phases, single-threaded per worker on that worker's own store and spill
+   *   buffer.
    * @post Every one of the packed_width() destination bytes is initialized; bytes not covered by a value (NULL lanes,
    *   padding, the blob tail, an unused spill pointer) are zero, which whole-buffer equality and hashing rely on.
    */
-  void pack(std::span<const AbstractSegment* const> group_by_segments, ChunkOffset chunk_offset, std::byte* key_out,
+  void pack(const KeyDecodeScratch& scratch, ChunkOffset chunk_offset, std::byte* key_out,
             StringSpillBuffer& spill_buffer) const;
   /**
    * Unpack a packed key back into typed output values, one appended cell per group-by column.
@@ -572,19 +612,14 @@ class StringOnlyKeySchema {
   size_t column_count() const;
 
   /**
-   * Pack one input row's group-by tuple into a key buffer, spilling overlong strings as needed.
-   *
-   * @param group_by_segments Segments for the group-by columns of the current chunk, in schema order; borrowed, read
-   *   only.
-   * @param chunk_offset Row within those segments to pack.
-   * @param key_out Destination key buffer; borrowed, written. Must be at least packed_width() bytes.
-   * @param spill_buffer Per-partition overflow buffer for string content that does not fit the inline blob; borrowed,
-   *   may be appended to. Must be the buffer owned by the calling worker/partition.
-   * @pre Runs in the scatter phase, single-threaded per worker on that worker's own store and spill buffer.
-   * @post Every one of the packed_width() destination bytes is initialized; bytes not covered by a value (NULL lanes,
-   *   padding, the blob tail, an unused spill pointer) are zero, which whole-buffer equality and hashing rely on.
+   * Decode one chunk's group-by columns into the worker's scratch; see NumericShortKeySchema::decode.
    */
-  void pack(std::span<const AbstractSegment* const> group_by_segments, ChunkOffset chunk_offset, std::byte* key_out,
+  void decode(std::span<const AbstractSegment* const> group_by_segments, KeyDecodeScratch& scratch) const;
+  /**
+   * Pack one decoded row's group-by tuple into a key buffer, spilling overlong strings as needed; see
+   * MixedKeySchema::pack for the spill contract.
+   */
+  void pack(const KeyDecodeScratch& scratch, ChunkOffset chunk_offset, std::byte* key_out,
             StringSpillBuffer& spill_buffer) const;
   /**
    * Unpack a packed key back into typed output values, one appended string per group-by column.

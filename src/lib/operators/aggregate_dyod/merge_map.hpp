@@ -123,6 +123,15 @@ class MergeMap : private Noncopyable {
   size_t size() const;
 
   /**
+   * Merge every group of another map into this one, used by the low-cardinality path to reduce the per-worker
+   * private maps into a single result. Each of `other`'s dense keys is resolved into this map (creating a slot if new,
+   * matching an existing group otherwise) and its accumulator state is combined into the matching slot via
+   * AbstractAccumulatorColumn::combine_from. The pre-finalize state is merged, so AVG and the counted aggregates stay
+   * correct.
+   */
+  void combine(const MergeMap& other);
+
+  /**
    * Drop all logical state while retaining capacity, readying the map for the next partition this worker claims.
    *
    * Zeroes the probe index, clears the dense keys and every accumulator column, and clears the spill buffer; allocated
