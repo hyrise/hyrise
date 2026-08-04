@@ -20,11 +20,8 @@
 #include "operators/join_nested_loop.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
-<<<<<<< HEAD
 #include "scheduler/node_queue_scheduler.hpp"
-=======
 #include "operators/validate.hpp"
->>>>>>> upstream/dyod2026
 #include "storage/chunk_encoder.hpp"
 #include "storage/mvcc_data.hpp"
 #include "storage/table.hpp"
