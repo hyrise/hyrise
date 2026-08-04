@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <memory>
 #include <random>
 #include <string>
@@ -8,6 +9,8 @@
 #include <vector>
 
 #include "benchmark_config.hpp"
+#include "concurrency/transaction_context.hpp"
+#include "encoding_config.hpp"
 #include "expression/expression_functional.hpp"
 #include "hyrise.hpp"
 #include "operators/aggregate_dyod.hpp"
@@ -15,14 +18,17 @@
 #include "operators/join_hash.hpp"
 #include "operators/operator_join_predicate.hpp"
 #include "operators/print.hpp"
+#include "operators/projection.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
+#include "operators/validate.hpp"
 #include "scheduler/immediate_execution_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "storage/chunk.hpp"
 #include "storage/chunk_encoder.hpp"
+#include "storage/mvcc_data.hpp"
 #include "tpcds/tpcds_table_generator.hpp"
 #include "tpch/tpch_constants.hpp"
 #include "tpch/tpch_table_generator.hpp"
@@ -44,6 +50,8 @@ static void silent_tpcx_table_generation(const BenchmarkType benchmark_type, flo
                                          std::shared_ptr<BenchmarkConfig> config) {
   auto* initial_buffer = std::cout.rdbuf();
 
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+
   std::cout.rdbuf(nullptr);
   if (benchmark_type == BenchmarkType::tpch) {
     TPCHTableGenerator(scale_factor, ClusteringConfiguration::None, config).generate_and_store();
@@ -51,6 +59,8 @@ static void silent_tpcx_table_generation(const BenchmarkType benchmark_type, flo
     TPCDSTableGenerator(static_cast<uint32_t>(scale_factor), config).generate_and_store();
   }
   std::cout.rdbuf(initial_buffer);
+
+  Hyrise::get().set_scheduler(std::make_shared<ImmediateExecutionScheduler>());
 }
 
 void append_to_csv(const std::string& benchmark, const float scale, const std::string& encoding,
@@ -268,13 +278,14 @@ static void TPCHQ18(const float scale_factor, const EncodingConfig encoding_conf
   }
 }
 
-static void JOBlikeMINMAX(const EncodingConfig encoding_config) {
-  const auto chunk_count = ChunkID{512};  // ~33 M rows.
+static void JOBlikeMINMAX(const EncodingConfig encoding_config, std::shared_ptr<Table>& table, bool filter_rows) {
   const auto agg_execution_count = size_t{16};
   const auto thread_count = size_t{4};
 
-  auto pseudorandom_engine = std::mt19937{17};
-  auto probability_dist = std::uniform_int_distribution{1, 31};
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+  const auto encoding_spec = *encoding_config.preferred_encoding_spec;
+  ChunkEncoder::encode_all_chunks(table, encoding_spec);
+  Hyrise::get().set_scheduler(std::make_shared<ImmediateExecutionScheduler>());
 
   for (const auto use_scheduler : {true, false}) {
     const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
@@ -284,43 +295,17 @@ static void JOBlikeMINMAX(const EncodingConfig encoding_config) {
       Hyrise::get().set_scheduler(std::make_shared<ImmediateExecutionScheduler>());
     }
 
-    auto column_definitions = TableColumnDefinitions{
-        {"col_0", DataType::Int, true}, {"col_1", DataType::String, true}, {"col_2", DataType::Long, true}};
-    auto table = std::make_shared<Table>(column_definitions, TableType::Data);
-
-    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-      auto col_0_segment = pmr_vector<int32_t>{};
-      auto col_1_segment = pmr_vector<pmr_string>{};
-      auto col_2_segment = pmr_vector<int64_t>{};
-
-      for (auto row_id = ChunkOffset{0}; row_id < Chunk::DEFAULT_SIZE; ++row_id) {
-        col_0_segment.emplace_back(static_cast<int32_t>(probability_dist(pseudorandom_engine)));
-        auto string_value = "2025-07-" + std::format("{:02} 12:{:02}:17", probability_dist(pseudorandom_engine),
-                                                     probability_dist(pseudorandom_engine));
-        if (row_id == 4'913) {
-          string_value +=
-              " // Important note: for unknown reasons there is a long string comment appended to this"
-              " row. People are still not sure what the purpose is.";
-        }
-        col_1_segment.emplace_back(string_value);
-        col_2_segment.emplace_back(static_cast<int64_t>(probability_dist(pseudorandom_engine)));
-      }
-
-      auto segments = pmr_vector<std::shared_ptr<AbstractSegment>>{};
-      segments.emplace_back(std::make_shared<ValueSegment<int32_t>>(std::move(col_0_segment)));
-      segments.emplace_back(std::make_shared<ValueSegment<pmr_string>>(std::move(col_1_segment)));
-      segments.emplace_back(std::make_shared<ValueSegment<int64_t>>(std::move(col_2_segment)));
-
-      table->append_chunk(segments);
-      table->last_chunk()->set_immutable();
-    }
-
-    const auto encoding_spec = *encoding_config.preferred_encoding_spec;
-    ChunkEncoder::encode_all_chunks(table, encoding_spec);
-
     const auto table_wrapper = std::make_shared<TableWrapper>(table);
     table_wrapper->never_clear_output();
     table_wrapper->execute();
+
+    const auto validate = std::make_shared<Validate>(table_wrapper);
+    const auto transaction_context =
+        std::make_shared<TransactionContext>(TransactionID{1}, CommitID{2}, AutoCommit::Yes);
+    validate->set_transaction_context(transaction_context);
+    validate->never_clear_output();
+    validate->execute();
+    const auto input = filter_rows ? validate->shared_from_this() : table_wrapper->shared_from_this();
 
     // We measure the time it takes to aggregate the input table `agg_execution_count` times.
     auto runtimes = std::vector<size_t>{};
@@ -341,7 +326,7 @@ static void JOBlikeMINMAX(const EncodingConfig encoding_config) {
       for (auto thread_id = size_t{0}; thread_id < thread_count; ++thread_id) {
         threads.emplace_back([&]() {
           while (!stop_flag.test()) {
-            auto aggregate = std::make_shared<AggregateDYOD>(table_wrapper, aggregates, groupby_column_ids);
+            auto aggregate = std::make_shared<AggregateDYOD>(input, aggregates, groupby_column_ids);
             aggregate->execute();
             const auto old_count = agg_execution_counter++;
 
@@ -366,7 +351,8 @@ static void JOBlikeMINMAX(const EncodingConfig encoding_config) {
 
     auto sstream = std::stringstream{};
     sstream << encoding_spec;
-    append_to_csv("JOBlikeMINMAX", static_cast<float>(table->row_count()), sstream.str(), runtimes,
+    const auto name = "JOBlikeMINMAX" + (filter_rows ? std::string{"Filtered"} : std::string{});
+    append_to_csv(name, static_cast<float>(input->get_output()->row_count()), sstream.str(), runtimes,
                   use_scheduler ? "multi-threaded" : "single-threaded");
 
     if (use_scheduler) {
@@ -377,11 +363,15 @@ static void JOBlikeMINMAX(const EncodingConfig encoding_config) {
 
 static void HiddenTest1() {}
 
-static void HiddenTest2() {}
+static void HiddenTest2AggOnAgg() {}
 
-static void HiddenTest3() {}
+static void HiddenTest350Rest() {}
 
-static void HiddenTest4() {}
+static void HiddenTest4JOBlikeButHeavy() {}
+
+static void HiddenTest5AggAggAggAggAggAggAggAggAgg() {}
+
+static void HiddenTest6SingleChar() {}
 
 int main(int argc, char* argv[]) {
   if (std::filesystem::exists(FILENAME)) {
@@ -400,7 +390,7 @@ int main(int argc, char* argv[]) {
 
       for (const auto& encoding_config : ENCODING_CONFIGS) {
         auto benchmark_config = std::make_shared<BenchmarkConfig>();
-        benchmark_config->cache_binary_tables = false;
+        benchmark_config->cache_binary_tables = true;
         benchmark_config->encoding_config = encoding_config;
 
         silent_tpcx_table_generation(BenchmarkType::tpch, scale_factor, benchmark_config);
@@ -418,16 +408,71 @@ int main(int argc, char* argv[]) {
       }
 
       HiddenTest1();
-      HiddenTest2();
-      HiddenTest3();
-      HiddenTest4();
+      HiddenTest2AggOnAgg();
+      HiddenTest350Rest();
+      HiddenTest4JOBlikeButHeavy();
+      HiddenTest5AggAggAggAggAggAggAggAggAgg();
+      HiddenTest6SingleChar();
     }
 
     return 0;
   }
 
+  const auto chunk_count = ChunkID{512};  // ~33 M rows.
+  auto pseudorandom_engine = std::mt19937{17};
+  auto probability_dist = std::uniform_int_distribution{1, 31};
+
+  auto column_definitions = TableColumnDefinitions{
+      {"col_0", DataType::Int, true}, {"col_1", DataType::String, true}, {"col_2", DataType::Long, true}};
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, Chunk::DEFAULT_SIZE, UseMvcc::Yes);
+
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+    auto col_0_segment = pmr_vector<int32_t>{};
+    auto col_1_segment = pmr_vector<pmr_string>{};
+    auto col_2_segment = pmr_vector<int64_t>{};
+
+    auto min_date = pmr_string{"2026"};
+    auto max_date = pmr_string{"2024"};
+
+    for (auto row_id = ChunkOffset{0}; row_id < Chunk::DEFAULT_SIZE; ++row_id) {
+      col_0_segment.emplace_back(static_cast<int32_t>(probability_dist(pseudorandom_engine)));
+      auto string_value = "2025-07-" + std::format("{:02} 12:{:02}:17", probability_dist(pseudorandom_engine),
+                                                   probability_dist(pseudorandom_engine));
+      if (row_id == 4'913) {
+        string_value +=
+            " // Important note: for unknown reasons there is a long string comment appended to this"
+            " row. People are still not sure what the purpose is.";
+      }
+
+      col_1_segment.emplace_back(string_value);
+      col_2_segment.emplace_back(static_cast<int64_t>(probability_dist(pseudorandom_engine)));
+      min_date = std::min(col_1_segment.back(), min_date);
+      max_date = std::max(col_1_segment.back(), max_date);
+    }
+
+    auto invalid_rows = ChunkOffset{0};
+    auto mvcc_data = std::make_shared<MvccData>(Chunk::DEFAULT_SIZE, UNSET_COMMIT_ID);
+    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < Chunk::DEFAULT_SIZE; ++chunk_offset) {
+      if (col_1_segment[chunk_offset] == min_date || col_1_segment[chunk_offset] == max_date) {
+        mvcc_data->set_end_cid(chunk_offset, CommitID{1});
+        ++invalid_rows;
+      }
+    }
+
+    auto segments = pmr_vector<std::shared_ptr<AbstractSegment>>{};
+    segments.emplace_back(std::make_shared<ValueSegment<int32_t>>(std::move(col_0_segment)));
+    segments.emplace_back(std::make_shared<ValueSegment<pmr_string>>(std::move(col_1_segment)));
+    segments.emplace_back(std::make_shared<ValueSegment<int64_t>>(std::move(col_2_segment)));
+
+    table->append_chunk(segments, mvcc_data);
+    table->last_chunk()->set_immutable();
+    table->last_chunk()->mvcc_data()->max_end_cid = CommitID{1};
+    table->last_chunk()->increase_invalid_row_count(invalid_rows);
+  }
+
   for (const auto& encoding_config : ENCODING_CONFIGS) {
-    JOBlikeMINMAX(encoding_config);
+    JOBlikeMINMAX(encoding_config, table, false);
+    JOBlikeMINMAX(encoding_config, table, true);
   }
 
   return 0;
