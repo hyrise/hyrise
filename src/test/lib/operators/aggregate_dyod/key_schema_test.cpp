@@ -193,6 +193,33 @@ TEST_F(AggregateDYODKeySchemaTest, SpillBufferIsReusableAfterClear) {
   EXPECT_EQ(std::memcmp(interned, second.data(), second.size()), 0);
 }
 
+TEST_F(AggregateDYODKeySchemaTest, SpillBufferFreesBlocksOnRelease) {
+  const auto empty = StringSpillBuffer{}.memory_usage();
+  auto buffer = StringSpillBuffer{};
+
+  const auto content = std::string{"spilled key content"};
+  buffer.append(reinterpret_cast<const std::byte*>(content.data()), content.size());
+  ASSERT_GT(buffer.memory_usage(), empty);
+
+  buffer.release();
+
+  EXPECT_EQ(buffer.memory_usage(), empty);
+}
+
+TEST_F(AggregateDYODKeySchemaTest, SpillBufferIsReusableAfterRelease) {
+  auto buffer = StringSpillBuffer{};
+
+  const auto first = std::string{"first batch"};
+  buffer.append(reinterpret_cast<const std::byte*>(first.data()), first.size());
+  buffer.release();
+
+  const auto second = std::string{"second batch"};
+  const auto* interned = buffer.append(reinterpret_cast<const std::byte*>(second.data()), second.size());
+
+  ASSERT_NE(interned, nullptr);
+  EXPECT_EQ(std::memcmp(interned, second.data(), second.size()), 0);
+}
+
 TEST_F(AggregateDYODKeySchemaTest, ResolvingWithoutGroupByColumnsThrows) {
   const auto input = make_pack_input({{"a", DataType::Int, false}}, {{1}});
   EXPECT_THROW(resolve_key_schema({}, *input.table, [](const auto& /*schema*/) {}), std::logic_error);
