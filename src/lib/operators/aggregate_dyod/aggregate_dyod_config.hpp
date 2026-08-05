@@ -172,15 +172,16 @@ inline size_t merge_tile_rows() {
  *
  * The total inline blob width of a string-involving key scales as
  * (STRING_BLOB_BYTES_PER_COLUMN * number_of_string_columns); a row whose length-prefixed string content exceeds its
- * blob spills to a per-partition spill buffer. Chosen so typical short strings stay inline -- no pointer chase on the
- * equality hot path -- while the fixed part of the key stays compact.
+ * blob spills to a per-partition spill buffer. Chosen so short codes and flags stay inline -- no pointer chase on
+ * the equality hot path -- while the fixed part of the key stays compact; the narrow key pays off on the hash and
+ * scatter hot paths even when longer strings spill.
  *
  * Raising it keeps longer strings inline (fewer spills) but widens every key's fixed part, so fewer keys stay
  * cache-resident; lowering it keeps keys compact but spills more strings to the per-partition buffer.
  *
  * @see key_schema.hpp for the packed-key layout and the spill path.
  */
-constexpr size_t STRING_BLOB_BYTES_PER_COLUMN = 16;
+constexpr size_t STRING_BLOB_BYTES_PER_COLUMN = 8;
 
 /**
  * Number of distinct output groups where the low-cardinality path is taken
