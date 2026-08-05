@@ -1,7 +1,11 @@
 #pragma once
 
+#include <algorithm>
+#include <bit>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <vector>
 
 #include "operators/aggregate_dyod/aggregate_dyod_config.hpp"
@@ -85,9 +89,57 @@ class HllSketch : private Noncopyable {
   size_t estimate() const;
 
  private:
+  static constexpr auto REGISTER_COUNT = size_t{1} << HLL_PRECISION;
+
   // One 6-bit rank per register, stored one-per-byte for branch-free updates; 2^HLL_PRECISION entries.
   std::vector<uint8_t> _registers;
 };
+
+inline HllSketch::HllSketch() : _registers(REGISTER_COUNT, uint8_t{0}) {}
+
+inline void HllSketch::add(const uint64_t key_hash) {
+  constexpr auto REMAINING_HASH_BITS = 64 - HLL_PRECISION;
+
+  const auto register_index = static_cast<size_t>(key_hash >> REMAINING_HASH_BITS);
+  const auto remaining_hash_bits = key_hash << HLL_PRECISION;
+
+  const auto rank = remaining_hash_bits == 0 ? static_cast<uint8_t>(REMAINING_HASH_BITS + 1)
+                                             : static_cast<uint8_t>(std::countl_zero(remaining_hash_bits) + 1);
+  _registers[register_index] = std::max(_registers[register_index], rank);
+}
+
+inline void HllSketch::merge(const HllSketch& other) {
+  for (auto register_index = size_t{0}; register_index < REGISTER_COUNT; ++register_index) {
+    _registers[register_index] = std::max(_registers[register_index], other._registers[register_index]);
+  }
+}
+
+inline size_t HllSketch::estimate() const {
+  auto inverse_sum = 0.0;
+  auto zero_register_count = size_t{0};
+
+  for (const auto rank : _registers) {
+    inverse_sum += std::ldexp(1.0, -static_cast<int>(rank));
+    if (rank == 0) {
+      ++zero_register_count;
+    }
+  }
+
+  constexpr auto register_count = static_cast<double>(REGISTER_COUNT);
+  constexpr auto alpha = 0.7213 / (1.0 + 1.079 / register_count);
+  const auto raw_estimate = alpha * register_count * register_count / inverse_sum;
+
+  if (raw_estimate <= 2.5 * register_count && zero_register_count > 0) {
+    return static_cast<size_t>(
+        std::round(register_count * std::log(register_count / static_cast<double>(zero_register_count))));
+  }
+
+  if (raw_estimate >= static_cast<double>(std::numeric_limits<size_t>::max())) {
+    return std::numeric_limits<size_t>::max();
+  }
+
+  return static_cast<size_t>(std::round(raw_estimate));
+}
 
 /**
  * Chooses the radix partition count P for a query from its estimated group-by cardinality.
@@ -108,6 +160,19 @@ class HllSketch : private Noncopyable {
  * @note This is a total function: every input, including a 0 estimate, yields a valid P. Empty input is additionally
  *   short-circuited upstream.
  */
-PartitionCount choose_partition_count(size_t cardinality_estimate, size_t worker_count);
+inline PartitionCount choose_partition_count(const size_t cardinality_estimate, const size_t worker_count) {
+  const auto ceil_divide = [](const size_t dividend, const size_t divisor) {
+    return (dividend / divisor) + (dividend % divisor == 0 ? 0 : 1);
+  };
+
+  const auto maximum_partition_count = static_cast<size_t>(MAX_PARTITION_COUNT);
+  const auto minimum_partition_count =
+      std::bit_ceil(std::min(std::max(size_t{1}, worker_count), maximum_partition_count));
+  const auto target_partition_count =
+      std::bit_ceil(std::min(ceil_divide(cardinality_estimate, KEYS_BUDGET), maximum_partition_count));
+  const auto partition_count = std::clamp(target_partition_count, minimum_partition_count, maximum_partition_count);
+
+  return static_cast<PartitionCount>(partition_count);
+}
 
 }  // namespace hyrise
