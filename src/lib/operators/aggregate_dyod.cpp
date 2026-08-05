@@ -138,7 +138,12 @@ void resolve_window_function(WindowFunction window_function, Functor&& functor) 
   }
 }
 
-WorkerState::WorkerState(const std::vector<std::shared_ptr<WindowFunctionExpression>>& aggregates) {
+WorkerState::WorkerState(const std::vector<std::shared_ptr<WindowFunctionExpression>>& aggregates, std::function<std::pair<GroupID, GroupID>()> get_new_group_id_range) {
+  auto [initial_next_group_id, initial_max_group_id] = get_new_group_id_range();
+  _next_group_id = initial_next_group_id;
+  _max_group_id = initial_max_group_id;
+  _get_new_group_id_range = get_new_group_id_range;
+  
   const auto aggregate_count = aggregates.size();
   _vectors.resize(aggregate_count);
 
@@ -164,6 +169,16 @@ void WorkerState::merge(WorkerState& other) {
   for (auto index = size_t{0}; index < size; ++index) {
     _vectors[index]->merge(other.aggregate_vector(index));
   }
+}
+
+GroupID WorkerState::next_group_id() {
+  if (_next_group_id > _max_group_id) {
+    auto [next_group_id, max_group_id] = _get_new_group_id_range();
+    _next_group_id = next_group_id;
+    _max_group_id = max_group_id;
+  } 
+
+  return _next_group_id++;
 }
 
 AbstractAggregateVector& WorkerState::aggregate_vector(size_t index) {
@@ -192,7 +207,10 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
 
   // Aggregate chunk by chunk
   const auto chunk_count = input_table->chunk_count();
-  auto state = OperatorSharedState<WorkerState>{_aggregates};
+  const auto get_new_group_id_range = [&]() {
+    return _get_new_group_id_range();
+  };
+  auto state = OperatorSharedState<WorkerState>{_aggregates, get_new_group_id_range};
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>(chunk_count);
 
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
@@ -211,7 +229,7 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
   // If we haven't run any jobs, attempting to merge the worker states would fail
   auto merged_worker_states = [&]() {
     TRACE_EVENT("aggregate_operator", "merge_worker_states");
-    return jobs.empty() ? WorkerState(_aggregates) : std::move(state.merge_worker_states());
+    return jobs.empty() ? WorkerState(_aggregates, get_new_group_id_range) : std::move(state.merge_worker_states());
   }();
 
   // SQL requires a single output row if the input table is empty and there is no GROUP BY clause.
@@ -442,6 +460,7 @@ std::shared_ptr<AbstractSegment> AggregateDYOD::_write_default_aggregate_segment
   return std::make_shared<ValueSegment<AggregateDataType>>(std::move(values));
 }
 
+// TODO ticket ranges initial verteilen
 GroupID AggregateDYOD::_group_id(const GroupKey& group_key, WorkerState& worker_state) {
   auto it = _group_id_map.find(group_key);
   if (it != _group_id_map.end()) {
@@ -452,16 +471,11 @@ GroupID AggregateDYOD::_group_id(const GroupKey& group_key, WorkerState& worker_
     return group_id;
   }
 
-  // We need to lock here because multiple threads may attempt to insert the same group key concurrently.
-  GroupID group_id;
-  {
-    std::lock_guard lock(_group_id_map_mutex);
-    auto [insert_it, inserted] = _group_id_map.insert({group_key, _group_count()});
-    group_id = insert_it->second;
+  auto [insert_it, inserted] = _group_id_map.insert({group_key, worker_state.next_group_id()});
+  auto group_id = insert_it->second;
 
-    if (inserted) {
-      _group_keys.push_back(group_key);
-    }
+  if (inserted) {
+    _group_keys.push_back(group_key);
   }
 
   for (auto& aggregate_vector : worker_state.aggregate_vectors()) {
@@ -469,6 +483,12 @@ GroupID AggregateDYOD::_group_id(const GroupKey& group_key, WorkerState& worker_
   }
 
   return group_id;
+}
+
+std::pair<GroupID, GroupID> AggregateDYOD::_get_new_group_id_range() {
+  auto next_group_id = _next_group_id.fetch_add(FUZZY_TICKET_RANGE_SIZE, std::memory_order_relaxed);
+  auto max_group_id = next_group_id + FUZZY_TICKET_RANGE_SIZE;
+  return {next_group_id, max_group_id};
 }
 
 GroupID AggregateDYOD::_group_count() {

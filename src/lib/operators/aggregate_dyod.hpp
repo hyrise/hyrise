@@ -146,16 +146,20 @@ struct TypedAggregateVector : AbstractAggregateVector {
 
 class WorkerState : public Noncopyable {
  public:
-  explicit WorkerState(const std::vector<std::shared_ptr<WindowFunctionExpression>>& aggregates);
+  explicit WorkerState(const std::vector<std::shared_ptr<WindowFunctionExpression>>& aggregates,
+                       std::function<std::pair<GroupID, GroupID>()> init_group_id_range);
   void merge(WorkerState& other);
+
+  GroupID next_group_id();
 
   AbstractAggregateVector& aggregate_vector(size_t index);
   std::vector<std::unique_ptr<AbstractAggregateVector>>& aggregate_vectors();
 
  protected:
-  std::vector<std::unique_ptr<AbstractAggregateVector>> _vectors;
   GroupID _next_group_id;
   GroupID _max_group_id;
+  std::function<std::pair<GroupID, GroupID>()> _get_new_group_id_range;
+  std::vector<std::unique_ptr<AbstractAggregateVector>> _vectors;
 };
 
 template <typename T>
@@ -197,10 +201,15 @@ class AggregateDYOD : public AbstractAggregateOperator {
 
   const std::string& name() const override;
 
+  std::pair<GroupID, GroupID> _get_new_group_id_range();
+
  protected:
+  static constexpr GroupID FUZZY_TICKET_RANGE_SIZE = 200;
+
   std::vector<DataType> _aggregate_data_types;
   GroupIDMap _group_id_map;
   std::mutex _group_id_map_mutex;
+  std::atomic<GroupID> _next_group_id;
   tbb::concurrent_vector<GroupKey> _group_keys;
 
   std::shared_ptr<const Table> _on_execute() override;
