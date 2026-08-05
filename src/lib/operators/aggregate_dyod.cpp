@@ -454,7 +454,6 @@ std::vector<std::unique_ptr<AbstractAggregator>> build_aggregators(
 
 template <typename Worker>
 void run_workers(const size_t worker_count, const Worker& worker) {
-  // The immediate scheduler executes JobTasks sequentially; direct calls avoid their setup overhead.
   if (!Hyrise::get().is_multi_threaded()) {
     for (auto worker_id = size_t{0}; worker_id < worker_count; ++worker_id) {
       worker(worker_id);
@@ -504,6 +503,388 @@ void gather_value_column(const AbstractSegment& segment, const DataType type, co
       }
       ++row;
     });
+  });
+}
+
+void gather_segments(const Chunk& chunk, const std::vector<ColumnID>& column_ids,
+                     std::vector<std::shared_ptr<AbstractSegment>>& owners,
+                     std::vector<const AbstractSegment*>& segments) {
+  owners.clear();
+  segments.clear();
+  for (const auto column_id : column_ids) {
+    owners.emplace_back(chunk.get_segment(column_id));
+    segments.emplace_back(owners.back().get());
+  }
+}
+
+TableColumnDefinitions build_output_column_definitions(
+    const Table& input_table, const std::vector<ColumnID>& groupby_column_ids, const AggregateSchema& aggregate_schema,
+    const std::vector<std::shared_ptr<WindowFunctionExpression>>& aggregates) {
+  const auto aggregate_count = aggregate_schema.aggregate_count();
+  auto output_column_definitions = TableColumnDefinitions{};
+  output_column_definitions.reserve(groupby_column_ids.size() + aggregate_count);
+  for (const auto column_id : groupby_column_ids) {
+    output_column_definitions.emplace_back(input_table.column_name(column_id), input_table.column_data_type(column_id),
+                                           input_table.column_is_nullable(column_id));
+  }
+  for (auto aggregate_index = size_t{0}; aggregate_index < aggregate_count; ++aggregate_index) {
+    const auto function = aggregate_schema.function(aggregate_index);
+    // ANY keeps the input column's name and nullability.
+    if (function == WindowFunction::Any) {
+      const auto source_column = aggregate_schema.source_column(aggregate_index);
+      output_column_definitions.emplace_back(input_table.column_name(source_column),
+                                             aggregate_schema.result_type(aggregate_index),
+                                             input_table.column_is_nullable(source_column));
+      continue;
+    }
+    output_column_definitions.emplace_back(
+        aggregates[aggregate_index]->as_column_name(), aggregate_schema.result_type(aggregate_index),
+        function != WindowFunction::Count && function != WindowFunction::CountDistinct);
+  }
+  return output_column_definitions;
+}
+
+// Derived key-schema-independent layout the scatter and merge phases share
+struct ScatterLayout {
+  size_t value_stream_count{0};
+  std::vector<size_t> value_stream_widths;
+  std::vector<ColumnID> value_stream_sources;
+  std::vector<uint32_t> value_stream_null_bits;
+  uint32_t nullable_stream_count{0};
+  size_t value_null_bitmap_width{0};
+  bool has_value_null_bitmap{false};
+  bool needs_value_arena{false};
+  bool needs_row_id_stream{false};
+  size_t row_id_stream_index{0};
+  size_t value_null_bitmap_stream_index{0};
+  std::vector<size_t> stream_widths;
+};
+
+ScatterLayout make_scatter_layout(const AggregateSchema& aggregate_schema) {
+  auto layout = ScatterLayout{};
+  const auto value_stream_count = aggregate_schema.value_stream_count();
+  layout.value_stream_count = value_stream_count;
+  layout.value_stream_widths = std::vector<size_t>(value_stream_count);
+  layout.value_stream_sources = std::vector<ColumnID>(value_stream_count, INVALID_COLUMN_ID);
+  layout.value_stream_null_bits = std::vector<uint32_t>(value_stream_count, 0);
+  for (auto stream_index = size_t{0}; stream_index < value_stream_count; ++stream_index) {
+    const auto& stream = aggregate_schema.value_stream(stream_index);
+    layout.value_stream_widths[stream_index] = stream.element_width();
+    if (stream.is_nullable()) {
+      layout.value_stream_null_bits[stream_index] = layout.nullable_stream_count;
+      ++layout.nullable_stream_count;
+    }
+  }
+  const auto aggregate_count = aggregate_schema.aggregate_count();
+  for (auto aggregate_index = size_t{0}; aggregate_index < aggregate_count; ++aggregate_index) {
+    const auto stream_index = aggregate_schema.aggregate_value_stream(aggregate_index);
+    if (stream_index == AggregateSchema::NO_VALUE_STREAM) {
+      continue;
+    }
+    layout.value_stream_sources[stream_index] = aggregate_schema.source_column(aggregate_index);
+  }
+
+  layout.value_null_bitmap_width = aggregate_schema.value_null_bitmap_width();
+  layout.has_value_null_bitmap = layout.value_null_bitmap_width > 0;
+  layout.needs_value_arena = aggregate_schema.needs_value_arena();
+
+  // ANY aggregates scatter no value; they read one shared row-id stream instead.
+  layout.needs_row_id_stream = aggregate_schema.needs_row_id_stream();
+  layout.row_id_stream_index = value_stream_count;
+  if (layout.needs_row_id_stream) {
+    layout.value_stream_widths.emplace_back(sizeof(RowID));
+  }
+  layout.value_null_bitmap_stream_index = 1 + layout.value_stream_widths.size();
+
+  // The packed key is staged in 4-byte pieces and the value-null bitmap byte-wise, so every declared stream width
+  // divides the SWWC line.
+  layout.stream_widths.reserve(1 + layout.value_stream_widths.size() + (layout.has_value_null_bitmap ? 1 : 0));
+  layout.stream_widths.emplace_back(4);
+  layout.stream_widths.insert(layout.stream_widths.end(), layout.value_stream_widths.begin(),
+                              layout.value_stream_widths.end());
+  if (layout.has_value_null_bitmap) {
+    layout.stream_widths.emplace_back(1);
+  }
+  return layout;
+}
+
+template <typename KeySchema>
+size_t estimate_cardinality(const KeySchema& key_schema, const Table& input_table,
+                            const std::vector<ColumnID>& groupby_column_ids, const size_t scatter_worker_count) {
+  const auto chunk_count = static_cast<size_t>(input_table.chunk_count());
+  const auto key_width = key_schema.packed_width();
+  const auto estimate_worker_count =
+      input_table.row_count() < PARALLEL_ESTIMATE_THRESHOLD ? size_t{1} : scatter_worker_count;
+  auto sketches = std::vector<HllSketch>(estimate_worker_count);
+  {
+    auto chunk_cursor = std::atomic<size_t>{0};
+    run_workers(estimate_worker_count, [&](const size_t worker_id) {
+      auto& sketch = sketches[worker_id];
+      auto key_scratch = std::vector<std::byte>(key_width);
+      auto decode_scratch = KeyDecodeScratch{};
+      auto spill_scratch = StringSpillBuffer{};
+      auto segment_owners = std::vector<std::shared_ptr<AbstractSegment>>{};
+      auto segments = std::vector<const AbstractSegment*>{};
+      while (true) {
+        const auto chunk_index = chunk_cursor.fetch_add(1, std::memory_order_relaxed);
+        if (chunk_index >= chunk_count) {
+          break;
+        }
+        const auto chunk = input_table.get_chunk(ChunkID{static_cast<ChunkID::base_type>(chunk_index)});
+        if (!chunk) {
+          continue;
+        }
+        gather_segments(*chunk, groupby_column_ids, segment_owners, segments);
+        key_schema.decode(segments, decode_scratch);
+        const auto row_count = chunk->size();
+        for (auto chunk_offset = ChunkOffset{0}; chunk_offset < row_count; ++chunk_offset) {
+          key_schema.pack(decode_scratch, chunk_offset, key_scratch.data(), spill_scratch);
+          sketch.add(key_schema.hash(key_scratch.data()));
+        }
+        spill_scratch.clear();
+      }
+    });
+  }
+  for (auto worker_id = size_t{1}; worker_id < estimate_worker_count; ++worker_id) {
+    sketches.front().merge(sketches[worker_id]);
+  }
+  return sketches.front().estimate();
+}
+
+template <typename KeySchema>
+void run_scatter_phase(const KeySchema& key_schema, const AggregateSchema& aggregate_schema, const Table& input_table,
+                       const std::vector<ColumnID>& groupby_column_ids, const ScatterLayout& layout,
+                       std::vector<ScatterStore>& scatter_stores, const PartitionCount partition_count,
+                       const size_t key_width, const size_t chunk_count, const size_t scatter_worker_count) {
+  auto chunk_cursor = std::atomic<size_t>{0};
+  run_workers(scatter_worker_count, [&](const size_t worker_id) {
+    auto& store = scatter_stores[worker_id];
+    auto heads =
+        ScatterHeads{partition_count, layout.stream_widths.size(), layout.stream_widths, layout.has_value_null_bitmap};
+    auto key_scratch = std::vector<std::byte>(key_width);
+    auto decode_scratch = KeyDecodeScratch{};
+    auto row_partitions = std::vector<PartitionId>{};
+    auto bitmap_scratch = std::vector<std::byte>{};
+    auto pack_spill = StringSpillBuffer{};
+    auto segment_owners = std::vector<std::shared_ptr<AbstractSegment>>{};
+    auto segments = std::vector<const AbstractSegment*>{};
+    auto value_segment_owners = std::vector<std::shared_ptr<AbstractSegment>>{};
+    auto value_segments = std::vector<const AbstractSegment*>{};
+    while (true) {
+      const auto chunk_index = chunk_cursor.fetch_add(1, std::memory_order_relaxed);
+      if (chunk_index >= chunk_count) {
+        break;
+      }
+      const auto chunk = input_table.get_chunk(ChunkID{static_cast<ChunkID::base_type>(chunk_index)});
+      if (!chunk) {
+        continue;
+      }
+      gather_segments(*chunk, groupby_column_ids, segment_owners, segments);
+      gather_segments(*chunk, layout.value_stream_sources, value_segment_owners, value_segments);
+      const auto row_count = chunk->size();
+
+      key_schema.decode(segments, decode_scratch);
+      row_partitions.resize(row_count);
+      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < row_count; ++chunk_offset) {
+        key_schema.pack(decode_scratch, chunk_offset, key_scratch.data(), pack_spill);
+        const auto key_hash = key_schema.hash(key_scratch.data());
+        const auto partition = static_cast<PartitionId>(key_hash & (partition_count - 1));
+        row_partitions[chunk_offset] = partition;
+        if constexpr (KeySchema::HAS_STRINGS) {
+          key_schema.reintern_spill(key_scratch.data(), store.key_spill_buffer(partition));
+          pack_spill.clear();
+        }
+        for (auto piece_offset = size_t{0}; piece_offset < key_width; piece_offset += 4) {
+          heads.push(store, 0, partition, key_scratch.data() + piece_offset, 4);
+        }
+      }
+
+      if (layout.has_value_null_bitmap) {
+        bitmap_scratch.assign(row_count * layout.value_null_bitmap_width, std::byte{0});
+      }
+      for (auto stream_index = size_t{0}; stream_index < layout.value_stream_count; ++stream_index) {
+        aggregate_schema.value_stream(stream_index)
+            .scatter(*value_segments[stream_index], row_partitions, 1 + stream_index, heads, store,
+                     bitmap_scratch.data(), layout.value_null_bitmap_width,
+                     layout.value_stream_null_bits[stream_index]);
+      }
+      if (layout.needs_row_id_stream) {
+        for (auto chunk_offset = ChunkOffset{0}; chunk_offset < row_count; ++chunk_offset) {
+          const auto row_id = RowID{ChunkID{static_cast<ChunkID::base_type>(chunk_index)}, chunk_offset};
+          heads.push(store, 1 + layout.row_id_stream_index, row_partitions[chunk_offset],
+                     reinterpret_cast<const std::byte*>(&row_id), sizeof(row_id));
+        }
+      }
+      if (layout.has_value_null_bitmap) {
+        for (auto chunk_offset = ChunkOffset{0}; chunk_offset < row_count; ++chunk_offset) {
+          const auto* row_bitmap = bitmap_scratch.data() + size_t{chunk_offset} * layout.value_null_bitmap_width;
+          for (auto byte_index = size_t{0}; byte_index < layout.value_null_bitmap_width; ++byte_index) {
+            heads.push(store, layout.value_null_bitmap_stream_index, row_partitions[chunk_offset],
+                       row_bitmap + byte_index, 1);
+          }
+        }
+      }
+    }
+    heads.finish(store);
+  });
+}
+
+template <typename KeySchema>
+std::vector<OutputColumns> run_merge_phase(const KeySchema& key_schema, const AggregateSchema& aggregate_schema,
+                                           const ScatterLayout& layout, std::vector<ScatterStore>& scatter_stores,
+                                           const TableColumnDefinitions& output_column_definitions,
+                                           const PartitionCount partition_count, const uint32_t shift,
+                                           const size_t key_width, const size_t cardinality_estimate,
+                                           const size_t merge_worker_count) {
+  const auto aggregate_count = aggregate_schema.aggregate_count();
+  auto per_worker_outputs = std::vector<OutputColumns>{};
+  per_worker_outputs.reserve(merge_worker_count);
+  for (auto worker_id = size_t{0}; worker_id < merge_worker_count; ++worker_id) {
+    per_worker_outputs.emplace_back(output_column_definitions, Chunk::DEFAULT_SIZE);
+  }
+  const auto partition_hint = cardinality_estimate / partition_count + 1;
+  auto partition_cursor = std::atomic<size_t>{0};
+  run_workers(merge_worker_count, [&](const size_t worker_id) {
+    auto merge_map = MergeMap<KeySchema>{key_schema, shift, aggregate_schema.make_accumulator_columns()};
+    auto& output = per_worker_outputs[worker_id];
+    auto slots = std::vector<uint32_t>{};
+    auto bitmap_tile = std::vector<std::byte>((MERGE_TILE_ROWS + 7) / 8);
+    while (true) {
+      const auto partition = static_cast<PartitionId>(partition_cursor.fetch_add(1, std::memory_order_relaxed));
+      if (partition >= partition_count) {
+        break;
+      }
+      merge_map.clear();
+      merge_map.reserve(partition_hint);
+      for (auto& store : scatter_stores) {
+        const auto& key_region = store.key_region(partition);
+        DebugAssert(key_region.size() % key_width == 0, "Key region must hold whole keys.");
+        const auto row_count = key_region.size() / key_width;
+        for (auto tile_start = size_t{0}; tile_start < row_count; tile_start += MERGE_TILE_ROWS) {
+          const auto tile_rows = std::min(MERGE_TILE_ROWS, row_count - tile_start);
+          slots.clear();
+          merge_map.resolve({key_region.data() + tile_start * key_width, tile_rows * key_width}, slots);
+          for (auto aggregate_index = size_t{0}; aggregate_index < aggregate_count; ++aggregate_index) {
+            const auto stream_index = aggregate_schema.aggregate_value_stream(aggregate_index);
+            if (stream_index == AggregateSchema::NO_VALUE_STREAM) {
+              if (aggregate_schema.function(aggregate_index) == WindowFunction::Any) {
+                const auto& row_id_region = store.value_region(partition, layout.row_id_stream_index);
+                merge_map.fold(aggregate_index, slots,
+                               {row_id_region.data() + tile_start * sizeof(RowID), tile_rows * sizeof(RowID)}, {});
+              } else {
+                merge_map.fold(aggregate_index, slots, {}, {});
+              }
+              continue;
+            }
+            const auto width = layout.value_stream_widths[stream_index];
+            const auto& value_region = store.value_region(partition, stream_index);
+            const auto value_bytes =
+                std::span<const std::byte>{value_region.data() + tile_start * width, tile_rows * width};
+            auto value_null_bitmap = std::span<const std::byte>{};
+            if (aggregate_schema.value_stream(stream_index).is_nullable()) {
+              // Gather this stream's bits from the per-row bitmap fields into the bit-per-row tile form.
+              const auto* row_bitmaps = store.value_null_bitmap_region(partition).data();
+              const auto stream_bit = layout.value_stream_null_bits[stream_index];
+              std::memset(bitmap_tile.data(), 0, bitmap_tile.size());
+              for (auto row = size_t{0}; row < tile_rows; ++row) {
+                const auto* row_bitmap = row_bitmaps + (tile_start + row) * layout.value_null_bitmap_width;
+                if ((row_bitmap[stream_bit / 8] & (std::byte{1} << (stream_bit % 8))) != std::byte{0}) {
+                  bitmap_tile[row / 8] |= std::byte{1} << (row % 8);
+                }
+              }
+              value_null_bitmap = {bitmap_tile.data(), (tile_rows + 7) / 8};
+            }
+            merge_map.fold(aggregate_index, slots, value_bytes, value_null_bitmap);
+          }
+        }
+      }
+      merge_map.flush_into(output);
+      output.maybe_seal();
+    }
+    output.seal_all();
+  });
+  return per_worker_outputs;
+}
+
+// Low-cardinality accumulation: each worker folds its claimed chunks into its own private MergeMap (no partitioning).
+// The maps are reduced by the caller afterwards.
+template <typename KeySchema>
+void accumulate_private_maps(const KeySchema& key_schema, const AggregateSchema& aggregate_schema,
+                             const Table& input_table, const std::vector<ColumnID>& groupby_column_ids,
+                             std::vector<MergeMap<KeySchema>>& per_worker_private_maps, const size_t worker_count,
+                             const size_t chunk_count, const size_t key_width, const size_t aggregate_count,
+                             const size_t cardinality_estimate) {
+  auto chunk_cursor = std::atomic<size_t>{0};
+  run_workers(worker_count, [&](const size_t worker_id) {
+    auto& merge_map = per_worker_private_maps[worker_id];
+    merge_map.reserve(cardinality_estimate);
+
+    auto decode_scratch = KeyDecodeScratch{};
+    auto spill_scratch = StringSpillBuffer{};
+    auto key_buffer = std::vector<std::byte>{};
+    auto slots = std::vector<uint32_t>{};
+    auto value_buffers = std::vector<std::vector<std::byte>>(aggregate_count);
+    auto null_buffers = std::vector<std::vector<std::byte>>(aggregate_count);
+    auto owners = std::vector<std::shared_ptr<AbstractSegment>>{};
+    auto segments = std::vector<const AbstractSegment*>{};
+
+    while (true) {
+      const auto chunk_index = chunk_cursor.fetch_add(1, std::memory_order_relaxed);
+      if (chunk_index >= chunk_count) {
+        break;
+      }
+      const auto chunk = input_table.get_chunk(ChunkID{static_cast<ChunkID::base_type>(chunk_index)});
+      if (!chunk) {
+        continue;
+      }
+
+      const auto row_count = chunk->size();
+      if (row_count == 0) {
+        continue;
+      }
+
+      gather_segments(*chunk, groupby_column_ids, owners, segments);
+      key_schema.decode(segments, decode_scratch);
+      key_buffer.resize(size_t{row_count} * key_width);
+      for (auto offset = ChunkOffset{0}; offset < row_count; ++offset) {
+        key_schema.pack(decode_scratch, offset, key_buffer.data() + size_t{offset} * key_width, spill_scratch);
+      }
+
+      for (auto aggregate_index = size_t{0}; aggregate_index < aggregate_count; ++aggregate_index) {
+        const auto stream = aggregate_schema.aggregate_value_stream(aggregate_index);
+        if (stream == AggregateSchema::NO_VALUE_STREAM) {
+          continue;
+        }
+        const auto source = aggregate_schema.source_column(aggregate_index);
+        const auto nullable = aggregate_schema.value_stream(stream).is_nullable();
+        gather_value_column(*chunk->get_segment(source), input_table.column_data_type(source), nullable,
+                            value_buffers[aggregate_index], null_buffers[aggregate_index], row_count);
+      }
+
+      for (auto tile_start = size_t{0}; tile_start < row_count; tile_start += MERGE_TILE_ROWS) {
+        const auto tile_rows = std::min(MERGE_TILE_ROWS, size_t{row_count} - tile_start);
+        slots.clear();
+        merge_map.resolve({key_buffer.data() + tile_start * key_width, tile_rows * key_width}, slots);
+
+        for (auto aggregate_index = size_t{0}; aggregate_index < aggregate_count; ++aggregate_index) {
+          const auto stream = aggregate_schema.aggregate_value_stream(aggregate_index);
+          if (stream == AggregateSchema::NO_VALUE_STREAM) {
+            merge_map.fold(aggregate_index, slots, {}, {});
+            continue;
+          }
+          const auto width = aggregate_schema.value_stream(stream).element_width();
+          const auto nullable = aggregate_schema.value_stream(stream).is_nullable();
+          const auto value_span =
+              std::span<const std::byte>{value_buffers[aggregate_index].data() + tile_start * width, tile_rows * width};
+          auto null_span = std::span<const std::byte>{};
+          if (nullable) {
+            null_span = {null_buffers[aggregate_index].data() + tile_start / 8, (tile_rows + 7) / 8};
+          }
+          merge_map.fold(aggregate_index, slots, value_span, null_span);
+        }
+      }
+      spill_scratch.clear();
+    }
   });
 }
 }  // namespace
@@ -566,85 +947,8 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate_low_cardinality(const KeySchema
     per_worker_private_maps.emplace_back(key_schema, uint32_t{0}, aggregate_schema.make_accumulator_columns());
   }
 
-  {
-    auto chunk_cursor = std::atomic<size_t>{0};
-    run_workers(worker_count, [&](const size_t worker_id) {
-      auto& merge_map = per_worker_private_maps[worker_id];
-      merge_map.reserve(cardinality_estimate);
-
-      auto decode_scratch = KeyDecodeScratch{};
-      auto spill_scratch = StringSpillBuffer{};
-      auto key_buffer = std::vector<std::byte>{};
-      auto slots = std::vector<uint32_t>{};
-      auto value_buffers = std::vector<std::vector<std::byte>>(aggregate_count);
-      auto null_buffers = std::vector<std::vector<std::byte>>(aggregate_count);
-      auto owners = std::vector<std::shared_ptr<AbstractSegment>>{};
-      auto segments = std::vector<const AbstractSegment*>{};
-
-      while (true) {
-        const auto chunk_index = chunk_cursor.fetch_add(1, std::memory_order_relaxed);
-        if (chunk_index >= chunk_count) {
-          break;
-        }
-        const auto chunk = input_table.get_chunk(ChunkID{static_cast<ChunkID::base_type>(chunk_index)});
-        if (!chunk) {
-          continue;
-        }
-
-        const auto row_count = chunk->size();
-        if (row_count == 0) {
-          continue;
-        }
-
-        owners.clear();
-        segments.clear();
-        for (const auto column_id : _groupby_column_ids) {
-          owners.emplace_back(chunk->get_segment(column_id));
-          segments.emplace_back(owners.back().get());
-        }
-        key_schema.decode(segments, decode_scratch);
-        key_buffer.resize(size_t{row_count} * key_width);
-        for (auto offset = ChunkOffset{0}; offset < row_count; ++offset) {
-          key_schema.pack(decode_scratch, offset, key_buffer.data() + size_t{offset} * key_width, spill_scratch);
-        }
-
-        for (auto aggregate_index = size_t{0}; aggregate_index < aggregate_count; ++aggregate_index) {
-          const auto stream = aggregate_schema.aggregate_value_stream(aggregate_index);
-          if (stream == AggregateSchema::NO_VALUE_STREAM) {
-            continue;
-          }
-          const auto source = aggregate_schema.source_column(aggregate_index);
-          const auto nullable = aggregate_schema.value_stream(stream).is_nullable();
-          gather_value_column(*chunk->get_segment(source), input_table.column_data_type(source), nullable,
-                              value_buffers[aggregate_index], null_buffers[aggregate_index], row_count);
-        }
-
-        for (auto tile_start = size_t{0}; tile_start < row_count; tile_start += MERGE_TILE_ROWS) {
-          const auto tile_rows = std::min(MERGE_TILE_ROWS, size_t{row_count} - tile_start);
-          slots.clear();
-          merge_map.resolve({key_buffer.data() + tile_start * key_width, tile_rows * key_width}, slots);
-
-          for (auto aggregate_index = size_t{0}; aggregate_index < aggregate_count; ++aggregate_index) {
-            const auto stream = aggregate_schema.aggregate_value_stream(aggregate_index);
-            if (stream == AggregateSchema::NO_VALUE_STREAM) {
-              merge_map.fold(aggregate_index, slots, {}, {});
-              continue;
-            }
-            const auto width = aggregate_schema.value_stream(stream).element_width();
-            const auto nullable = aggregate_schema.value_stream(stream).is_nullable();
-            const auto value_span = std::span<const std::byte>{
-                value_buffers[aggregate_index].data() + tile_start * width, tile_rows * width};
-            auto null_span = std::span<const std::byte>{};
-            if (nullable) {
-              null_span = {null_buffers[aggregate_index].data() + tile_start / 8, (tile_rows + 7) / 8};
-            }
-            merge_map.fold(aggregate_index, slots, value_span, null_span);
-          }
-        }
-        spill_scratch.clear();
-      }
-    });
-  }
+  accumulate_private_maps(key_schema, aggregate_schema, input_table, _groupby_column_ids, per_worker_private_maps,
+                          worker_count, chunk_count, key_width, aggregate_count, cardinality_estimate);
   step_performance_data.set_step_runtime(OperatorSteps::Scatter, timer.lap());
 
   // reduce the per-worker private maps into map 0, then emit its groups as the result.
@@ -655,18 +959,8 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate_low_cardinality(const KeySchema
     }
   }
 
-  auto output_column_definitions = TableColumnDefinitions{};
-  output_column_definitions.reserve(_groupby_column_ids.size() + aggregate_count);
-  for (const auto column_id : _groupby_column_ids) {
-    output_column_definitions.emplace_back(input_table.column_name(column_id), input_table.column_data_type(column_id),
-                                           input_table.column_is_nullable(column_id));
-  }
-  for (auto aggregate_index = size_t{0}; aggregate_index < aggregate_count; ++aggregate_index) {
-    const auto function = aggregate_schema.function(aggregate_index);
-    output_column_definitions.emplace_back(
-        _aggregates[aggregate_index]->as_column_name(), aggregate_schema.result_type(aggregate_index),
-        function != WindowFunction::Count && function != WindowFunction::CountDistinct);
-  }
+  const auto output_column_definitions =
+      build_output_column_definitions(input_table, _groupby_column_ids, aggregate_schema, _aggregates);
 
   auto per_worker_outputs = std::vector<OutputColumns>{};
   per_worker_outputs.emplace_back(output_column_definitions, Chunk::DEFAULT_SIZE);
@@ -690,54 +984,9 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate(const KeySchema& key_schema, co
   const auto scatter_worker_count = std::clamp(chunk_count, size_t{1}, num_cpus);
   const auto key_width = key_schema.packed_width();
 
-  const auto gather_group_by_segments = [&](const Chunk& chunk, std::vector<std::shared_ptr<AbstractSegment>>& owners,
-                                            std::vector<const AbstractSegment*>& segments) {
-    owners.clear();
-    segments.clear();
-    for (const auto column_id : _groupby_column_ids) {
-      owners.emplace_back(chunk.get_segment(column_id));
-      segments.emplace_back(owners.back().get());
-    }
-  };
-
   // Estimate: per-worker HyperLogLog sketches over the packed-key hash choose the partition count.
-  const auto estimate_worker_count =
-      input_table.row_count() < PARALLEL_ESTIMATE_THRESHOLD ? size_t{1} : scatter_worker_count;
-  auto sketches = std::vector<HllSketch>(estimate_worker_count);
-  {
-    auto chunk_cursor = std::atomic<size_t>{0};
-    run_workers(estimate_worker_count, [&](const size_t worker_id) {
-      auto& sketch = sketches[worker_id];
-      auto key_scratch = std::vector<std::byte>(key_width);
-      auto decode_scratch = KeyDecodeScratch{};
-      auto spill_scratch = StringSpillBuffer{};
-      auto segment_owners = std::vector<std::shared_ptr<AbstractSegment>>{};
-      auto segments = std::vector<const AbstractSegment*>{};
-      while (true) {
-        const auto chunk_index = chunk_cursor.fetch_add(1, std::memory_order_relaxed);
-        if (chunk_index >= chunk_count) {
-          break;
-        }
-        const auto chunk = input_table.get_chunk(ChunkID{static_cast<ChunkID::base_type>(chunk_index)});
-        if (!chunk) {
-          continue;
-        }
-        gather_group_by_segments(*chunk, segment_owners, segments);
-        key_schema.decode(segments, decode_scratch);
-        const auto row_count = chunk->size();
-        for (auto chunk_offset = ChunkOffset{0}; chunk_offset < row_count; ++chunk_offset) {
-          key_schema.pack(decode_scratch, chunk_offset, key_scratch.data(), spill_scratch);
-          sketch.add(key_schema.hash(key_scratch.data()));
-        }
-        spill_scratch.clear();
-      }
-    });
-  }
-  for (auto worker_id = size_t{1}; worker_id < estimate_worker_count; ++worker_id) {
-    sketches.front().merge(sketches[worker_id]);
-  }
-  const auto cardinality_estimate = sketches.front().estimate();
-
+  const auto cardinality_estimate =
+      estimate_cardinality(key_schema, input_table, _groupby_column_ids, scatter_worker_count);
   step_performance_data.set_step_runtime(OperatorSteps::Estimate, timer.lap());
 
   if (cardinality_estimate <= LOW_CARDINALITY_THRESHOLD && low_cardinality_eligible(aggregate_schema, input_table)) {
@@ -747,229 +996,30 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate(const KeySchema& key_schema, co
   const auto partition_count = choose_partition_count(cardinality_estimate, num_cpus);
   const auto shift = static_cast<uint32_t>(std::countr_zero(partition_count));
 
-  const auto value_stream_count = aggregate_schema.value_stream_count();
-  auto value_stream_widths = std::vector<size_t>(value_stream_count);
-  auto value_stream_sources = std::vector<ColumnID>(value_stream_count, INVALID_COLUMN_ID);
-  auto value_stream_null_bits = std::vector<uint32_t>(value_stream_count, 0);
-  auto nullable_stream_count = uint32_t{0};
-  for (auto stream_index = size_t{0}; stream_index < value_stream_count; ++stream_index) {
-    const auto& stream = aggregate_schema.value_stream(stream_index);
-    value_stream_widths[stream_index] = stream.element_width();
-    if (stream.is_nullable()) {
-      value_stream_null_bits[stream_index] = nullable_stream_count;
-      ++nullable_stream_count;
-    }
-  }
-  const auto aggregate_count = aggregate_schema.aggregate_count();
-  for (auto aggregate_index = size_t{0}; aggregate_index < aggregate_count; ++aggregate_index) {
-    const auto stream_index = aggregate_schema.aggregate_value_stream(aggregate_index);
-    if (stream_index == AggregateSchema::NO_VALUE_STREAM) {
-      continue;
-    }
-    value_stream_sources[stream_index] = aggregate_schema.source_column(aggregate_index);
-  }
-
-  const auto value_null_bitmap_width = aggregate_schema.value_null_bitmap_width();
-  const auto has_value_null_bitmap = value_null_bitmap_width > 0;
-  const auto needs_value_arena = aggregate_schema.needs_value_arena();
-
-  // ANY aggregates scatter no value; they read one shared row-id stream instead.
-  const auto needs_row_id_stream = aggregate_schema.needs_row_id_stream();
-  const auto row_id_stream_index = value_stream_count;
-  if (needs_row_id_stream) {
-    value_stream_widths.emplace_back(sizeof(RowID));
-  }
-  const auto value_null_bitmap_stream_index = 1 + value_stream_widths.size();
-
-  // The packed key is staged in 4-byte pieces and the value-null bitmap byte-wise, so every declared stream width
-  // divides the SWWC line.
-  auto stream_widths = std::vector<size_t>{};
-  stream_widths.reserve(1 + value_stream_widths.size() + (has_value_null_bitmap ? 1 : 0));
-  stream_widths.emplace_back(4);
-  stream_widths.insert(stream_widths.end(), value_stream_widths.begin(), value_stream_widths.end());
-  if (has_value_null_bitmap) {
-    stream_widths.emplace_back(1);
-  }
+  const auto layout = make_scatter_layout(aggregate_schema);
 
   auto scatter_stores = std::vector<ScatterStore>{};
   scatter_stores.reserve(scatter_worker_count);
   for (auto worker_id = size_t{0}; worker_id < scatter_worker_count; ++worker_id) {
-    scatter_stores.emplace_back(partition_count, key_width, value_stream_widths, value_null_bitmap_width,
-                                needs_value_arena);
+    scatter_stores.emplace_back(partition_count, key_width, layout.value_stream_widths, layout.value_null_bitmap_width,
+                                layout.needs_value_arena);
   }
 
   // Scatter: buffer raw (key, values...) rows into per-worker stores across the partitions. The key pass packs and
   // routes each row and records its partition; the value streams, the row-id stream, and the value-null bitmap then
   // run as separate column-wise passes over the same chunk.
-  {
-    auto chunk_cursor = std::atomic<size_t>{0};
-    run_workers(scatter_worker_count, [&](const size_t worker_id) {
-      auto& store = scatter_stores[worker_id];
-      auto heads = ScatterHeads{partition_count, stream_widths.size(), stream_widths, has_value_null_bitmap};
-      auto key_scratch = std::vector<std::byte>(key_width);
-      auto decode_scratch = KeyDecodeScratch{};
-      auto row_partitions = std::vector<PartitionId>{};
-      auto bitmap_scratch = std::vector<std::byte>{};
-      auto pack_spill = StringSpillBuffer{};
-      auto segment_owners = std::vector<std::shared_ptr<AbstractSegment>>{};
-      auto segments = std::vector<const AbstractSegment*>{};
-      auto value_segment_owners = std::vector<std::shared_ptr<AbstractSegment>>{};
-      auto value_segments = std::vector<const AbstractSegment*>{};
-      while (true) {
-        const auto chunk_index = chunk_cursor.fetch_add(1, std::memory_order_relaxed);
-        if (chunk_index >= chunk_count) {
-          break;
-        }
-        const auto chunk = input_table.get_chunk(ChunkID{static_cast<ChunkID::base_type>(chunk_index)});
-        if (!chunk) {
-          continue;
-        }
-        gather_group_by_segments(*chunk, segment_owners, segments);
-        value_segment_owners.clear();
-        value_segments.clear();
-        for (const auto column_id : value_stream_sources) {
-          value_segment_owners.emplace_back(chunk->get_segment(column_id));
-          value_segments.emplace_back(value_segment_owners.back().get());
-        }
-        const auto row_count = chunk->size();
-
-        key_schema.decode(segments, decode_scratch);
-        row_partitions.resize(row_count);
-        for (auto chunk_offset = ChunkOffset{0}; chunk_offset < row_count; ++chunk_offset) {
-          key_schema.pack(decode_scratch, chunk_offset, key_scratch.data(), pack_spill);
-          const auto key_hash = key_schema.hash(key_scratch.data());
-          const auto partition = static_cast<PartitionId>(key_hash & (partition_count - 1));
-          row_partitions[chunk_offset] = partition;
-          if constexpr (KeySchema::HAS_STRINGS) {
-            key_schema.reintern_spill(key_scratch.data(), store.key_spill_buffer(partition));
-            pack_spill.clear();
-          }
-          for (auto piece_offset = size_t{0}; piece_offset < key_width; piece_offset += 4) {
-            heads.push(store, 0, partition, key_scratch.data() + piece_offset, 4);
-          }
-        }
-
-        if (has_value_null_bitmap) {
-          bitmap_scratch.assign(row_count * value_null_bitmap_width, std::byte{0});
-        }
-        for (auto stream_index = size_t{0}; stream_index < value_stream_count; ++stream_index) {
-          aggregate_schema.value_stream(stream_index)
-              .scatter(*value_segments[stream_index], row_partitions, 1 + stream_index, heads, store,
-                       bitmap_scratch.data(), value_null_bitmap_width, value_stream_null_bits[stream_index]);
-        }
-        if (needs_row_id_stream) {
-          for (auto chunk_offset = ChunkOffset{0}; chunk_offset < row_count; ++chunk_offset) {
-            const auto row_id = RowID{ChunkID{static_cast<ChunkID::base_type>(chunk_index)}, chunk_offset};
-            heads.push(store, 1 + row_id_stream_index, row_partitions[chunk_offset],
-                       reinterpret_cast<const std::byte*>(&row_id), sizeof(row_id));
-          }
-        }
-        if (has_value_null_bitmap) {
-          for (auto chunk_offset = ChunkOffset{0}; chunk_offset < row_count; ++chunk_offset) {
-            const auto* row_bitmap = bitmap_scratch.data() + size_t{chunk_offset} * value_null_bitmap_width;
-            for (auto byte_index = size_t{0}; byte_index < value_null_bitmap_width; ++byte_index) {
-              heads.push(store, value_null_bitmap_stream_index, row_partitions[chunk_offset], row_bitmap + byte_index,
-                         1);
-            }
-          }
-        }
-      }
-      heads.finish(store);
-    });
-  }
+  run_scatter_phase(key_schema, aggregate_schema, input_table, _groupby_column_ids, layout, scatter_stores,
+                    partition_count, key_width, chunk_count, scatter_worker_count);
   step_performance_data.set_step_runtime(OperatorSteps::Scatter, timer.lap());
 
-  auto output_column_definitions = TableColumnDefinitions{};
-  output_column_definitions.reserve(_groupby_column_ids.size() + aggregate_count);
-  for (const auto column_id : _groupby_column_ids) {
-    output_column_definitions.emplace_back(input_table.column_name(column_id), input_table.column_data_type(column_id),
-                                           input_table.column_is_nullable(column_id));
-  }
-  for (auto aggregate_index = size_t{0}; aggregate_index < aggregate_count; ++aggregate_index) {
-    const auto function = aggregate_schema.function(aggregate_index);
-    // ANY keeps the input column's name and nullability.
-    if (function == WindowFunction::Any) {
-      const auto source_column = aggregate_schema.source_column(aggregate_index);
-      output_column_definitions.emplace_back(input_table.column_name(source_column),
-                                             aggregate_schema.result_type(aggregate_index),
-                                             input_table.column_is_nullable(source_column));
-      continue;
-    }
-    output_column_definitions.emplace_back(
-        _aggregates[aggregate_index]->as_column_name(), aggregate_schema.result_type(aggregate_index),
-        function != WindowFunction::Count && function != WindowFunction::CountDistinct);
-  }
+  const auto output_column_definitions =
+      build_output_column_definitions(input_table, _groupby_column_ids, aggregate_schema, _aggregates);
 
   // Merge: workers claim partitions and fold every store's rows for that partition through a dense MergeMap.
   const auto merge_worker_count = std::min(static_cast<size_t>(partition_count), num_cpus);
-  auto per_worker_outputs = std::vector<OutputColumns>{};
-  per_worker_outputs.reserve(merge_worker_count);
-  for (auto worker_id = size_t{0}; worker_id < merge_worker_count; ++worker_id) {
-    per_worker_outputs.emplace_back(output_column_definitions, Chunk::DEFAULT_SIZE);
-  }
-  {
-    const auto partition_hint = cardinality_estimate / partition_count + 1;
-    auto partition_cursor = std::atomic<size_t>{0};
-    run_workers(merge_worker_count, [&](const size_t worker_id) {
-      auto merge_map = MergeMap<KeySchema>{key_schema, shift, aggregate_schema.make_accumulator_columns()};
-      auto& output = per_worker_outputs[worker_id];
-      auto slots = std::vector<uint32_t>{};
-      auto bitmap_tile = std::vector<std::byte>((MERGE_TILE_ROWS + 7) / 8);
-      while (true) {
-        const auto partition = static_cast<PartitionId>(partition_cursor.fetch_add(1, std::memory_order_relaxed));
-        if (partition >= partition_count) {
-          break;
-        }
-        merge_map.clear();
-        merge_map.reserve(partition_hint);
-        for (auto& store : scatter_stores) {
-          const auto& key_region = store.key_region(partition);
-          DebugAssert(key_region.size() % key_width == 0, "Key region must hold whole keys.");
-          const auto row_count = key_region.size() / key_width;
-          for (auto tile_start = size_t{0}; tile_start < row_count; tile_start += MERGE_TILE_ROWS) {
-            const auto tile_rows = std::min(MERGE_TILE_ROWS, row_count - tile_start);
-            slots.clear();
-            merge_map.resolve({key_region.data() + tile_start * key_width, tile_rows * key_width}, slots);
-            for (auto aggregate_index = size_t{0}; aggregate_index < aggregate_count; ++aggregate_index) {
-              const auto stream_index = aggregate_schema.aggregate_value_stream(aggregate_index);
-              if (stream_index == AggregateSchema::NO_VALUE_STREAM) {
-                if (aggregate_schema.function(aggregate_index) == WindowFunction::Any) {
-                  const auto& row_id_region = store.value_region(partition, row_id_stream_index);
-                  merge_map.fold(aggregate_index, slots,
-                                 {row_id_region.data() + tile_start * sizeof(RowID), tile_rows * sizeof(RowID)}, {});
-                } else {
-                  merge_map.fold(aggregate_index, slots, {}, {});
-                }
-                continue;
-              }
-              const auto width = value_stream_widths[stream_index];
-              const auto& value_region = store.value_region(partition, stream_index);
-              const auto value_bytes =
-                  std::span<const std::byte>{value_region.data() + tile_start * width, tile_rows * width};
-              auto value_null_bitmap = std::span<const std::byte>{};
-              if (aggregate_schema.value_stream(stream_index).is_nullable()) {
-                // Gather this stream's bits from the per-row bitmap fields into the bit-per-row tile form.
-                const auto* row_bitmaps = store.value_null_bitmap_region(partition).data();
-                const auto stream_bit = value_stream_null_bits[stream_index];
-                std::memset(bitmap_tile.data(), 0, bitmap_tile.size());
-                for (auto row = size_t{0}; row < tile_rows; ++row) {
-                  const auto* row_bitmap = row_bitmaps + (tile_start + row) * value_null_bitmap_width;
-                  if ((row_bitmap[stream_bit / 8] & (std::byte{1} << (stream_bit % 8))) != std::byte{0}) {
-                    bitmap_tile[row / 8] |= std::byte{1} << (row % 8);
-                  }
-                }
-                value_null_bitmap = {bitmap_tile.data(), (tile_rows + 7) / 8};
-              }
-              merge_map.fold(aggregate_index, slots, value_bytes, value_null_bitmap);
-            }
-          }
-        }
-        merge_map.flush_into(output);
-        output.maybe_seal();
-      }
-      output.seal_all();
-    });
-  }
+  auto per_worker_outputs =
+      run_merge_phase(key_schema, aggregate_schema, layout, scatter_stores, output_column_definitions, partition_count,
+                      shift, key_width, cardinality_estimate, merge_worker_count);
   step_performance_data.set_step_runtime(OperatorSteps::Merge, timer.lap());
 
   const auto output_table = build_output_table(output_column_definitions, per_worker_outputs);
@@ -983,7 +1033,7 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate_without_group_by(const Aggregat
 
   // TODO(anyone): currently morsel_count == chunk_count, this has to be adjusted
   const auto morsel_count = static_cast<size_t>(input_table.chunk_count());
-  // The immediate scheduler cannot run logical workers concurrently and therefore needs only one state.
+
   const auto max_worker_count = Hyrise::get().is_multi_threaded() ? Hyrise::get().topology.num_cpus() : size_t{1};
   const auto worker_count = std::clamp(morsel_count, size_t{1}, max_worker_count);
 
