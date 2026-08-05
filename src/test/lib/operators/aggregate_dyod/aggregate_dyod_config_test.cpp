@@ -1,3 +1,4 @@
+#include <bit>
 #include <cstddef>
 
 #include "base_test.hpp"
@@ -39,6 +40,38 @@ TEST_F(AggregateDYODConfigTest, MergeTileRowsGrowsWithL1) {
   large.l1d_bytes = 2 * small.l1d_bytes;
 
   EXPECT_LT(merge_tile_rows_for(small), merge_tile_rows_for(large));
+}
+
+TEST_F(AggregateDYODConfigTest, MaxPartitionCountMatchesFallbackTuning) {
+  EXPECT_EQ(max_partition_count_for(FALLBACK_CACHE_SIZES, 2), 2048);
+}
+
+TEST_F(AggregateDYODConfigTest, MaxPartitionCountKeepsStagingWithinL2) {
+  auto sizes = FALLBACK_CACHE_SIZES;
+  for (auto l2 = size_t{64} * 1024; l2 <= size_t{64} * 1024 * 1024; l2 *= 2) {
+    sizes.l2_bytes = l2;
+    for (auto stream_count = size_t{1}; stream_count <= 16; ++stream_count) {
+      const auto partitions = max_partition_count_for(sizes, stream_count);
+      EXPECT_LE(partitions * stream_count * (SWWC_LINE_BYTES + sizeof(size_t)), l2);
+      EXPECT_GE(partitions, 1);
+    }
+  }
+}
+
+TEST_F(AggregateDYODConfigTest, MaxPartitionCountShrinksWithStreamCount) {
+  EXPECT_LT(max_partition_count_for(FALLBACK_CACHE_SIZES, 4), max_partition_count_for(FALLBACK_CACHE_SIZES, 2));
+}
+
+TEST_F(AggregateDYODConfigTest, MaxPartitionCountIsPowerOfTwo) {
+  for (auto stream_count = size_t{1}; stream_count <= 16; ++stream_count) {
+    EXPECT_TRUE(std::has_single_bit(max_partition_count_for(FALLBACK_CACHE_SIZES, stream_count)));
+  }
+}
+
+TEST_F(AggregateDYODConfigTest, MaxPartitionCountRespectsAbsoluteCeiling) {
+  auto sizes = FALLBACK_CACHE_SIZES;
+  sizes.l2_bytes = size_t{64} * 1024 * 1024;
+  EXPECT_EQ(max_partition_count_for(sizes, 1), MAX_PARTITION_COUNT);
 }
 
 
