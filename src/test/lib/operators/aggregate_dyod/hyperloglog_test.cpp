@@ -169,10 +169,10 @@ TEST_F(HllSketchTest, ChoosePartitionCountZeroEstimate) {
 }
 
 TEST_F(HllSketchTest, ChoosePartitionCountScalesWithKeysBudget) {
-  EXPECT_EQ(choose_partition_count(KEYS_BUDGET - 1, 1), PartitionCount{1});
-  EXPECT_EQ(choose_partition_count(KEYS_BUDGET, 1), PartitionCount{1});
-  EXPECT_EQ(choose_partition_count(KEYS_BUDGET + 1, 1), PartitionCount{2});
-  EXPECT_EQ(choose_partition_count(3 * KEYS_BUDGET, 1), PartitionCount{4});
+  EXPECT_EQ(choose_partition_count(keys_budget() - 1, 1), PartitionCount{1});
+  EXPECT_EQ(choose_partition_count(keys_budget(), 1), PartitionCount{1});
+  EXPECT_EQ(choose_partition_count(keys_budget() + 1, 1), PartitionCount{2});
+  EXPECT_EQ(choose_partition_count(3 * keys_budget(), 1), PartitionCount{4});
 }
 
 TEST_F(HllSketchTest, ChoosePartitionCountClampsToWorkerCount) {
@@ -182,7 +182,7 @@ TEST_F(HllSketchTest, ChoosePartitionCountClampsToWorkerCount) {
 }
 
 TEST_F(HllSketchTest, ChoosePartitionCountClampsToMax) {
-  const auto large_cardinality = static_cast<size_t>(MAX_PARTITION_COUNT) * KEYS_BUDGET * 16;
+  const auto large_cardinality = static_cast<size_t>(MAX_PARTITION_COUNT) * keys_budget() * 16;
 
   EXPECT_EQ(choose_partition_count(large_cardinality, 1), MAX_PARTITION_COUNT);
 }
@@ -195,11 +195,11 @@ TEST_F(HllSketchTest, ChoosePartitionCountClampsOversizedWorkerCountToMax) {
 TEST_F(HllSketchTest, ChoosePartitionCountAlwaysReturnsPowerOfTwo) {
   const auto inputs = std::array<std::pair<size_t, size_t>, 8>{{{0, 0},
                                                                 {1, 1},
-                                                                {KEYS_BUDGET - 1, 1},
-                                                                {KEYS_BUDGET + 1, 1},
-                                                                {3 * KEYS_BUDGET, 1},
-                                                                {100 * KEYS_BUDGET, 3},
-                                                                {1'000 * KEYS_BUDGET, 64},
+                                                                {keys_budget() - 1, 1},
+                                                                {keys_budget() + 1, 1},
+                                                                {3 * keys_budget(), 1},
+                                                                {100 * keys_budget(), 3},
+                                                                {1'000 * keys_budget(), 64},
                                                                 {std::numeric_limits<size_t>::max() / 2, 17}}};
 
   for (const auto& [cardinality_estimate, worker_count] : inputs) {

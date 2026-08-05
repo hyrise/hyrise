@@ -3,17 +3,22 @@
 #include <cstddef>
 #include <cstdint>
 
+#include "operators/aggregate_dyod/cache_info.hpp"
+
 namespace hyrise {
 
-// Shared vocabulary and tuning constants for the AggregateDYOD operator, a parallel radix-partitioned hash
+// Shared vocabulary and tuning values for the AggregateDYOD operator, a parallel radix-partitioned hash
 // aggregation: it estimates group-by cardinality, scatters input rows into cache-sized radix partitions using
 // software write-combining (SWWC) buffers, then merges each partition independently into a dense hash map. See
 // aggregate_dyod.hpp for the operator itself and the phase overview.
 //
-// The tuning constants below are machine-independent inputs, not baked-in hardware assumptions. Anything that should
-// scale with the deployment machine (most importantly the partition count) is derived from them at runtime; see
-// choose_partition_count() in hyperloglog.hpp. Overriding them for experimentation is expected. The eventual home for
-// hardware-derived values such as cache sizes is Hyrise's Topology, not this file.
+// The compile-time constants below are machine-independent inputs, not baked-in hardware assumptions. Values that
+// should scale with the deployment machine come in two steps: cache-dependent budgets (keys_budget(),
+// merge_tile_rows()) are a compile-time fraction applied to the queried cache sizes (see cache_info.hpp), and the
+// partition count is derived from those budgets per query; see choose_partition_count() in hyperloglog.hpp.
+// Overriding the constants for experimentation is expected. The fractions are calibrated against a parameter sweep
+// on EPYC 7742 (32 KiB L1d, 512 KiB L2, 16 MiB L3 per 4-core CCX), which matches FALLBACK_CACHE_SIZES, so machines
+// without cache reporting behave exactly like the calibration target.
 
 /**
  * A count of radix partitions produced by the scatter phase.
@@ -55,25 +60,46 @@ using PartitionId = uint32_t;
  * larger staging footprint; lowering it caps that split and can leave per-partition merge maps too large to stay
  * cache-resident.
  *
- * @see choose_partition_count() (hyperloglog.hpp), KEYS_BUDGET, SWWC_LINE_BYTES.
+ * @see choose_partition_count() (hyperloglog.hpp), keys_budget(), SWWC_LINE_BYTES.
  */
 constexpr PartitionCount MAX_PARTITION_COUNT = 8192;
+
+/**
+ * Number of cores assumed to share one OS-reported last-level cache slice (unit: cores).
+ *
+ * sysconf reports the L3 slice a single core belongs to, not the socket total; on the calibration target that slice
+ * is 16 MiB shared by the 4 cores of a CCX. Dividing by this turns the reported slice into a per-worker share.
+ */
+constexpr size_t LLC_CORES_PER_SLICE = 4;
+
+/**
+ * Last-level cache bytes budgeted per distinct key in a partition's merge map (unit: bytes per key).
+ *
+ * Covers the probe index (8 bytes per key at the 0.5 max load factor), the packed key, and the accumulator columns
+ * (whose per-slot width depends on the requested aggregates), with headroom for the input tiles streaming through
+ * the same cache. 128 bytes reproduces the swept optimum of 32768 keys per partition on the calibration target.
+ */
+constexpr size_t MERGE_MAP_BYTES_PER_KEY = 128;
 
 /**
  * Target number of distinct keys per partition (unit: distinct keys); the divisor when sizing P from the estimate.
  *
  * The partition count is chosen so that a single partition's dense merge map -- its probe index plus dense
- * key/accumulator storage -- is expected to stay resident in a mid-level cache during the merge phase, the
- * cache-residency the radix split is designed to provide. This is a distinct-key budget, not a byte budget, and is
- * deliberately conservative so the accumulator columns (whose per-slot width depends on the requested aggregates) also
- * fit.
+ * key/accumulator storage -- is expected to stay resident in the merge worker's share of the last-level cache, the
+ * cache-residency the radix split is designed to provide: (slice / LLC_CORES_PER_SLICE) / MERGE_MAP_BYTES_PER_KEY.
  *
- * Raising it yields fewer, larger partitions whose merge maps risk spilling out of cache; lowering it yields more,
- * smaller partitions at the cost of higher per-partition overhead.
+ * A larger budget yields fewer, larger partitions whose merge maps risk spilling out of cache; a smaller one yields
+ * more, smaller partitions at the cost of higher per-partition overhead.
  *
- * @see choose_partition_count() (hyperloglog.hpp), MAX_PARTITION_COUNT.
+ * @see choose_partition_count() (hyperloglog.hpp), MAX_PARTITION_COUNT, cache_sizes() (cache_info.hpp).
  */
-constexpr size_t KEYS_BUDGET = 8192;
+inline size_t keys_budget_for(const CacheSizes& sizes) {
+  return sizes.l3_bytes / LLC_CORES_PER_SLICE / MERGE_MAP_BYTES_PER_KEY;
+}
+
+inline size_t keys_budget() {
+  return keys_budget_for(cache_sizes());
+}
 
 /**
  * Row-count cutoff at or above which the estimate phase runs in parallel (unit: input rows).
@@ -113,19 +139,33 @@ constexpr uint8_t HLL_PRECISION = 12;
 constexpr size_t SWWC_LINE_BYTES = 64;
 
 /**
+ * Fraction of L1d granted to the merge phase's row->slot scratch: scratch budget = L1d / this (unit: divisor).
+ *
+ * A quarter leaves the rest of L1d to the key tile and accumulator lines the same loop touches.
+ */
+constexpr size_t MERGE_SCRATCH_L1_DIVISOR = 4;
+
+/**
  * Row tile size for the merge phase's resolve+fold step (unit: rows).
  *
  * Each partition's rows are folded in tiles of this many rows so the transient row->slot index scratch
- * (MERGE_TILE_ROWS * sizeof(dense index)) stays L1-resident rather than growing to the whole partition. It is also the
- * granularity at which AbstractAccumulatorColumn::fold is dispatched: one virtual call per tile, amortized over a tight
- * typed loop, never per row.
+ * (merge_tile_rows() * sizeof(dense index)) stays L1-resident rather than growing to the whole partition: the tile is
+ * sized so the scratch fills the L1d fraction granted by MERGE_SCRATCH_L1_DIVISOR. It is also the granularity at
+ * which AbstractAccumulatorColumn::fold is dispatched: one virtual call per tile, amortized over a tight typed loop,
+ * never per row.
  *
- * Raising it grows the scratch until it no longer fits in L1 (defeating the tiling); lowering it shrinks the scratch
- * but pays more virtual fold dispatches per partition.
+ * A larger tile grows the scratch until it no longer fits in L1 (defeating the tiling); a smaller one shrinks the
+ * scratch but pays more virtual fold dispatches per partition.
  *
- * @see accumulator_column.hpp for the fold interface.
+ * @see accumulator_column.hpp for the fold interface, cache_sizes() (cache_info.hpp).
  */
-constexpr size_t MERGE_TILE_ROWS = 2048;
+inline size_t merge_tile_rows_for(const CacheSizes& sizes) {
+  return sizes.l1d_bytes / MERGE_SCRATCH_L1_DIVISOR / sizeof(uint32_t);
+}
+
+inline size_t merge_tile_rows() {
+  return merge_tile_rows_for(cache_sizes());
+}
 
 /**
  * Inline string-blob capacity budget per string group-by column (unit: bytes).
@@ -145,6 +185,8 @@ constexpr size_t STRING_BLOB_BYTES_PER_COLUMN = 16;
 /**
  * Number of distinct output groups where the low-cardinality path is taken
 */
-constexpr size_t LOW_CARDINALITY_THRESHOLD = KEYS_BUDGET / 2;
+inline size_t low_cardinality_threshold() {
+  return keys_budget() / 2;
+}
 
 }  // namespace hyrise

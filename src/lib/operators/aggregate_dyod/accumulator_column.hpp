@@ -240,7 +240,7 @@ inline void StringValueScatterColumn::scatter(const AbstractSegment& segment,
  * maps each key to a dense slot, then fold() accumulates the row's value into that slot. State grows to match the
  * map's slot count and is finalized into the worker's OutputColumns at partition-flush time.
  *
- * fold is tile-granular, not per-row: the single virtual call lands per (aggregate, MERGE_TILE_ROWS tile) and the
+ * fold is tile-granular, not per-row: the single virtual call lands per (aggregate, merge_tile_rows() tile) and the
  * concrete override runs a straight typed loop over the tile, amortizing the dispatch over the tile. A per-row virtual
  * fold would defeat the design.
  *
@@ -273,7 +273,7 @@ class AbstractAccumulatorColumn {
    * into slots[i], bumping the per-slot non-null count where the aggregate needs it.
    *
    * @param slots dense slot id per row in the tile; slots[i] must be < the current slot count. Length is the tile's
-   *   row count (<= MERGE_TILE_ROWS).
+   *   row count (<= merge_tile_rows()).
    * @param value_bytes this aggregate's value stream over the same tile, one element_width()-sized cell per row.
    *   Empty for COUNT(*), which counts every row regardless of value.
    * @param value_null_bitmap the tile's value-null bitmap, one bit per row. Empty when the stream is non-nullable

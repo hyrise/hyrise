@@ -36,7 +36,7 @@ namespace hyrise {
  * choose_partition_count(). A single sketch must not be mutated concurrently. Copying is disabled (Noncopyable);
  * combine sketches with merge() rather than by copying.
  *
- * @see choose_partition_count, HLL_PRECISION and KEYS_BUDGET in aggregate_dyod_config.hpp.
+ * @see choose_partition_count, HLL_PRECISION and keys_budget() in aggregate_dyod_config.hpp.
  */
 class HllSketch : private Noncopyable {
  public:
@@ -144,8 +144,8 @@ inline size_t HllSketch::estimate() const {
 /**
  * Chooses the radix partition count P for a query from its estimated group-by cardinality.
  *
- * Computes clamp(next_pow2(ceil(cardinality_estimate / KEYS_BUDGET)),
- * min(next_pow2(max(worker_count, 1)), MAX_PARTITION_COUNT), MAX_PARTITION_COUNT). Dividing by KEYS_BUDGET targets
+ * Computes clamp(next_pow2(ceil(cardinality_estimate / keys_budget())),
+ * min(next_pow2(max(worker_count, 1)), MAX_PARTITION_COUNT), MAX_PARTITION_COUNT). Dividing by keys_budget() targets
  * that many distinct keys per partition, so each partition's dense merge map is expected to stay resident in a
  * mid-level cache during the merge phase -- the cache residency the radix split exists to buy. The lower bound keeps at
  * least one partition per worker, capped by MAX_PARTITION_COUNT, so every core has merge work; the upper bound caps
@@ -169,7 +169,7 @@ inline PartitionCount choose_partition_count(const size_t cardinality_estimate, 
   const auto minimum_partition_count =
       std::bit_ceil(std::min(std::max(size_t{1}, worker_count), maximum_partition_count));
   const auto target_partition_count =
-      std::bit_ceil(std::min(ceil_divide(cardinality_estimate, KEYS_BUDGET), maximum_partition_count));
+      std::bit_ceil(std::min(ceil_divide(cardinality_estimate, keys_budget()), maximum_partition_count));
   const auto partition_count = std::clamp(target_partition_count, minimum_partition_count, maximum_partition_count);
 
   return static_cast<PartitionCount>(partition_count);

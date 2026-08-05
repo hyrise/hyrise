@@ -23,7 +23,7 @@ namespace hyrise {
  * aggregates. Ported from the reference PoC's MergeMap and generalized from a fixed u128 key to an arbitrary KeySchema.
  *
  * This is the core of the merge phase. A merge worker streams every scatter-store row belonging to one partition
- * through this map in MERGE_TILE_ROWS tiles: resolve() maps each packed key to a dense slot, fold() folds the row's
+ * through this map in merge_tile_rows() tiles: resolve() maps each packed key to a dense slot, fold() folds the row's
  * values into that slot's accumulators, and flush_into() finalizes the groups into the worker's thread-local
  * OutputColumns. The dense slot id is the shared index across three parallel arrays, so grouping happens once (in
  * resolve) and every aggregate folds against the same slots.
@@ -40,7 +40,7 @@ namespace hyrise {
  * aggregate list -- the accumulator columns are opaque, keeping the aggregate axis out of the type.
  *
  * Cache residency is the point: reserve() sizes the index and dense storage from the per-partition cardinality hint
- * (KEYS_BUDGET, aggregate_dyod_config.hpp) so a partition's working set stays cache-resident during the fold.
+ * (keys_budget(), aggregate_dyod_config.hpp) so a partition's working set stays cache-resident during the fold.
  *
  * Invariants:
  *   * _table holds dense-slot-plus-one biased values; 0 means empty, so a stored slot id is always the entry minus 1.
@@ -77,7 +77,7 @@ class MergeMap : private Noncopyable {
    * Size the probe index and dense storage for an expected `distinct_keys` keys, keeping the fold cache-resident.
    *
    * @param distinct_keys  Expected number of distinct keys in this partition (the per-partition cardinality hint, from
-   *   the estimate phase and KEYS_BUDGET). A hint only: the index still grows past it transparently via grow_index().
+   *   the estimate phase and keys_budget()). A hint only: the index still grows past it transparently via grow_index().
    * @pre Call before resolve() for a partition, typically once after clear() when reusing the map.
    * @post The index is grown so its load stays under threshold at `distinct_keys`, and dense storage is reserved.
    */
@@ -93,7 +93,7 @@ class MergeMap : private Noncopyable {
    * a cold, worker-dispersed scatter store.
    *
    * @param key_tile   Raw packed key bytes for the tile, stride KeySchema::packed_width(); length must be a whole
-   *   multiple of the stride and hold at most MERGE_TILE_ROWS rows.
+   *   multiple of the stride and hold at most merge_tile_rows() rows.
    * @param slots_out  Receives one dense slot id per key, appended in row order; resolve() does not clear it first
    *   (the caller reuses one scratch vector across tiles). Kept small so the row-to-slot scratch stays L1-resident.
    * @pre Run per tile in the merge phase, single-threaded on this worker's map.
@@ -218,7 +218,7 @@ void MergeMap<KeySchema>::resolve(const std::span<const std::byte> key_tile, std
   const auto width = _key_schema->packed_width();
   DebugAssert(!_table.empty(), "reserve() must run before resolve().");
   DebugAssert(key_tile.size() % width == 0, "Key tile must hold whole keys.");
-  DebugAssert(key_tile.size() / width <= MERGE_TILE_ROWS, "Key tile exceeds MERGE_TILE_ROWS.");
+  DebugAssert(key_tile.size() / width <= merge_tile_rows(), "Key tile exceeds merge_tile_rows().");
   DebugAssert(slots_out.empty(), "slots_out must be cleared by the caller.");
 
   const auto row_count = key_tile.size() / width;
@@ -273,8 +273,9 @@ void MergeMap<KeySchema>::combine(const MergeMap& other) {
   const auto width = _key_schema->packed_width();
   const auto other_slot_count = other.size();
   auto slots = std::vector<uint32_t>{};
-  for (auto tile_start = size_t{0}; tile_start < other_slot_count; tile_start += MERGE_TILE_ROWS) {
-    const auto tile_rows = std::min(MERGE_TILE_ROWS, other_slot_count - tile_start);
+  const auto max_tile_rows = merge_tile_rows();
+  for (auto tile_start = size_t{0}; tile_start < other_slot_count; tile_start += max_tile_rows) {
+    const auto tile_rows = std::min(max_tile_rows, other_slot_count - tile_start);
     slots.clear();
     resolve({other._keys.data() + tile_start * width, tile_rows * width}, slots);
     const auto column_count = _columns.size();
