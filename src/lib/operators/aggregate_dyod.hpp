@@ -71,11 +71,11 @@ struct TypedAggregateVector : AbstractAggregateVector {
   }
 
   // The mutable accessor is needed because aggregator functions mutate values directly.
-  pmr_vector<AccumulatorDataType>& values() {
+  std::vector<AccumulatorDataType>& values() {
     return _values;
   }
 
-  const pmr_vector<AccumulatorDataType>& values() const {
+  const std::vector<AccumulatorDataType>& values() const {
     return _values;
   }
 
@@ -92,7 +92,7 @@ struct TypedAggregateVector : AbstractAggregateVector {
   }
 
  protected:
-  pmr_vector<AccumulatorDataType> _values;
+  std::vector<AccumulatorDataType> _values;
 
   void _merge(TypedAggregateVector<ColumnDataType, aggregate_function>& other) {
     const auto other_group_count = other.group_count();
