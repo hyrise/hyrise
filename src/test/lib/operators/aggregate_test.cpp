@@ -1002,5 +1002,4 @@ TYPED_TEST(OperatorsAggregateTest, FilteredDictionary) {
     EXPECT_TABLE_EQ_UNORDERED(aggregate->get_output(), expected_result);
   }
 }
-
 }  // namespace hyrise
