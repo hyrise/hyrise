@@ -144,19 +144,18 @@ struct TypedAggregateVector : AbstractAggregateVector {
   }
 };
 
-class AggregateVectors : public Noncopyable {
+class WorkerState : public Noncopyable {
  public:
-  explicit AggregateVectors(const std::vector<std::shared_ptr<WindowFunctionExpression>>& aggregates);
-  void merge(AggregateVectors& other);
-  AbstractAggregateVector& operator[](size_t index);
-  const AbstractAggregateVector& operator[](size_t index) const;
-  auto begin();
-  auto begin() const;
-  auto end();
-  auto end() const;
+  explicit WorkerState(const std::vector<std::shared_ptr<WindowFunctionExpression>>& aggregates);
+  void merge(WorkerState& other);
+
+  AbstractAggregateVector& aggregate_vector(size_t index);
+  std::vector<std::unique_ptr<AbstractAggregateVector>>& aggregate_vectors();
 
  protected:
   std::vector<std::unique_ptr<AbstractAggregateVector>> _vectors;
+  GroupID _next_group_id;
+  GroupID _max_group_id;
 };
 
 template <typename T>
@@ -217,7 +216,7 @@ class AggregateDYOD : public AbstractAggregateOperator {
 
   void _prepare_aggregate_vectors();
 
-  std::shared_ptr<Table> _write_output_table(AggregateVectors& aggregate_vectors);
+  std::shared_ptr<Table> _write_output_table(WorkerState& worker_state);
 
   template <typename ColumnDataType>
   std::shared_ptr<AbstractSegment> _write_groupby_segment(size_t groupby_column_index, GroupID start_group_id,
@@ -248,13 +247,13 @@ class AggregateDYOD : public AbstractAggregateOperator {
       TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector, bool is_nullable,
       GroupID start_group_id, GroupID end_group_id);
 
-  GroupID _group_id(const GroupKey& group_key, AggregateVectors& aggregate_vectors);
+  GroupID _group_id(const GroupKey& group_key, WorkerState& worker_state);
 
   GroupID _group_count();
 
-  std::vector<GroupID> _group_ids_for_chunk(const Chunk& chunk, AggregateVectors& aggregate_vectors);
+  std::vector<GroupID> _group_ids_for_chunk(const Chunk& chunk, WorkerState& worker_state);
 
-  void _aggregate_chunk(AggregateVectors& state, const std::shared_ptr<const Chunk> chunk);
+  void _aggregate_chunk(WorkerState& state, const std::shared_ptr<const Chunk> chunk);
 
   template <typename ColumnDataType, WindowFunction aggregate_function>
   void _aggregate_segment(TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector,

@@ -138,7 +138,7 @@ void resolve_window_function(WindowFunction window_function, Functor&& functor) 
   }
 }
 
-AggregateVectors::AggregateVectors(const std::vector<std::shared_ptr<WindowFunctionExpression>>& aggregates) {
+WorkerState::WorkerState(const std::vector<std::shared_ptr<WindowFunctionExpression>>& aggregates) {
   const auto aggregate_count = aggregates.size();
   _vectors.resize(aggregate_count);
 
@@ -158,36 +158,20 @@ AggregateVectors::AggregateVectors(const std::vector<std::shared_ptr<WindowFunct
   }
 }
 
-AbstractAggregateVector& AggregateVectors::operator[](size_t index) {
-  return *_vectors[index];
-}
-
-const AbstractAggregateVector& AggregateVectors::operator[](size_t index) const {
-  return *_vectors[index];
-}
-
-auto AggregateVectors::begin() {
-  return boost::indirect_iterator(_vectors.begin());
-}
-
-auto AggregateVectors::begin() const {
-  return boost::indirect_iterator(_vectors.cbegin());
-}
-
-auto AggregateVectors::end() {
-  return boost::indirect_iterator(_vectors.end());
-}
-
-auto AggregateVectors::end() const {
-  return boost::indirect_iterator(_vectors.cend());
-}
-
-void AggregateVectors::merge(AggregateVectors& other) {
+void WorkerState::merge(WorkerState& other) {
   const auto size = _vectors.size();
 
   for (auto index = size_t{0}; index < size; ++index) {
-    _vectors[index]->merge(other[index]);
+    _vectors[index]->merge(other.aggregate_vector(index));
   }
+}
+
+AbstractAggregateVector& WorkerState::aggregate_vector(size_t index) {
+  return *_vectors[index];
+}
+
+std::vector<std::unique_ptr<AbstractAggregateVector>>& WorkerState::aggregate_vectors() {
+  return _vectors;
 }
 
 AggregateDYOD::AggregateDYOD(const std::shared_ptr<AbstractOperator>& input_operator,
@@ -208,14 +192,14 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
 
   // Aggregate chunk by chunk
   const auto chunk_count = input_table->chunk_count();
-  auto state = OperatorSharedState<AggregateVectors>{_aggregates};
+  auto state = OperatorSharedState<WorkerState>{_aggregates};
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>(chunk_count);
 
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     jobs[chunk_id] = std::make_shared<JobTask>([&, chunk_id]() {
-      auto& aggregate_vectors = state.current_worker_state();
+      auto& worker_state = state.current_worker_state();
       const auto chunk = input_table->get_chunk(chunk_id);
-      _aggregate_chunk(aggregate_vectors, chunk);
+      _aggregate_chunk(worker_state, chunk);
     });
   }
 
@@ -225,21 +209,21 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
   }
 
   // If we haven't run any jobs, attempting to merge the worker states would fail
-  auto merged_aggregate_vectors = [&]() {
+  auto merged_worker_states = [&]() {
     TRACE_EVENT("aggregate_operator", "merge_worker_states");
-    return jobs.empty() ? AggregateVectors(_aggregates) : std::move(state.merge_worker_states());
+    return jobs.empty() ? WorkerState(_aggregates) : std::move(state.merge_worker_states());
   }();
 
   // SQL requires a single output row if the input table is empty and there is no GROUP BY clause.
   // We ensure this by inserting a single group into the group ID mapping before writing the output table.
   if (_group_id_map.empty() && _groupby_column_ids.empty()) {
-    _group_id(GroupKey{}, merged_aggregate_vectors);
+    _group_id(GroupKey{}, merged_worker_states);
   }
 
-  return _write_output_table(merged_aggregate_vectors);
+  return _write_output_table(merged_worker_states);
 }
 
-std::shared_ptr<Table> AggregateDYOD::_write_output_table(AggregateVectors& aggregate_vectors) {
+std::shared_ptr<Table> AggregateDYOD::_write_output_table(WorkerState& worker_state) {
   TRACE_EVENT("aggregate_operator", "_write_output_table");
   const auto input_table = left_input_table();
   auto column_definitions = TableColumnDefinitions();
@@ -303,7 +287,7 @@ std::shared_ptr<Table> AggregateDYOD::_write_output_table(AggregateVectors& aggr
           resolve_window_function(aggregate->window_function, [&](auto type) {
             constexpr auto aggregate_function = decltype(type)::value;
             auto& aggregate_vector = static_cast<TypedAggregateVector<ColumnDataType, aggregate_function>&>(
-                aggregate_vectors[aggregate_index]);
+                worker_state.aggregate_vector(aggregate_index));
             segments.push_back(_write_aggregate_segment<ColumnDataType, aggregate_function>(
                 aggregate_vector, _aggregate_is_nullable(aggregate_index), start_group_id, end_group_id));
           });
@@ -458,12 +442,12 @@ std::shared_ptr<AbstractSegment> AggregateDYOD::_write_default_aggregate_segment
   return std::make_shared<ValueSegment<AggregateDataType>>(std::move(values));
 }
 
-GroupID AggregateDYOD::_group_id(const GroupKey& group_key, AggregateVectors& aggregate_vectors) {
+GroupID AggregateDYOD::_group_id(const GroupKey& group_key, WorkerState& worker_state) {
   auto it = _group_id_map.find(group_key);
   if (it != _group_id_map.end()) {
     const auto group_id = it->second;
-    for (auto& aggregate_vector : aggregate_vectors) {
-      aggregate_vector.grow_if_necessary(group_id + 1);
+    for (auto& aggregate_vector : worker_state.aggregate_vectors()) {
+      aggregate_vector->grow_if_necessary(group_id + 1);
     }
     return group_id;
   }
@@ -480,8 +464,8 @@ GroupID AggregateDYOD::_group_id(const GroupKey& group_key, AggregateVectors& ag
     }
   }
 
-  for (auto& aggregate_vector : aggregate_vectors) {
-    aggregate_vector.grow_if_necessary(group_id + 1);
+  for (auto& aggregate_vector : worker_state.aggregate_vectors()) {
+    aggregate_vector->grow_if_necessary(group_id + 1);
   }
 
   return group_id;
@@ -491,9 +475,9 @@ GroupID AggregateDYOD::_group_count() {
   return _group_keys.size();
 }
 
-void AggregateDYOD::_aggregate_chunk(AggregateVectors& aggregate_vectors, const std::shared_ptr<const Chunk> chunk) {
+void AggregateDYOD::_aggregate_chunk(WorkerState& worker_state, const std::shared_ptr<const Chunk> chunk) {
   TRACE_EVENT("aggregate_operator", "_aggregate_chunk");
-  const auto group_ids = _group_ids_for_chunk(*chunk, aggregate_vectors);
+  const auto group_ids = _group_ids_for_chunk(*chunk, worker_state);
 
   // Compute aggregates
   const auto aggregate_count = _aggregates.size();
@@ -505,7 +489,7 @@ void AggregateDYOD::_aggregate_chunk(AggregateVectors& aggregate_vectors, const 
 
     // COUNT(*): Skip the generic path and just count the number of rows in each group
     if (aggregate->window_function == WindowFunction::Count && column_id == INVALID_COLUMN_ID) {
-      _aggregate_count_star(aggregate_vectors[aggregate_index], group_ids);
+      _aggregate_count_star(worker_state.aggregate_vector(aggregate_index), group_ids);
       continue;
     }
 
@@ -515,15 +499,15 @@ void AggregateDYOD::_aggregate_chunk(AggregateVectors& aggregate_vectors, const 
       using ColumnDataType = typename decltype(type)::type;
       resolve_window_function(aggregate->window_function, [&](auto type) {
         constexpr auto aggregate_function = decltype(type)::value;
-        auto& aggregate_vector =
-            static_cast<TypedAggregateVector<ColumnDataType, aggregate_function>&>(aggregate_vectors[aggregate_index]);
+        auto& aggregate_vector = static_cast<TypedAggregateVector<ColumnDataType, aggregate_function>&>(
+            worker_state.aggregate_vector(aggregate_index));
         _aggregate_segment<ColumnDataType, aggregate_function>(aggregate_vector, *segment, group_ids);
       });
     });
   }
 }
 
-std::vector<GroupID> AggregateDYOD::_group_ids_for_chunk(const Chunk& chunk, AggregateVectors& aggregate_vectors) {
+std::vector<GroupID> AggregateDYOD::_group_ids_for_chunk(const Chunk& chunk, WorkerState& worker_state) {
   TRACE_EVENT("aggregate_operator", "_group_ids_for_chunk");
   const auto input_table = left_input_table();
 
@@ -559,7 +543,7 @@ std::vector<GroupID> AggregateDYOD::_group_ids_for_chunk(const Chunk& chunk, Agg
     for (auto groupby_column_index = size_t{0}; groupby_column_index < groupby_column_count; ++groupby_column_index) {
       group_key[groupby_column_index] = std::move(group_keys_by_column[groupby_column_index][offset]);
     }
-    group_ids[offset] = _group_id(group_key, aggregate_vectors);
+    group_ids[offset] = _group_id(group_key, worker_state);
   }
 
   return group_ids;
