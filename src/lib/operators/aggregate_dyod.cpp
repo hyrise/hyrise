@@ -434,7 +434,8 @@ std::shared_ptr<AbstractSegment> AggregateDYOD::_write_default_aggregate_segment
       if (aggregate_vector.count(group_id) == 0) {
         null_values[chunk_offset] = true;
       } else {
-        values[chunk_offset] = aggregate_vector[group_id];
+        // Move aggregate values in case AggregateDataType is not trivially copyable
+        values[chunk_offset] = std::move(aggregate_vector[group_id]);
       }
     }
     return std::make_shared<ValueSegment<AggregateDataType>>(std::move(values), std::move(null_values));
