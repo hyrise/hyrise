@@ -21,6 +21,13 @@ TEST_F(AggregateDYODConfigTest, KeysBudgetGrowsWithLastLevelCache) {
   EXPECT_EQ(keys_budget_for(large), 2 * keys_budget_for(small));
 }
 
+TEST_F(AggregateDYODConfigTest, KeysBudgetSplitsTheSliceAmongItsSharers) {
+  auto crowded = FALLBACK_CACHE_SIZES;
+  crowded.llc_sharing_cpus = 2 * FALLBACK_CACHE_SIZES.llc_sharing_cpus;
+
+  EXPECT_EQ(keys_budget_for(crowded), keys_budget_for(FALLBACK_CACHE_SIZES) / 2);
+}
+
 TEST_F(AggregateDYODConfigTest, MergeTileRowsMatchesFallbackTuning) {
   EXPECT_EQ(merge_tile_rows_for(FALLBACK_CACHE_SIZES), 2048);
 }
