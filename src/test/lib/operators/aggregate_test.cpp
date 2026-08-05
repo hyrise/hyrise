@@ -941,6 +941,7 @@ TYPED_TEST(OperatorsAggregateTest, MultiThreadingCountDistinct) {
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
   test_output<TypeParam>(this->_table_wrapper_1_1, {{ColumnID{1}, WindowFunction::CountDistinct}}, {ColumnID{0}},
                          "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/count_distinct.tbl");
+}
 
 TYPED_TEST(OperatorsAggregateTest, FilteredDictionary) {
   const auto table =
