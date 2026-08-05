@@ -3,8 +3,12 @@
 #include <unistd.h>
 
 #include <algorithm>
+#include <charconv>
 #include <cstddef>
 #include <cstdint>
+#include <fstream>
+#include <string>
+#include <string_view>
 
 namespace hyrise {
 
@@ -12,8 +16,9 @@ namespace hyrise {
  * Per-core data cache sizes of the executing machine (unit: bytes per level).
  *
  * l1d_bytes and l2_bytes are per-core; l3_bytes is the slice reported by the OS, which on multi-CCX processors (e.g.
- * AMD Rome) is the per-CCX slice rather than the socket total. The cache-dependent tuning values in
- * aggregate_dyod_config.hpp are derived from these sizes.
+ * AMD Rome) is the per-CCX slice rather than the socket total. llc_sharing_cpus counts the CPUs competing for that
+ * slice -- every scheduler CPU runs a merge worker, so it is the divisor that turns the slice into a per-worker
+ * share. The cache-dependent tuning values in aggregate_dyod_config.hpp are derived from these values.
  *
  * @see cache_sizes() for the queried-and-sanitized instance, sanitize_cache_sizes() for the sanitization rules.
  */
@@ -21,30 +26,77 @@ struct CacheSizes {
   size_t l1d_bytes;
   size_t l2_bytes;
   size_t l3_bytes;
+  size_t llc_sharing_cpus;
 };
 
 /**
- * Cache sizes assumed when the OS reports none: 32 KiB L1d, 512 KiB L2, 16 MiB L3.
+ * Values assumed when the OS reports none: 32 KiB L1d, 512 KiB L2, 16 MiB L3 shared by 4 CPUs.
  *
- * These are the sizes the tuning constants were originally hand-tuned against, so a machine without cache reporting
- * behaves exactly as before the sizes became hardware-derived.
+ * These are the sizes the tuning constants were originally hand-tuned against (the L3 slice and CCX of an
+ * EPYC 7742), so a machine without cache reporting behaves exactly as before the sizes became hardware-derived.
  */
-constexpr CacheSizes FALLBACK_CACHE_SIZES = {32 * 1024, 512 * 1024, 16 * 1024 * 1024};
+constexpr CacheSizes FALLBACK_CACHE_SIZES = {32 * 1024, 512 * 1024, 16 * 1024 * 1024, 4};
 
 /**
- * Turns raw per-level cache sizes into values safe to derive tuning parameters from.
+ * Number of CPUs named by a sysfs cpu list such as "0-3" or "0-3,64-67".
+ *
+ * @return The count; 0 for an empty or malformed list, on which callers fall back.
+ */
+inline size_t parse_cpu_list_count(const std::string_view cpu_list) {
+  const auto* position = cpu_list.data();
+  const auto* const end = position + cpu_list.size();
+  auto count = size_t{0};
+  while (position != end) {
+    auto first = uint64_t{0};
+    auto parsed = std::from_chars(position, end, first);
+    if (parsed.ec != std::errc{}) {
+      return 0;
+    }
+    position = parsed.ptr;
+    auto last = first;
+    if (position != end && *position == '-') {
+      parsed = std::from_chars(position + 1, end, last);
+      if (parsed.ec != std::errc{} || last < first) {
+        return 0;
+      }
+      position = parsed.ptr;
+    }
+    count += last - first + 1;
+    if (position == end) {
+      break;
+    }
+    if (*position != ',' || position + 1 == end) {
+      return 0;
+    }
+    ++position;
+  }
+  return count;
+}
+
+/**
+ * CPUs sharing cpu0's last-level cache, from /sys/devices/system/cpu/cpu0/cache/index3/shared_cpu_list.
+ *
+ * index3 is the L3 on the machines we target; where the file is missing (no L3, non-Linux), the read yields an
+ * empty list and the caller falls back.
+ */
+inline size_t sysfs_llc_sharing_cpu_count() {
+  auto list_file = std::ifstream{"/sys/devices/system/cpu/cpu0/cache/index3/shared_cpu_list"};
+  auto cpu_list = std::string{};
+  std::getline(list_file, cpu_list);
+  return parse_cpu_list_count(cpu_list);
+}
+
+/**
+ * Turns raw cache values into ones safe to derive tuning parameters from.
  *
  * A level that is unknown (<= 0, as sysconf reports on incomplete kernels or in containers) falls back to
  * FALLBACK_CACHE_SIZES; a reported value is clamped to a plausible per-level range (L1d 4 KiB..1 MiB,
  * L2 64 KiB..64 MiB, L3 1 MiB..1 GiB) so a misreporting hypervisor cannot push a derived parameter to an extreme.
- * Levels are then ordered: L2 is raised to at least L1d, L3 to at least L2.
- *
- * @param l1d_bytes  Raw L1 data cache size, e.g. sysconf(_SC_LEVEL1_DCACHE_SIZE).
- * @param l2_bytes   Raw L2 cache size, e.g. sysconf(_SC_LEVEL2_CACHE_SIZE).
- * @param l3_bytes   Raw L3 cache size, e.g. sysconf(_SC_LEVEL3_CACHE_SIZE).
- * @return Sanitized sizes with l1d_bytes <= l2_bytes <= l3_bytes.
+ * Levels are then ordered: L2 is raised to at least L1d, L3 to at least L2. A sharing count of 0 (unreadable or
+ * malformed cpu list) likewise falls back; a reported one is capped at 1024.
  */
-inline CacheSizes sanitize_cache_sizes(const int64_t l1d_bytes, const int64_t l2_bytes, const int64_t l3_bytes) {
+inline CacheSizes sanitize_cache_sizes(const int64_t l1d_bytes, const int64_t l2_bytes, const int64_t l3_bytes,
+                                       const size_t llc_sharing_cpus) {
   const auto sanitize_level = [](const int64_t reported_bytes, const size_t fallback_bytes, const size_t minimum_bytes,
                                  const size_t maximum_bytes) {
     if (reported_bytes <= 0) {
@@ -59,22 +111,22 @@ inline CacheSizes sanitize_cache_sizes(const int64_t l1d_bytes, const int64_t l2
   sizes.l3_bytes = sanitize_level(l3_bytes, FALLBACK_CACHE_SIZES.l3_bytes, 1024 * 1024, 1024 * 1024 * 1024);
   sizes.l2_bytes = std::max(sizes.l2_bytes, sizes.l1d_bytes);
   sizes.l3_bytes = std::max(sizes.l3_bytes, sizes.l2_bytes);
+  sizes.llc_sharing_cpus =
+      llc_sharing_cpus == 0 ? FALLBACK_CACHE_SIZES.llc_sharing_cpus : std::min(llc_sharing_cpus, size_t{1024});
   return sizes;
 }
 
 /**
- * The executing machine's cache sizes, queried from the OS once and sanitized.
+ * The executing machine's cache values, queried from the OS once and sanitized.
  *
- * Queried via sysconf on first use and cached for the process lifetime; always safe to derive from (see
+ * Queried via sysconf and sysfs on first use and cached for the process lifetime; always safe to derive from (see
  * sanitize_cache_sizes()). Lives here rather than in Hyrise's Topology only because the aggregate is the sole
  * consumer so far; Topology is the eventual home.
- *
- * @return The same sanitized CacheSizes instance on every call.
  */
 inline const CacheSizes& cache_sizes() {
 #ifdef __linux__
   static const auto sizes = sanitize_cache_sizes(sysconf(_SC_LEVEL1_DCACHE_SIZE), sysconf(_SC_LEVEL2_CACHE_SIZE),
-                                                 sysconf(_SC_LEVEL3_CACHE_SIZE));
+                                                 sysconf(_SC_LEVEL3_CACHE_SIZE), sysfs_llc_sharing_cpu_count());
 #else
   static const auto sizes = FALLBACK_CACHE_SIZES;
 #endif

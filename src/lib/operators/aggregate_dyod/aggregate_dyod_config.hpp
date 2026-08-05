@@ -65,14 +65,6 @@ using PartitionId = uint32_t;
 constexpr PartitionCount MAX_PARTITION_COUNT = 8192;
 
 /**
- * Number of cores assumed to share one OS-reported last-level cache slice (unit: cores).
- *
- * sysconf reports the L3 slice a single core belongs to, not the socket total; on the calibration target that slice
- * is 16 MiB shared by the 4 cores of a CCX. Dividing by this turns the reported slice into a per-worker share.
- */
-constexpr size_t LLC_CORES_PER_SLICE = 4;
-
-/**
  * Last-level cache bytes budgeted per distinct key in a partition's merge map (unit: bytes per key).
  *
  * Covers the probe index (8 bytes per key at the 0.5 max load factor), the packed key, and the accumulator columns
@@ -86,7 +78,8 @@ constexpr size_t MERGE_MAP_BYTES_PER_KEY = 128;
  *
  * The partition count is chosen so that a single partition's dense merge map -- its probe index plus dense
  * key/accumulator storage -- is expected to stay resident in the merge worker's share of the last-level cache, the
- * cache-residency the radix split is designed to provide: (slice / LLC_CORES_PER_SLICE) / MERGE_MAP_BYTES_PER_KEY.
+ * cache-residency the radix split is designed to provide. The worker's share is the reported slice divided by the
+ * CPUs sharing it, since every one of them runs a merge worker.
  *
  * A larger budget yields fewer, larger partitions whose merge maps risk spilling out of cache; a smaller one yields
  * more, smaller partitions at the cost of higher per-partition overhead.
@@ -94,7 +87,7 @@ constexpr size_t MERGE_MAP_BYTES_PER_KEY = 128;
  * @see choose_partition_count() (hyperloglog.hpp), MAX_PARTITION_COUNT, cache_sizes() (cache_info.hpp).
  */
 inline size_t keys_budget_for(const CacheSizes& sizes) {
-  return sizes.l3_bytes / LLC_CORES_PER_SLICE / MERGE_MAP_BYTES_PER_KEY;
+  return sizes.l3_bytes / sizes.llc_sharing_cpus / MERGE_MAP_BYTES_PER_KEY;
 }
 
 inline size_t keys_budget() {
