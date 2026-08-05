@@ -8,7 +8,9 @@
 
 #include "all_type_variant.hpp"
 #include "base_test.hpp"
+#include "concurrency/transaction_context.hpp"
 #include "expression/expression_functional.hpp"
+#include "expression/pqp_column_expression.hpp"
 #include "expression/window_function_expression.hpp"
 #include "operators/abstract_operator.hpp"
 #include "operators/aggregate_dyod.hpp"
@@ -19,7 +21,9 @@
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
+#include "operators/validate.hpp"
 #include "storage/chunk_encoder.hpp"
+#include "storage/mvcc_data.hpp"
 #include "storage/table.hpp"
 #include "storage/value_segment.hpp"
 #include "testing_assert.hpp"
@@ -939,4 +943,64 @@ TYPED_TEST(OperatorsAggregateTest, MultiThreadingCountDistinct) {
                          "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/count_distinct.tbl");
 }
 
+TYPED_TEST(OperatorsAggregateTest, FilteredDictionary) {
+  const auto table =
+      std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}, {"b", DataType::Int, false}},
+                              TableType::Data, Chunk::DEFAULT_SIZE, UseMvcc::Yes);
+
+  table->append({int32_t{0}, int32_t{0}});
+  table->append({int32_t{0}, int32_t{1}});
+  table->append({int32_t{0}, int32_t{2}});
+  table->append({int32_t{1}, int32_t{0}});
+  table->append({int32_t{1}, int32_t{1}});
+  table->append({int32_t{1}, int32_t{2}});
+
+  table->last_chunk()->set_immutable();
+  table->last_chunk()->mvcc_data()->set_end_cid(ChunkOffset{0}, CommitID{1});
+  table->last_chunk()->mvcc_data()->set_end_cid(ChunkOffset{2}, CommitID{1});
+  table->last_chunk()->mvcc_data()->set_end_cid(ChunkOffset{3}, CommitID{1});
+  table->last_chunk()->mvcc_data()->set_end_cid(ChunkOffset{5}, CommitID{1});
+  table->last_chunk()->mvcc_data()->max_end_cid = CommitID{0};
+  table->last_chunk()->increase_invalid_row_count(ChunkOffset{4});
+
+  ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{EncodingType::Dictionary});
+
+  const auto table_wrapper = std::make_shared<TableWrapper>(table);
+  const auto validate = std::make_shared<Validate>(table_wrapper);
+  const auto transaction_context = std::make_shared<TransactionContext>(TransactionID{1}, CommitID{2}, AutoCommit::Yes);
+  validate->set_transaction_context(transaction_context);
+  validate->never_clear_output();
+  table_wrapper->execute();
+  validate->execute();
+
+  const auto a = PQPColumnExpression::from_table(*validate->get_output(), "a");
+  const auto b = PQPColumnExpression::from_table(*validate->get_output(), "b");
+  const auto aggregate_expressions = std::vector<std::shared_ptr<WindowFunctionExpression>>{min_(b), max_(b)};
+
+  {
+    // Case i: No grouping.
+    const auto expected_result = std::make_shared<Table>(
+        TableColumnDefinitions{{"MIN(b)", DataType::Int, true}, {"MAX(b)", DataType::Int, true}}, TableType::Data);
+    expected_result->append({int32_t{1}, int32_t{1}});
+
+    const auto aggregate = std::make_shared<TypeParam>(validate, aggregate_expressions, std::vector<ColumnID>{});
+    aggregate->execute();
+    EXPECT_TABLE_EQ_UNORDERED(aggregate->get_output(), expected_result);
+  }
+
+  {
+    // Case ii: Grouping.
+    const auto expected_result = std::make_shared<Table>(
+        TableColumnDefinitions{
+            {"a", DataType::Int, false}, {"MIN(b)", DataType::Int, true}, {"MAX(b)", DataType::Int, true}},
+        TableType::Data);
+    expected_result->append({int32_t{0}, int32_t{1}, int32_t{1}});
+    expected_result->append({int32_t{1}, int32_t{1}, int32_t{1}});
+
+    const auto aggregate =
+        std::make_shared<TypeParam>(validate, aggregate_expressions, std::vector<ColumnID>{ColumnID{0}});
+    aggregate->execute();
+    EXPECT_TABLE_EQ_UNORDERED(aggregate->get_output(), expected_result);
+  }
+}
 }  // namespace hyrise
