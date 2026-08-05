@@ -398,11 +398,7 @@ std::shared_ptr<AbstractSegment> AggregateDYOD::_write_count_aggregate_segment(
     GroupID end_group_id) {
   using AggregateDataType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
   const auto& counts = aggregate_vector.counts();
-  const auto chunk_size = end_group_id - start_group_id;
-  auto values = pmr_vector<AggregateDataType>(chunk_size);
-  for (auto group_id = start_group_id; group_id < end_group_id; ++group_id) {
-    values[group_id - start_group_id] = counts[group_id];
-  }
+  auto values = pmr_vector<AggregateDataType>(counts.begin() + start_group_id, counts.begin() + end_group_id);
   return std::make_shared<ValueSegment<AggregateDataType>>(std::move(values));
 }
 
@@ -412,12 +408,12 @@ std::shared_ptr<AbstractSegment> AggregateDYOD::_write_count_distinct_aggregate_
     GroupID end_group_id) {
   using AggregateDataType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
   const auto chunk_size = end_group_id - start_group_id;
-
   auto values = pmr_vector<AggregateDataType>(chunk_size);
 
   for (auto group_id = start_group_id; group_id < end_group_id; ++group_id) {
+    const auto chunk_offset = group_id - start_group_id;
     // The set size is the number of distinct values.
-    values[group_id - start_group_id] = aggregate_vector[group_id].size();
+    values[chunk_offset] = aggregate_vector[group_id].size();
   }
 
   return std::make_shared<ValueSegment<AggregateDataType>>(std::move(values));
@@ -438,7 +434,7 @@ std::shared_ptr<AbstractSegment> AggregateDYOD::_write_default_aggregate_segment
       if (aggregate_vector.count(group_id) == 0) {
         null_values[chunk_offset] = true;
       } else {
-        values[chunk_offset] = aggregate_vector.values()[group_id];
+        values[chunk_offset] = aggregate_vector[group_id];
       }
     }
     return std::make_shared<ValueSegment<AggregateDataType>>(std::move(values), std::move(null_values));
@@ -446,7 +442,7 @@ std::shared_ptr<AbstractSegment> AggregateDYOD::_write_default_aggregate_segment
 
   auto values = pmr_vector<AggregateDataType>(chunk_size);
   for (auto group_id = start_group_id; group_id < end_group_id; ++group_id) {
-    values[group_id - start_group_id] = aggregate_vector.values()[group_id];
+    values[group_id - start_group_id] = aggregate_vector[group_id];
   }
   return std::make_shared<ValueSegment<AggregateDataType>>(std::move(values));
 }
