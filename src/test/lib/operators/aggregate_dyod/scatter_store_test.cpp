@@ -152,6 +152,27 @@ TEST_F(RegionTest, ClearResetsSizeAndRetainsCapacity) {
   expect_region_bytes(_region, concat(lines));
 }
 
+TEST_F(RegionTest, ReleaseFreesTheBuffer) {
+  const auto line = make_line(0x20);
+  _region.push_line(line.data());
+
+  _region.release();
+
+  EXPECT_EQ(_region.size(), 0u);
+  EXPECT_EQ(_region.data(), nullptr);
+}
+
+TEST_F(RegionTest, ReleasedRegionAcceptsNewLines) {
+  const auto line = make_line(0x30);
+  _region.push_line(line.data());
+  _region.release();
+
+  _region.push_line(line.data());
+
+  EXPECT_EQ(_region.size(), SWWC_LINE_BYTES);
+  expect_region_bytes(_region, std::vector(line.begin(), line.end()));
+}
+
 TEST_F(RegionTest, EmptyRegionHasZeroSize) {
   EXPECT_EQ(_region.size(), 0);
   _region.clear();
@@ -189,6 +210,26 @@ TEST_F(ScatterStoreTest, ClearResetsAllRegions) {
     EXPECT_EQ(store.key_region(partition).size(), 0u);
     EXPECT_EQ(store.value_region(partition, 0).size(), 0u);
     EXPECT_EQ(store.value_null_bitmap_region(partition).size(), 0u);
+  }
+}
+
+TEST_F(ScatterStoreTest, ReleaseFreesAllRegions) {
+  constexpr auto value_widths = std::array<size_t, 1>{8};
+  auto store = ScatterStore(PartitionCount{2}, 8, std::span<const size_t>(value_widths), 1, true);
+
+  const auto line = make_line(0x60);
+  for (auto partition = PartitionId{0}; partition < 2; ++partition) {
+    store.key_region(partition).push_line(line.data());
+    store.value_region(partition, 0).push_line(line.data());
+    store.value_null_bitmap_region(partition).push_line(line.data());
+  }
+
+  store.release();
+
+  for (auto partition = PartitionId{0}; partition < 2; ++partition) {
+    EXPECT_EQ(store.key_region(partition).data(), nullptr);
+    EXPECT_EQ(store.value_region(partition, 0).data(), nullptr);
+    EXPECT_EQ(store.value_null_bitmap_region(partition).data(), nullptr);
   }
 }
 
