@@ -1,5 +1,7 @@
 #pragma once
 
+#include <algorithm>
+#include <bit>
 #include <cstddef>
 #include <cstdint>
 
@@ -13,9 +15,10 @@ namespace hyrise {
 // aggregate_dyod.hpp for the operator itself and the phase overview.
 //
 // The compile-time constants below are machine-independent inputs, not baked-in hardware assumptions. Values that
-// should scale with the deployment machine come in two steps: cache-dependent budgets (keys_budget(),
-// merge_tile_rows()) are a compile-time fraction applied to the queried cache sizes (see cache_info.hpp), and the
-// partition count is derived from those budgets per query; see choose_partition_count() in hyperloglog.hpp.
+// should scale with the deployment machine come in two steps: cache-dependent budgets (merge_tile_rows() from L1d,
+// max_partition_count() from L2, keys_budget() from L3) are a compile-time fraction applied to the queried cache
+// sizes (see cache_info.hpp), and the partition count is derived from those budgets per query; see
+// choose_partition_count() in hyperloglog.hpp.
 // Overriding the constants for experimentation is expected. The fractions are calibrated against a parameter sweep
 // on EPYC 7742 (32 KiB L1d, 512 KiB L2, 16 MiB L3 per 4-core CCX), which matches FALLBACK_CACHE_SIZES, so machines
 // without cache reporting behave exactly like the calibration target.
@@ -50,17 +53,14 @@ using PartitionCount = uint32_t;
 using PartitionId = uint32_t;
 
 /**
- * Upper clamp on the derived partition count P (unit: partitions; always a power of two).
+ * Absolute clamp on the derived partition count P (unit: partitions; always a power of two).
  *
- * Bounds per-partition bookkeeping and the SWWC staging footprint, which grows linearly in P (one staging line per
- * (stream, partition) pair). The lower bound on P is the worker count, applied in choose_partition_count() rather than
- * fixed here.
+ * Bounds per-partition bookkeeping independently of any cache size, so a machine reporting an implausibly large L2
+ * cannot drive the per-partition state arbitrarily high. The cache-dependent ceiling is max_partition_count(), which
+ * is the binding one on the calibration target; the lower bound on P is the worker count, applied in
+ * choose_partition_count() rather than fixed here.
  *
- * Raising it permits a finer radix split on very high-cardinality inputs at the cost of more per-partition state and a
- * larger staging footprint; lowering it caps that split and can leave per-partition merge maps too large to stay
- * cache-resident.
- *
- * @see choose_partition_count() (hyperloglog.hpp), keys_budget(), SWWC_LINE_BYTES.
+ * @see max_partition_count() for the L2-derived ceiling, choose_partition_count() (hyperloglog.hpp), keys_budget().
  */
 constexpr PartitionCount MAX_PARTITION_COUNT = 8192;
 
@@ -137,6 +137,30 @@ constexpr uint8_t HLL_PRECISION = 12;
  * transactions and undoes the non-temporal store benefit.
  */
 constexpr size_t SWWC_LINE_BYTES = 64;
+
+/**
+ * Cache-derived ceiling on the partition count P for a query scattering stream_count streams (unit: partitions).
+ *
+ * The scatter phase keeps one SWWC_LINE_BYTES staging line plus one fill counter per (stream, partition) pair, so its
+ * hot working set is stream_count * P * (SWWC_LINE_BYTES + sizeof(size_t)) bytes and is touched on every scattered
+ * row. Once that outgrows the scattering core's L2 the scatter loop slows down measurably, so P is bounded to keep it
+ * resident.
+ *
+ * The result is rounded down to a power of two (P indexes by the low bits of a hash) and clamped by the absolute
+ * MAX_PARTITION_COUNT.
+ *
+ * @see MAX_PARTITION_COUNT for the machine-independent clamp, choose_partition_count() (hyperloglog.hpp),
+ *   ScatterHeads (scatter_store.hpp) for the staging layout.
+ */
+inline PartitionCount max_partition_count_for(const CacheSizes& sizes, const size_t stream_count) {
+  const auto staging_bytes_per_partition = std::max(size_t{1}, stream_count) * (SWWC_LINE_BYTES + sizeof(size_t));
+  const auto fitting_partitions = std::bit_floor(std::max(size_t{1}, sizes.l2_bytes / staging_bytes_per_partition));
+  return static_cast<PartitionCount>(std::min(fitting_partitions, static_cast<size_t>(MAX_PARTITION_COUNT)));
+}
+
+inline PartitionCount max_partition_count(const size_t stream_count) {
+  return max_partition_count_for(cache_sizes(), stream_count);
+}
 
 /**
  * Fraction of L1d granted to the merge phase's row->slot scratch: scratch budget = L1d / this (unit: divisor).

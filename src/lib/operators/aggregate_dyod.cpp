@@ -745,9 +745,6 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate(const KeySchema& key_schema, co
     return _aggregate_low_cardinality(key_schema, aggregate_schema, input_table, cardinality_estimate);
   }
 
-  const auto partition_count = choose_partition_count(cardinality_estimate, num_cpus);
-  const auto shift = static_cast<uint32_t>(std::countr_zero(partition_count));
-
   const auto value_stream_count = aggregate_schema.value_stream_count();
   auto value_stream_widths = std::vector<size_t>(value_stream_count);
   auto value_stream_sources = std::vector<ColumnID>(value_stream_count, INVALID_COLUMN_ID);
@@ -791,6 +788,10 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate(const KeySchema& key_schema, co
   if (has_value_null_bitmap) {
     stream_widths.emplace_back(1);
   }
+
+  // The ceiling on P depends on the query's stream count, so the partition count is only chosen here.
+  const auto partition_count = choose_partition_count(cardinality_estimate, num_cpus, stream_widths.size());
+  const auto shift = static_cast<uint32_t>(std::countr_zero(partition_count));
 
   auto scatter_stores = std::vector<ScatterStore>{};
   scatter_stores.reserve(scatter_worker_count);
