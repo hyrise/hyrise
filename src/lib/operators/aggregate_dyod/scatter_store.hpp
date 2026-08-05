@@ -117,6 +117,9 @@ class Region : private Noncopyable {
    */
   void clear();
 
+  /** Free the backing storage. */
+  void release();
+
  private:
   static constexpr size_t INITIAL_LINES = 16;
   static constexpr size_t INITIAL_CAPACITY = INITIAL_LINES * SWWC_LINE_BYTES;
@@ -189,6 +192,12 @@ inline const std::byte* Region::data() const {
 
 inline void Region::clear() {
   _size = 0;
+}
+
+inline void Region::release() {
+  _data.reset();
+  _size = 0;
+  _capacity = 0;
 }
 
 /**
@@ -284,6 +293,9 @@ class ScatterStore : private Noncopyable {
    */
   void clear();
 
+  /** Free the storage of every held region and buffer. */
+  void release();
+
  private:
   [[maybe_unused]] PartitionCount _partition_count;   // Radix partition count P; valid PartitionId range [0, P).
   std::vector<Region> _key_regions;                   // One packed-key region per partition; indexed [partition].
@@ -368,6 +380,24 @@ inline void ScatterStore::clear() {
   }
   for (auto& arena : _value_arenas) {
     arena.clear();
+  }
+}
+
+inline void ScatterStore::release() {
+  for (auto& region : _key_regions) {
+    region.release();
+  }
+  for (auto& region : _value_regions) {
+    region.release();
+  }
+  for (auto& region : _value_null_bitmap_regions) {
+    region.release();
+  }
+  for (auto& buffer : _key_spill_buffers) {
+    buffer.release();
+  }
+  for (auto& arena : _value_arenas) {
+    arena.release();
   }
 }
 

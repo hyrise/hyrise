@@ -974,6 +974,13 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate(const KeySchema& key_schema, co
 
   const auto output_table = build_output_table(output_column_definitions, per_worker_outputs);
   step_performance_data.set_step_runtime(OperatorSteps::OutputWriting, timer.lap());
+
+  // The per-partition frees dominate a multi-threaded aggregate, so spread them over the workers. Merge is the last
+  // reader and the output columns hold copies, so the stores are dead by this point.
+  run_workers(scatter_worker_count, [&](const size_t worker_id) {
+    scatter_stores[worker_id].release();
+  });
+
   return output_table;
 }
 

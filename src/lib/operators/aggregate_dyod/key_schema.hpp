@@ -158,6 +158,12 @@ class StringSpillBuffer : private Noncopyable {
    */
   void clear();
 
+  /** Free the blocks instead of keeping them for reuse. */
+  void release();
+
+  /** @return Bytes used by this buffer and the blocks it holds. */
+  size_t memory_usage() const;
+
  private:
   struct Block {
     std::unique_ptr<std::byte[]> data;
@@ -194,6 +200,20 @@ inline void StringSpillBuffer::clear() {
     block.used = 0;
   }
   _current_block = 0;
+}
+
+inline void StringSpillBuffer::release() {
+  _blocks = std::vector<Block>{};
+  _current_block = 0;
+}
+
+inline size_t StringSpillBuffer::memory_usage() const {
+  auto bytes = sizeof(*this);
+  bytes += _blocks.capacity() * sizeof(Block);
+  for (const auto& block : _blocks) {
+    bytes += block.capacity;
+  }
+  return bytes;
 }
 
 // ------------------------------------------------------------------------------------------------------------
