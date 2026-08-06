@@ -365,6 +365,16 @@ TEST_F(OperatorsAggregateDYODTest, MultiThreadedLowCardinalityCombine) {
                               {ColumnID{2}});
 }
 
+TEST_F(OperatorsAggregateDYODTest, MultiThreadedCountDistinctWithoutGroupBy) {
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+  const auto input = make_input(30'000);
+  compare_with_aggregate_hash(input,
+                              {{ColumnID{2}, WindowFunction::CountDistinct},
+                               {ColumnID{1}, WindowFunction::CountDistinct},
+                               {ColumnID{3}, WindowFunction::CountDistinct}},
+                              {});
+}
+
 TEST_F(OperatorsAggregateDYODTest, MultiThreadedManyGroups) {
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
   const auto input = make_input(120'000);
