@@ -485,10 +485,14 @@ inline void pack_string_columns(const StringKeyColumns& string_columns, const si
     total_length += value.size();
   }
 
+  // NULL rows decode to empty views with a null data pointer, which must not reach memcpy.
   const auto blob_capacity = STRING_BLOB_BYTES_PER_COLUMN * column_count;
   if (total_length <= blob_capacity) {
     auto* cursor = key_out + blob_offset;
     for (auto index = size_t{0}; index < column_count; ++index) {
+      if (scratch.string_columns[index].nulls[chunk_offset]) {
+        continue;
+      }
       const auto& value = scratch.string_columns[index].values[chunk_offset];
       std::memcpy(cursor, value.data(), value.size());
       cursor += value.size();
@@ -499,6 +503,9 @@ inline void pack_string_columns(const StringKeyColumns& string_columns, const si
   auto content = std::vector<std::byte>{};
   content.reserve(total_length);
   for (auto index = size_t{0}; index < column_count; ++index) {
+    if (scratch.string_columns[index].nulls[chunk_offset]) {
+      continue;
+    }
     const auto& value = scratch.string_columns[index].values[chunk_offset];
     const auto* bytes = reinterpret_cast<const std::byte*>(value.data());
     content.insert(content.end(), bytes, bytes + value.size());
