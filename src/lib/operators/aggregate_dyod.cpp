@@ -708,12 +708,12 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate(const KeySchema& key_schema, co
   const auto sample_stride = estimate_sample_stride(chunk_count);
   const auto sampled_chunk_count = (chunk_count + sample_stride - 1) / sample_stride;
   auto sketches = std::vector<HllSketch>(estimate_worker_count);
-  auto half_sketches = std::vector<HllSketch>(estimate_worker_count);
+  // The half-sample sketch only exists to rescale a strided sample.
+  auto half_sketches = std::vector<HllSketch>(sample_stride > 1 ? estimate_worker_count : 0);
   {
     auto sample_cursor = std::atomic<size_t>{0};
     run_workers(estimate_worker_count, [&](const size_t worker_id) {
       auto& sketch = sketches[worker_id];
-      auto& half_sketch = half_sketches[worker_id];
       auto key_scratch = std::vector<std::byte>(key_width);
       auto decode_scratch = KeyDecodeScratch{};
       auto spill_scratch = StringSpillBuffer{};
@@ -738,7 +738,7 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate(const KeySchema& key_schema, co
           const auto key_hash = key_schema.hash(key_scratch.data());
           sketch.add(key_hash);
           if (in_half_sample) {
-            half_sketch.add(key_hash);
+            half_sketches[worker_id].add(key_hash);
           }
         }
         spill_scratch.clear();
@@ -747,10 +747,13 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate(const KeySchema& key_schema, co
   }
   for (auto worker_id = size_t{1}; worker_id < estimate_worker_count; ++worker_id) {
     sketches.front().merge(sketches[worker_id]);
-    half_sketches.front().merge(half_sketches[worker_id]);
+    if (sample_stride > 1) {
+      half_sketches.front().merge(half_sketches[worker_id]);
+    }
   }
   const auto cardinality_estimate =
-      scale_sampled_estimate(sketches.front().estimate(), half_sketches.front().estimate(),
+      scale_sampled_estimate(sketches.front().estimate(),
+                             sample_stride > 1 ? half_sketches.front().estimate() : size_t{0},
                              input_table.row_count(), sample_stride);
 
   step_performance_data.set_step_runtime(OperatorSteps::Estimate, timer.lap());
