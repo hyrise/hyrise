@@ -207,4 +207,15 @@ inline size_t low_cardinality_threshold() {
   return keys_budget() / 2;
 }
 
+/**
+ * Ceiling on the number of workers a phase fans out to (unit: workers).
+ *
+ * Under the immediate scheduler every JobTask runs sequentially on the calling thread, so per-worker state beyond one
+ * store or map is pure setup and teardown; the limit is 1 there and the CPU count otherwise. It also lower-bounds the
+ * partition count via choose_partition_count(), so single-threaded runs size P from the cardinality alone.
+ */
+inline size_t worker_limit_for(const bool is_multi_threaded, const size_t num_cpus) {
+  return is_multi_threaded ? std::max(size_t{1}, num_cpus) : size_t{1};
+}
+
 }  // namespace hyrise
