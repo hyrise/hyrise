@@ -83,4 +83,14 @@ TEST_F(AggregateDYODConfigTest, MaxPartitionCountRespectsAbsoluteCeiling) {
 
 
 
+TEST_F(AggregateDYODConfigTest, WorkerLimitFollowsScheduler) {
+  EXPECT_EQ(worker_limit_for(true, 32), 32);
+  EXPECT_EQ(worker_limit_for(false, 32), 1);
+}
+
+TEST_F(AggregateDYODConfigTest, WorkerLimitIsAtLeastOne) {
+  EXPECT_EQ(worker_limit_for(true, 0), 1);
+  EXPECT_EQ(worker_limit_for(false, 0), 1);
+}
+
 }  // namespace hyrise
