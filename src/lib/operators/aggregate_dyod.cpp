@@ -137,13 +137,18 @@ class StandardAggregator : public AbstractAggregator {
       }
     }
 
+    // Fold through locals so the accumulator stays in a register instead of a load/store per row.
+    auto accumulator = state.accumulator;
+    auto count = state.count;
     segment_iterate<ColumnDataType>(segment, [&](const auto& position) {
       if (position.is_null()) {
         return;
       }
-      fold(position.value(), state.count, state.accumulator);
-      ++state.count;
+      fold(position.value(), count, accumulator);
+      ++count;
     });
+    state.accumulator = std::move(accumulator);
+    state.count = count;
   }
 
   void merge() override {
@@ -315,12 +320,13 @@ class CountColumnAggregator : public AbstractAggregator {
   }
 
   void accumulate(const size_t worker_id, const Chunk& chunk) override {
-    auto& count = _states[worker_id].count;
+    auto count = _states[worker_id].count;
     segment_iterate<ColumnDataType>(*chunk.get_segment(_column_id), [&](const auto& position) {
       if (!position.is_null()) {
         ++count;
       }
     });
+    _states[worker_id].count = count;
   }
 
   void merge() override {
