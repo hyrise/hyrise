@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <bit>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 
@@ -116,28 +117,33 @@ constexpr size_t PARALLEL_ESTIMATE_THRESHOLD = 100'000;
  */
 constexpr size_t ESTIMATE_SAMPLE_CHUNKS = 16;
 
-/**
- * Margin by which a sampled estimate must undershoot the sampled row count to be taken as exact (unit: factor).
- *
- * When the sketch saw at least this many times more rows than distinct keys, the sample has hit the key space's
- * plateau and the estimate is the true cardinality; otherwise distinct keys grow with the rows read, and the estimate
- * is scaled by the stride. Linear scaling is exact for keys clustered in runs (each key lands wholly inside a sampled
- * or skipped chunk) and overestimates spread-out repeated keys, which errs toward more, smaller partitions.
- */
-constexpr size_t ESTIMATE_PLATEAU_FACTOR = 8;
-
 /** Chunk stride of the estimate phase: sample every k-th chunk so about ESTIMATE_SAMPLE_CHUNKS chunks are read. */
 inline size_t estimate_sample_stride(const size_t chunk_count) {
   return std::max(size_t{1}, chunk_count / ESTIMATE_SAMPLE_CHUNKS);
 }
 
-/** Rescale a sketch estimate taken over every stride-th chunk to the full input (see ESTIMATE_PLATEAU_FACTOR). */
-inline size_t scale_sampled_estimate(const size_t estimate, const size_t sampled_row_count,
+/**
+ * Rescale a sketch estimate taken over every stride-th chunk to the full input.
+ *
+ * Rows-per-key inside the sample cannot tell a plateaued key space from keys that merely repeat within their own
+ * chunk while every chunk brings new ones, so the growth between a half-size sample and the full sample decides the
+ * scaling: an estimate that did not grow is the true cardinality, one that doubled grows linearly with the input and
+ * is scaled by the stride, and partial growth is extrapolated as stride^log2(growth). The result is clamped to
+ * [estimate, min(total rows, estimate * stride)]; an empty sample carries no information and yields the row count.
+ */
+inline size_t scale_sampled_estimate(const size_t estimate, const size_t half_sample_estimate,
                                      const size_t total_row_count, const size_t stride) {
-  if (stride == 1 || estimate * ESTIMATE_PLATEAU_FACTOR <= sampled_row_count) {
+  if (stride == 1) {
     return estimate;
   }
-  return std::min(total_row_count, estimate * stride);
+  if (estimate == 0) {
+    return total_row_count;
+  }
+  const auto growth = std::clamp(
+      static_cast<double>(estimate) / static_cast<double>(std::max(half_sample_estimate, size_t{1})), 1.0, 2.0);
+  const auto scaled = static_cast<double>(estimate) * std::pow(static_cast<double>(stride), std::log2(growth));
+  const auto ceiling = std::min(static_cast<double>(total_row_count), static_cast<double>(estimate * stride));
+  return static_cast<size_t>(std::llround(std::clamp(scaled, static_cast<double>(estimate), ceiling)));
 }
 
 /**
