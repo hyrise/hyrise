@@ -9,9 +9,11 @@
 #include "base_test.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/window_function_expression.hpp"
+#include "hyrise.hpp"
 #include "operators/aggregate_dyod.hpp"
 #include "operators/aggregate_hash.hpp"
 #include "operators/table_wrapper.hpp"
+#include "scheduler/node_queue_scheduler.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/pos_lists/row_id_pos_list.hpp"
@@ -338,6 +340,39 @@ TEST_F(OperatorsAggregateDYODTest, LowCardinalityPathSingleChunkNoCombine) {
                                {ColumnID{2}, WindowFunction::Max},
                                {INVALID_COLUMN_ID, WindowFunction::Count}},
                               {ColumnID{0}, ColumnID{1}});
+}
+
+TEST_F(OperatorsAggregateDYODTest, LowCardinalityPathStringValues) {
+  const auto input = make_input(30'000);
+  compare_with_aggregate_hash(input,
+                              {{ColumnID{1}, WindowFunction::Min},
+                               {ColumnID{1}, WindowFunction::Max},
+                               {ColumnID{1}, WindowFunction::Count},
+                               {ColumnID{4}, WindowFunction::Min},
+                               {ColumnID{3}, WindowFunction::Sum}},
+                              {ColumnID{2}});
+}
+
+TEST_F(OperatorsAggregateDYODTest, MultiThreadedLowCardinalityCombine) {
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+  const auto input = make_input(30'000);
+  compare_with_aggregate_hash(input,
+                              {{ColumnID{1}, WindowFunction::Min},
+                               {ColumnID{1}, WindowFunction::Max},
+                               {ColumnID{3}, WindowFunction::Sum},
+                               {ColumnID{3}, WindowFunction::Avg},
+                               {INVALID_COLUMN_ID, WindowFunction::Count}},
+                              {ColumnID{2}});
+}
+
+TEST_F(OperatorsAggregateDYODTest, MultiThreadedManyGroups) {
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+  const auto input = make_input(120'000);
+  compare_with_aggregate_hash(input,
+                              {{ColumnID{2}, WindowFunction::Sum},
+                               {ColumnID{4}, WindowFunction::Min},
+                               {ColumnID{3}, WindowFunction::CountDistinct}},
+                              {ColumnID{0}});
 }
 
 }  // namespace hyrise

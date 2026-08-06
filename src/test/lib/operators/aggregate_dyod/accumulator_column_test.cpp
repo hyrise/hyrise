@@ -117,6 +117,27 @@ TEST_F(AggregateDYODAccumulatorColumnTest, BuildSharesValueStreamsAcrossAggregat
   EXPECT_EQ(schema.aggregate_value_stream(3), AggregateSchema::NO_VALUE_STREAM);
 }
 
+TEST_F(AggregateDYODAccumulatorColumnTest, LowCardinalityEligibilityAdmitsStringSources) {
+  const auto table = make_input_table({{"a", DataType::Int, false}, {"b", DataType::String, true}}, {});
+  const auto aggregates = std::vector<std::shared_ptr<WindowFunctionExpression>>{
+      make_aggregate(WindowFunction::Sum, *table, ColumnID{0}),
+      make_aggregate(WindowFunction::Min, *table, ColumnID{1}),
+      make_aggregate(WindowFunction::Count, *table, ColumnID{1}),
+  };
+  EXPECT_TRUE(low_cardinality_eligible(AggregateSchema::build(aggregates, *table)));
+}
+
+TEST_F(AggregateDYODAccumulatorColumnTest, LowCardinalityEligibilityRejectsCountDistinctAndAny) {
+  const auto table = make_input_table({{"a", DataType::Int, false}}, {});
+  const auto count_distinct = std::vector<std::shared_ptr<WindowFunctionExpression>>{
+      make_aggregate(WindowFunction::CountDistinct, *table, ColumnID{0})};
+  EXPECT_FALSE(low_cardinality_eligible(AggregateSchema::build(count_distinct, *table)));
+
+  const auto any = std::vector<std::shared_ptr<WindowFunctionExpression>>{
+      make_aggregate(WindowFunction::Any, *table, ColumnID{0})};
+  EXPECT_FALSE(low_cardinality_eligible(AggregateSchema::build(any, *table)));
+}
+
 TEST_F(AggregateDYODAccumulatorColumnTest, BuildRejectsOutOfScopeFunctions) {
   const auto table = make_input_table({{"a", DataType::Int, false}}, {});
   const auto aggregates = std::vector<std::shared_ptr<WindowFunctionExpression>>{
