@@ -93,4 +93,27 @@ TEST_F(AggregateDYODConfigTest, WorkerLimitIsAtLeastOne) {
   EXPECT_EQ(worker_limit_for(false, 0), 1);
 }
 
+TEST_F(AggregateDYODConfigTest, EstimateSampleStrideCoversSmallInputs) {
+  EXPECT_EQ(estimate_sample_stride(0), 1);
+  EXPECT_EQ(estimate_sample_stride(ESTIMATE_SAMPLE_CHUNKS), 1);
+  EXPECT_EQ(estimate_sample_stride(4 * ESTIMATE_SAMPLE_CHUNKS), 4);
+}
+
+TEST_F(AggregateDYODConfigTest, SampledEstimatePassesThroughWithoutSampling) {
+  EXPECT_EQ(scale_sampled_estimate(1234, 2'000'000, 2'000'000, 1), 1234);
+}
+
+TEST_F(AggregateDYODConfigTest, SampledEstimateKeepsPlateauedCardinality) {
+  EXPECT_EQ(scale_sampled_estimate(4, 1'000'000, 60'000'000, 57), 4);
+  EXPECT_EQ(scale_sampled_estimate(100'000, 1'000'000, 60'000'000, 57), 100'000);
+}
+
+TEST_F(AggregateDYODConfigTest, SampledEstimateScalesGrowingCardinality) {
+  EXPECT_EQ(scale_sampled_estimate(300'000, 1'000'000, 6'000'000, 5), 1'500'000);
+}
+
+TEST_F(AggregateDYODConfigTest, SampledEstimateNeverExceedsRowCount) {
+  EXPECT_EQ(scale_sampled_estimate(900'000, 1'000'000, 20'000'000, 57), 20'000'000);
+}
+
 }  // namespace hyrise
