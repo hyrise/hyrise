@@ -32,6 +32,16 @@ uint64_t packed_key_hash(const int32_t value) {
   return hash_bytes(key.data(), key.size());
 }
 
+// Preimage under mix64 of a hash that selects `register_index` and leaves no remaining set bits.
+uint64_t saturating_hash(const uint64_t register_index) {
+  auto value = register_index << (64 - HLL_PRECISION);
+  value ^= value >> 33;
+  value *= 0x9cb4b2f8129337dbull;
+  value ^= value >> 33;
+  value *= 0x4f74430c22a54005ull;
+  return value ^ (value >> 33);
+}
+
 void add_distinct_values(HllSketch& sketch, const size_t count, const uint64_t offset = 0) {
   for (auto value = uint64_t{0}; value < count; ++value) {
     sketch.add(mix(value + offset));
@@ -112,7 +122,7 @@ TEST_F(HllSketchTest, EstimatesLargeCardinalityFromPackedKeyHashes) {
 TEST_F(HllSketchTest, SaturatedSketchClampsEstimate) {
   auto sketch = HllSketch{};
   for (auto register_index = uint64_t{0}; register_index < (uint64_t{1} << HLL_PRECISION); ++register_index) {
-    sketch.add(register_index << (64 - HLL_PRECISION));
+    sketch.add(saturating_hash(register_index));
   }
 
   EXPECT_EQ(sketch.estimate(), std::numeric_limits<size_t>::max());

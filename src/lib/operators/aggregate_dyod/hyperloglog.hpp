@@ -50,9 +50,10 @@ class HllSketch : private Noncopyable {
   /**
    * Folds one key's precomputed hash into the sketch.
    *
-   * The high HLL_PRECISION bits of the hash select a register; the leading-zero rank of the remaining bits is combined
-   * into that register by register-wise maximum. Takes the hash rather than the key so the estimate is taken over
-   * exactly the packed-key hash the scatter and merge phases route on.
+   * The hash is mixed (see mix64), then its high HLL_PRECISION bits select a register and the leading-zero
+   * rank of the remaining bits is combined into that register by register-wise maximum. Takes the hash rather than the
+   * key so the estimate is taken over exactly the packed-key hash the scatter and merge phases route on; mixing is
+   * bijective, so it changes the bit distribution but not which keys count as distinct.
    *
    * @param key_hash 64-bit hash of the packed group-by key, as produced by the query's KeySchema. Any 64-bit value is
    *   valid; there is no reserved or sentinel hash.
@@ -97,11 +98,22 @@ class HllSketch : private Noncopyable {
 
 inline HllSketch::HllSketch() : _registers(REGISTER_COUNT, uint8_t{0}) {}
 
+// MurmurHash3's 64-bit finalizer. KeySchema::hash() is FNV-1a, which has no finalization step: for a 4-byte packed key
+// its high bits -- the only ones a sketch reads -- collide badly enough at 15 M distinct keys to halve the estimate.
+inline uint64_t mix64(uint64_t hash) {
+  hash ^= hash >> 33;
+  hash *= 0xff51afd7ed558ccdull;
+  hash ^= hash >> 33;
+  hash *= 0xc4ceb9fe1a85ec53ull;
+  return hash ^ (hash >> 33);
+}
+
 inline void HllSketch::add(const uint64_t key_hash) {
   constexpr auto REMAINING_HASH_BITS = 64 - HLL_PRECISION;
 
-  const auto register_index = static_cast<size_t>(key_hash >> REMAINING_HASH_BITS);
-  const auto remaining_hash_bits = key_hash << HLL_PRECISION;
+  const auto mixed_hash = mix64(key_hash);
+  const auto register_index = static_cast<size_t>(mixed_hash >> REMAINING_HASH_BITS);
+  const auto remaining_hash_bits = mixed_hash << HLL_PRECISION;
 
   const auto rank = remaining_hash_bits == 0 ? static_cast<uint8_t>(REMAINING_HASH_BITS + 1)
                                              : static_cast<uint8_t>(std::countl_zero(remaining_hash_bits) + 1);
