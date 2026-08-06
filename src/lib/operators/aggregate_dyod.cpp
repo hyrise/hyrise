@@ -260,74 +260,86 @@ std::shared_ptr<Table> AggregateDYOD::_write_output_table(AggregateVectors& aggr
     });
   }
 
-  auto segments = Segments{};
-  segments.reserve(groupby_column_count + aggregate_count);
+  // TODO(anyone): chunk size from the input table?
+  const auto chunk_size = Chunk::DEFAULT_SIZE;
+  const auto output_table = std::make_shared<Table>(column_definitions, TableType::Data, chunk_size);
+  const auto total_group_count = _group_count();
 
-  // Create one ValueSegment per grouping column
-  // TODO(anyone): Open new chunk when max number of rows is reached
-  for (auto groupby_column_index = size_t{0}; groupby_column_index < groupby_column_count; ++groupby_column_index) {
-    const auto column_id = _groupby_column_ids[groupby_column_index];
-    const auto data_type = input_table->column_data_type(column_id);
+  if (total_group_count > 0) {
+    for (auto start_group_id = GroupID{0}; start_group_id < total_group_count; start_group_id += chunk_size) {
+      const auto end_group_id = std::min(start_group_id + chunk_size, total_group_count);
+      auto segments = Segments{};
+      segments.reserve(groupby_column_count + aggregate_count);
 
-    resolve_data_type(data_type, [&](auto type) {
-      using ColumnDataType = typename decltype(type)::type;
-      segments.push_back(_write_groupby_segment<ColumnDataType>(groupby_column_index));
-    });
+      // Create one ValueSegment per grouping column
+      for (auto groupby_column_index = size_t{0}; groupby_column_index < groupby_column_count; ++groupby_column_index) {
+        const auto column_id = _groupby_column_ids[groupby_column_index];
+        const auto data_type = input_table->column_data_type(column_id);
+
+        resolve_data_type(data_type, [&](auto type) {
+          using ColumnDataType = typename decltype(type)::type;
+          segments.push_back(
+              _write_groupby_segment<ColumnDataType>(groupby_column_index, start_group_id, end_group_id));
+        });
+      }
+
+      // Create one ValueSegment per aggregate
+      for (auto aggregate_index = size_t{0}; aggregate_index < aggregate_count; ++aggregate_index) {
+        const auto aggregate = _aggregates[aggregate_index];
+
+        resolve_data_type(_aggregate_column_data_type(aggregate_index), [&](auto type) {
+          using ColumnDataType = typename decltype(type)::type;
+
+          resolve_window_function(aggregate->window_function, [&](auto type) {
+            constexpr auto aggregate_function = decltype(type)::value;
+            auto& aggregate_vector = static_cast<TypedAggregateVector<ColumnDataType, aggregate_function>&>(
+                aggregate_vectors[aggregate_index]);
+            segments.push_back(_write_aggregate_segment<ColumnDataType, aggregate_function>(
+                aggregate_vector, _aggregate_is_nullable(aggregate_index), start_group_id, end_group_id));
+          });
+        });
+      }
+
+      output_table->append_chunk(segments);
+    }
   }
-
-  // Create one ValueSegment per aggregate
-  for (auto aggregate_index = size_t{0}; aggregate_index < aggregate_count; ++aggregate_index) {
-    const auto aggregate = _aggregates[aggregate_index];
-
-    resolve_data_type(_aggregate_column_data_type(aggregate_index), [&](auto type) {
-      using ColumnDataType = typename decltype(type)::type;
-
-      resolve_window_function(aggregate->window_function, [&](auto type) {
-        constexpr auto aggregate_function = decltype(type)::value;
-        auto& aggregate_vector =
-            static_cast<TypedAggregateVector<ColumnDataType, aggregate_function>&>(aggregate_vectors[aggregate_index]);
-        segments.push_back(_write_aggregate_segment<ColumnDataType, aggregate_function>(
-            aggregate_vector, _aggregate_is_nullable(aggregate_index)));
-      });
-    });
-  }
-
-  const auto output_table = std::make_shared<Table>(column_definitions, TableType::Data);
-  output_table->append_chunk(segments);
 
   return output_table;
 }
 
 template <typename ColumnDataType>
-std::shared_ptr<AbstractSegment> AggregateDYOD::_write_groupby_segment(size_t groupby_column_index) {
+std::shared_ptr<AbstractSegment> AggregateDYOD::_write_groupby_segment(size_t groupby_column_index,
+                                                                       GroupID start_group_id, GroupID end_group_id) {
   const auto input_table = left_input_table();
   const auto column_id = _groupby_column_ids[groupby_column_index];
   const auto is_nullable = input_table->column_is_nullable(column_id);
-  const auto group_count = _group_count();
+  const auto chunk_size = end_group_id - start_group_id;
 
   if (is_nullable) {
-    auto values = pmr_vector<ColumnDataType>(group_count);
-    auto null_values = pmr_vector<bool>(group_count);
+    auto values = pmr_vector<ColumnDataType>(chunk_size);
+    auto null_values = pmr_vector<bool>(chunk_size);
 
-    for (auto group_id = GroupID{0}; group_id < group_count; ++group_id) {
+    for (auto group_id = start_group_id; group_id < end_group_id; ++group_id) {
+      const auto chunk_offset = group_id - start_group_id;
       const auto group_key_entry = _group_keys[group_id][groupby_column_index];
       const auto deserialized = deserialize_value<ColumnDataType, true>(group_key_entry);
 
       if (deserialized.has_value()) {
-        values[group_id] = deserialized.value();
+        values[chunk_offset] = deserialized.value();
       } else {
-        null_values[group_id] = true;
+        null_values[chunk_offset] = true;
       }
     }
 
     return std::make_shared<ValueSegment<ColumnDataType>>(std::move(values), std::move(null_values));
   }
 
-  auto values = pmr_vector<ColumnDataType>(group_count);
+  auto values = pmr_vector<ColumnDataType>(chunk_size);
 
-  for (auto group_id = GroupID{0}; group_id < group_count; ++group_id) {
+  for (auto group_id = start_group_id; group_id < end_group_id; ++group_id) {
+    const auto chunk_offset = group_id - start_group_id;
     const auto group_key_entry = _group_keys[group_id][groupby_column_index];
-    values[group_id] = deserialize_value<ColumnDataType, false>(group_key_entry);
+    values[chunk_offset] = deserialize_value<ColumnDataType, false>(group_key_entry);
   }
 
   return std::make_shared<ValueSegment<ColumnDataType>>(std::move(values));
@@ -335,42 +347,45 @@ std::shared_ptr<AbstractSegment> AggregateDYOD::_write_groupby_segment(size_t gr
 
 template <typename ColumnDataType, WindowFunction aggregate_function>
 std::shared_ptr<AbstractSegment> AggregateDYOD::_write_aggregate_segment(
-    TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector, bool is_nullable) {
+    TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector, bool is_nullable,
+    GroupID start_group_id, GroupID end_group_id) {
   constexpr auto data_type = WindowFunctionTraits<ColumnDataType, aggregate_function>::RESULT_TYPE;
 
   if constexpr (data_type == DataType::Null) {
     Fail("Invalid combination of column type and aggregate function.");
   } else {
     if constexpr (aggregate_function == WindowFunction::Count) {
-      return _write_count_aggregate_segment(aggregate_vector);
+      return _write_count_aggregate_segment(aggregate_vector, start_group_id, end_group_id);
     } else if constexpr (aggregate_function == WindowFunction::Avg) {
-      return _write_avg_aggregate_segment(aggregate_vector);
+      return _write_avg_aggregate_segment(aggregate_vector, start_group_id, end_group_id);
     } else if constexpr (aggregate_function == WindowFunction::CountDistinct) {
-      return _write_count_distinct_aggregate_segment(aggregate_vector);
+      return _write_count_distinct_aggregate_segment(aggregate_vector, start_group_id, end_group_id);
     } else {
-      return _write_default_aggregate_segment(aggregate_vector, is_nullable);
+      return _write_default_aggregate_segment(aggregate_vector, is_nullable, start_group_id, end_group_id);
     }
   }
 }
 
 template <typename ColumnDataType, WindowFunction aggregate_function>
 std::shared_ptr<AbstractSegment> AggregateDYOD::_write_avg_aggregate_segment(
-    TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector) {
+    TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector, GroupID start_group_id,
+    GroupID end_group_id) {
   using AggregateDataType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
   const auto& sums = aggregate_vector.values();
   const auto& counts = aggregate_vector.counts();
-  const auto group_count = _group_count();
+  const auto chunk_size = end_group_id - start_group_id;
 
-  auto averages = pmr_vector<AggregateDataType>(group_count);
-  auto null_values = pmr_vector<bool>(group_count);
+  auto averages = pmr_vector<AggregateDataType>(chunk_size);
+  auto null_values = pmr_vector<bool>(chunk_size);
 
-  for (auto group_id = GroupID{0}; group_id < group_count; ++group_id) {
+  for (auto group_id = start_group_id; group_id < end_group_id; ++group_id) {
+    const auto chunk_offset = group_id - start_group_id;
     if (counts[group_id] == 0) {
-      null_values[group_id] = true;
+      null_values[chunk_offset] = true;
     } else {
       // TODO(anyone): The maximum representable RowID in Hyrise is 2^64 (minus a few reserved sentinel values).
       // So in theory, the count could exceed the range of double, although in practice, it is rather unlikely.
-      averages[group_id] = sums[group_id] / static_cast<double>(counts[group_id]);
+      averages[chunk_offset] = sums[group_id] / static_cast<double>(counts[group_id]);
     }
   }
 
@@ -379,24 +394,26 @@ std::shared_ptr<AbstractSegment> AggregateDYOD::_write_avg_aggregate_segment(
 
 template <typename ColumnDataType, WindowFunction aggregate_function>
 std::shared_ptr<AbstractSegment> AggregateDYOD::_write_count_aggregate_segment(
-    TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector) {
+    TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector, GroupID start_group_id,
+    GroupID end_group_id) {
   using AggregateDataType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
   const auto& counts = aggregate_vector.counts();
-  auto values = pmr_vector<AggregateDataType>(counts.begin(), counts.end());
+  auto values = pmr_vector<AggregateDataType>(counts.begin() + start_group_id, counts.begin() + end_group_id);
   return std::make_shared<ValueSegment<AggregateDataType>>(std::move(values));
 }
 
 template <typename ColumnDataType, WindowFunction aggregate_function>
 std::shared_ptr<AbstractSegment> AggregateDYOD::_write_count_distinct_aggregate_segment(
-    TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector) {
+    TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector, GroupID start_group_id,
+    GroupID end_group_id) {
   using AggregateDataType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
-  const auto group_count = _group_count();
+  const auto chunk_size = end_group_id - start_group_id;
+  auto values = pmr_vector<AggregateDataType>(chunk_size);
 
-  auto values = pmr_vector<AggregateDataType>(group_count);
-
-  for (auto group_id = GroupID{0}; group_id < group_count; ++group_id) {
+  for (auto group_id = start_group_id; group_id < end_group_id; ++group_id) {
+    const auto chunk_offset = group_id - start_group_id;
     // The set size is the number of distinct values.
-    values[group_id] = aggregate_vector[group_id].size();
+    values[chunk_offset] = aggregate_vector[group_id].size();
   }
 
   return std::make_shared<ValueSegment<AggregateDataType>>(std::move(values));
@@ -404,21 +421,31 @@ std::shared_ptr<AbstractSegment> AggregateDYOD::_write_count_distinct_aggregate_
 
 template <typename ColumnDataType, WindowFunction aggregate_function>
 std::shared_ptr<AbstractSegment> AggregateDYOD::_write_default_aggregate_segment(
-    TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector, bool is_nullable) {
+    TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector, bool is_nullable,
+    GroupID start_group_id, GroupID end_group_id) {
   using AggregateDataType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
+  const auto chunk_size = end_group_id - start_group_id;
+
   if (is_nullable) {
-    const auto group_count = _group_count();
-    auto null_values = pmr_vector<bool>(group_count);
-    for (auto group_id = GroupID{0}; group_id < group_count; ++group_id) {
+    auto values = pmr_vector<AggregateDataType>(chunk_size);
+    auto null_values = pmr_vector<bool>(chunk_size);
+    for (auto group_id = start_group_id; group_id < end_group_id; ++group_id) {
+      const auto chunk_offset = group_id - start_group_id;
       if (aggregate_vector.count(group_id) == 0) {
-        null_values[group_id] = true;
+        null_values[chunk_offset] = true;
+      } else {
+        // Move aggregate values in case AggregateDataType is not trivially copyable
+        values[chunk_offset] = std::move(aggregate_vector[group_id]);
       }
     }
-    return std::make_shared<ValueSegment<AggregateDataType>>(std::move(aggregate_vector.values()),
-                                                             std::move(null_values));
+    return std::make_shared<ValueSegment<AggregateDataType>>(std::move(values), std::move(null_values));
   }
 
-  return std::make_shared<ValueSegment<AggregateDataType>>(std::move(aggregate_vector.values()));
+  auto values = pmr_vector<AggregateDataType>(chunk_size);
+  for (auto group_id = start_group_id; group_id < end_group_id; ++group_id) {
+    values[group_id - start_group_id] = aggregate_vector[group_id];
+  }
+  return std::make_shared<ValueSegment<AggregateDataType>>(std::move(values));
 }
 
 GroupID AggregateDYOD::_group_id(const GroupKey& group_key, AggregateVectors& aggregate_vectors) {
