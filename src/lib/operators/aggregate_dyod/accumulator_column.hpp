@@ -987,4 +987,18 @@ inline std::vector<std::unique_ptr<AbstractAccumulatorColumn>> AggregateSchema::
   return columns;
 }
 
+/**
+ * Whether a query may take the low-cardinality fast path. COUNT(DISTINCT) needs per-partition value sets and ANY the
+ * shared row-id stream, so both stay on the scatter pipeline.
+ */
+inline bool low_cardinality_eligible(const AggregateSchema& schema) {
+  for (auto index = size_t{0}; index < schema.aggregate_count(); ++index) {
+    const auto function = schema.function(index);
+    if (function == WindowFunction::Any || function == WindowFunction::CountDistinct) {
+      return false;
+    }
+  }
+  return true;
+}
+
 }  // namespace hyrise
