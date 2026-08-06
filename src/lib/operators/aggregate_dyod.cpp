@@ -62,6 +62,27 @@ class AbstractAggregator {
 };
 
 namespace {
+template <typename Worker>
+void run_workers(const size_t worker_count, const Worker& worker) {
+  // The immediate scheduler executes JobTasks sequentially; direct calls avoid their setup overhead.
+  if (!Hyrise::get().is_multi_threaded()) {
+    for (auto worker_id = size_t{0}; worker_id < worker_count; ++worker_id) {
+      worker(worker_id);
+    }
+    return;
+  }
+
+  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+  jobs.reserve(worker_count);
+  for (auto worker_id = size_t{0}; worker_id < worker_count; ++worker_id) {
+    jobs.emplace_back(std::make_shared<JobTask>([&worker, worker_id]() {
+      worker(worker_id);
+    }));
+  }
+
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+}
+
 template <typename ColumnDataType, WindowFunction window_function>
 class StandardAggregator : public AbstractAggregator {
   using AggregateType = typename WindowFunctionTraits<ColumnDataType, window_function>::ReturnType;
@@ -374,14 +395,38 @@ class CountDistinctAggregator : public AbstractAggregator {
     });
   }
 
+  // A serial union of the per-worker sets does not scale; split by hash range and union the ranges independently.
   void merge() override {
-    for (auto worker_id = size_t{1}; worker_id < _states.size(); ++worker_id) {
-      _states.front().set.merge(_states[worker_id].set);
+    const auto worker_count = _states.size();
+    if (worker_count == 1) {
+      _final_count = static_cast<int64_t>(_states.front().set.size());
+      return;
+    }
+
+    const auto range_count = std::bit_ceil(worker_count);
+    auto buckets = std::vector<std::vector<DistinctSet<ColumnDataType>>>(worker_count);
+    run_workers(worker_count, [&](const size_t worker_id) {
+      buckets[worker_id] = std::vector<DistinctSet<ColumnDataType>>(range_count);
+      _states[worker_id].set.split_into(buckets[worker_id]);
+    });
+
+    auto range_counts = std::vector<size_t>(range_count, 0);
+    run_workers(range_count, [&](const size_t range_index) {
+      auto& merged = buckets.front()[range_index];
+      for (auto worker_id = size_t{1}; worker_id < worker_count; ++worker_id) {
+        merged.merge(buckets[worker_id][range_index]);
+      }
+      range_counts[range_index] = merged.size();
+    });
+
+    _final_count = 0;
+    for (const auto count : range_counts) {
+      _final_count += static_cast<int64_t>(count);
     }
   }
 
   std::shared_ptr<AbstractSegment> build_segment() const override {
-    return std::make_shared<ValueSegment<int64_t>>(pmr_vector{static_cast<int64_t>(_states.front().set.size())});
+    return std::make_shared<ValueSegment<int64_t>>(pmr_vector{_final_count});
   }
 
   TableColumnDefinition output_column_definition() const override {
@@ -392,6 +437,7 @@ class CountDistinctAggregator : public AbstractAggregator {
   std::string _output_name;
   ColumnID _column_id;
   std::vector<PaddedState> _states;
+  int64_t _final_count{0};
 };
 
 std::unique_ptr<AbstractAggregator> make_aggregator(const Table& input_table, const WindowFunctionExpression& aggregate,
@@ -456,27 +502,6 @@ std::vector<std::unique_ptr<AbstractAggregator>> build_aggregators(
   }
 
   return aggregators;
-}
-
-template <typename Worker>
-void run_workers(const size_t worker_count, const Worker& worker) {
-  // The immediate scheduler executes JobTasks sequentially; direct calls avoid their setup overhead.
-  if (!Hyrise::get().is_multi_threaded()) {
-    for (auto worker_id = size_t{0}; worker_id < worker_count; ++worker_id) {
-      worker(worker_id);
-    }
-    return;
-  }
-
-  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
-  jobs.reserve(worker_count);
-  for (auto worker_id = size_t{0}; worker_id < worker_count; ++worker_id) {
-    jobs.emplace_back(std::make_shared<JobTask>([&worker, worker_id]() {
-      worker(worker_id);
-    }));
-  }
-
-  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 }
 
 void gather_value_column(const AbstractSegment& segment, const DataType type, const bool nullable,
