@@ -201,6 +201,7 @@ const std::string& AggregateDYOD::name() const {
 }
 
 std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
+  TRACE_EVENT("aggregate_operator", "_on_execute");
   const auto input_table = left_input_table();
 
   _validate_aggregates();
@@ -218,10 +219,16 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
     });
   }
 
-  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+  {
+    TRACE_EVENT("aggregate_operator", "schedule_and_wait_for_tasks");
+    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+  }
 
   // If we haven't run any jobs, attempting to merge the worker states would fail
-  auto merged_aggregate_vectors = jobs.empty() ? AggregateVectors(_aggregates) : std::move(state.merge_worker_states());
+  auto merged_aggregate_vectors = [&]() {
+    TRACE_EVENT("aggregate_operator", "merge_worker_states");
+    return jobs.empty() ? AggregateVectors(_aggregates) : std::move(state.merge_worker_states());
+  }();
 
   // SQL requires a single output row if the input table is empty and there is no GROUP BY clause.
   // We ensure this by inserting a single group into the group ID mapping before writing the output table.
@@ -233,6 +240,7 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
 }
 
 std::shared_ptr<Table> AggregateDYOD::_write_output_table(AggregateVectors& aggregate_vectors) {
+  TRACE_EVENT("aggregate_operator", "_write_output_table");
   const auto input_table = left_input_table();
   auto column_definitions = TableColumnDefinitions();
 
@@ -484,6 +492,7 @@ GroupID AggregateDYOD::_group_count() {
 }
 
 void AggregateDYOD::_aggregate_chunk(AggregateVectors& aggregate_vectors, const std::shared_ptr<const Chunk> chunk) {
+  TRACE_EVENT("aggregate_operator", "_aggregate_chunk");
   const auto group_ids = _group_ids_for_chunk(*chunk, aggregate_vectors);
 
   // Compute aggregates
@@ -515,6 +524,7 @@ void AggregateDYOD::_aggregate_chunk(AggregateVectors& aggregate_vectors, const 
 }
 
 std::vector<GroupID> AggregateDYOD::_group_ids_for_chunk(const Chunk& chunk, AggregateVectors& aggregate_vectors) {
+  TRACE_EVENT("aggregate_operator", "_group_ids_for_chunk");
   const auto input_table = left_input_table();
 
   // This is a two-dimensional vector, with the first dimension being the index of the grouping column, and the second
@@ -558,6 +568,7 @@ std::vector<GroupID> AggregateDYOD::_group_ids_for_chunk(const Chunk& chunk, Agg
 template <typename ColumnDataType, WindowFunction aggregate_function>
 void AggregateDYOD::_aggregate_segment(TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector,
                                        const AbstractSegment& segment, const std::vector<GroupID>& group_ids) {
+  TRACE_EVENT("aggregate_operator", "_aggregate_segment", "aggregate_function", "default");
   using AggregateDataType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
   auto aggregator =
       WindowFunctionBuilder<ColumnDataType, AggregateDataType, aggregate_function>().get_aggregate_function();
@@ -574,6 +585,7 @@ template <typename ColumnDataType, WindowFunction aggregate_function>
   requires(aggregate_function == WindowFunction::CountDistinct)
 void AggregateDYOD::_aggregate_segment(TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector,
                                        const AbstractSegment& segment, const std::vector<GroupID>& group_ids) {
+  TRACE_EVENT("aggregate_operator", "_aggregate_segment", "aggregate_function", "CountDistinct");
   segment_iterate<ColumnDataType>(segment, [&](const auto& position) {
     if (!position.is_null()) {
       const auto group_id = group_ids[position.chunk_offset()];
@@ -586,6 +598,7 @@ template <typename ColumnDataType, WindowFunction aggregate_function>
   requires(aggregate_function == WindowFunction::Any)
 void AggregateDYOD::_aggregate_segment(TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector,
                                        const AbstractSegment& segment, const std::vector<GroupID>& group_ids) {
+  TRACE_EVENT("aggregate_operator", "_aggregate_segment", "aggregate_function", "Any");
   // TODO(anyone): We don’t need to iterate through the segment if we’ve already found any
   // value for all groups (i.e., the count for the respective group_id is greater than 0).
   segment_iterate<ColumnDataType>(segment, [&](const auto& position) {
@@ -602,6 +615,7 @@ void AggregateDYOD::_aggregate_segment(TypedAggregateVector<ColumnDataType, aggr
 
 void AggregateDYOD::_aggregate_count_star(AbstractAggregateVector& aggregate_vector,
                                           const std::vector<GroupID>& group_ids) {
+  TRACE_EVENT("aggregate_operator", "_aggregate_count_star");
   for (const auto group_id : group_ids) {
     aggregate_vector.increment_count(group_id);
   }

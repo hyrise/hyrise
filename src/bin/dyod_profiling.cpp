@@ -133,6 +133,8 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<GetTable>> setup_get_table(
 
 static void TPCDSQ97(const float scale_factor, const EncodingConfig encoding_config) {
   for (const auto use_scheduler : {true, false}) {
+    TRACE_EVENT("benchmark", "TPCDSQ97", "scale_factor", scale_factor, "use_scheduler", use_scheduler);
+
     const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
     if (use_scheduler) {
       Hyrise::get().set_scheduler(node_queue_scheduler);
@@ -180,6 +182,8 @@ static void TPCDSQ97(const float scale_factor, const EncodingConfig encoding_con
 
 static void TPCHQ01(const float scale_factor, const EncodingConfig encoding_config) {
   for (const auto use_scheduler : {true, false}) {
+    TRACE_EVENT("benchmark", "TPCHQ01", "scale_factor", scale_factor, "use_scheduler", use_scheduler);
+
     const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
     if (use_scheduler) {
       Hyrise::get().set_scheduler(node_queue_scheduler);
@@ -250,6 +254,8 @@ static void TPCHQ01(const float scale_factor, const EncodingConfig encoding_conf
 
 static void TPCHQ18(const float scale_factor, const EncodingConfig encoding_config) {
   for (const auto use_scheduler : {true, false}) {
+    TRACE_EVENT("benchmark", "TPCHQ18", "scale_factor", scale_factor, "use_scheduler", use_scheduler);
+
     const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
     if (use_scheduler) {
       Hyrise::get().set_scheduler(node_queue_scheduler);
@@ -290,6 +296,8 @@ static void JOBlikeMINMAX(const EncodingConfig encoding_config, std::shared_ptr<
   Hyrise::get().set_scheduler(std::make_shared<ImmediateExecutionScheduler>());
 
   for (const auto use_scheduler : {true, false}) {
+    TRACE_EVENT("benchmark", "JOBlikeMINMAX", "filter_rows", filter_rows, "use_scheduler", use_scheduler);
+
     const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
     if (use_scheduler) {
       Hyrise::get().set_scheduler(node_queue_scheduler);
@@ -427,6 +435,10 @@ int main(int argc, char* argv[]) {
       auto perfetto_session = start_perfetto_session();
 
       for (const auto& encoding_config : ENCODING_CONFIGS) {
+        const auto encoding_name =
+            std::string{magic_enum::enum_name(encoding_config.preferred_encoding_spec->encoding_type)};
+        TRACE_EVENT("benchmark", "run benchmarks for encoding", "encoding", encoding_name.c_str());
+
         auto benchmark_config = std::make_shared<BenchmarkConfig>();
         benchmark_config->cache_binary_tables = true;
         benchmark_config->encoding_config = encoding_config;
@@ -513,6 +525,10 @@ int main(int argc, char* argv[]) {
   auto perfetto_session = start_perfetto_session();
 
   for (const auto& encoding_config : ENCODING_CONFIGS) {
+    const auto encoding_name =
+        std::string{magic_enum::enum_name(encoding_config.preferred_encoding_spec->encoding_type)};
+    TRACE_EVENT("benchmark", "run benchmarks for encoding", "encoding", encoding_name.c_str());
+
     JOBlikeMINMAX(encoding_config, table, false);
     JOBlikeMINMAX(encoding_config, table, true);
   }
