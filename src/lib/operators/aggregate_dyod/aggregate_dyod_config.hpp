@@ -108,6 +108,39 @@ inline size_t keys_budget() {
 constexpr size_t PARALLEL_ESTIMATE_THRESHOLD = 100'000;
 
 /**
+ * Number of chunks the estimate phase aims to feed into its sketch (unit: chunks).
+ *
+ * The estimate exists to size the partition count and the per-partition maps, so it does not need every row: above
+ * this many chunks, the phase samples every estimate_sample_stride()-th chunk and rescales the result via
+ * scale_sampled_estimate(). 16 full chunks are about one million rows, plenty for a power-of-two choice of P.
+ */
+constexpr size_t ESTIMATE_SAMPLE_CHUNKS = 16;
+
+/**
+ * Margin by which a sampled estimate must undershoot the sampled row count to be taken as exact (unit: factor).
+ *
+ * When the sketch saw at least this many times more rows than distinct keys, the sample has hit the key space's
+ * plateau and the estimate is the true cardinality; otherwise distinct keys grow with the rows read, and the estimate
+ * is scaled by the stride. Linear scaling is exact for keys clustered in runs (each key lands wholly inside a sampled
+ * or skipped chunk) and overestimates spread-out repeated keys, which errs toward more, smaller partitions.
+ */
+constexpr size_t ESTIMATE_PLATEAU_FACTOR = 8;
+
+/** Chunk stride of the estimate phase: sample every k-th chunk so about ESTIMATE_SAMPLE_CHUNKS chunks are read. */
+inline size_t estimate_sample_stride(const size_t chunk_count) {
+  return std::max(size_t{1}, chunk_count / ESTIMATE_SAMPLE_CHUNKS);
+}
+
+/** Rescale a sketch estimate taken over every stride-th chunk to the full input (see ESTIMATE_PLATEAU_FACTOR). */
+inline size_t scale_sampled_estimate(const size_t estimate, const size_t sampled_row_count,
+                                     const size_t total_row_count, const size_t stride) {
+  if (stride == 1 || estimate * ESTIMATE_PLATEAU_FACTOR <= sampled_row_count) {
+    return estimate;
+  }
+  return std::min(total_row_count, estimate * stride);
+}
+
+/**
  * HyperLogLog register precision: the sketch uses 2^HLL_PRECISION registers (unit: bits of precision).
  *
  * Precision 12 gives roughly 1.6% standard error at a few KiB per sketch -- accurate enough to size the partition

@@ -701,12 +701,15 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate(const KeySchema& key_schema, co
     }
   };
 
-  // Estimate: per-worker HyperLogLog sketches over the packed-key hash choose the partition count.
+  // Estimate: per-worker HyperLogLog sketches over the packed-key hash of every sample_stride-th chunk choose the
+  // partition count.
   const auto estimate_worker_count =
       input_table.row_count() < PARALLEL_ESTIMATE_THRESHOLD ? size_t{1} : scatter_worker_count;
+  const auto sample_stride = estimate_sample_stride(chunk_count);
+  const auto sampled_chunk_count = (chunk_count + sample_stride - 1) / sample_stride;
   auto sketches = std::vector<HllSketch>(estimate_worker_count);
   {
-    auto chunk_cursor = std::atomic<size_t>{0};
+    auto sample_cursor = std::atomic<size_t>{0};
     run_workers(estimate_worker_count, [&](const size_t worker_id) {
       auto& sketch = sketches[worker_id];
       auto key_scratch = std::vector<std::byte>(key_width);
@@ -715,10 +718,11 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate(const KeySchema& key_schema, co
       auto segment_owners = std::vector<std::shared_ptr<AbstractSegment>>{};
       auto segments = std::vector<const AbstractSegment*>{};
       while (true) {
-        const auto chunk_index = chunk_cursor.fetch_add(1, std::memory_order_relaxed);
-        if (chunk_index >= chunk_count) {
+        const auto sample_index = sample_cursor.fetch_add(1, std::memory_order_relaxed);
+        if (sample_index >= sampled_chunk_count) {
           break;
         }
+        const auto chunk_index = sample_index * sample_stride;
         const auto chunk = input_table.get_chunk(ChunkID{static_cast<ChunkID::base_type>(chunk_index)});
         if (!chunk) {
           continue;
@@ -737,7 +741,8 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate(const KeySchema& key_schema, co
   for (auto worker_id = size_t{1}; worker_id < estimate_worker_count; ++worker_id) {
     sketches.front().merge(sketches[worker_id]);
   }
-  const auto cardinality_estimate = sketches.front().estimate();
+  const auto cardinality_estimate = scale_sampled_estimate(sketches.front().estimate(), sampled_row_count,
+                                                           input_table.row_count(), sample_stride);
 
   step_performance_data.set_step_runtime(OperatorSteps::Estimate, timer.lap());
 
