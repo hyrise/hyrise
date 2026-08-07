@@ -29,6 +29,7 @@
 #include "utils/assert.hpp"
 #include "utils/timer.hpp"
 
+
 namespace {
 
 using namespace hyrise;

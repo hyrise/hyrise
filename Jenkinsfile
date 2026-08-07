@@ -121,7 +121,7 @@ try {
 
             // Configure the rest in parallel. We use unity builds to decrease build times. The only exceptions are the
             // clang-tidy and precompiled-headers build as they might otherwise miss some issues (e.g., missing includes).
-            sh "mkdir clang-debug-tidy && cd clang-debug-tidy &&                                         ${cmake} ${debug}          ${clang}                      ${ninja} -DENABLE_CLANG_TIDY=ON .. &\
+            sh "mkdir clang-debug-tidy && cd clang-debug-tidy &&                                         ${cmake} ${debug}          ${clang}                      ${ninja} -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_DISABLE_PRECOMPILE_HEADERS=On .. &\
             mkdir clang-debug-unity-odr && cd clang-debug-unity-odr &&                                   ${cmake} ${debug}          ${clang}   ${unity}           ${ninja} -DCMAKE_UNITY_BUILD_BATCH_SIZE=0 .. &\
             mkdir clang-debug-disable-precompile-headers && cd clang-debug-disable-precompile-headers && ${cmake} ${debug}          ${clang}                      ${ninja} -DCMAKE_DISABLE_PRECOMPILE_HEADERS=On .. &\
             mkdir clang-debug-addr-ub-leak-sanitizers && cd clang-debug-addr-ub-leak-sanitizers &&       ${cmake} ${debug}          ${clang}   ${unity}           ${ninja} -DENABLE_ADDR_UB_LEAK_SANITIZATION=ON .. &\
@@ -227,10 +227,10 @@ try {
               }
             }
           }, clangDebugTidy: {
-            stage("clang-debug:tidy") {
+            stage("clang-debug:tidy-changed-files") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
-                // We do not run tidy checks on the src/test folder, so there is no point in running the expensive clang-tidy for those files
-                sh "cd clang-debug-tidy && ninja hyrise_impl hyriseBenchmarkFileBased hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkJoinOrder hyriseConsole hyriseServer hyriseMvccDeletePlugin hyriseUccDiscoveryPlugin -k 0 -j \$(( \$(nproc) / 2))"
+                // We do not run the expensive clang-tidy for the non-changed files.
+                sh "CLANG_TIDY_DEBUG=1 bash ./scripts/clang_tidy.sh clang-debug-tidy"
               } else {
                 Utils.markStageSkippedForConditional("clangDebugTidy")
               }
