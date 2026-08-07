@@ -83,6 +83,44 @@ void run_workers(const size_t worker_count, const Worker& worker) {
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 }
 
+// The unit a scanning phase claims at a time: a row range of one chunk.
+struct MorselJob {
+  ChunkID chunk_id;
+  ChunkOffset row_begin;
+  ChunkOffset row_end;
+};
+
+// Splitting chunks into morsels decouples the parallelism from how the input happens to be chunked. Single-threaded
+// runs get one job per chunk, since a split only repeats the per-morsel setup; `chunk_stride` skips chunks so the
+// estimate phase can enumerate its sample.
+std::vector<MorselJob> build_morsel_jobs(const Table& input_table, const size_t worker_limit,
+                                         const size_t chunk_stride) {
+  const auto chunk_count = static_cast<size_t>(input_table.chunk_count());
+  auto jobs = std::vector<MorselJob>{};
+  jobs.reserve((chunk_count + chunk_stride - 1) / chunk_stride);
+  for (auto chunk_index = size_t{0}; chunk_index < chunk_count; chunk_index += chunk_stride) {
+    const auto chunk_id = ChunkID{static_cast<ChunkID::base_type>(chunk_index)};
+    const auto chunk = input_table.get_chunk(chunk_id);
+    if (!chunk) {
+      continue;
+    }
+    const auto row_count = size_t{chunk->size()};
+    if (row_count == 0) {
+      continue;
+    }
+
+    const auto rows_per_morsel = worker_limit > 1 ? MORSEL_ROWS : row_count;
+    const auto morsel_count = morsel_count_for(row_count, rows_per_morsel);
+    for (auto morsel = size_t{0}; morsel < morsel_count; ++morsel) {
+      const auto row_begin = morsel * rows_per_morsel;
+      const auto row_end = std::min(row_begin + rows_per_morsel, row_count);
+      jobs.emplace_back(MorselJob{chunk_id, ChunkOffset{static_cast<ChunkOffset::base_type>(row_begin)},
+                                  ChunkOffset{static_cast<ChunkOffset::base_type>(row_end)}});
+    }
+  }
+  return jobs;
+}
+
 template <typename ColumnDataType, WindowFunction window_function>
 class StandardAggregator : public AbstractAggregator {
   using AggregateType = typename WindowFunctionTraits<ColumnDataType, window_function>::ReturnType;
@@ -548,51 +586,49 @@ std::vector<std::unique_ptr<AbstractAggregator>> build_aggregators(
 }
 
 void gather_value_column(const AbstractSegment& segment, const DataType type, const bool nullable,
-                         std::vector<std::byte>& out_bytes, std::vector<std::byte>& out_null, const size_t row_count) {
+                         std::vector<std::byte>& out_bytes, std::vector<std::byte>& out_null, const size_t row_begin,
+                         const size_t row_end) {
+  const auto row_count = row_end - row_begin;
   resolve_data_type(type, [&](const auto data_type) {
     using ColumnDataType = typename decltype(data_type)::type;
     out_bytes.assign(row_count * sizeof(ColumnDataType), std::byte{0});
     if (nullable) {
       out_null.assign((row_count + 7) / 8, std::byte{0});
     }
-    auto row = size_t{0};
-    segment_iterate<ColumnDataType>(segment, [&](const auto& position) {
-      if (position.is_null()) {
-        if (nullable) {
-          out_null[row / 8] |= std::byte{1} << (row % 8);
-        }
-      } else {
-        const auto value = position.value();
-        std::memcpy(out_bytes.data() + row * sizeof(ColumnDataType), &value, sizeof(ColumnDataType));
-      }
-      ++row;
-    });
+    iterate_segment_window<ColumnDataType>(
+        segment, row_begin, row_end, [&](const size_t row, const ColumnDataType* value) {
+          if (!value) {
+            if (nullable) {
+              out_null[row / 8] |= std::byte{1} << (row % 8);
+            }
+            return;
+          }
+          std::memcpy(out_bytes.data() + row * sizeof(ColumnDataType), value, sizeof(ColumnDataType));
+        });
   });
 }
 
 // String cells are gathered as (pointer, length) references into `values`, which must stay alive through the fold.
 void gather_string_value_column(const AbstractSegment& segment, const bool nullable, std::vector<pmr_string>& values,
                                 std::vector<std::byte>& out_bytes, std::vector<std::byte>& out_null,
-                                const size_t row_count) {
+                                const size_t row_begin, const size_t row_end) {
+  const auto row_count = row_end - row_begin;
   values.resize(row_count);
   out_bytes.assign(row_count * sizeof(StringValueReference), std::byte{0});
   if (nullable) {
     out_null.assign((row_count + 7) / 8, std::byte{0});
   }
-  auto row = size_t{0};
-  segment_iterate<pmr_string>(segment, [&](const auto& position) {
-    if (position.is_null()) {
+  iterate_segment_window<pmr_string>(segment, row_begin, row_end, [&](const size_t row, const pmr_string* source) {
+    if (!source) {
       if (nullable) {
         out_null[row / 8] |= std::byte{1} << (row % 8);
       }
-    } else {
-      auto& value = values[row];
-      value = position.value();
-      const auto reference =
-          StringValueReference{reinterpret_cast<const std::byte*>(value.data()), value.size()};
-      std::memcpy(out_bytes.data() + row * sizeof(reference), &reference, sizeof(reference));
+      return;
     }
-    ++row;
+    auto& value = values[row];
+    value = *source;
+    const auto reference = StringValueReference{reinterpret_cast<const std::byte*>(value.data()), value.size()};
+    std::memcpy(out_bytes.data() + row * sizeof(reference), &reference, sizeof(reference));
   });
 }
 }  // namespace
@@ -643,9 +679,10 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate_low_cardinality(const KeySchema
   auto& step_performance_data = dynamic_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
   auto timer = Timer{};
 
-  const auto chunk_count = static_cast<size_t>(input_table.chunk_count());
   const auto worker_limit = worker_limit_for(Hyrise::get().is_multi_threaded(), Hyrise::get().topology.num_cpus());
-  const auto worker_count = std::clamp(chunk_count, size_t{1}, worker_limit);
+  const auto morsel_jobs = build_morsel_jobs(input_table, worker_limit, 1);
+  const auto job_count = morsel_jobs.size();
+  const auto worker_count = std::clamp(job_count, size_t{1}, worker_limit);
   const auto aggregate_count = aggregate_schema.aggregate_count();
   const auto key_width = key_schema.packed_width();
 
@@ -656,7 +693,7 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate_low_cardinality(const KeySchema
   }
 
   {
-    auto chunk_cursor = std::atomic<size_t>{0};
+    auto job_cursor = std::atomic<size_t>{0};
     run_workers(worker_count, [&](const size_t worker_id) {
       auto& merge_map = per_worker_private_maps[worker_id];
       merge_map.reserve(cardinality_estimate);
@@ -672,19 +709,13 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate_low_cardinality(const KeySchema
       auto segments = std::vector<const AbstractSegment*>{};
 
       while (true) {
-        const auto chunk_index = chunk_cursor.fetch_add(1, std::memory_order_relaxed);
-        if (chunk_index >= chunk_count) {
+        const auto job_index = job_cursor.fetch_add(1, std::memory_order_relaxed);
+        if (job_index >= job_count) {
           break;
         }
-        const auto chunk = input_table.get_chunk(ChunkID{static_cast<ChunkID::base_type>(chunk_index)});
-        if (!chunk) {
-          continue;
-        }
-
-        const auto row_count = chunk->size();
-        if (row_count == 0) {
-          continue;
-        }
+        const auto& job = morsel_jobs[job_index];
+        const auto chunk = input_table.get_chunk(job.chunk_id);
+        const auto row_count = job.row_end - job.row_begin;
 
         owners.clear();
         segments.clear();
@@ -692,7 +723,7 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate_low_cardinality(const KeySchema
           owners.emplace_back(chunk->get_segment(column_id));
           segments.emplace_back(owners.back().get());
         }
-        key_schema.decode(segments, decode_scratch);
+        key_schema.decode(segments, job.row_begin, job.row_end, decode_scratch);
         key_buffer.resize(size_t{row_count} * key_width);
         for (auto offset = ChunkOffset{0}; offset < row_count; ++offset) {
           key_schema.pack(decode_scratch, offset, key_buffer.data() + size_t{offset} * key_width, spill_scratch);
@@ -708,10 +739,11 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate_low_cardinality(const KeySchema
           const auto source_type = input_table.column_data_type(source);
           if (source_type == DataType::String) {
             gather_string_value_column(*chunk->get_segment(source), nullable, string_holders[aggregate_index],
-                                       value_buffers[aggregate_index], null_buffers[aggregate_index], row_count);
+                                       value_buffers[aggregate_index], null_buffers[aggregate_index], job.row_begin,
+                                       job.row_end);
           } else {
             gather_value_column(*chunk->get_segment(source), source_type, nullable, value_buffers[aggregate_index],
-                                null_buffers[aggregate_index], row_count);
+                                null_buffers[aggregate_index], job.row_begin, job.row_end);
           }
         }
 
@@ -784,7 +816,9 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate(const KeySchema& key_schema, co
 
   const auto chunk_count = static_cast<size_t>(input_table.chunk_count());
   const auto worker_limit = worker_limit_for(Hyrise::get().is_multi_threaded(), Hyrise::get().topology.num_cpus());
-  const auto scatter_worker_count = std::clamp(chunk_count, size_t{1}, worker_limit);
+  const auto scatter_jobs = build_morsel_jobs(input_table, worker_limit, 1);
+  const auto scatter_job_count = scatter_jobs.size();
+  const auto scatter_worker_count = std::clamp(scatter_job_count, size_t{1}, worker_limit);
   const auto key_width = key_schema.packed_width();
 
   const auto gather_group_by_segments = [&](const Chunk& chunk, std::vector<std::shared_ptr<AbstractSegment>>& owners,
@@ -798,16 +832,18 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate(const KeySchema& key_schema, co
   };
 
   // Estimate: per-worker HyperLogLog sketches over the packed-key hash of every sample_stride-th chunk choose the
-  // partition count.
-  const auto estimate_worker_count =
-      input_table.row_count() < PARALLEL_ESTIMATE_THRESHOLD ? size_t{1} : scatter_worker_count;
+  // partition count. The sample is still selected per chunk; the morsels only split the scan of a sampled chunk.
   const auto sample_stride = estimate_sample_stride(chunk_count);
-  const auto sampled_chunk_count = (chunk_count + sample_stride - 1) / sample_stride;
+  const auto estimate_worker_limit =
+      input_table.row_count() < PARALLEL_ESTIMATE_THRESHOLD ? size_t{1} : worker_limit;
+  const auto estimate_jobs = build_morsel_jobs(input_table, estimate_worker_limit, sample_stride);
+  const auto estimate_job_count = estimate_jobs.size();
+  const auto estimate_worker_count = std::clamp(estimate_job_count, size_t{1}, estimate_worker_limit);
   auto sketches = std::vector<HllSketch>(estimate_worker_count);
   // The half-sample sketch only exists to rescale a strided sample.
   auto half_sketches = std::vector<HllSketch>(sample_stride > 1 ? estimate_worker_count : 0);
   {
-    auto sample_cursor = std::atomic<size_t>{0};
+    auto job_cursor = std::atomic<size_t>{0};
     run_workers(estimate_worker_count, [&](const size_t worker_id) {
       auto& sketch = sketches[worker_id];
       auto key_scratch = std::vector<std::byte>(key_width);
@@ -816,21 +852,18 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate(const KeySchema& key_schema, co
       auto segment_owners = std::vector<std::shared_ptr<AbstractSegment>>{};
       auto segments = std::vector<const AbstractSegment*>{};
       while (true) {
-        const auto sample_index = sample_cursor.fetch_add(1, std::memory_order_relaxed);
-        if (sample_index >= sampled_chunk_count) {
+        const auto job_index = job_cursor.fetch_add(1, std::memory_order_relaxed);
+        if (job_index >= estimate_job_count) {
           break;
         }
-        const auto chunk_index = sample_index * sample_stride;
-        const auto chunk = input_table.get_chunk(ChunkID{static_cast<ChunkID::base_type>(chunk_index)});
-        if (!chunk) {
-          continue;
-        }
-        const auto in_half_sample = sample_stride > 1 && sample_index % 2 == 0;
+        const auto& job = estimate_jobs[job_index];
+        const auto chunk = input_table.get_chunk(job.chunk_id);
+        const auto in_half_sample = sample_stride > 1 && (size_t{job.chunk_id} / sample_stride) % 2 == 0;
         gather_group_by_segments(*chunk, segment_owners, segments);
-        key_schema.decode(segments, decode_scratch);
-        const auto row_count = chunk->size();
-        for (auto chunk_offset = ChunkOffset{0}; chunk_offset < row_count; ++chunk_offset) {
-          key_schema.pack(decode_scratch, chunk_offset, key_scratch.data(), spill_scratch);
+        key_schema.decode(segments, job.row_begin, job.row_end, decode_scratch);
+        const auto row_count = job.row_end - job.row_begin;
+        for (auto morsel_offset = ChunkOffset{0}; morsel_offset < row_count; ++morsel_offset) {
+          key_schema.pack(decode_scratch, morsel_offset, key_scratch.data(), spill_scratch);
           const auto key_hash = key_schema.hash(key_scratch.data());
           sketch.add(key_hash);
           if (in_half_sample) {
@@ -916,9 +949,9 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate(const KeySchema& key_schema, co
 
   // Scatter: buffer raw (key, values...) rows into per-worker stores across the partitions. The key pass packs and
   // routes each row and records its partition; the value streams, the row-id stream, and the value-null bitmap then
-  // run as separate column-wise passes over the same chunk.
+  // run as separate column-wise passes over the same morsel.
   {
-    auto chunk_cursor = std::atomic<size_t>{0};
+    auto job_cursor = std::atomic<size_t>{0};
     run_workers(scatter_worker_count, [&](const size_t worker_id) {
       auto& store = scatter_stores[worker_id];
       auto heads = ScatterHeads{partition_count, stream_widths.size(), stream_widths, has_value_null_bitmap};
@@ -932,14 +965,12 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate(const KeySchema& key_schema, co
       auto value_segment_owners = std::vector<std::shared_ptr<AbstractSegment>>{};
       auto value_segments = std::vector<const AbstractSegment*>{};
       while (true) {
-        const auto chunk_index = chunk_cursor.fetch_add(1, std::memory_order_relaxed);
-        if (chunk_index >= chunk_count) {
+        const auto job_index = job_cursor.fetch_add(1, std::memory_order_relaxed);
+        if (job_index >= scatter_job_count) {
           break;
         }
-        const auto chunk = input_table.get_chunk(ChunkID{static_cast<ChunkID::base_type>(chunk_index)});
-        if (!chunk) {
-          continue;
-        }
+        const auto& job = scatter_jobs[job_index];
+        const auto chunk = input_table.get_chunk(job.chunk_id);
         gather_group_by_segments(*chunk, segment_owners, segments);
         value_segment_owners.clear();
         value_segments.clear();
@@ -947,15 +978,15 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate(const KeySchema& key_schema, co
           value_segment_owners.emplace_back(chunk->get_segment(column_id));
           value_segments.emplace_back(value_segment_owners.back().get());
         }
-        const auto row_count = chunk->size();
+        const auto row_count = job.row_end - job.row_begin;
 
-        key_schema.decode(segments, decode_scratch);
+        key_schema.decode(segments, job.row_begin, job.row_end, decode_scratch);
         row_partitions.resize(row_count);
-        for (auto chunk_offset = ChunkOffset{0}; chunk_offset < row_count; ++chunk_offset) {
-          key_schema.pack(decode_scratch, chunk_offset, key_scratch.data(), pack_spill);
+        for (auto morsel_offset = ChunkOffset{0}; morsel_offset < row_count; ++morsel_offset) {
+          key_schema.pack(decode_scratch, morsel_offset, key_scratch.data(), pack_spill);
           const auto key_hash = key_schema.hash(key_scratch.data());
           const auto partition = static_cast<PartitionId>(key_hash & (partition_count - 1));
-          row_partitions[chunk_offset] = partition;
+          row_partitions[morsel_offset] = partition;
           if constexpr (KeySchema::HAS_STRINGS) {
             key_schema.reintern_spill(key_scratch.data(), store.key_spill_buffer(partition));
             pack_spill.clear();
@@ -970,21 +1001,22 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate(const KeySchema& key_schema, co
         }
         for (auto stream_index = size_t{0}; stream_index < value_stream_count; ++stream_index) {
           aggregate_schema.value_stream(stream_index)
-              .scatter(*value_segments[stream_index], row_partitions, 1 + stream_index, heads, store,
-                       bitmap_scratch.data(), value_null_bitmap_width, value_stream_null_bits[stream_index]);
+              .scatter(*value_segments[stream_index], job.row_begin, job.row_end, row_partitions, 1 + stream_index,
+                       heads, store, bitmap_scratch.data(), value_null_bitmap_width,
+                       value_stream_null_bits[stream_index]);
         }
         if (needs_row_id_stream) {
-          for (auto chunk_offset = ChunkOffset{0}; chunk_offset < row_count; ++chunk_offset) {
-            const auto row_id = RowID{ChunkID{static_cast<ChunkID::base_type>(chunk_index)}, chunk_offset};
-            heads.push(store, 1 + row_id_stream_index, row_partitions[chunk_offset],
+          for (auto morsel_offset = ChunkOffset{0}; morsel_offset < row_count; ++morsel_offset) {
+            const auto row_id = RowID{job.chunk_id, ChunkOffset{job.row_begin + morsel_offset}};
+            heads.push(store, 1 + row_id_stream_index, row_partitions[morsel_offset],
                        reinterpret_cast<const std::byte*>(&row_id), sizeof(row_id));
           }
         }
         if (has_value_null_bitmap) {
-          for (auto chunk_offset = ChunkOffset{0}; chunk_offset < row_count; ++chunk_offset) {
-            const auto* row_bitmap = bitmap_scratch.data() + size_t{chunk_offset} * value_null_bitmap_width;
+          for (auto morsel_offset = ChunkOffset{0}; morsel_offset < row_count; ++morsel_offset) {
+            const auto* row_bitmap = bitmap_scratch.data() + size_t{morsel_offset} * value_null_bitmap_width;
             for (auto byte_index = size_t{0}; byte_index < value_null_bitmap_width; ++byte_index) {
-              heads.push(store, value_null_bitmap_stream_index, row_partitions[chunk_offset], row_bitmap + byte_index,
+              heads.push(store, value_null_bitmap_stream_index, row_partitions[morsel_offset], row_bitmap + byte_index,
                          1);
             }
           }

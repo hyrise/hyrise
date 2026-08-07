@@ -28,6 +28,7 @@
 #include "storage/table.hpp"
 #include "storage/value_segment.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
+#include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -241,11 +242,12 @@ constexpr uint32_t NO_NULL_BIT = std::numeric_limits<uint32_t>::max();
 constexpr size_t EXPECTED_GROUP_BY_COLUMNS = 4;
 
 /**
- * Worker-local decoded copy of one chunk's group-by columns, filled by KeySchema::decode() and consumed row-wise by
- * KeySchema::pack().
+ * Worker-local decoded copy of a row window of one chunk's group-by columns, filled by KeySchema::decode() and
+ * consumed row-wise by KeySchema::pack().
  *
- * Packing a row needs all group-by columns of that row at once, so the columns are decoded chunk-wise into these flat
- * buffers first (one typed segment_iterate pass per column), and the per-row pack then only touches flat memory.
+ * Packing a row needs all group-by columns of that row at once, so the columns are decoded window-wise into these flat
+ * buffers first (one pass per column), and the per-row pack then only touches flat memory. The buffers hold the
+ * window's rows alone, so their indices count from the window's first row, not from the chunk's.
  * Numeric lanes hold the equality-canonical encoded bytes (sign-bit bias / float canonicalization applied during
  * decode), zeroed for NULL rows; string columns hold the decoded values, empty for NULL rows.
  *
@@ -285,17 +287,21 @@ class AbstractNumericKeyLane {
   virtual ~AbstractNumericKeyLane() = default;
 
   /**
-   * Decode one chunk's column into the lane's flat scratch buffer.
+   * Decode rows [row_begin, row_end) of one chunk's column into the lane's flat scratch buffer.
    *
    * Integer lanes apply the sign-bit-XOR bias; float/double lanes canonicalize -0.0 and NaN, so whole-buffer
    * byte-equality matches value-equality (see the file banner). The schema's per-row pack loop copies the stored
    * bytes into the key. NULL rows store zero bytes and set their null flag.
    *
    * @param segment Input segment holding this lane's group-by column for the current chunk; borrowed, read only.
-   * @param lane Destination scratch buffers; borrowed, resized to the chunk's row count and overwritten.
+   * @param row_begin First row of the window to decode.
+   * @param row_end One past the window's last row; must not exceed the chunk's row count.
+   * @param lane Destination scratch buffers; borrowed, resized to the window's row count and overwritten, so the
+   *   window's first row is stored at index 0.
    * @pre Runs in the estimate and scatter phases, single-threaded per worker on that worker's own scratch.
    */
-  virtual void decode(const AbstractSegment& segment, KeyDecodeScratch::NumericLane& lane) const = 0;
+  virtual void decode(const AbstractSegment& segment, size_t row_begin, size_t row_end,
+                      KeyDecodeScratch::NumericLane& lane) const = 0;
 
   /**
    * Reverse of pack(): decode this lane's value and append it (or a NULL) to its output column.
@@ -333,7 +339,8 @@ class NumericKeyLane : public AbstractNumericKeyLane {
    */
   NumericKeyLane(ColumnID column_id, uint32_t field_offset, uint32_t null_bit_index);
 
-  void decode(const AbstractSegment& segment, KeyDecodeScratch::NumericLane& lane) const override;
+  void decode(const AbstractSegment& segment, size_t row_begin, size_t row_end,
+              KeyDecodeScratch::NumericLane& lane) const override;
   void unpack(const std::byte* key, const std::byte* null_bitmap, OutputColumns& output, size_t output_column_index,
               size_t output_row) const override;
 
@@ -634,116 +641,182 @@ inline NumericKeyLaneEntry make_numeric_lane(const DataType data_type, const Col
           NumericLaneField{field_offset, static_cast<uint32_t>(numeric_lane_width(data_type)), null_bit_index}};
 }
 
+/**
+ * Visit rows [row_begin, row_end) of a segment that stores its values where a single row can be addressed directly,
+ * calling `visitor(window_row, value)` in ascending row order.
+ *
+ * Those shapes are the dictionary segment, the value segment, and the reference segment whose position list stays
+ * within one chunk of either -- between them they cover what a group-by scan meets in practice. Reading them by row
+ * is what lets a worker pay for its own window only, instead of scanning the whole chunk to reach it.
+ *
+ * @tparam T The segment's column data type.
+ * @param segment Segment to read; borrowed, read only.
+ * @param row_begin First row of the window.
+ * @param row_end One past the window's last row; must not exceed the segment's row count.
+ * @param visitor Called once per window row as visitor(window_row, value), where `window_row` counts from 0 at
+ *   `row_begin` and `value` points into the segment's own storage -- stable for the segment's lifetime -- or is
+ *   nullptr for a NULL row.
+ * @return true iff the segment is one of those shapes, in which case the window has been visited; false leaves the
+ *   visitor uncalled and the caller has to scan (see iterate_segment_window()).
+ */
+template <typename T, typename Visitor>
+bool iterate_stable_segment_window(const AbstractSegment& segment, const size_t row_begin, const size_t row_end,
+                                   const Visitor& visitor) {
+  // The attribute vector's compression is resolved once per window, so reading a value id costs no virtual call.
+  const auto visit_dictionary = [&](const DictionarySegment<T>& dictionary_segment, const auto& row_to_id) {
+    const auto& dictionary = *dictionary_segment.dictionary();
+    const auto null_value_id = dictionary_segment.null_value_id();
+    resolve_compressed_vector_type(*dictionary_segment.attribute_vector(), [&](const auto& attribute_vector) {
+      const auto decompressor = attribute_vector.create_decompressor();
+      for (auto row = row_begin; row < row_end; ++row) {
+        const auto value_id = row_to_id(decompressor, row);
+        visitor(row - row_begin, value_id == null_value_id ? nullptr : &dictionary[value_id]);
+      }
+    });
+  };
+
+  if (const auto* dictionary_segment = dynamic_cast<const DictionarySegment<T>*>(&segment)) {
+    visit_dictionary(*dictionary_segment, [](const auto& decompressor, const size_t row) {
+      return ValueID{decompressor.get(row)};
+    });
+    return true;
+  }
+
+  if (const auto* value_segment = dynamic_cast<const ValueSegment<T>*>(&segment)) {
+    const auto& values = value_segment->values();
+    const auto* null_values = value_segment->is_nullable() ? &value_segment->null_values() : nullptr;
+    for (auto row = row_begin; row < row_end; ++row) {
+      const auto is_null = null_values && (*null_values)[row];
+      visitor(row - row_begin, is_null ? nullptr : &values[row]);
+    }
+    return true;
+  }
+
+  const auto* reference_segment = dynamic_cast<const ReferenceSegment*>(&segment);
+  if (!reference_segment) {
+    return false;
+  }
+  const auto& pos_list = *reference_segment->pos_list();
+  if (!pos_list.references_single_chunk() || pos_list.empty()) {
+    return false;
+  }
+
+  const auto target = reference_segment->referenced_table()
+                          ->get_chunk(pos_list.common_chunk_id())
+                          ->get_segment(reference_segment->referenced_column_id());
+  if (const auto* dictionary_segment = dynamic_cast<const DictionarySegment<T>*>(target.get())) {
+    visit_dictionary(*dictionary_segment, [&](const auto& decompressor, const size_t row) {
+      return ValueID{decompressor.get(pos_list[row].chunk_offset)};
+    });
+    return true;
+  }
+  if (const auto* value_segment = dynamic_cast<const ValueSegment<T>*>(target.get())) {
+    const auto& values = value_segment->values();
+    const auto* null_values = value_segment->is_nullable() ? &value_segment->null_values() : nullptr;
+    for (auto row = row_begin; row < row_end; ++row) {
+      const auto chunk_offset = pos_list[row].chunk_offset;
+      const auto is_null = null_values && (*null_values)[chunk_offset];
+      visitor(row - row_begin, is_null ? nullptr : &values[chunk_offset]);
+    }
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Visit rows [row_begin, row_end) of any segment, calling `visitor(window_row, value)` as
+ * iterate_stable_segment_window() does.
+ *
+ * A segment outside the directly addressable shapes is scanned whole and the rows outside the window are dropped, so
+ * it costs one scan of the chunk per window: a phase claiming windows over such a segment falls back to chunk
+ * granularity in cost, never in correctness. Its values reach the visitor as a pointer that is valid for the duration
+ * of the call only, so a visitor that keeps the value must copy it.
+ */
+template <typename T, typename Visitor>
+void iterate_segment_window(const AbstractSegment& segment, const size_t row_begin, const size_t row_end,
+                            const Visitor& visitor) {
+  if (iterate_stable_segment_window<T>(segment, row_begin, row_end, visitor)) {
+    return;
+  }
+
+  auto row = size_t{0};
+  segment_iterate<T>(segment, [&](const auto& position) {
+    const auto segment_row = row++;
+    if (segment_row < row_begin || segment_row >= row_end) {
+      return;
+    }
+    if (position.is_null()) {
+      visitor(segment_row - row_begin, nullptr);
+      return;
+    }
+    const auto& value = position.value();
+    visitor(segment_row - row_begin, &value);
+  });
+}
+
 inline void decode_numeric_lanes(const NumericKeyLanes& lanes,
                                  const std::span<const AbstractSegment* const> group_by_segments,
-                                 KeyDecodeScratch& scratch) {
+                                 const size_t row_begin, const size_t row_end, KeyDecodeScratch& scratch) {
   const auto lane_count = lanes.size();
   scratch.numeric_lanes.resize(lane_count);
   for (auto index = size_t{0}; index < lane_count; ++index) {
-    lanes[index].lane->decode(*group_by_segments[index], scratch.numeric_lanes[index]);
+    lanes[index].lane->decode(*group_by_segments[index], row_begin, row_end, scratch.numeric_lanes[index]);
   }
 }
 
-// The decoded views point into the segment's own storage wherever that storage is stable for the chunk's lifetime:
-// straight into the dictionary for dictionary segments, into the value vector for value segments, and through a
-// single-chunk position list into either of those for reference segments. Only segments outside these shapes are
-// copied into the scratch's `owned` backing.
-inline void decode_string_column(const AbstractSegment& segment, KeyDecodeScratch::StringColumn& column) {
-  const auto row_count = static_cast<size_t>(segment.size());
-  column.values.resize(row_count);
-  column.nulls.resize(row_count);
+// The decoded views point into the segment's own storage wherever that storage is stable for the chunk's lifetime;
+// only segments outside those shapes are copied into the scratch's `owned` backing.
+inline void decode_string_column(const AbstractSegment& segment, const size_t row_begin, const size_t row_end,
+                                 KeyDecodeScratch::StringColumn& column) {
+  const auto window_rows = row_end - row_begin;
+  column.values.resize(window_rows);
+  column.nulls.resize(window_rows);
 
-  const auto decode_dictionary = [&](const DictionarySegment<pmr_string>& dictionary_segment, const auto& row_to_id) {
-    const auto& dictionary = *dictionary_segment.dictionary();
-    const auto null_value_id = dictionary_segment.null_value_id();
-    for (auto row = size_t{0}; row < row_count; ++row) {
-      const auto value_id = row_to_id(row);
-      if (value_id == null_value_id) {
-        column.values[row] = {};
-        column.nulls[row] = 1;
-      } else {
-        column.values[row] = std::string_view{dictionary[value_id]};
-        column.nulls[row] = 0;
-      }
-    }
-  };
-
-  if (const auto* dictionary_segment = dynamic_cast<const DictionarySegment<pmr_string>*>(&segment)) {
-    const auto decompressor = dictionary_segment->attribute_vector()->create_base_decompressor();
-    decode_dictionary(*dictionary_segment, [&](const size_t row) {
-      return ValueID{decompressor->get(row)};
-    });
-    return;
-  }
-
-  if (const auto* value_segment = dynamic_cast<const ValueSegment<pmr_string>*>(&segment)) {
-    const auto& values = value_segment->values();
-    const auto* null_values = value_segment->is_nullable() ? &value_segment->null_values() : nullptr;
-    for (auto row = size_t{0}; row < row_count; ++row) {
-      if (null_values && (*null_values)[row]) {
-        column.values[row] = {};
-        column.nulls[row] = 1;
-      } else {
-        column.values[row] = std::string_view{values[row]};
-        column.nulls[row] = 0;
-      }
-    }
-    return;
-  }
-
-  if (const auto* reference_segment = dynamic_cast<const ReferenceSegment*>(&segment)) {
-    const auto& pos_list = *reference_segment->pos_list();
-    if (pos_list.references_single_chunk() && row_count > 0) {
-      const auto target = reference_segment->referenced_table()
-                              ->get_chunk(pos_list.common_chunk_id())
-                              ->get_segment(reference_segment->referenced_column_id());
-      if (const auto* dictionary_segment = dynamic_cast<const DictionarySegment<pmr_string>*>(target.get())) {
-        const auto decompressor = dictionary_segment->attribute_vector()->create_base_decompressor();
-        decode_dictionary(*dictionary_segment, [&](const size_t row) {
-          return ValueID{decompressor->get(pos_list[row].chunk_offset)};
-        });
-        return;
-      }
-      if (const auto* value_segment = dynamic_cast<const ValueSegment<pmr_string>*>(target.get())) {
-        const auto& values = value_segment->values();
-        const auto* null_values = value_segment->is_nullable() ? &value_segment->null_values() : nullptr;
-        for (auto row = size_t{0}; row < row_count; ++row) {
-          const auto chunk_offset = pos_list[row].chunk_offset;
-          if (null_values && (*null_values)[chunk_offset]) {
-            column.values[row] = {};
-            column.nulls[row] = 1;
-          } else {
-            column.values[row] = std::string_view{values[chunk_offset]};
-            column.nulls[row] = 0;
-          }
+  const auto viewed = iterate_stable_segment_window<pmr_string>(
+      segment, row_begin, row_end, [&](const size_t row, const pmr_string* value) {
+        if (value) {
+          column.values[row] = std::string_view{*value};
+          column.nulls[row] = 0;
+        } else {
+          column.values[row] = {};
+          column.nulls[row] = 1;
         }
-        return;
-      }
-    }
+      });
+  if (viewed) {
+    return;
   }
 
-  column.owned.resize(row_count);
+  column.owned.resize(window_rows);
   auto row = size_t{0};
   segment_iterate<pmr_string>(segment, [&](const auto& position) {
-    if (position.is_null()) {
-      column.values[row] = {};
-      column.nulls[row] = 1;
-    } else {
-      column.owned[row] = position.value();
-      column.values[row] = std::string_view{column.owned[row]};
-      column.nulls[row] = 0;
+    const auto segment_row = row++;
+    if (segment_row < row_begin || segment_row >= row_end) {
+      return;
     }
-    ++row;
+    const auto window_row = segment_row - row_begin;
+    if (position.is_null()) {
+      column.values[window_row] = {};
+      column.nulls[window_row] = 1;
+    } else {
+      column.owned[window_row] = position.value();
+      column.values[window_row] = std::string_view{column.owned[window_row]};
+      column.nulls[window_row] = 0;
+    }
   });
+}
+
+inline void decode_string_column(const AbstractSegment& segment, KeyDecodeScratch::StringColumn& column) {
+  decode_string_column(segment, 0, segment.size(), column);
 }
 
 inline void decode_string_key_columns(const StringKeyColumns& string_columns,
                                       const std::span<const AbstractSegment* const> group_by_segments,
-                                      KeyDecodeScratch& scratch) {
+                                      const size_t row_begin, const size_t row_end, KeyDecodeScratch& scratch) {
   const auto string_count = string_columns.size();
   scratch.string_columns.resize(string_count);
   for (auto index = size_t{0}; index < string_count; ++index) {
-    decode_string_column(*group_by_segments[string_columns[index].tuple_index], scratch.string_columns[index]);
+    decode_string_column(*group_by_segments[string_columns[index].tuple_index], row_begin, row_end,
+                         scratch.string_columns[index]);
   }
 }
 
@@ -786,24 +859,23 @@ NumericKeyLane<T>::NumericKeyLane(const ColumnID column_id, const uint32_t field
     : _column_id{column_id}, _field_offset{field_offset}, _null_bit_index{null_bit_index} {}
 
 template <typename T>
-void NumericKeyLane<T>::decode(const AbstractSegment& segment, KeyDecodeScratch::NumericLane& lane) const {
+void NumericKeyLane<T>::decode(const AbstractSegment& segment, const size_t row_begin, const size_t row_end,
+                               KeyDecodeScratch::NumericLane& lane) const {
   using Encoded = decltype(encode_lane_value(T{}));
-  const auto row_count = static_cast<size_t>(segment.size());
-  lane.values.resize(row_count * sizeof(Encoded));
-  lane.nulls.resize(row_count);
+  const auto window_rows = row_end - row_begin;
+  lane.values.resize(window_rows * sizeof(Encoded));
+  lane.nulls.resize(window_rows);
   auto* values = lane.values.data();
-  auto row = size_t{0};
-  segment_iterate<T>(segment, [&](const auto& position) {
+  iterate_segment_window<T>(segment, row_begin, row_end, [&](const size_t row, const T* value) {
     auto encoded = Encoded{};
-    if (position.is_null()) {
+    if (value) {
+      encoded = encode_lane_value(*value);
+      lane.nulls[row] = 0;
+    } else {
       DebugAssert(_null_bit_index != NO_NULL_BIT, "NULL in a non-nullable group-by column.");
       lane.nulls[row] = 1;
-    } else {
-      encoded = encode_lane_value(position.value());
-      lane.nulls[row] = 0;
     }
     std::memcpy(values + row * sizeof(Encoded), &encoded, sizeof(encoded));
-    ++row;
   });
 }
 
@@ -858,19 +930,28 @@ class NumericShortKeySchema {
   size_t column_count() const;
 
   /**
-   * Decode one chunk's group-by columns into the worker's scratch, one pass per column.
+   * Decode rows [row_begin, row_end) of one chunk's group-by columns into the worker's scratch, one pass per column.
+   *
+   * The scratch holds the window's rows alone, so pack() addresses a row by its distance from `row_begin` rather than
+   * by its chunk offset. Decoding a window instead of a whole chunk is what lets several workers share one chunk.
    *
    * @param group_by_segments Segments for the group-by columns of the current chunk, in schema order; borrowed, read
    *   only.
-   * @param scratch Destination scratch; borrowed, resized and overwritten. Must be the calling worker's own.
+   * @param row_begin First row of the window to decode.
+   * @param row_end One past the window's last row; must not exceed the chunk's row count.
+   * @param scratch Destination scratch; borrowed, resized to the window and overwritten. Must be the calling worker's
+   *   own.
    * @pre Runs in the estimate and scatter phases, single-threaded per worker on that worker's own scratch.
    */
+  void decode(std::span<const AbstractSegment* const> group_by_segments, size_t row_begin, size_t row_end,
+              KeyDecodeScratch& scratch) const;
+  /** Decode a whole chunk's group-by columns via the windowed overload. */
   void decode(std::span<const AbstractSegment* const> group_by_segments, KeyDecodeScratch& scratch) const;
   /**
    * Pack one decoded row's group-by tuple into a key buffer.
    *
    * @param scratch Decoded columns of the current chunk, filled by decode(); borrowed, read only.
-   * @param chunk_offset Row within the decoded chunk to pack.
+   * @param chunk_offset Row to pack, counted from the first row decode() was given.
    * @param key_out Destination key buffer; borrowed, written. Must be at least PackedWidth bytes.
    * @param spill_buffer Unused for numeric-only keys; present only for a uniform call site across schema variants.
    * @pre Runs in the estimate and scatter phases, single-threaded per worker on that worker's own store.
@@ -940,8 +1021,15 @@ size_t NumericShortKeySchema<PackedWidth>::column_count() const {
 
 template <size_t PackedWidth>
 void NumericShortKeySchema<PackedWidth>::decode(const std::span<const AbstractSegment* const> group_by_segments,
+                                                const size_t row_begin, const size_t row_end,
                                                 KeyDecodeScratch& scratch) const {
-  decode_numeric_lanes(_lanes, group_by_segments, scratch);
+  decode_numeric_lanes(_lanes, group_by_segments, row_begin, row_end, scratch);
+}
+
+template <size_t PackedWidth>
+void NumericShortKeySchema<PackedWidth>::decode(const std::span<const AbstractSegment* const> group_by_segments,
+                                                KeyDecodeScratch& scratch) const {
+  decode(group_by_segments, 0, group_by_segments.front()->size(), scratch);
 }
 
 template <size_t PackedWidth>
@@ -1019,8 +1107,11 @@ class NumericArbitraryKeySchema {
   size_t column_count() const;
 
   /**
-   * Decode one chunk's group-by columns into the worker's scratch; see NumericShortKeySchema::decode.
+   * Decode a window of one chunk's group-by columns into the worker's scratch; see NumericShortKeySchema::decode.
    */
+  void decode(std::span<const AbstractSegment* const> group_by_segments, size_t row_begin, size_t row_end,
+              KeyDecodeScratch& scratch) const;
+  /** Decode a whole chunk's group-by columns; see NumericShortKeySchema::decode. */
   void decode(std::span<const AbstractSegment* const> group_by_segments, KeyDecodeScratch& scratch) const;
   /**
    * Pack one decoded row's group-by tuple into a key buffer; see NumericShortKeySchema::pack.
@@ -1084,8 +1175,14 @@ inline size_t NumericArbitraryKeySchema::column_count() const {
 }
 
 inline void NumericArbitraryKeySchema::decode(const std::span<const AbstractSegment* const> group_by_segments,
+                                              const size_t row_begin, const size_t row_end,
                                               KeyDecodeScratch& scratch) const {
-  decode_numeric_lanes(_lanes, group_by_segments, scratch);
+  decode_numeric_lanes(_lanes, group_by_segments, row_begin, row_end, scratch);
+}
+
+inline void NumericArbitraryKeySchema::decode(const std::span<const AbstractSegment* const> group_by_segments,
+                                              KeyDecodeScratch& scratch) const {
+  decode(group_by_segments, 0, group_by_segments.front()->size(), scratch);
 }
 
 inline void NumericArbitraryKeySchema::unpack(const std::byte* key, OutputColumns& output,
@@ -1173,14 +1270,17 @@ class MixedKeySchema {
   size_t column_count() const;
 
   /**
-   * Decode one chunk's group-by columns into the worker's scratch; see NumericShortKeySchema::decode.
+   * Decode a window of one chunk's group-by columns into the worker's scratch; see NumericShortKeySchema::decode.
    */
+  void decode(std::span<const AbstractSegment* const> group_by_segments, size_t row_begin, size_t row_end,
+              KeyDecodeScratch& scratch) const;
+  /** Decode a whole chunk's group-by columns; see NumericShortKeySchema::decode. */
   void decode(std::span<const AbstractSegment* const> group_by_segments, KeyDecodeScratch& scratch) const;
   /**
    * Pack one decoded row's group-by tuple into a key buffer, spilling overlong strings as needed.
    *
    * @param scratch Decoded columns of the current chunk, filled by decode(); borrowed, read only.
-   * @param chunk_offset Row within the decoded chunk to pack.
+   * @param chunk_offset Row to pack, counted from the first row decode() was given.
    * @param key_out Destination key buffer; borrowed, written. Must be at least packed_width() bytes.
    * @param spill_buffer Per-partition overflow buffer for string content that does not fit the inline blob; borrowed,
    *   may be appended to. Must be the buffer owned by the calling worker/partition.
@@ -1267,13 +1367,20 @@ MixedKeySchema<LenWidth> MixedKeySchema<LenWidth>::build(const std::vector<Colum
 
 template <size_t LenWidth>
 void MixedKeySchema<LenWidth>::decode(const std::span<const AbstractSegment* const> group_by_segments,
-                                      KeyDecodeScratch& scratch) const {
+                                      const size_t row_begin, const size_t row_end, KeyDecodeScratch& scratch) const {
   const auto lane_count = _numeric_lanes.size();
   scratch.numeric_lanes.resize(lane_count);
   for (auto index = size_t{0}; index < lane_count; ++index) {
-    _numeric_lanes[index].lane->decode(*group_by_segments[_numeric_tuple_indices[index]], scratch.numeric_lanes[index]);
+    _numeric_lanes[index].lane->decode(*group_by_segments[_numeric_tuple_indices[index]], row_begin, row_end,
+                                       scratch.numeric_lanes[index]);
   }
-  decode_string_key_columns(_string_columns, group_by_segments, scratch);
+  decode_string_key_columns(_string_columns, group_by_segments, row_begin, row_end, scratch);
+}
+
+template <size_t LenWidth>
+void MixedKeySchema<LenWidth>::decode(const std::span<const AbstractSegment* const> group_by_segments,
+                                      KeyDecodeScratch& scratch) const {
+  decode(group_by_segments, 0, group_by_segments.front()->size(), scratch);
 }
 
 template <size_t LenWidth>
@@ -1365,8 +1472,11 @@ class StringOnlyKeySchema {
   size_t column_count() const;
 
   /**
-   * Decode one chunk's group-by columns into the worker's scratch; see NumericShortKeySchema::decode.
+   * Decode a window of one chunk's group-by columns into the worker's scratch; see NumericShortKeySchema::decode.
    */
+  void decode(std::span<const AbstractSegment* const> group_by_segments, size_t row_begin, size_t row_end,
+              KeyDecodeScratch& scratch) const;
+  /** Decode a whole chunk's group-by columns; see NumericShortKeySchema::decode. */
   void decode(std::span<const AbstractSegment* const> group_by_segments, KeyDecodeScratch& scratch) const;
   /**
    * Pack one decoded row's group-by tuple into a key buffer, spilling overlong strings as needed; see
@@ -1440,8 +1550,15 @@ StringOnlyKeySchema<LenWidth> StringOnlyKeySchema<LenWidth>::build(const std::ve
 
 template <size_t LenWidth>
 void StringOnlyKeySchema<LenWidth>::decode(const std::span<const AbstractSegment* const> group_by_segments,
+                                           const size_t row_begin, const size_t row_end,
                                            KeyDecodeScratch& scratch) const {
-  decode_string_key_columns(_string_columns, group_by_segments, scratch);
+  decode_string_key_columns(_string_columns, group_by_segments, row_begin, row_end, scratch);
+}
+
+template <size_t LenWidth>
+void StringOnlyKeySchema<LenWidth>::decode(const std::span<const AbstractSegment* const> group_by_segments,
+                                           KeyDecodeScratch& scratch) const {
+  decode(group_by_segments, 0, group_by_segments.front()->size(), scratch);
 }
 
 template <size_t LenWidth>

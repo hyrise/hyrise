@@ -163,7 +163,7 @@ constexpr uint8_t HLL_PRECISION = 12;
  *
  * Each (stream, partition) pair buffers this many bytes before a non-temporal flush to the partition's region; sized
  * to one cache line so the flush is exactly one write-combining transaction. Decoupled from the scatter morsel
- * granularity (one input chunk), so morsel size does not affect it.
+ * granularity (MORSEL_ROWS rows), so morsel size does not affect it.
  *
  * Keep it a whole cache line: a value that is not the hardware cache-line size splits or wastes write-combining
  * transactions and undoes the non-temporal store benefit.
@@ -321,6 +321,27 @@ inline size_t key_piece_width(const size_t key_width) {
     return 16;
   }
   return key_width % 8 == 0 ? 8 : 4;
+}
+
+/**
+ * Rows a worker claims at a time in the scanning phases: estimate, scatter, and the low-cardinality fold (unit: rows).
+ *
+ * A chunk is too coarse a unit to claim: 13 million rows are only about 200 default-sized chunks, so beyond a hundred
+ * workers most of them find the cursor exhausted and how far a phase parallelizes follows the input's chunking rather
+ * than the machine. Claiming (chunk, row range) morsels of this many rows decouples the two. A quarter of a default
+ * chunk is coarse enough for the per-morsel setup -- one scratch resize, one segment dispatch, one atomic claim -- to
+ * disappear against the rows it covers, and fine enough to keep 128 workers fed on such an input.
+ *
+ * Raising it drifts back towards chunk-granularity quantization at high worker counts; lowering it balances more
+ * finely but pays the per-morsel setup more often.
+ *
+ * @see morsel_count_for() for the enumeration, worker_limit_for() -- single-threaded runs claim whole chunks instead.
+ */
+constexpr size_t MORSEL_ROWS = 16'384;
+
+/** Morsels a chunk of `chunk_rows` rows is claimed in; a chunk shorter than one morsel is a single morsel. */
+inline size_t morsel_count_for(const size_t chunk_rows, const size_t rows_per_morsel) {
+  return std::max(size_t{1}, (chunk_rows + rows_per_morsel - 1) / rows_per_morsel);
 }
 
 /**
