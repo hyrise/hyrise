@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <limits>
 #include <string>
+#include <vector>
 
 #include "base_test.hpp"
 #include "operators/aggregate_dyod/distinct_set.hpp"
@@ -41,6 +42,65 @@ TEST_F(DistinctSetTest, GrowthPreservesMembership) {
   for (auto value = int32_t{0}; value < value_count; ++value) {
     EXPECT_FALSE(set.insert(static_cast<uint32_t>(value % 3), value));
   }
+}
+
+TEST_F(DistinctSetTest, SplitDistributesEveryEntryExactlyOnce) {
+  auto set = DistinctSet<int32_t>{};
+  for (auto value = int32_t{0}; value < 5'000; ++value) {
+    set.insert(static_cast<uint32_t>(value % 5), value);
+  }
+
+  auto targets = std::vector<DistinctSet<int32_t>>(8);
+  set.split_into(targets);
+
+  auto total = size_t{0};
+  for (const auto& target : targets) {
+    total += target.size();
+  }
+  EXPECT_EQ(total, set.size());
+
+  auto merged = DistinctSet<int32_t>{};
+  for (const auto& target : targets) {
+    merged.merge(target);
+  }
+  EXPECT_EQ(merged.size(), set.size());
+  for (auto value = int32_t{0}; value < 5'000; ++value) {
+    EXPECT_FALSE(merged.insert(static_cast<uint32_t>(value % 5), value));
+  }
+}
+
+TEST_F(DistinctSetTest, SplitKeepsEqualValuesInTheSameTarget) {
+  auto first = DistinctSet<pmr_string>{};
+  auto second = DistinctSet<pmr_string>{};
+  for (auto value = int32_t{0}; value < 500; ++value) {
+    first.insert(0, "v" + std::to_string(value));
+    second.insert(0, "v" + std::to_string(value + 250));
+  }
+
+  auto targets_first = std::vector<DistinctSet<pmr_string>>(4);
+  auto targets_second = std::vector<DistinctSet<pmr_string>>(4);
+  first.split_into(targets_first);
+  second.split_into(targets_second);
+
+  auto total = size_t{0};
+  for (auto range = size_t{0}; range < 4; ++range) {
+    targets_first[range].merge(targets_second[range]);
+    total += targets_first[range].size();
+  }
+  EXPECT_EQ(total, 750u);
+}
+
+TEST_F(DistinctSetTest, SplitIntoSingleTargetMerges) {
+  auto set = DistinctSet<int32_t>{};
+  set.insert(0, 1);
+  set.insert(0, 2);
+
+  auto targets = std::vector<DistinctSet<int32_t>>(1);
+  targets.front().insert(0, 2);
+  targets.front().insert(0, 3);
+  set.split_into(targets);
+
+  EXPECT_EQ(targets.front().size(), 3u);
 }
 
 TEST_F(DistinctSetTest, ClearRetainsCapacityAndDropsContent) {

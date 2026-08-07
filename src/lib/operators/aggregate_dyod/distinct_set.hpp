@@ -58,6 +58,12 @@ class DistinctSet : private Noncopyable {
   /** Union another set's entries into this one, re-interning string content. */
   void merge(const DistinctSet& other);
 
+  /**
+   * Distribute the entries into `targets` by hash range. Equal (slot, value) pairs land in the same target
+   * regardless of which set they came from, so per-range unions across many sets partition the distinct count.
+   */
+  void split_into(std::vector<DistinctSet>& targets) const;
+
   size_t size() const;
 
   /** Drop all entries but keep allocated capacity. */
@@ -152,6 +158,26 @@ void DistinctSet<ColumnType>::merge(const DistinctSet& other) {
       insert(entry.slot, std::string_view{reinterpret_cast<const char*>(entry.data), entry.length});
     } else {
       insert(entry.slot, std::bit_cast<ColumnType>(entry.bits));
+    }
+  }
+}
+
+template <typename ColumnType>
+void DistinctSet<ColumnType>::split_into(std::vector<DistinctSet>& targets) const {
+  const auto target_count = targets.size();
+  Assert(std::has_single_bit(target_count), "Split requires a power-of-two target count.");
+  if (target_count == 1) {
+    targets.front().merge(*this);
+    return;
+  }
+
+  const auto shift = 64 - std::countr_zero(target_count);
+  for (const auto& entry : _entries) {
+    auto& target = targets[mix64(_entry_hash(entry)) >> shift];
+    if constexpr (std::is_same_v<ColumnType, pmr_string>) {
+      target.insert(entry.slot, std::string_view{reinterpret_cast<const char*>(entry.data), entry.length});
+    } else {
+      target.insert(entry.slot, std::bit_cast<ColumnType>(entry.bits));
     }
   }
 }
