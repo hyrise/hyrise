@@ -1506,11 +1506,12 @@ struct StringKeyBudget {
  * A string group-by column stored as a DictionarySegment<pmr_string> in every chunk has its value lengths bounded
  * exactly by those dictionaries: no row of that column can be longer than the longest dictionary entry. When that holds
  * for every string group-by column and every maximum fits a 1-byte length field, the key can carry 1-byte length fields
- * and an inline blob sized to the summed maxima instead of the flat STRING_BLOB_BYTES_PER_COLUMN per column -- a key
- * that is both narrower and, because the bound covers every row, never spills. Any column outside that shape -- not
- * dictionary-encoded in some chunk, dictionaries too large to settle within `dictionary_scan_limit`, or an entry too
- * long for a 1-byte length field -- puts the whole key back on the default sizing, which handles arbitrary lengths via
- * the spill path.
+ * and an inline blob sized to the summed maxima instead of the flat STRING_BLOB_BYTES_PER_COLUMN per column. The blob
+ * is capped at the default capacity, so one long dictionary outlier cannot widen every key; within the cap the bound
+ * covers every row and keys never spill, past it the affected rows spill exactly as on the default sizing. Any column
+ * outside that shape -- not dictionary-encoded in some chunk, dictionaries too large to settle within
+ * `dictionary_scan_limit`, or an entry too long for a 1-byte length field -- puts the whole key back on the default
+ * sizing, which handles arbitrary lengths via the spill path.
  *
  * @param group_by_column_ids ColumnIDs of the group-by columns, in output order; borrowed, read only. Non-string
  *   columns are skipped.
@@ -1525,10 +1526,12 @@ inline StringKeyBudget choose_string_key_budget(const std::vector<ColumnID>& gro
                                                 const Table& input_table, const size_t dictionary_scan_limit) {
   const auto chunk_count = input_table.chunk_count();
   auto blob_bytes = size_t{0};
+  auto string_column_count = size_t{0};
   for (const auto column_id : group_by_column_ids) {
     if (input_table.column_data_type(column_id) != DataType::String) {
       continue;
     }
+    ++string_column_count;
 
     auto scanned_entries = size_t{0};
     auto max_length = size_t{0};
@@ -1558,7 +1561,7 @@ inline StringKeyBudget choose_string_key_budget(const std::vector<ColumnID>& gro
     }
     blob_bytes += max_length;
   }
-  return {1, blob_bytes};
+  return {1, std::min(blob_bytes, STRING_BLOB_BYTES_PER_COLUMN * string_column_count)};
 }
 
 /**
