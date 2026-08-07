@@ -8,6 +8,7 @@
 #include <cstring>
 #include <limits>
 #include <memory>
+#include <optional>
 #include <span>
 #include <string_view>
 #include <type_traits>
@@ -56,7 +57,10 @@ namespace hyrise {
 // The null bitmap carries one bit per nullable group-by column (present only if any group-by column is nullable) and is
 // padded so the fixed part stays a multiple of 4 -- which keeps numeric widths on the {4,8,12,16,20,24} buckets and
 // leaves no uninitialized interior padding, making whole-buffer equality/hash sound (the pad bytes are zero-filled and
-// compared as zero). The string blob and spill pointer are absent for numeric-only schemas.
+// compared as zero). The inline string blob is padded at its tail for the same reason, which is what holds the fixed
+// part on a multiple of 4 once the blob capacity is sized from measured string lengths rather than from
+// STRING_BLOB_BYTES_PER_COLUMN (see choose_string_key_budget). The string blob and spill pointer are absent for
+// numeric-only schemas.
 //
 // NULL is carried out of band in the null bitmap -- never as an in-band sentinel value. (An in-band "+1 and reserve 0"
 // scheme collides at TYPE_MAX in a fixed-width lane, and no byte pattern is safe for a full-range column.) A NULL
@@ -487,7 +491,7 @@ inline void pack_string_columns(const StringKeyColumns& string_columns, const si
   }
 
   // NULL rows decode to empty views with a null data pointer, which must not reach memcpy.
-  const auto blob_capacity = STRING_BLOB_BYTES_PER_COLUMN * column_count;
+  const auto blob_capacity = fixed_part_width - blob_offset;
   if (total_length <= blob_capacity) {
     auto* cursor = key_out + blob_offset;
     for (auto index = size_t{0}; index < column_count; ++index) {
@@ -554,8 +558,12 @@ struct KeyLayout {
   size_t fixed_part_width{0};
 };
 
+// `string_blob_bytes` is the total inline blob capacity; std::nullopt spends STRING_BLOB_BYTES_PER_COLUMN on every
+// string column, while a caller that has bounded the string lengths passes the tighter budget it measured. Either way
+// the blob is padded at its tail so the fixed part stays a multiple of 4 bytes.
 inline KeyLayout compute_key_layout(const std::vector<ColumnID>& group_by_column_ids, const Table& input_table,
-                                    const size_t length_field_width) {
+                                    const size_t length_field_width,
+                                    const std::optional<size_t> string_blob_bytes = std::nullopt) {
   auto layout = KeyLayout{};
   layout.columns.reserve(group_by_column_ids.size());
 
@@ -593,8 +601,13 @@ inline KeyLayout compute_key_layout(const std::vector<ColumnID>& group_by_column
   }
 
   layout.blob_offset = length_field_cursor;
-  layout.fixed_part_width =
-      layout.blob_offset + (layout.string_count > 0 ? STRING_BLOB_BYTES_PER_COLUMN * layout.string_count : size_t{0});
+  if (layout.string_count == 0) {
+    layout.fixed_part_width = layout.blob_offset;
+    return layout;
+  }
+
+  const auto blob_bytes = string_blob_bytes.value_or(STRING_BLOB_BYTES_PER_COLUMN * layout.string_count);
+  layout.fixed_part_width = (layout.blob_offset + blob_bytes + 3) / 4 * 4;
   return layout;
 }
 
@@ -1122,8 +1135,9 @@ inline bool NumericArbitraryKeySchema::equals(const std::byte* a, const std::byt
  * points into lives in per-partition StringSpillBuffers. Used in the scatter (pack) and merge (unpack/hash/equals)
  * phases.
  *
- * Only LenWidth 4 is explicitly instantiated for now (see resolve_key_schema); the merge side re-interns spilled
- * content on a key's first insertion via reintern_spill() (see MergeMap).
+ * resolve_key_schema instantiates LenWidth 4 by default and LenWidth 1 when choose_string_key_budget finds the input's
+ * dictionaries bound every string length; the merge side re-interns spilled content on a key's first insertion via
+ * reintern_spill() (see MergeMap).
  *
  * See StringOnlyKeySchema (this schema with a zero-width numeric prefix) and StringSpillBuffer.
  */
@@ -1139,11 +1153,14 @@ class MixedKeySchema {
    *
    * @param group_by_column_ids ColumnIDs of the group-by columns, in output order; borrowed, read only.
    * @param input_table Table providing the columns' data types; borrowed, read only.
+   * @param string_blob_bytes Total inline string-blob capacity in bytes, or std::nullopt for the
+   *   STRING_BLOB_BYTES_PER_COLUMN default; resolve_key_schema passes the budget from choose_string_key_budget.
    * @return A fully built schema with at least one string and at least one numeric column.
    * @pre The columns include at least one string and at least one non-string column (resolve_key_schema guarantees
    *   this before instantiating the template).
    */
-  static MixedKeySchema build(const std::vector<ColumnID>& group_by_column_ids, const Table& input_table);
+  static MixedKeySchema build(const std::vector<ColumnID>& group_by_column_ids, const Table& input_table,
+                              std::optional<size_t> string_blob_bytes = std::nullopt);
 
   /** @return Upper bound of a key's footprint in bytes: fixed_part_width() plus the 8-byte spill pointer. */
   size_t packed_width() const;
@@ -1224,8 +1241,9 @@ class MixedKeySchema {
 
 template <size_t LenWidth>
 MixedKeySchema<LenWidth> MixedKeySchema<LenWidth>::build(const std::vector<ColumnID>& group_by_column_ids,
-                                                         const Table& input_table) {
-  const auto layout = compute_key_layout(group_by_column_ids, input_table, LenWidth);
+                                                         const Table& input_table,
+                                                         const std::optional<size_t> string_blob_bytes) {
+  const auto layout = compute_key_layout(group_by_column_ids, input_table, LenWidth, string_blob_bytes);
   Assert(layout.string_count > 0 && layout.string_count < group_by_column_ids.size(),
          "MixedKeySchema requires at least one string and at least one non-string group-by column.");
 
@@ -1317,7 +1335,7 @@ bool MixedKeySchema<LenWidth>::equals(const std::byte* a, const std::byte* b) co
  *
  * Invariants and ownership/lifetime/threading match MixedKeySchema (one immutable per-query instance, shared read-only
  * across the scatter and merge phases; spilled content lives in per-partition StringSpillBuffers). As with
- * MixedKeySchema, only LenWidth 4 is explicitly instantiated for now.
+ * MixedKeySchema, LenWidth 4 and LenWidth 1 are instantiated (see choose_string_key_budget).
  */
 template <size_t LenWidth>
 class StringOnlyKeySchema {
@@ -1331,10 +1349,13 @@ class StringOnlyKeySchema {
    *
    * @param group_by_column_ids ColumnIDs of the group-by columns, in output order; borrowed, read only.
    * @param input_table Table providing the columns' data types; borrowed, read only.
+   * @param string_blob_bytes Total inline string-blob capacity in bytes, or std::nullopt for the
+   *   STRING_BLOB_BYTES_PER_COLUMN default; resolve_key_schema passes the budget from choose_string_key_budget.
    * @return A fully built schema in which every group-by column is a string.
    * @pre Every listed column is a string (resolve_key_schema guarantees this before instantiating the template).
    */
-  static StringOnlyKeySchema build(const std::vector<ColumnID>& group_by_column_ids, const Table& input_table);
+  static StringOnlyKeySchema build(const std::vector<ColumnID>& group_by_column_ids, const Table& input_table,
+                                   std::optional<size_t> string_blob_bytes = std::nullopt);
 
   /** @return Upper bound of a key's footprint in bytes: fixed_part_width() plus the 8-byte spill pointer. */
   size_t packed_width() const;
@@ -1399,8 +1420,9 @@ class StringOnlyKeySchema {
 
 template <size_t LenWidth>
 StringOnlyKeySchema<LenWidth> StringOnlyKeySchema<LenWidth>::build(const std::vector<ColumnID>& group_by_column_ids,
-                                                                   const Table& input_table) {
-  const auto layout = compute_key_layout(group_by_column_ids, input_table, LenWidth);
+                                                                   const Table& input_table,
+                                                                   const std::optional<size_t> string_blob_bytes) {
+  const auto layout = compute_key_layout(group_by_column_ids, input_table, LenWidth, string_blob_bytes);
   Assert(layout.string_count == group_by_column_ids.size(),
          "StringOnlyKeySchema requires string-only group-by columns.");
 
@@ -1467,11 +1489,89 @@ bool StringOnlyKeySchema<LenWidth>::equals(const std::byte* a, const std::byte* 
 }
 
 /**
- * The schema family and short-width bucket resolve_key_schema dispatches on, computed by choose_key_schema.
+ * How a query's string key fields are sized: the per-string length-prefix field width and the total inline blob
+ * capacity, as chosen by choose_string_key_budget.
+ *
+ * The default -- a 4-byte length field per string column and STRING_BLOB_BYTES_PER_COLUMN of blob per string column --
+ * carries strings of any length by spilling the ones that do not fit inline.
+ */
+struct StringKeyBudget {
+  size_t length_field_width{4};
+  std::optional<size_t> blob_bytes{};  // Total inline blob capacity; std::nullopt selects the per-column default.
+};
+
+/**
+ * Derive the tightest string-key field sizing the input table's encodings prove correct.
+ *
+ * A string group-by column stored as a DictionarySegment<pmr_string> in every chunk has its value lengths bounded
+ * exactly by those dictionaries: no row of that column can be longer than the longest dictionary entry. When that holds
+ * for every string group-by column and every maximum fits a 1-byte length field, the key can carry 1-byte length fields
+ * and an inline blob sized to the summed maxima instead of the flat STRING_BLOB_BYTES_PER_COLUMN per column. The blob
+ * is capped at the default capacity, so one long dictionary outlier cannot widen every key; within the cap the bound
+ * covers every row and keys never spill, past it the affected rows spill exactly as on the default sizing. Any column
+ * outside that shape -- not dictionary-encoded in some chunk, dictionaries too large to settle within
+ * `dictionary_scan_limit`, or an entry too long for a 1-byte length field -- puts the whole key back on the default
+ * sizing, which handles arbitrary lengths via the spill path.
+ *
+ * @param group_by_column_ids ColumnIDs of the group-by columns, in output order; borrowed, read only. Non-string
+ *   columns are skipped.
+ * @param input_table Table whose chunks are inspected; borrowed, read only. A reference table bounds nothing, because
+ *   its chunks hold ReferenceSegments rather than dictionaries.
+ * @param dictionary_scan_limit Cap on the dictionary entries read per column before that column is given up on; see
+ *   DICTIONARY_BOUND_SCAN_LIMIT for the value resolve_key_schema uses.
+ * @return The tightened sizing, or the default one when the bound does not hold.
+ * Complexity: O(dictionary_scan_limit) entry reads per string group-by column.
+ */
+inline StringKeyBudget choose_string_key_budget(const std::vector<ColumnID>& group_by_column_ids,
+                                                const Table& input_table, const size_t dictionary_scan_limit) {
+  const auto chunk_count = input_table.chunk_count();
+  auto blob_bytes = size_t{0};
+  auto string_column_count = size_t{0};
+  for (const auto column_id : group_by_column_ids) {
+    if (input_table.column_data_type(column_id) != DataType::String) {
+      continue;
+    }
+    ++string_column_count;
+
+    auto scanned_entries = size_t{0};
+    auto max_length = size_t{0};
+    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+      const auto chunk = input_table.get_chunk(chunk_id);
+      if (!chunk) {
+        continue;
+      }
+      const auto segment = chunk->get_segment(column_id);
+      const auto* dictionary_segment = dynamic_cast<const DictionarySegment<pmr_string>*>(segment.get());
+      if (!dictionary_segment) {
+        return {};
+      }
+
+      const auto& dictionary = *dictionary_segment->dictionary();
+      scanned_entries += dictionary.size();
+      if (scanned_entries > dictionary_scan_limit) {
+        return {};
+      }
+      for (const auto& entry : dictionary) {
+        max_length = std::max(max_length, entry.size());
+      }
+    }
+
+    if (max_length > 255) {
+      return {};
+    }
+    blob_bytes += max_length;
+  }
+  return {1, std::min(blob_bytes, STRING_BLOB_BYTES_PER_COLUMN * string_column_count)};
+}
+
+/**
+ * The schema family, short-width bucket, and string field sizing resolve_key_schema dispatches on, computed by
+ * choose_key_schema.
  */
 struct KeySchemaChoice {
   KeyComposition composition{KeyComposition::NumericOnly};
   size_t short_packed_width{0};  // One of {4,8,12,16,20,24} for NumericShortKeySchema; 0 when the width exceeds them.
+  StringKeyBudget string_budget{};  // How the string fields are sized; unused for numeric-only tuples.
 };
 
 /**
@@ -1480,7 +1580,8 @@ struct KeySchemaChoice {
  *
  * @param group_by_column_ids ColumnIDs of the group-by columns, in output order; borrowed, read only.
  * @param input_table Table providing the columns' data types; borrowed, read only.
- * @return The composition and, for numeric-only tuples of at most 24 bytes, the packed-width bucket.
+ * @return The composition, for numeric-only tuples of at most 24 bytes the packed-width bucket, and for
+ *   string-involving tuples the string field sizing from choose_string_key_budget.
  */
 inline KeySchemaChoice choose_key_schema(const std::vector<ColumnID>& group_by_column_ids, const Table& input_table) {
   auto has_string = false;
@@ -1498,7 +1599,8 @@ inline KeySchemaChoice choose_key_schema(const std::vector<ColumnID>& group_by_c
     const auto width = layout.fixed_part_width;
     return {KeyComposition::NumericOnly, width <= 24 ? width : size_t{0}};
   }
-  return {has_numeric ? KeyComposition::Mixed : KeyComposition::StringOnly, 0};
+  return {has_numeric ? KeyComposition::Mixed : KeyComposition::StringOnly, 0,
+          choose_string_key_budget(group_by_column_ids, input_table, DICTIONARY_BOUND_SCAN_LIMIT)};
 }
 
 /**
@@ -1522,7 +1624,6 @@ template <typename Functor>
 void resolve_key_schema(const std::vector<ColumnID>& group_by_column_ids, const Table& input_table,
                         const Functor& functor) {
   Assert(!group_by_column_ids.empty(), "resolve_key_schema requires at least one group-by column.");
-  // For now, string length fields are always 4 bytes wide.
   const auto choice = choose_key_schema(group_by_column_ids, input_table);
   switch (choice.composition) {
     case KeyComposition::NumericOnly:
@@ -1550,11 +1651,23 @@ void resolve_key_schema(const std::vector<ColumnID>& group_by_column_ids, const 
           return;
       }
     case KeyComposition::Mixed:
-      functor(MixedKeySchema<4>::build(group_by_column_ids, input_table));
-      return;
+      switch (choice.string_budget.length_field_width) {
+        case 1:
+          functor(MixedKeySchema<1>::build(group_by_column_ids, input_table, choice.string_budget.blob_bytes));
+          return;
+        default:
+          functor(MixedKeySchema<4>::build(group_by_column_ids, input_table, choice.string_budget.blob_bytes));
+          return;
+      }
     case KeyComposition::StringOnly:
-      functor(StringOnlyKeySchema<4>::build(group_by_column_ids, input_table));
-      return;
+      switch (choice.string_budget.length_field_width) {
+        case 1:
+          functor(StringOnlyKeySchema<1>::build(group_by_column_ids, input_table, choice.string_budget.blob_bytes));
+          return;
+        default:
+          functor(StringOnlyKeySchema<4>::build(group_by_column_ids, input_table, choice.string_budget.blob_bytes));
+          return;
+      }
   }
   Fail("Invalid KeyComposition.");
 }

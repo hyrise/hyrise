@@ -240,6 +240,22 @@ inline size_t merge_tile_rows() {
 constexpr size_t STRING_BLOB_BYTES_PER_COLUMN = 8;
 
 /**
+ * Cap on the dictionary entries read per string group-by column when bounding the key layout (unit: entries).
+ *
+ * A string group-by column that is dictionary-encoded in every chunk has its value lengths bounded exactly by those
+ * dictionaries, which lets the key carry 1-byte length fields and an inline blob sized to the measured maxima instead
+ * of the flat STRING_BLOB_BYTES_PER_COLUMN (see choose_string_key_budget() in key_schema.hpp). Establishing that bound
+ * costs one pass over the dictionary entries, summed over the chunks, so a column that has not been settled within
+ * this many entries keeps the default layout. This caps the resolve-time cost per column regardless of how many chunks
+ * the input has, while the columns the tightened layout targets -- short codes with a handful of distinct values --
+ * stay far below it even for tables with thousands of chunks.
+ *
+ * Raising it lets wider dictionaries be bounded at more resolve-time work; lowering it settles resolve faster but
+ * leaves more group-bys on the default layout.
+ */
+constexpr size_t DICTIONARY_BOUND_SCAN_LIMIT = size_t{1} << 20;
+
+/**
  * Number of distinct output groups where the low-cardinality path is taken
 */
 inline size_t low_cardinality_threshold() {
