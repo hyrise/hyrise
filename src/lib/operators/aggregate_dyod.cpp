@@ -555,8 +555,8 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate_low_cardinality(const KeySchema
   auto timer = Timer{};
 
   const auto chunk_count = static_cast<size_t>(input_table.chunk_count());
-  const auto num_cpus = std::max(size_t{1}, Hyrise::get().topology.num_cpus());
-  const auto worker_count = std::clamp(chunk_count, size_t{1}, num_cpus);
+  const auto worker_limit = worker_limit_for(Hyrise::get().is_multi_threaded(), Hyrise::get().topology.num_cpus());
+  const auto worker_count = std::clamp(chunk_count, size_t{1}, worker_limit);
   const auto aggregate_count = aggregate_schema.aggregate_count();
   const auto key_width = key_schema.packed_width();
 
@@ -687,8 +687,8 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate(const KeySchema& key_schema, co
   auto timer = Timer{};
 
   const auto chunk_count = static_cast<size_t>(input_table.chunk_count());
-  const auto num_cpus = std::max(size_t{1}, Hyrise::get().topology.num_cpus());
-  const auto scatter_worker_count = std::clamp(chunk_count, size_t{1}, num_cpus);
+  const auto worker_limit = worker_limit_for(Hyrise::get().is_multi_threaded(), Hyrise::get().topology.num_cpus());
+  const auto scatter_worker_count = std::clamp(chunk_count, size_t{1}, worker_limit);
   const auto key_width = key_schema.packed_width();
 
   const auto gather_group_by_segments = [&](const Chunk& chunk, std::vector<std::shared_ptr<AbstractSegment>>& owners,
@@ -790,7 +790,7 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate(const KeySchema& key_schema, co
   }
 
   // The ceiling on P depends on the query's stream count, so the partition count is only chosen here.
-  const auto partition_count = choose_partition_count(cardinality_estimate, num_cpus, stream_widths.size());
+  const auto partition_count = choose_partition_count(cardinality_estimate, worker_limit, stream_widths.size());
   const auto shift = static_cast<uint32_t>(std::countr_zero(partition_count));
 
   auto scatter_stores = std::vector<ScatterStore>{};
@@ -903,7 +903,7 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate(const KeySchema& key_schema, co
   }
 
   // Merge: workers claim partitions and fold every store's rows for that partition through a dense MergeMap.
-  const auto merge_worker_count = std::min(static_cast<size_t>(partition_count), num_cpus);
+  const auto merge_worker_count = std::min(static_cast<size_t>(partition_count), worker_limit);
   auto per_worker_outputs = std::vector<OutputColumns>{};
   per_worker_outputs.reserve(merge_worker_count);
   for (auto worker_id = size_t{0}; worker_id < merge_worker_count; ++worker_id) {
@@ -993,9 +993,8 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate_without_group_by(const Aggregat
 
   // TODO(anyone): currently morsel_count == chunk_count, this has to be adjusted
   const auto morsel_count = static_cast<size_t>(input_table.chunk_count());
-  // The immediate scheduler cannot run logical workers concurrently and therefore needs only one state.
-  const auto max_worker_count = Hyrise::get().is_multi_threaded() ? Hyrise::get().topology.num_cpus() : size_t{1};
-  const auto worker_count = std::clamp(morsel_count, size_t{1}, max_worker_count);
+  const auto worker_limit = worker_limit_for(Hyrise::get().is_multi_threaded(), Hyrise::get().topology.num_cpus());
+  const auto worker_count = std::clamp(morsel_count, size_t{1}, worker_limit);
 
   for (const auto& aggregator : aggregators) {
     aggregator->set_worker_count(worker_count);
