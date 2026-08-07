@@ -271,7 +271,7 @@ TEST_F(AggregateDYODKeySchemaTest, NullableColumnWidensTheKeyByTheNullBitmap) {
   EXPECT_TRUE(resolved);
 }
 
-TEST_F(AggregateDYODKeySchemaTest, ResolvesWideNumericTupleToArbitrarySchema) {
+TEST_F(AggregateDYODKeySchemaTest, ResolvesFiveIntsToTwentyByteShortSchema) {
   const auto definitions = TableColumnDefinitions{{"a", DataType::Int, false},
                                                   {"b", DataType::Int, false},
                                                   {"c", DataType::Int, false},
@@ -282,8 +282,23 @@ TEST_F(AggregateDYODKeySchemaTest, ResolvesWideNumericTupleToArbitrarySchema) {
   resolve_key_schema(input.column_ids, *input.table, [&](const auto& schema) {
     using SchemaType = std::decay_t<decltype(schema)>;
     resolved = true;
+    EXPECT_TRUE((std::is_same_v<SchemaType, NumericShortKeySchema<20>>));
+  });
+  EXPECT_TRUE(resolved);
+}
+
+TEST_F(AggregateDYODKeySchemaTest, ResolvesWideNumericTupleToArbitrarySchema) {
+  const auto definitions = TableColumnDefinitions{{"a", DataType::Long, false},
+                                                  {"b", DataType::Long, false},
+                                                  {"c", DataType::Long, false},
+                                                  {"d", DataType::Int, false}};
+  const auto input = make_pack_input(definitions, {{int64_t{1}, int64_t{2}, int64_t{3}, 4}});
+  auto resolved = false;
+  resolve_key_schema(input.column_ids, *input.table, [&](const auto& schema) {
+    using SchemaType = std::decay_t<decltype(schema)>;
+    resolved = true;
     EXPECT_TRUE((std::is_same_v<SchemaType, NumericArbitraryKeySchema>));
-    EXPECT_EQ(schema.packed_width(), 20u);
+    EXPECT_EQ(schema.packed_width(), 28u);
   });
   EXPECT_TRUE(resolved);
 }
