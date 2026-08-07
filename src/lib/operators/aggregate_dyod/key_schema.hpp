@@ -9,6 +9,7 @@
 #include <limits>
 #include <memory>
 #include <span>
+#include <string_view>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -19,8 +20,12 @@
 #include "operators/aggregate_dyod/aggregate_dyod_config.hpp"
 #include "operators/aggregate_dyod/output_columns.hpp"
 #include "storage/abstract_segment.hpp"
+#include "storage/dictionary_segment.hpp"
+#include "storage/reference_segment.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/table.hpp"
+#include "storage/value_segment.hpp"
+#include "storage/vector_compression/base_compressed_vector.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -249,8 +254,9 @@ struct KeyDecodeScratch {
   };
 
   struct StringColumn {
-    std::vector<pmr_string> values;  // Decoded values; empty for NULL rows.
-    std::vector<uint8_t> nulls;      // One flag per row.
+    std::vector<std::string_view> values;  // Views of the decoded values; empty for NULL rows.
+    std::vector<uint8_t> nulls;            // One flag per row.
+    std::vector<pmr_string> owned;         // Backing copies for rows whose segment storage cannot be viewed directly.
   };
 
   boost::container::small_vector<NumericLane, EXPECTED_GROUP_BY_COLUMNS> numeric_lanes;
@@ -479,10 +485,14 @@ inline void pack_string_columns(const StringKeyColumns& string_columns, const si
     total_length += value.size();
   }
 
+  // NULL rows decode to empty views with a null data pointer, which must not reach memcpy.
   const auto blob_capacity = STRING_BLOB_BYTES_PER_COLUMN * column_count;
   if (total_length <= blob_capacity) {
     auto* cursor = key_out + blob_offset;
     for (auto index = size_t{0}; index < column_count; ++index) {
+      if (scratch.string_columns[index].nulls[chunk_offset]) {
+        continue;
+      }
       const auto& value = scratch.string_columns[index].values[chunk_offset];
       std::memcpy(cursor, value.data(), value.size());
       cursor += value.size();
@@ -493,6 +503,9 @@ inline void pack_string_columns(const StringKeyColumns& string_columns, const si
   auto content = std::vector<std::byte>{};
   content.reserve(total_length);
   for (auto index = size_t{0}; index < column_count; ++index) {
+    if (scratch.string_columns[index].nulls[chunk_offset]) {
+      continue;
+    }
     const auto& value = scratch.string_columns[index].values[chunk_offset];
     const auto* bytes = reinterpret_cast<const std::byte*>(value.data());
     content.insert(content.end(), bytes, bytes + value.size());
@@ -617,17 +630,93 @@ inline void decode_numeric_lanes(const NumericKeyLanes& lanes,
   }
 }
 
+// The decoded views point into the segment's own storage wherever that storage is stable for the chunk's lifetime:
+// straight into the dictionary for dictionary segments, into the value vector for value segments, and through a
+// single-chunk position list into either of those for reference segments. Only segments outside these shapes are
+// copied into the scratch's `owned` backing.
 inline void decode_string_column(const AbstractSegment& segment, KeyDecodeScratch::StringColumn& column) {
   const auto row_count = static_cast<size_t>(segment.size());
   column.values.resize(row_count);
   column.nulls.resize(row_count);
+
+  const auto decode_dictionary = [&](const DictionarySegment<pmr_string>& dictionary_segment, const auto& row_to_id) {
+    const auto& dictionary = *dictionary_segment.dictionary();
+    const auto null_value_id = dictionary_segment.null_value_id();
+    for (auto row = size_t{0}; row < row_count; ++row) {
+      const auto value_id = row_to_id(row);
+      if (value_id == null_value_id) {
+        column.values[row] = {};
+        column.nulls[row] = 1;
+      } else {
+        column.values[row] = std::string_view{dictionary[value_id]};
+        column.nulls[row] = 0;
+      }
+    }
+  };
+
+  if (const auto* dictionary_segment = dynamic_cast<const DictionarySegment<pmr_string>*>(&segment)) {
+    const auto decompressor = dictionary_segment->attribute_vector()->create_base_decompressor();
+    decode_dictionary(*dictionary_segment, [&](const size_t row) {
+      return ValueID{decompressor->get(row)};
+    });
+    return;
+  }
+
+  if (const auto* value_segment = dynamic_cast<const ValueSegment<pmr_string>*>(&segment)) {
+    const auto& values = value_segment->values();
+    const auto* null_values = value_segment->is_nullable() ? &value_segment->null_values() : nullptr;
+    for (auto row = size_t{0}; row < row_count; ++row) {
+      if (null_values && (*null_values)[row]) {
+        column.values[row] = {};
+        column.nulls[row] = 1;
+      } else {
+        column.values[row] = std::string_view{values[row]};
+        column.nulls[row] = 0;
+      }
+    }
+    return;
+  }
+
+  if (const auto* reference_segment = dynamic_cast<const ReferenceSegment*>(&segment)) {
+    const auto& pos_list = *reference_segment->pos_list();
+    if (pos_list.references_single_chunk() && row_count > 0) {
+      const auto target = reference_segment->referenced_table()
+                              ->get_chunk(pos_list.common_chunk_id())
+                              ->get_segment(reference_segment->referenced_column_id());
+      if (const auto* dictionary_segment = dynamic_cast<const DictionarySegment<pmr_string>*>(target.get())) {
+        const auto decompressor = dictionary_segment->attribute_vector()->create_base_decompressor();
+        decode_dictionary(*dictionary_segment, [&](const size_t row) {
+          return ValueID{decompressor->get(pos_list[row].chunk_offset)};
+        });
+        return;
+      }
+      if (const auto* value_segment = dynamic_cast<const ValueSegment<pmr_string>*>(target.get())) {
+        const auto& values = value_segment->values();
+        const auto* null_values = value_segment->is_nullable() ? &value_segment->null_values() : nullptr;
+        for (auto row = size_t{0}; row < row_count; ++row) {
+          const auto chunk_offset = pos_list[row].chunk_offset;
+          if (null_values && (*null_values)[chunk_offset]) {
+            column.values[row] = {};
+            column.nulls[row] = 1;
+          } else {
+            column.values[row] = std::string_view{values[chunk_offset]};
+            column.nulls[row] = 0;
+          }
+        }
+        return;
+      }
+    }
+  }
+
+  column.owned.resize(row_count);
   auto row = size_t{0};
   segment_iterate<pmr_string>(segment, [&](const auto& position) {
     if (position.is_null()) {
-      column.values[row].clear();
+      column.values[row] = {};
       column.nulls[row] = 1;
     } else {
-      column.values[row] = position.value();
+      column.owned[row] = position.value();
+      column.values[row] = std::string_view{column.owned[row]};
       column.nulls[row] = 0;
     }
     ++row;

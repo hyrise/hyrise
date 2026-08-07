@@ -668,6 +668,27 @@ TEST_F(AggregateDYODKeySchemaTest, ReferenceSegmentsSpanningChunksPackLikeValueS
   });
 }
 
+TEST_F(AggregateDYODKeySchemaTest, ReferenceSegmentsOverDictionaryChunksPackLikeValueSegments) {
+  const auto definitions = TableColumnDefinitions{{"a", DataType::Int, true}, {"b", DataType::String, true}};
+  const auto rows = std::vector<std::vector<AllTypeVariant>>{{1, pmr_string{"abc"}},
+                                                             {NullValue{}, pmr_string{"abc"}},
+                                                             {2, NullValue{}},
+                                                             {1, pmr_string{"xy"}},
+                                                             {3, pmr_string{"abc"}}};
+  const auto plain = make_pack_input(definitions, rows);
+  const auto reference = to_reference_input(
+      make_pack_input(definitions, rows, std::nullopt, SegmentEncodingSpec{EncodingType::Dictionary}));
+  resolve_key_schema(plain.column_ids, *plain.table, [&](const auto& schema) {
+    auto spill_plain = StringSpillBuffer{};
+    auto spill_reference = StringSpillBuffer{};
+    const auto expected = pack_all_keys(schema, plain, spill_plain);
+    const auto actual = pack_all_keys(schema, reference, spill_reference);
+    for (auto row = size_t{0}; row < expected.size(); ++row) {
+      expect_keys_equal(schema, expected[row], actual[row]);
+    }
+  });
+}
+
 TEST_F(AggregateDYODKeySchemaTest, NullRowIdsPackAsNullValues) {
   const auto definitions = TableColumnDefinitions{{"a", DataType::Int, true}};
   const auto plain = make_pack_input(definitions, {{7}, {NullValue{}}, {8}});
