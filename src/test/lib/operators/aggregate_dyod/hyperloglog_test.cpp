@@ -1,5 +1,7 @@
 #include <array>
+#include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <limits>
 #include <tuple>
 #include <utility>
@@ -8,6 +10,7 @@
 #include "base_test.hpp"
 #include "operators/aggregate_dyod/aggregate_dyod_config.hpp"
 #include "operators/aggregate_dyod/hyperloglog.hpp"
+#include "operators/aggregate_dyod/key_schema.hpp"
 
 namespace hyrise {
 
@@ -19,6 +22,24 @@ uint64_t mix(const uint64_t value) {
   mixed = (mixed ^ (mixed >> 30)) * 0xbf58476d1ce4e5b9ull;
   mixed = (mixed ^ (mixed >> 27)) * 0x94d049bb133111ebull;
   return mixed ^ (mixed >> 31);
+}
+
+// What the estimate phase feeds the sketch for a single non-nullable Int group-by column.
+uint64_t packed_key_hash(const int32_t value) {
+  const auto encoded = encode_lane_value(value);
+  auto key = std::array<std::byte, sizeof(encoded)>{};
+  std::memcpy(key.data(), &encoded, sizeof(encoded));
+  return hash_bytes(key.data(), key.size());
+}
+
+// Preimage under mix64 of a hash that selects `register_index` and leaves no remaining set bits.
+uint64_t saturating_hash(const uint64_t register_index) {
+  auto value = register_index << (64 - HLL_PRECISION);
+  value ^= value >> 33;
+  value *= 0x9cb4b2f8129337dbull;
+  value ^= value >> 33;
+  value *= 0x4f74430c22a54005ull;
+  return value ^ (value >> 33);
 }
 
 void add_distinct_values(HllSketch& sketch, const size_t count, const uint64_t offset = 0) {
@@ -86,10 +107,22 @@ TEST_F(HllSketchTest, EstimatesLargeCardinality) {
               static_cast<double>(actual_count) * 0.05);
 }
 
+TEST_F(HllSketchTest, EstimatesLargeCardinalityFromPackedKeyHashes) {
+  constexpr auto actual_count = size_t{4'000'000};
+
+  auto sketch = HllSketch{};
+  for (auto value = size_t{1}; value <= actual_count; ++value) {
+    sketch.add(packed_key_hash(static_cast<int32_t>(value)));
+  }
+
+  EXPECT_NEAR(static_cast<double>(sketch.estimate()), static_cast<double>(actual_count),
+              static_cast<double>(actual_count) * 0.05);
+}
+
 TEST_F(HllSketchTest, SaturatedSketchClampsEstimate) {
   auto sketch = HllSketch{};
   for (auto register_index = uint64_t{0}; register_index < (uint64_t{1} << HLL_PRECISION); ++register_index) {
-    sketch.add(register_index << (64 - HLL_PRECISION));
+    sketch.add(saturating_hash(register_index));
   }
 
   EXPECT_EQ(sketch.estimate(), std::numeric_limits<size_t>::max());
