@@ -247,6 +247,19 @@ inline size_t low_cardinality_threshold() {
 }
 
 /**
+ * Width of the pieces a packed key is staged in during the scatter phase (unit: bytes).
+ *
+ * The widest of {16, 8, 4} that divides the key width, so a key needs as few push calls as possible while every
+ * piece still evenly divides the SWWC staging line. Key widths are always multiples of 4.
+ */
+inline size_t key_piece_width(const size_t key_width) {
+  if (key_width % 16 == 0) {
+    return 16;
+  }
+  return key_width % 8 == 0 ? 8 : 4;
+}
+
+/**
  * Ceiling on the number of workers a phase fans out to (unit: workers).
  *
  * Under the immediate scheduler every JobTask runs sequentially on the calling thread, so per-worker state beyond one

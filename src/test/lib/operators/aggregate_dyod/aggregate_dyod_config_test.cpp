@@ -128,4 +128,14 @@ TEST_F(AggregateDYODConfigTest, SampledEstimateFallsBackOnEmptySamples) {
   EXPECT_EQ(scale_sampled_estimate(0, 0, 20'000'000, 57), 20'000'000);
 }
 
+TEST_F(AggregateDYODConfigTest, KeyPieceWidthIsTheWidestAlignedDivisor) {
+  EXPECT_EQ(key_piece_width(4), 4);
+  EXPECT_EQ(key_piece_width(8), 8);
+  EXPECT_EQ(key_piece_width(12), 4);
+  EXPECT_EQ(key_piece_width(16), 16);
+  EXPECT_EQ(key_piece_width(20), 4);
+  EXPECT_EQ(key_piece_width(24), 8);
+  EXPECT_EQ(key_piece_width(28), 4);
+}
+
 }  // namespace hyrise

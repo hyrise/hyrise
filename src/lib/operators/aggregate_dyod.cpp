@@ -892,11 +892,12 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate(const KeySchema& key_schema, co
   }
   const auto value_null_bitmap_stream_index = 1 + value_stream_widths.size();
 
-  // The packed key is staged in 4-byte pieces and the value-null bitmap byte-wise, so every declared stream width
-  // divides the SWWC line.
+  // The packed key is staged in key_piece_width() pieces and the value-null bitmap byte-wise, so every declared
+  // stream width divides the SWWC line.
+  const auto piece_width = key_piece_width(key_width);
   auto stream_widths = std::vector<size_t>{};
   stream_widths.reserve(1 + value_stream_widths.size() + (has_value_null_bitmap ? 1 : 0));
-  stream_widths.emplace_back(4);
+  stream_widths.emplace_back(piece_width);
   stream_widths.insert(stream_widths.end(), value_stream_widths.begin(), value_stream_widths.end());
   if (has_value_null_bitmap) {
     stream_widths.emplace_back(1);
@@ -959,8 +960,8 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate(const KeySchema& key_schema, co
             key_schema.reintern_spill(key_scratch.data(), store.key_spill_buffer(partition));
             pack_spill.clear();
           }
-          for (auto piece_offset = size_t{0}; piece_offset < key_width; piece_offset += 4) {
-            heads.push(store, 0, partition, key_scratch.data() + piece_offset, 4);
+          for (auto piece_offset = size_t{0}; piece_offset < key_width; piece_offset += piece_width) {
+            heads.push(store, 0, partition, key_scratch.data() + piece_offset, piece_width);
           }
         }
 
