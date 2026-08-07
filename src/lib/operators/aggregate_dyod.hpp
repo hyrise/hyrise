@@ -232,8 +232,6 @@ class AggregateDYOD : public AbstractAggregateOperator {
 
   const std::string& name() const override;
 
-  std::pair<GroupID, GroupID> _get_new_group_id_range();
-
  protected:
   // The paper uses a default step size of 256
   // https://github.com/danielxue/global-hash-tables-strike-back/blob/main/common/src/fuzzy_counter.rs#L56
@@ -294,6 +292,8 @@ class AggregateDYOD : public AbstractAggregateOperator {
   GroupID _group_id(const GroupKey& group_key, WorkerState& worker_state);
 
   std::vector<GroupID> _group_ids_for_chunk(const Chunk& chunk, WorkerState& worker_state);
+
+  std::pair<GroupID, GroupID> _get_new_group_id_range();
 
   void _aggregate_chunk(WorkerState& state, const std::shared_ptr<const Chunk> chunk);
 
