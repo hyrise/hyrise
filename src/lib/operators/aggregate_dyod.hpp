@@ -50,12 +50,11 @@ class AbstractAggregateVector {
   }
 
   pmr_vector<size_t> counts() {
-    auto view = std::views::iota(size_t{0}, _counts.size()) | std::views::filter([&](size_t index) {
-                  return _occupied[index];
-                }) |
-                std::views::transform([&](size_t index) {
-                  return _counts[index];
-                });
+    // clang-format off
+    auto view = std::views::iota(size_t{0}, _counts.size())
+      | std::views::filter([&](size_t index) { return _occupied[index]; })
+      | std::views::transform([&](size_t index) { return _counts[index]; });
+    // clang-format on
 
     return pmr_vector<size_t>(view.begin(), view.end());
   }
@@ -84,12 +83,11 @@ struct TypedAggregateVector : AbstractAggregateVector {
   }
 
   pmr_vector<AccumulatorDataType> accumulators() {
-    auto view = std::views::iota(size_t{0}, _accumulators.size()) | std::views::filter([&](size_t index) {
-                  return _occupied[index];
-                }) |
-                std::views::transform([&](size_t index) {
-                  return _accumulators[index];
-                });
+    // clang-format off
+    auto view = std::views::iota(size_t{0}, _accumulators.size())
+      | std::views::filter([&](size_t index) { return _occupied[index]; })
+      | std::views::transform([&](size_t index) { return _accumulators[index]; });
+    // clang-format on
 
     return pmr_vector<AccumulatorDataType>(view.begin(), view.end());
   }
