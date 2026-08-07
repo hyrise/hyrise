@@ -33,6 +33,9 @@ version.hpp
 /*.csv
 /*.csv.meta
 
+# Ignore Perfetto traces
+*.perfetto-trace
+
 # CLion cmake directory
 cmake-build-*
 
