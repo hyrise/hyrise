@@ -237,7 +237,9 @@ class AggregateDYOD : public AbstractAggregateOperator {
   std::pair<GroupID, GroupID> _get_new_group_id_range();
 
  protected:
-  static constexpr GroupID FUZZY_TICKET_RANGE_SIZE = 200;
+  // The paper uses a default step size of 256
+  // https://github.com/danielxue/global-hash-tables-strike-back/blob/main/common/src/fuzzy_counter.rs#L56
+  static constexpr GroupID FUZZY_TICKET_RANGE_SIZE = 128;
 
   std::vector<DataType> _aggregate_data_types;
   GroupIDMap _group_id_map;
