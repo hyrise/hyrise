@@ -473,17 +473,6 @@ void run_workers(const size_t worker_count, const Worker& worker) {
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 }
 
-bool low_cardinality_eligible(const AggregateSchema& schema, const Table& input) {
-  for (auto i = size_t{0}; i < schema.aggregate_count(); ++i) {
-    if (const auto fn = schema.function(i); fn == WindowFunction::Any || fn == WindowFunction::CountDistinct)
-      return false;
-    if (const auto col = schema.source_column(i);
-        col != INVALID_COLUMN_ID && input.column_data_type(col) == DataType::String)
-      return false;
-  }
-  return true;
-}
-
 void gather_value_column(const AbstractSegment& segment, const DataType type, const bool nullable,
                          std::vector<std::byte>& out_bytes, std::vector<std::byte>& out_null, const size_t row_count) {
   resolve_data_type(type, [&](const auto data_type) {
@@ -504,6 +493,32 @@ void gather_value_column(const AbstractSegment& segment, const DataType type, co
       }
       ++row;
     });
+  });
+}
+
+// String cells are gathered as (pointer, length) references into `values`, which must stay alive through the fold.
+void gather_string_value_column(const AbstractSegment& segment, const bool nullable, std::vector<pmr_string>& values,
+                                std::vector<std::byte>& out_bytes, std::vector<std::byte>& out_null,
+                                const size_t row_count) {
+  values.resize(row_count);
+  out_bytes.assign(row_count * sizeof(StringValueReference), std::byte{0});
+  if (nullable) {
+    out_null.assign((row_count + 7) / 8, std::byte{0});
+  }
+  auto row = size_t{0};
+  segment_iterate<pmr_string>(segment, [&](const auto& position) {
+    if (position.is_null()) {
+      if (nullable) {
+        out_null[row / 8] |= std::byte{1} << (row % 8);
+      }
+    } else {
+      auto& value = values[row];
+      value = position.value();
+      const auto reference =
+          StringValueReference{reinterpret_cast<const std::byte*>(value.data()), value.size()};
+      std::memcpy(out_bytes.data() + row * sizeof(reference), &reference, sizeof(reference));
+    }
+    ++row;
   });
 }
 }  // namespace
@@ -578,6 +593,7 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate_low_cardinality(const KeySchema
       auto slots = std::vector<uint32_t>{};
       auto value_buffers = std::vector<std::vector<std::byte>>(aggregate_count);
       auto null_buffers = std::vector<std::vector<std::byte>>(aggregate_count);
+      auto string_holders = std::vector<std::vector<pmr_string>>(aggregate_count);
       auto owners = std::vector<std::shared_ptr<AbstractSegment>>{};
       auto segments = std::vector<const AbstractSegment*>{};
 
@@ -615,8 +631,14 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate_low_cardinality(const KeySchema
           }
           const auto source = aggregate_schema.source_column(aggregate_index);
           const auto nullable = aggregate_schema.value_stream(stream).is_nullable();
-          gather_value_column(*chunk->get_segment(source), input_table.column_data_type(source), nullable,
-                              value_buffers[aggregate_index], null_buffers[aggregate_index], row_count);
+          const auto source_type = input_table.column_data_type(source);
+          if (source_type == DataType::String) {
+            gather_string_value_column(*chunk->get_segment(source), nullable, string_holders[aggregate_index],
+                                       value_buffers[aggregate_index], null_buffers[aggregate_index], row_count);
+          } else {
+            gather_value_column(*chunk->get_segment(source), source_type, nullable, value_buffers[aggregate_index],
+                                null_buffers[aggregate_index], row_count);
+          }
         }
 
         const auto max_tile_rows = merge_tile_rows();
@@ -758,7 +780,7 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate(const KeySchema& key_schema, co
 
   step_performance_data.set_step_runtime(OperatorSteps::Estimate, timer.lap());
 
-  if (cardinality_estimate <= low_cardinality_threshold() && low_cardinality_eligible(aggregate_schema, input_table)) {
+  if (cardinality_estimate <= low_cardinality_threshold() && low_cardinality_eligible(aggregate_schema)) {
     return _aggregate_low_cardinality(key_schema, aggregate_schema, input_table, cardinality_estimate);
   }
 
