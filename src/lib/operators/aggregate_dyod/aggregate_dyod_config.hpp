@@ -224,6 +224,54 @@ inline size_t merge_tile_rows() {
 }
 
 /**
+ * Rows at which a merge partition counts as oversized, as a multiple of the mean partition's rows (unit: factor).
+ *
+ * Below this the partition is close enough to the others for the merge phase to stay balanced, and the extra maps and
+ * the per-key combine a split costs are not repaid.
+ */
+constexpr size_t MERGE_SPLIT_MEAN_ROW_FACTOR = 4;
+
+/**
+ * Rows per expected distinct key an oversized partition must hold before it is split (unit: rows per key).
+ *
+ * A split folds disjoint store ranges into separate maps and combines them per key, so it pays only when the partition
+ * is large because few keys repeat often: at few rows per key the combine touches nearly as many keys as the fold it
+ * parallelizes.
+ */
+constexpr size_t MERGE_SPLIT_ROWS_PER_KEY = 8;
+
+/**
+ * Number of ways one merge partition is split across workers; 1 leaves it to a single worker (unit: sub-jobs).
+ *
+ * Each way folds a contiguous range of the scatter stores into its own map, and the maps are combined once the last
+ * way is done, so a split is bounded by the stores it can be cut along as well as by the workers available to run the
+ * ways. Single-threaded runs pass a worker_limit of 1 and never split. A partition qualifies only when it is oversized
+ * against both the mean partition and the keys a partition is expected to hold; the number of ways then brings the
+ * largest way down to about the mean partition's rows.
+ *
+ * @param partition_rows              Rows the partition holds across all stores.
+ * @param mean_partition_rows         Rows per partition on average, i.e. the scattered row count divided by P.
+ * @param expected_keys_per_partition Distinct keys a partition is expected to hold, i.e. the cardinality estimate
+ *   divided by P.
+ * @param store_count                 Scatter stores the partition's rows are spread over; the finest cut available.
+ * @param worker_limit                Ceiling on the workers the merge phase fans out to.
+ * @return The number of ways to split, in [1, min(store_count, worker_limit)].
+ */
+inline size_t merge_split_ways_for(const size_t partition_rows, const size_t mean_partition_rows,
+                                   const size_t expected_keys_per_partition, const size_t store_count,
+                                   const size_t worker_limit) {
+  const auto split_limit = std::min(store_count, worker_limit);
+  if (split_limit < 2 || mean_partition_rows == 0) {
+    return 1;
+  }
+  if (partition_rows < MERGE_SPLIT_MEAN_ROW_FACTOR * mean_partition_rows ||
+      partition_rows < MERGE_SPLIT_ROWS_PER_KEY * expected_keys_per_partition) {
+    return 1;
+  }
+  return std::min(partition_rows / mean_partition_rows, split_limit);
+}
+
+/**
  * Inline string-blob capacity budget per string group-by column (unit: bytes).
  *
  * The total inline blob width of a string-involving key scales as

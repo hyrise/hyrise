@@ -49,6 +49,33 @@ TEST_F(AggregateDYODConfigTest, MergeTileRowsGrowsWithL1) {
   EXPECT_LT(merge_tile_rows_for(small), merge_tile_rows_for(large));
 }
 
+TEST_F(AggregateDYODConfigTest, NoMergeSplitForEvenlySizedPartitions) {
+  EXPECT_EQ(merge_split_ways_for(4000, 4000, 500, 32, 32), 1);
+  EXPECT_EQ(merge_split_ways_for(3 * 4000, 4000, 500, 32, 32), 1);
+}
+
+TEST_F(AggregateDYODConfigTest, MergeSplitFollowsTheRowSurplus) {
+  EXPECT_EQ(merge_split_ways_for(80'000, 4000, 500, 32, 32), 20);
+  EXPECT_EQ(merge_split_ways_for(40'000, 4000, 500, 32, 32), 10);
+}
+
+TEST_F(AggregateDYODConfigTest, NoMergeSplitForKeyRichPartitions) {
+  EXPECT_EQ(merge_split_ways_for(80'000, 4000, 20'000, 32, 32), 1);
+}
+
+TEST_F(AggregateDYODConfigTest, MergeSplitIsCappedByStoresAndWorkers) {
+  EXPECT_EQ(merge_split_ways_for(80'000, 4000, 500, 8, 32), 8);
+  EXPECT_EQ(merge_split_ways_for(80'000, 4000, 500, 32, 6), 6);
+}
+
+TEST_F(AggregateDYODConfigTest, NoMergeSplitForSingleThreadedRuns) {
+  EXPECT_EQ(merge_split_ways_for(80'000, 4000, 500, 32, 1), 1);
+}
+
+TEST_F(AggregateDYODConfigTest, NoMergeSplitForEmptyInput) {
+  EXPECT_EQ(merge_split_ways_for(0, 0, 0, 32, 32), 1);
+}
+
 TEST_F(AggregateDYODConfigTest, MaxPartitionCountMatchesFallbackTuning) {
   EXPECT_EQ(max_partition_count_for(FALLBACK_CACHE_SIZES, 2), 2048);
 }

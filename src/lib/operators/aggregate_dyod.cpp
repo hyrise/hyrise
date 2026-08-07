@@ -1016,8 +1016,61 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate(const KeySchema& key_schema, co
         function != WindowFunction::Count && function != WindowFunction::CountDistinct);
   }
 
-  // Merge: workers claim partitions and fold every store's rows for that partition through a dense MergeMap.
-  const auto merge_worker_count = std::min(static_cast<size_t>(partition_count), worker_limit);
+  // Merge: workers claim jobs and fold one partition's rows from a range of the stores through a dense MergeMap. A
+  // job normally covers every store, but a partition holding far more rows than the others -- one hot group-by value
+  // is enough -- is covered by several sub-jobs over disjoint store ranges, so it cannot serialize the phase.
+  auto partition_rows = std::vector<size_t>(partition_count, 0);
+  auto scattered_row_count = size_t{0};
+  for (auto& store : scatter_stores) {
+    for (auto partition = PartitionId{0}; partition < partition_count; ++partition) {
+      const auto rows = store.key_region(partition).size() / key_width;
+      partition_rows[partition] += rows;
+      scattered_row_count += rows;
+    }
+  }
+
+  struct MergeJob {
+    PartitionId partition;
+    size_t first_store;
+    size_t last_store;
+    size_t split_index;  // index into split_partitions, or NO_SPLIT for a job covering every store
+    size_t split_way;    // this job's slot among its partition's sub-jobs
+  };
+
+  // A split partition's sub-jobs publish their maps here and count down; the last one combines them and emits.
+  struct SplitPartition {
+    std::vector<std::unique_ptr<MergeMap<KeySchema>>> maps;
+    std::atomic<size_t> remaining;
+  };
+
+  constexpr auto NO_SPLIT = std::numeric_limits<size_t>::max();
+  const auto store_count = scatter_stores.size();
+  const auto split_eligible = merge_split_eligible(aggregate_schema);
+  auto merge_jobs = std::vector<MergeJob>{};
+  merge_jobs.reserve(partition_count);
+  auto split_partitions = std::vector<std::unique_ptr<SplitPartition>>{};
+  for (auto partition = PartitionId{0}; partition < partition_count; ++partition) {
+    const auto split_ways =
+        split_eligible ? merge_split_ways_for(partition_rows[partition], scattered_row_count / partition_count,
+                                              cardinality_estimate / partition_count, store_count, worker_limit)
+                       : size_t{1};
+    if (split_ways == 1) {
+      merge_jobs.emplace_back(MergeJob{partition, 0, store_count, NO_SPLIT, 0});
+      continue;
+    }
+
+    const auto split_index = split_partitions.size();
+    auto& split = *split_partitions.emplace_back(std::make_unique<SplitPartition>());
+    split.maps.resize(split_ways);
+    split.remaining.store(split_ways, std::memory_order_relaxed);
+    for (auto way = size_t{0}; way < split_ways; ++way) {
+      merge_jobs.emplace_back(
+          MergeJob{partition, way * store_count / split_ways, (way + 1) * store_count / split_ways, split_index, way});
+    }
+  }
+
+  const auto job_count = merge_jobs.size();
+  const auto merge_worker_count = std::min(job_count, worker_limit);
   auto per_worker_outputs = std::vector<OutputColumns>{};
   per_worker_outputs.reserve(merge_worker_count);
   for (auto worker_id = size_t{0}; worker_id < merge_worker_count; ++worker_id) {
@@ -1025,48 +1078,44 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate(const KeySchema& key_schema, co
   }
   {
     const auto partition_hint = cardinality_estimate / partition_count + 1;
-    auto partition_cursor = std::atomic<size_t>{0};
+    auto job_cursor = std::atomic<size_t>{0};
     run_workers(merge_worker_count, [&](const size_t worker_id) {
       auto merge_map = MergeMap<KeySchema>{key_schema, shift, aggregate_schema.make_accumulator_columns()};
       auto& output = per_worker_outputs[worker_id];
       auto slots = std::vector<uint32_t>{};
       auto bitmap_tile = std::vector<std::byte>((merge_tile_rows() + 7) / 8);
-      while (true) {
-        const auto partition = static_cast<PartitionId>(partition_cursor.fetch_add(1, std::memory_order_relaxed));
-        if (partition >= partition_count) {
-          break;
-        }
-        merge_map.clear();
-        merge_map.reserve(partition_hint);
-        for (auto& store : scatter_stores) {
-          const auto& key_region = store.key_region(partition);
+
+      const auto fold_store_range = [&](MergeMap<KeySchema>& map, const MergeJob& job) {
+        for (auto store_index = job.first_store; store_index < job.last_store; ++store_index) {
+          auto& store = scatter_stores[store_index];
+          const auto& key_region = store.key_region(job.partition);
           DebugAssert(key_region.size() % key_width == 0, "Key region must hold whole keys.");
           const auto row_count = key_region.size() / key_width;
           const auto max_tile_rows = merge_tile_rows();
           for (auto tile_start = size_t{0}; tile_start < row_count; tile_start += max_tile_rows) {
             const auto tile_rows = std::min(max_tile_rows, row_count - tile_start);
             slots.clear();
-            merge_map.resolve({key_region.data() + tile_start * key_width, tile_rows * key_width}, slots);
+            map.resolve({key_region.data() + tile_start * key_width, tile_rows * key_width}, slots);
             for (auto aggregate_index = size_t{0}; aggregate_index < aggregate_count; ++aggregate_index) {
               const auto stream_index = aggregate_schema.aggregate_value_stream(aggregate_index);
               if (stream_index == AggregateSchema::NO_VALUE_STREAM) {
                 if (aggregate_schema.function(aggregate_index) == WindowFunction::Any) {
-                  const auto& row_id_region = store.value_region(partition, row_id_stream_index);
-                  merge_map.fold(aggregate_index, slots,
-                                 {row_id_region.data() + tile_start * sizeof(RowID), tile_rows * sizeof(RowID)}, {});
+                  const auto& row_id_region = store.value_region(job.partition, row_id_stream_index);
+                  map.fold(aggregate_index, slots,
+                           {row_id_region.data() + tile_start * sizeof(RowID), tile_rows * sizeof(RowID)}, {});
                 } else {
-                  merge_map.fold(aggregate_index, slots, {}, {});
+                  map.fold(aggregate_index, slots, {}, {});
                 }
                 continue;
               }
               const auto width = value_stream_widths[stream_index];
-              const auto& value_region = store.value_region(partition, stream_index);
+              const auto& value_region = store.value_region(job.partition, stream_index);
               const auto value_bytes =
                   std::span<const std::byte>{value_region.data() + tile_start * width, tile_rows * width};
               auto value_null_bitmap = std::span<const std::byte>{};
               if (aggregate_schema.value_stream(stream_index).is_nullable()) {
                 // Gather this stream's bits from the per-row bitmap fields into the bit-per-row tile form.
-                const auto* row_bitmaps = store.value_null_bitmap_region(partition).data();
+                const auto* row_bitmaps = store.value_null_bitmap_region(job.partition).data();
                 const auto stream_bit = value_stream_null_bits[stream_index];
                 std::memset(bitmap_tile.data(), 0, bitmap_tile.size());
                 for (auto row = size_t{0}; row < tile_rows; ++row) {
@@ -1077,11 +1126,45 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate(const KeySchema& key_schema, co
                 }
                 value_null_bitmap = {bitmap_tile.data(), (tile_rows + 7) / 8};
               }
-              merge_map.fold(aggregate_index, slots, value_bytes, value_null_bitmap);
+              map.fold(aggregate_index, slots, value_bytes, value_null_bitmap);
             }
           }
         }
-        merge_map.flush_into(output);
+      };
+
+      while (true) {
+        const auto job_index = job_cursor.fetch_add(1, std::memory_order_relaxed);
+        if (job_index >= job_count) {
+          break;
+        }
+        const auto& job = merge_jobs[job_index];
+        if (job.split_index == NO_SPLIT) {
+          merge_map.clear();
+          merge_map.reserve(partition_hint);
+          fold_store_range(merge_map, job);
+          merge_map.flush_into(output);
+          output.maybe_seal();
+          continue;
+        }
+
+        auto& split = *split_partitions[job.split_index];
+        auto sub_map =
+            std::make_unique<MergeMap<KeySchema>>(key_schema, shift, aggregate_schema.make_accumulator_columns());
+        sub_map->reserve(partition_hint);
+        fold_store_range(*sub_map, job);
+        split.maps[job.split_way] = std::move(sub_map);
+        // The sub-maps stay alive until the phase ends: a combined string key may point into their spill buffers.
+        if (split.remaining.fetch_sub(1, std::memory_order_acq_rel) > 1) {
+          continue;
+        }
+        auto& combined = *split.maps[job.split_way];
+        const auto way_count = split.maps.size();
+        for (auto way = size_t{0}; way < way_count; ++way) {
+          if (way != job.split_way) {
+            combined.combine(*split.maps[way]);
+          }
+        }
+        combined.flush_into(output);
         output.maybe_seal();
       }
       output.seal_all();

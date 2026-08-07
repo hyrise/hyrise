@@ -295,9 +295,9 @@ class AbstractAccumulatorColumn {
   virtual void clear() = 0;
 
   /**
-   * Merge another accumulator column's per-slot state into this one, used by the low-cardinality path to combine
-   * per-worker private maps. For each row i, the source slot (other_first_slot + i) of `other` is folded into this
-   * column's dense slot destination_slots[i].
+   * Merge another accumulator column's per-slot state into this one, used to combine the per-worker private maps of
+   * the low-cardinality path and the sub-maps of a split merge partition. For each row i, the source slot
+   * (other_first_slot + i) of `other` is folded into this column's dense slot destination_slots[i].
    */
   virtual void combine_from(const AbstractAccumulatorColumn& other, size_t other_first_slot,
                             std::span<const uint32_t> destination_slots) = 0;
@@ -517,6 +517,7 @@ void TypedAccumulatorColumn<ColumnType, Function>::finalize_into(const size_t fi
 /**
  * Accumulator for ANY: keeps the first row id that lands in each dense slot and gathers the cell from the input table
  * at finalize, NULL included. No value stream is scattered for ANY; fold() consumes the shared row-id stream.
+ * combine_from() keeps the destination's row id wherever it already has one, since any row of a group is a valid ANY.
  */
 template <typename ColumnType>
 class AnyAccumulatorColumn : public AbstractAccumulatorColumn {
@@ -568,10 +569,17 @@ void AnyAccumulatorColumn<ColumnType>::clear() {
 }
 
 template <typename ColumnType>
-void AnyAccumulatorColumn<ColumnType>::combine_from(const AbstractAccumulatorColumn& /*other*/,
-                                                    const size_t /*other_first_slot*/,
-                                                    std::span<const uint32_t> /*destination_slots*/) {
-  Fail("ANY is not eligible for the low-cardinality fast path and must not be combined.");
+void AnyAccumulatorColumn<ColumnType>::combine_from(const AbstractAccumulatorColumn& other_base,
+                                                    const size_t other_first_slot,
+                                                    const std::span<const uint32_t> destination_slots) {
+  const auto& other = static_cast<const AnyAccumulatorColumn&>(other_base);
+  const auto row_count = destination_slots.size();
+  for (auto row = size_t{0}; row < row_count; ++row) {
+    auto& row_id = _row_ids[destination_slots[row]];
+    if (row_id.is_null()) {
+      row_id = other._row_ids[other_first_slot + row];
+    }
+  }
 }
 
 template <typename ColumnType>
@@ -995,6 +1003,19 @@ inline bool low_cardinality_eligible(const AggregateSchema& schema) {
   for (auto index = size_t{0}; index < schema.aggregate_count(); ++index) {
     const auto function = schema.function(index);
     if (function == WindowFunction::Any || function == WindowFunction::CountDistinct) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * Whether a query's merge phase may spread one partition over several store ranges and combine their maps afterwards.
+ * COUNT(DISTINCT) may not: the same value can occur in more than one range, so its per-slot counts cannot be summed.
+ */
+inline bool merge_split_eligible(const AggregateSchema& schema) {
+  for (auto index = size_t{0}; index < schema.aggregate_count(); ++index) {
+    if (schema.function(index) == WindowFunction::CountDistinct) {
       return false;
     }
   }
