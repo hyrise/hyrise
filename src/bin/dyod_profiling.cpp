@@ -40,7 +40,7 @@
 using namespace hyrise;
 using namespace expression_functional;
 
-constexpr auto RUN_COUNT = size_t{10} + 1;  // 1 warm-up run.
+constexpr auto RUN_COUNT = size_t{2};  // 1 warm-up run.
 constexpr auto FILENAME = "RESULTS.csv";
 
 enum class BenchmarkType : uint8_t { tpch, tpcds };
