@@ -414,6 +414,19 @@ TEST_F(AggregateDYODKeySchemaTest, StringKeyBudgetSumsTheDictionaryMaxima) {
   EXPECT_EQ(*budget.blob_bytes, 5u);
 }
 
+TEST_F(AggregateDYODKeySchemaTest, StringKeyBudgetCapsTheBlobAtTheDefaultCapacity) {
+  const auto definitions = TableColumnDefinitions{{"a", DataType::String, false}, {"b", DataType::String, false}};
+  const auto rows = std::vector<std::vector<AllTypeVariant>>{
+      {pmr_string{"A"}, pmr_string(40, 'x')}, {pmr_string{"N"}, pmr_string{"air"}}};
+  const auto input = make_pack_input(definitions, rows, std::nullopt, SegmentEncodingSpec{EncodingType::Dictionary});
+
+  const auto budget = choose_string_key_budget(input.column_ids, *input.table, DICTIONARY_BOUND_SCAN_LIMIT);
+
+  EXPECT_EQ(budget.length_field_width, 1u);
+  ASSERT_TRUE(budget.blob_bytes.has_value());
+  EXPECT_EQ(*budget.blob_bytes, 2 * STRING_BLOB_BYTES_PER_COLUMN);
+}
+
 TEST_F(AggregateDYODKeySchemaTest, StringKeyBudgetGivesUpOnOversizedDictionaries) {
   const auto definitions = TableColumnDefinitions{{"a", DataType::String, false}};
   const auto rows = std::vector<std::vector<AllTypeVariant>>{
