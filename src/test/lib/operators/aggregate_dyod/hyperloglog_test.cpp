@@ -1,6 +1,7 @@
 #include <array>
 #include <cstdint>
 #include <limits>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -165,45 +166,51 @@ TEST_F(HllSketchTest, WorkerSketchesCanBeMerged) {
 }
 
 TEST_F(HllSketchTest, ChoosePartitionCountZeroEstimate) {
-  EXPECT_EQ(choose_partition_count(0, 1), PartitionCount{1});
+  EXPECT_EQ(choose_partition_count(0, 1, 2), PartitionCount{1});
 }
 
 TEST_F(HllSketchTest, ChoosePartitionCountScalesWithKeysBudget) {
-  EXPECT_EQ(choose_partition_count(KEYS_BUDGET - 1, 1), PartitionCount{1});
-  EXPECT_EQ(choose_partition_count(KEYS_BUDGET, 1), PartitionCount{1});
-  EXPECT_EQ(choose_partition_count(KEYS_BUDGET + 1, 1), PartitionCount{2});
-  EXPECT_EQ(choose_partition_count(3 * KEYS_BUDGET, 1), PartitionCount{4});
+  EXPECT_EQ(choose_partition_count(keys_budget() - 1, 1, 2), PartitionCount{1});
+  EXPECT_EQ(choose_partition_count(keys_budget(), 1, 2), PartitionCount{1});
+  EXPECT_EQ(choose_partition_count(keys_budget() + 1, 1, 2), PartitionCount{2});
+  EXPECT_EQ(choose_partition_count(3 * keys_budget(), 1, 2), PartitionCount{4});
 }
 
 TEST_F(HllSketchTest, ChoosePartitionCountClampsToWorkerCount) {
-  EXPECT_EQ(choose_partition_count(1, 3), PartitionCount{4});
-  EXPECT_EQ(choose_partition_count(1, 8), PartitionCount{8});
-  EXPECT_EQ(choose_partition_count(1, static_cast<size_t>(MAX_PARTITION_COUNT)), MAX_PARTITION_COUNT);
+  EXPECT_EQ(choose_partition_count(1, 3, 2), PartitionCount{4});
+  EXPECT_EQ(choose_partition_count(1, 8, 2), PartitionCount{8});
+  EXPECT_EQ(choose_partition_count(1, max_partition_count(2), 2), max_partition_count(2));
 }
 
-TEST_F(HllSketchTest, ChoosePartitionCountClampsToMax) {
-  const auto large_cardinality = static_cast<size_t>(MAX_PARTITION_COUNT) * KEYS_BUDGET * 16;
+TEST_F(HllSketchTest, ChoosePartitionCountClampsToStagingCap) {
+  const auto large_cardinality = static_cast<size_t>(MAX_PARTITION_COUNT) * keys_budget() * 16;
 
-  EXPECT_EQ(choose_partition_count(large_cardinality, 1), MAX_PARTITION_COUNT);
+  EXPECT_EQ(choose_partition_count(large_cardinality, 1, 2), max_partition_count(2));
 }
 
-TEST_F(HllSketchTest, ChoosePartitionCountClampsOversizedWorkerCountToMax) {
-  EXPECT_EQ(choose_partition_count(1, static_cast<size_t>(MAX_PARTITION_COUNT) + 1), MAX_PARTITION_COUNT);
-  EXPECT_EQ(choose_partition_count(1, std::numeric_limits<size_t>::max()), MAX_PARTITION_COUNT);
+TEST_F(HllSketchTest, ChoosePartitionCountCapFallsWithStreamCount) {
+  const auto large_cardinality = static_cast<size_t>(MAX_PARTITION_COUNT) * keys_budget() * 16;
+
+  EXPECT_LT(choose_partition_count(large_cardinality, 1, 8), choose_partition_count(large_cardinality, 1, 2));
+}
+
+TEST_F(HllSketchTest, ChoosePartitionCountClampsOversizedWorkerCountToCap) {
+  EXPECT_EQ(choose_partition_count(1, static_cast<size_t>(MAX_PARTITION_COUNT) + 1, 2), max_partition_count(2));
+  EXPECT_EQ(choose_partition_count(1, std::numeric_limits<size_t>::max(), 2), max_partition_count(2));
 }
 
 TEST_F(HllSketchTest, ChoosePartitionCountAlwaysReturnsPowerOfTwo) {
-  const auto inputs = std::array<std::pair<size_t, size_t>, 8>{{{0, 0},
-                                                                {1, 1},
-                                                                {KEYS_BUDGET - 1, 1},
-                                                                {KEYS_BUDGET + 1, 1},
-                                                                {3 * KEYS_BUDGET, 1},
-                                                                {100 * KEYS_BUDGET, 3},
-                                                                {1'000 * KEYS_BUDGET, 64},
-                                                                {std::numeric_limits<size_t>::max() / 2, 17}}};
+  const auto inputs = std::array<std::tuple<size_t, size_t, size_t>, 8>{{{0, 0, 1},
+                                                                        {1, 1, 2},
+                                                                        {keys_budget() - 1, 1, 2},
+                                                                        {keys_budget() + 1, 1, 3},
+                                                                        {3 * keys_budget(), 1, 4},
+                                                                        {100 * keys_budget(), 3, 5},
+                                                                        {1'000 * keys_budget(), 64, 8},
+                                                                        {size_t{1} << 62, 17, 16}}};
 
-  for (const auto& [cardinality_estimate, worker_count] : inputs) {
-    EXPECT_TRUE(is_power_of_two(choose_partition_count(cardinality_estimate, worker_count)));
+  for (const auto& [cardinality_estimate, worker_count, stream_count] : inputs) {
+    EXPECT_TRUE(is_power_of_two(choose_partition_count(cardinality_estimate, worker_count, stream_count)));
   }
 }
 

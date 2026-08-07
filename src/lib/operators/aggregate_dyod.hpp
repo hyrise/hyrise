@@ -34,7 +34,7 @@ class AbstractAggregator;
  *      alone does not make the non-temporal stores visible.
  *   3. MERGE     Workers claim partitions; for each, they stream every worker's scattered rows for that partition
  *      through a dense open-addressing MergeMap (resolve key -> dense slot, fold value into slot), tiled at
- *      MERGE_TILE_ROWS so the row->slot scratch stays L1-resident, then flush finalized groups into the worker's own
+ *      merge_tile_rows() so the row->slot scratch stays L1-resident, then flush finalized groups into the worker's own
  *      thread-local OutputColumns. The output table is the concatenation of all workers' chunks.
  *
  * The scatter+merge pipeline is monomorphized once per query over the key schema chosen by resolve_key_schema(), so

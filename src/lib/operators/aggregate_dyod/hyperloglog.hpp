@@ -36,7 +36,7 @@ namespace hyrise {
  * choose_partition_count(). A single sketch must not be mutated concurrently. Copying is disabled (Noncopyable);
  * combine sketches with merge() rather than by copying.
  *
- * @see choose_partition_count, HLL_PRECISION and KEYS_BUDGET in aggregate_dyod_config.hpp.
+ * @see choose_partition_count, HLL_PRECISION and keys_budget() in aggregate_dyod_config.hpp.
  */
 class HllSketch : private Noncopyable {
  public:
@@ -144,32 +144,34 @@ inline size_t HllSketch::estimate() const {
 /**
  * Chooses the radix partition count P for a query from its estimated group-by cardinality.
  *
- * Computes clamp(next_pow2(ceil(cardinality_estimate / KEYS_BUDGET)),
- * min(next_pow2(max(worker_count, 1)), MAX_PARTITION_COUNT), MAX_PARTITION_COUNT). Dividing by KEYS_BUDGET targets
- * that many distinct keys per partition, so each partition's dense merge map is expected to stay resident in a
- * mid-level cache during the merge phase -- the cache residency the radix split exists to buy. The lower bound keeps at
- * least one partition per worker, capped by MAX_PARTITION_COUNT, so every core has merge work; the upper bound caps
- * per-partition bookkeeping and the SWWC staging footprint.
+ * Computes clamp(next_pow2(ceil(cardinality_estimate / keys_budget())), min(next_pow2(max(worker_count, 1)), ceiling),
+ * ceiling), where ceiling = max_partition_count(stream_count). Dividing by keys_budget() targets that many distinct
+ * keys per partition, so each partition's dense merge map is expected to stay resident in the merge worker's share of
+ * the last-level cache -- the cache residency the radix split exists to buy. The lower bound keeps at least one
+ * partition per worker so every core has merge work; the ceiling keeps the scatter phase's SWWC staging inside L2.
  *
  * @param cardinality_estimate Estimated distinct group-by keys, from a merged HllSketch::estimate(). 0 is valid (empty
  *   input) and yields the floor.
  * @param worker_count Number of merge workers (scheduler CPUs); sets the lower bound via max(worker_count, 1), so a
  *   worker_count of 0 still yields at least one partition.
- * @return A power of two in [min(next_pow2(max(worker_count, 1)), MAX_PARTITION_COUNT), MAX_PARTITION_COUNT], so a
- *   partition index is the low log2(P) bits of a key's hash.
+ * @param stream_count Number of scatter streams the query will use (packed key, value streams, optional row-id and
+ *   value-null-bitmap streams); sets the L2-derived ceiling. 0 is treated as 1.
+ * @return A power of two in [min(next_pow2(max(worker_count, 1)), ceiling), ceiling], so a partition index is the low
+ *   log2(P) bits of a key's hash.
  * @note This is a total function: every input, including a 0 estimate, yields a valid P. Empty input is additionally
  *   short-circuited upstream.
  */
-inline PartitionCount choose_partition_count(const size_t cardinality_estimate, const size_t worker_count) {
+inline PartitionCount choose_partition_count(const size_t cardinality_estimate, const size_t worker_count,
+                                             const size_t stream_count) {
   const auto ceil_divide = [](const size_t dividend, const size_t divisor) {
     return (dividend / divisor) + (dividend % divisor == 0 ? 0 : 1);
   };
 
-  const auto maximum_partition_count = static_cast<size_t>(MAX_PARTITION_COUNT);
+  const auto maximum_partition_count = static_cast<size_t>(max_partition_count(stream_count));
   const auto minimum_partition_count =
       std::bit_ceil(std::min(std::max(size_t{1}, worker_count), maximum_partition_count));
   const auto target_partition_count =
-      std::bit_ceil(std::min(ceil_divide(cardinality_estimate, KEYS_BUDGET), maximum_partition_count));
+      std::bit_ceil(std::min(ceil_divide(cardinality_estimate, keys_budget()), maximum_partition_count));
   const auto partition_count = std::clamp(target_partition_count, minimum_partition_count, maximum_partition_count);
 
   return static_cast<PartitionCount>(partition_count);

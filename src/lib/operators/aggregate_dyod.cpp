@@ -619,8 +619,9 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate_low_cardinality(const KeySchema
                               value_buffers[aggregate_index], null_buffers[aggregate_index], row_count);
         }
 
-        for (auto tile_start = size_t{0}; tile_start < row_count; tile_start += MERGE_TILE_ROWS) {
-          const auto tile_rows = std::min(MERGE_TILE_ROWS, size_t{row_count} - tile_start);
+        const auto max_tile_rows = merge_tile_rows();
+        for (auto tile_start = size_t{0}; tile_start < row_count; tile_start += max_tile_rows) {
+          const auto tile_rows = std::min(max_tile_rows, size_t{row_count} - tile_start);
           slots.clear();
           merge_map.resolve({key_buffer.data() + tile_start * key_width, tile_rows * key_width}, slots);
 
@@ -740,12 +741,9 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate(const KeySchema& key_schema, co
 
   step_performance_data.set_step_runtime(OperatorSteps::Estimate, timer.lap());
 
-  if (cardinality_estimate <= LOW_CARDINALITY_THRESHOLD && low_cardinality_eligible(aggregate_schema, input_table)) {
+  if (cardinality_estimate <= low_cardinality_threshold() && low_cardinality_eligible(aggregate_schema, input_table)) {
     return _aggregate_low_cardinality(key_schema, aggregate_schema, input_table, cardinality_estimate);
   }
-
-  const auto partition_count = choose_partition_count(cardinality_estimate, num_cpus);
-  const auto shift = static_cast<uint32_t>(std::countr_zero(partition_count));
 
   const auto value_stream_count = aggregate_schema.value_stream_count();
   auto value_stream_widths = std::vector<size_t>(value_stream_count);
@@ -790,6 +788,10 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate(const KeySchema& key_schema, co
   if (has_value_null_bitmap) {
     stream_widths.emplace_back(1);
   }
+
+  // The ceiling on P depends on the query's stream count, so the partition count is only chosen here.
+  const auto partition_count = choose_partition_count(cardinality_estimate, num_cpus, stream_widths.size());
+  const auto shift = static_cast<uint32_t>(std::countr_zero(partition_count));
 
   auto scatter_stores = std::vector<ScatterStore>{};
   scatter_stores.reserve(scatter_worker_count);
@@ -914,7 +916,7 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate(const KeySchema& key_schema, co
       auto merge_map = MergeMap<KeySchema>{key_schema, shift, aggregate_schema.make_accumulator_columns()};
       auto& output = per_worker_outputs[worker_id];
       auto slots = std::vector<uint32_t>{};
-      auto bitmap_tile = std::vector<std::byte>((MERGE_TILE_ROWS + 7) / 8);
+      auto bitmap_tile = std::vector<std::byte>((merge_tile_rows() + 7) / 8);
       while (true) {
         const auto partition = static_cast<PartitionId>(partition_cursor.fetch_add(1, std::memory_order_relaxed));
         if (partition >= partition_count) {
@@ -926,8 +928,9 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate(const KeySchema& key_schema, co
           const auto& key_region = store.key_region(partition);
           DebugAssert(key_region.size() % key_width == 0, "Key region must hold whole keys.");
           const auto row_count = key_region.size() / key_width;
-          for (auto tile_start = size_t{0}; tile_start < row_count; tile_start += MERGE_TILE_ROWS) {
-            const auto tile_rows = std::min(MERGE_TILE_ROWS, row_count - tile_start);
+          const auto max_tile_rows = merge_tile_rows();
+          for (auto tile_start = size_t{0}; tile_start < row_count; tile_start += max_tile_rows) {
+            const auto tile_rows = std::min(max_tile_rows, row_count - tile_start);
             slots.clear();
             merge_map.resolve({key_region.data() + tile_start * key_width, tile_rows * key_width}, slots);
             for (auto aggregate_index = size_t{0}; aggregate_index < aggregate_count; ++aggregate_index) {
