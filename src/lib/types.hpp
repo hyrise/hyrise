@@ -254,6 +254,7 @@ inline bool operator==(const SortColumnDefinition& lhs, const SortColumnDefiniti
   return lhs.column == rhs.column && lhs.sort_mode == rhs.sort_mode;
 }
 
+
 class Noncopyable {
  public:
   Noncopyable(const Noncopyable&) = delete;
