@@ -10,6 +10,7 @@
 #include <stdexcept>
 #include <string>
 #include <type_traits>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -338,6 +339,24 @@ TEST_F(AggregateDYODKeySchemaTest, StringSchemaPackedWidthIsFixedPartPlusSpillPo
       FAIL() << "Expected a string-involving schema.";
     }
   });
+}
+
+TEST_F(AggregateDYODKeySchemaTest, HashSpreadsStructuredKeysAcrossTheLowBits) {
+  auto rows = std::vector<std::vector<AllTypeVariant>>{};
+  for (auto k = int64_t{0}; k < 1024; ++k) {
+    rows.push_back({k * 1000003});
+  }
+  const auto input = make_pack_input({{"a", DataType::Long, false}}, rows);
+
+  const auto schema = NumericShortKeySchema<8>::build(input.column_ids, *input.table);
+  auto spill = StringSpillBuffer{};
+  const auto keys = pack_all_keys(schema, input, spill);
+
+  auto buckets = std::unordered_set<uint64_t>{};
+  for (const auto& key : keys) {
+    buckets.insert(schema.hash(key.data()) & 4095);
+  }
+  EXPECT_GT(buckets.size(), 850u);
 }
 
 TEST_F(AggregateDYODKeySchemaTest, PacksEqualIntsToEqualKeys) {

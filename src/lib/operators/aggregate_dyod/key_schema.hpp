@@ -18,6 +18,7 @@
 
 #include "all_type_variant.hpp"
 #include "operators/aggregate_dyod/aggregate_dyod_config.hpp"
+#include "operators/aggregate_dyod/hyperloglog.hpp"
 #include "operators/aggregate_dyod/output_columns.hpp"
 #include "storage/abstract_segment.hpp"
 #include "storage/dictionary_segment.hpp"
@@ -948,7 +949,21 @@ void NumericShortKeySchema<PackedWidth>::pack(const KeyDecodeScratch& scratch, c
 
 template <size_t PackedWidth>
 uint64_t NumericShortKeySchema<PackedWidth>::hash(const std::byte* key) const {
-  return hash_bytes(key, PackedWidth);
+  // One multiply-mix round per word beats byte-wise FNV-1a; the hash runs up to three times per row (estimate,
+  // scatter routing, merge probing), and its low bits pick the partition.
+  auto hash = uint64_t{0};
+  auto offset = size_t{0};
+  for (; offset + 8 <= PackedWidth; offset += 8) {
+    auto word = uint64_t{};
+    std::memcpy(&word, key + offset, 8);
+    hash = mix64(hash ^ word);
+  }
+  if constexpr (PackedWidth % 8 != 0) {
+    auto word = uint32_t{};
+    std::memcpy(&word, key + offset, 4);
+    hash = mix64(hash ^ word);
+  }
+  return hash;
 }
 
 template <size_t PackedWidth>
@@ -1075,7 +1090,7 @@ inline void NumericArbitraryKeySchema::pack(const KeyDecodeScratch& scratch, con
 }
 
 inline uint64_t NumericArbitraryKeySchema::hash(const std::byte* key) const {
-  return hash_bytes(key, _packed_width);
+  return mix64(hash_bytes(key, _packed_width));
 }
 
 inline bool NumericArbitraryKeySchema::equals(const std::byte* a, const std::byte* b) const {
@@ -1283,7 +1298,7 @@ void MixedKeySchema<LenWidth>::pack(const KeyDecodeScratch& scratch, const Chunk
 
 template <size_t LenWidth>
 uint64_t MixedKeySchema<LenWidth>::hash(const std::byte* key) const {
-  return hash_bytes(key, _fixed_part_width);
+  return mix64(hash_bytes(key, _fixed_part_width));
 }
 
 template <size_t LenWidth>
@@ -1443,7 +1458,7 @@ void StringOnlyKeySchema<LenWidth>::pack(const KeyDecodeScratch& scratch, const 
 
 template <size_t LenWidth>
 uint64_t StringOnlyKeySchema<LenWidth>::hash(const std::byte* key) const {
-  return hash_bytes(key, _fixed_part_width);
+  return mix64(hash_bytes(key, _fixed_part_width));
 }
 
 template <size_t LenWidth>
