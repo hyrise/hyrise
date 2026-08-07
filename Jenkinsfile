@@ -160,8 +160,11 @@ try {
             stage("Linting") {
               sh "scripts/lint.sh"
             }
+          }, clangDebugTidy: {
+            stage("clang-debug:tidy-changed-files") {
+              sh "CLANG_TIDY_DEBUG=1 bash ./scripts/clang_tidy.sh clang-debug-tidy"
+            }
           }
-
           // We distribute the cores to processes in a way to even the running times. With an even distributions,
           // clang-tidy builds take up to 3h (galileo server). In addition to compile time, the distribution also
           // considers the long test runtimes of clangRelWithDebInfoThreadSanitizer (~50 minutes).
@@ -228,12 +231,8 @@ try {
             }
           }, clangDebugTidy: {
             stage("clang-debug:tidy-changed-files") {
-              if (env.BRANCH_NAME == 'master' || full_ci) {
-                // We do not run the expensive clang-tidy for the non-changed files.
-                sh "CLANG_TIDY_DEBUG=1 bash ./scripts/clang_tidy.sh clang-debug-tidy"
-              } else {
-                Utils.markStageSkippedForConditional("clangDebugTidy")
-              }
+              def allInc = pullRequest != null && pullRequest.labels.contains('Refactor')
+              sh "CLANG_TIDY_ALL_INCLUDERS=${allInc ? 1 : 0} CLANG_TIDY_DEBUG=1 bash ./scripts/clang_tidy.sh clang-debug-tidy"
             }
           }, clangDebugDisablePrecompileHeaders: {
             stage("clang-debug:disable-precompile-headers") {

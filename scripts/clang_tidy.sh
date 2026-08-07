@@ -1,19 +1,42 @@
 #!/bin/bash
-set -o pipefail
-build_dir="${1:-clang-debug-tidy}"
+# Run clang-tidy only on the files a PR changed, for fast CI feedback.
+#
+# Selection:
+#   * every changed .cpp is analyzed;
+#   * For a changed header (.hpp/.ipp), we analyze ONE representative
+#     direct includer. A header is not its own translation unit, so it can only be
+#     analyzed through a .cpp that includes it. 
+#   * CLANG_TIDY_ALL_INCLUDERS=1 (the
+#     "Refactor" label) analyzes all direct includers instead.
+#
+# Env:
+#   CLANG_TIDY_ALL_INCLUDERS=1  expand headers to all includers (Refactor label)
+#   CLANG_TIDY_DIFF_BASE=<ref>  override the diff base (local dev)
+#   CLANG_TIDY_DEBUG=1          verbose selection diagnostics
 
-# Set CLANG_TIDY_DEBUG=1 for verbose diagnostics.
+set -o pipefail
+
+build_dir="${1:-clang-debug-tidy}"
+jobs="${2:-$(( $(nproc) / 4 ))}"
+[ "$jobs" -lt 1 ] && jobs=1
+all_includers="${CLANG_TIDY_ALL_INCLUDERS:-0}"
 debug="${CLANG_TIDY_DEBUG:-0}"
 
-# Determine diff base:
-#  - master builds: diff against the previous state of master, so we tidy
-#    exactly what the latest merge introduced.
-#  - branch/PR builds: diff against the merge-base with origin/master.
+command -v clang-tidy >/dev/null || { echo "FATAL: clang-tidy not on PATH"; exit 1; }
+[ -f "$build_dir/compile_commands.json" ] || {
+  echo "FATAL: no compile_commands.json in $build_dir"
+  echo "       (configure it with -DCMAKE_EXPORT_COMPILE_COMMANDS=ON)"; exit 1; }
+
+# version.hpp is generated at build time; build just that target so the one TU
+# including it can be parsed without a full build.
+[ -f "$build_dir/build.ninja" ] && ninja -C "$build_dir" version.hpp >/dev/null 2>&1
+
+# --- diff base -------------------------------------------------------------
+#   master builds: diff against the previous state of master (what the latest
+#                  merge introduced); branch/PR builds: merge-base with master.
 if [ -n "$CLANG_TIDY_DIFF_BASE" ]; then
   base="$CLANG_TIDY_DIFF_BASE"
 elif [ "$BRANCH_NAME" = "master" ]; then
-  # Prefer the last successfully built commit (covers multi-commit pushes);
-  # fall back to first parent.
   if [ -n "$GIT_PREVIOUS_SUCCESSFUL_COMMIT" ] \
      && git cat-file -e "$GIT_PREVIOUS_SUCCESSFUL_COMMIT" 2>/dev/null; then
     base="$GIT_PREVIOUS_SUCCESSFUL_COMMIT"
@@ -24,8 +47,9 @@ else
   git fetch --no-tags --quiet origin master
   base=$(git merge-base FETCH_HEAD HEAD)
 fi
-[ "$debug" = 1 ] && echo "[debug] diff base: $base"
+[ "$debug" = 1 ] && echo "[debug] diff base: $base  (all_includers=$all_includers, jobs=$jobs)"
 
+# Changed, tidy-relevant files:
 changed=$( { git diff --diff-filter=d --name-only "$base"; \
              git ls-files --others --exclude-standard; } \
            | grep -E '^src/.*\.[chi]pp$' | grep -v '^src/test' | sort -u )
@@ -34,63 +58,55 @@ changed=$( { git diff --diff-filter=d --name-only "$base"; \
 cpps=$(echo "$changed" | grep '\.cpp$')
 hdrs=$(echo "$changed" | grep -E '\.[hi]pp$')
 
-if [ "$debug" = 1 ]; then
-  echo "[debug] changed tidy-relevant files:"
-  echo "$changed" | sed 's/^/  /'
-  echo "[debug] directly changed .cpp: $(echo "$cpps" | grep -c .)"
-  echo "[debug] changed headers/.ipp:  $(echo "$hdrs" | grep -c .)"
-fi
+# Get a header's rooted include spelling.
+# NOTE: sed delimiter is '#', not '|' -- '|' would clash with the alternation.
+rooted_spelling() { printf '%s' "$1" | sed -E 's#^src/(lib|bin|benchmarklib|plugins)/##'; }
 
-# Header/ipp → direct includers. Hyrise includes are rooted at src/lib etc.,
+# Resolve a header's direct .cpp includers:
+includers_of() {
+  local h="$1" rooted dir base_name
+  rooted=$(rooted_spelling "$h")
+  dir=$(dirname "$h"); base_name=$(basename "$h")
+  {
+    grep -rlF "#include \"$rooted\"" \
+         src/lib src/bin src/benchmarklib src/plugins --include=*.cpp 2>/dev/null
+    grep -lF "#include \"$base_name\"" "$dir"/*.cpp 2>/dev/null
+  } | grep -v '^src/test' | sort -u
+}
+
+# Expand headers to includers
 for h in $hdrs; do
-  inc=$(echo "$h" | sed -E 's|^src/(lib\|bin\|benchmarklib\|plugins)/||')
-  includers=$(grep -rlE "#include \"$inc\"" src/lib src/bin src/benchmarklib src/plugins | grep '\.cpp$')
-  [ "$debug" = 1 ] && echo "[debug] header $h -> $(echo "$includers" | grep -c .) direct .cpp includer(s)"
-  cpps=$(printf "%s\n%s" "$cpps" "$includers")
+  inc=$(includers_of "$h")
+  if [ -z "$inc" ]; then
+    [ "$debug" = 1 ] && echo "[debug] header $h -> no .cpp includer (skipped)"
+    continue
+  fi
+  if [ "$all_includers" = 1 ]; then
+    [ "$debug" = 1 ] && echo "[debug] header $h -> $(echo "$inc" | grep -c .) includer(s) [all]"
+    cpps=$(printf '%s\n%s' "$cpps" "$inc")
+  else
+    one=$(echo "$inc" | head -n 1)
+    [ "$debug" = 1 ] && echo "[debug] header $h -> representative TU: $one"
+    cpps=$(printf '%s\n%s' "$cpps" "$one")
+  fi
 done
-cpps=$(echo "$cpps" | grep -v '^$' | sort -u)
-[ -z "$cpps" ] && { echo "Changed headers have no direct .cpp includers."; exit 0; }
+cpps=$(printf '%s\n' "$cpps" | grep -v '^$' | sort -u)
+[ -z "$cpps" ] && { echo "No .cpp translation units to analyze."; exit 0; }
 
-# Restrict header diagnostics to the *changed* headers only.
-hf=$(echo "$hdrs" | sed -E 's|^src/(lib\|bin\|benchmarklib\|plugins)/||' | paste -sd'|' -)
+# Header-filter: attribute findings to the changed headers only:
+hf=$(for h in $hdrs; do rooted_spelling "$h"; echo; done \
+     | grep -v '^$' \
+     | sed 's/[.^$*+?()|{}[]/\\&/g' \
+     | paste -sd'|' -)
 
-n_tu=$(echo "$cpps" | grep -c .)
+n_tu=$(printf '%s\n' "$cpps" | grep -c .)
 if [ "$debug" = 1 ]; then
   echo "[debug] header-filter: [${hf}]"
-  if [ -f "$build_dir/compile_commands.json" ] && command -v jq >/dev/null; then
-    echo "[debug] compile_commands.json entries: $(jq length "$build_dir/compile_commands.json")"
-  else
-    echo "[debug] compile_commands.json: missing or jq unavailable at $build_dir"
-  fi
   echo "[debug] translation units to analyze: $n_tu"
-  echo "$cpps" | sed 's/^/  run: /'
+  printf '%s\n' "$cpps" | sed 's/^/  run: /'
 fi
 
-# --- Run tidy ---------------------------------------------------------------
-if [ "$debug" = 1 ]; then
-  # Capture per-file output so we can summarize what actually fired.
-  log_dir=$(mktemp -d)
-  echo "$cpps" | xargs -r -P "$(nproc)" -n 1 -I{} \
-    bash -c 'f="$1"; ld="$2"; bd="$3"; hf="$4";
-             out="$ld/$(echo "$f" | tr / _).log";
-             if [ -n "$hf" ]; then
-               clang-tidy -p "$bd" --quiet --header-filter="($hf)\$" "$f" >"$out" 2>&1
-             else
-               clang-tidy -p "$bd" --quiet "$f" >"$out" 2>&1
-             fi
-             echo "  $f: exit=$? lines=$(wc -l <"$out")"' _ {} "$log_dir" "$build_dir" "$hf"
-  rc=$?
-
-  echo "=== per-check breakdown (deduplicated by check name) ==="
-  cat "$log_dir"/*.log 2>/dev/null \
-    | grep -oE '\[[a-z0-9]+(-[a-z0-9]+)*(,[a-z0-9-]+)*\]$' \
-    | sort | uniq -c | sort -rn
-  echo "=== unique (file:line:col: severity) findings ==="
-  cat "$log_dir"/*.log 2>/dev/null | grep -E ': (warning|error):' | sort -u | wc -l
-  echo "[debug] per-file logs in: $log_dir"
-  exit "$rc"
-else
-  echo "$cpps" | xargs -r -P "$(nproc)" -n 1 \
-    clang-tidy -p "$build_dir" --quiet --warnings-as-errors='*' \
-    ${hf:+--header-filter="($hf)\$"}
-fi
+# Run and report findings.
+printf '%s\n' "$cpps" | xargs -r -P "$jobs" -n 1 \
+  clang-tidy -p "$build_dir" --quiet --warnings-as-errors='*' \
+  ${hf:+--header-filter="($hf)\$"}
