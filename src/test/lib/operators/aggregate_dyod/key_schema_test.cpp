@@ -21,6 +21,7 @@
 #include "operators/aggregate_dyod/key_schema.hpp"
 #include "operators/aggregate_dyod/output_columns.hpp"
 #include "storage/abstract_segment.hpp"
+#include "storage/chunk.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/pos_lists/row_id_pos_list.hpp"
@@ -329,6 +330,103 @@ TEST_F(AggregateDYODKeySchemaTest, ResolvesStringPlusNumericToMixedSchema) {
   EXPECT_TRUE(resolved);
 }
 
+TEST_F(AggregateDYODKeySchemaTest, ResolvesDictionaryBoundedStringsToNarrowLengthFields) {
+  const auto definitions = TableColumnDefinitions{{"a", DataType::String, false}, {"b", DataType::String, false}};
+  const auto rows =
+      std::vector<std::vector<AllTypeVariant>>{{pmr_string{"A"}, pmr_string{"F"}}, {pmr_string{"N"}, pmr_string{"O"}}};
+  const auto input = make_pack_input(definitions, rows, std::nullopt, SegmentEncodingSpec{EncodingType::Dictionary});
+  auto resolved = false;
+  resolve_key_schema(input.column_ids, *input.table, [&](const auto& schema) {
+    using SchemaType = std::decay_t<decltype(schema)>;
+    resolved = true;
+    EXPECT_TRUE((std::is_same_v<SchemaType, StringOnlyKeySchema<1>>));
+    EXPECT_EQ(schema.packed_width(), 12u);
+  });
+  EXPECT_TRUE(resolved);
+}
+
+TEST_F(AggregateDYODKeySchemaTest, ResolvesDictionaryBoundedMixedKeysToNarrowLengthFields) {
+  const auto definitions = TableColumnDefinitions{{"a", DataType::Int, false}, {"b", DataType::String, false}};
+  const auto rows = std::vector<std::vector<AllTypeVariant>>{{1, pmr_string{"A"}}, {2, pmr_string{"N"}}};
+  const auto input = make_pack_input(definitions, rows, std::nullopt, SegmentEncodingSpec{EncodingType::Dictionary});
+  auto resolved = false;
+  resolve_key_schema(input.column_ids, *input.table, [&](const auto& schema) {
+    using SchemaType = std::decay_t<decltype(schema)>;
+    resolved = true;
+    EXPECT_TRUE((std::is_same_v<SchemaType, MixedKeySchema<1>>));
+    EXPECT_EQ(schema.packed_width(), 16u);
+  });
+  EXPECT_TRUE(resolved);
+}
+
+TEST_F(AggregateDYODKeySchemaTest, UnencodedStringColumnsKeepTheDefaultLengthFields) {
+  const auto input = make_pack_input({{"a", DataType::String, false}}, {{pmr_string{"A"}}, {pmr_string{"N"}}});
+  auto resolved = false;
+  resolve_key_schema(input.column_ids, *input.table, [&](const auto& schema) {
+    using SchemaType = std::decay_t<decltype(schema)>;
+    resolved = true;
+    EXPECT_TRUE((std::is_same_v<SchemaType, StringOnlyKeySchema<4>>));
+  });
+  EXPECT_TRUE(resolved);
+}
+
+TEST_F(AggregateDYODKeySchemaTest, PartlyEncodedStringColumnsKeepTheDefaultLengthFields) {
+  const auto definitions = TableColumnDefinitions{{"a", DataType::String, false}};
+  const auto table = std::make_shared<Table>(definitions, TableType::Data, ChunkOffset{2});
+  for (const auto* value : {"A", "F", "N", "O"}) {
+    table->append({pmr_string{value}});
+  }
+  table->last_chunk()->set_immutable();
+  ChunkEncoder::encode_chunks(table, {ChunkID{0}}, SegmentEncodingSpec{EncodingType::Dictionary});
+
+  auto resolved = false;
+  resolve_key_schema({ColumnID{0}}, *table, [&](const auto& schema) {
+    using SchemaType = std::decay_t<decltype(schema)>;
+    resolved = true;
+    EXPECT_TRUE((std::is_same_v<SchemaType, StringOnlyKeySchema<4>>));
+  });
+  EXPECT_TRUE(resolved);
+}
+
+TEST_F(AggregateDYODKeySchemaTest, LongDictionaryEntriesKeepTheDefaultLengthFields) {
+  const auto long_value = pmr_string(256, 'v');
+  const auto input = make_pack_input({{"a", DataType::String, false}}, {{pmr_string{"A"}}, {long_value}}, std::nullopt,
+                                     SegmentEncodingSpec{EncodingType::Dictionary});
+  auto resolved = false;
+  resolve_key_schema(input.column_ids, *input.table, [&](const auto& schema) {
+    using SchemaType = std::decay_t<decltype(schema)>;
+    resolved = true;
+    EXPECT_TRUE((std::is_same_v<SchemaType, StringOnlyKeySchema<4>>));
+  });
+  EXPECT_TRUE(resolved);
+}
+
+TEST_F(AggregateDYODKeySchemaTest, StringKeyBudgetSumsTheDictionaryMaxima) {
+  const auto definitions = TableColumnDefinitions{{"a", DataType::String, false}, {"b", DataType::String, false}};
+  const auto rows = std::vector<std::vector<AllTypeVariant>>{{pmr_string{"A"}, pmr_string{"ship"}},
+                                                             {pmr_string{"N"}, pmr_string{"air"}}};
+  const auto input = make_pack_input(definitions, rows, std::nullopt, SegmentEncodingSpec{EncodingType::Dictionary});
+
+  const auto budget = choose_string_key_budget(input.column_ids, *input.table, DICTIONARY_BOUND_SCAN_LIMIT);
+
+  EXPECT_EQ(budget.length_field_width, 1u);
+  ASSERT_TRUE(budget.blob_bytes.has_value());
+  EXPECT_EQ(*budget.blob_bytes, 5u);
+}
+
+TEST_F(AggregateDYODKeySchemaTest, StringKeyBudgetGivesUpOnOversizedDictionaries) {
+  const auto definitions = TableColumnDefinitions{{"a", DataType::String, false}};
+  const auto rows = std::vector<std::vector<AllTypeVariant>>{
+      {pmr_string{"A"}}, {pmr_string{"F"}}, {pmr_string{"N"}}, {pmr_string{"O"}}};
+  const auto input = make_pack_input(definitions, rows, std::nullopt, SegmentEncodingSpec{EncodingType::Dictionary});
+
+  EXPECT_EQ(choose_string_key_budget(input.column_ids, *input.table, 4).length_field_width, 1u);
+
+  const auto exceeded = choose_string_key_budget(input.column_ids, *input.table, 3);
+  EXPECT_EQ(exceeded.length_field_width, 4u);
+  EXPECT_FALSE(exceeded.blob_bytes.has_value());
+}
+
 TEST_F(AggregateDYODKeySchemaTest, StringSchemaPackedWidthIsFixedPartPlusSpillPointer) {
   const auto input = make_pack_input({{"a", DataType::String, false}}, {{pmr_string{"x"}}});
   resolve_key_schema(input.column_ids, *input.table, [&](const auto& schema) {
@@ -601,6 +699,74 @@ TEST_F(AggregateDYODKeySchemaTest, StringsAtTheBlobCapacityBoundaryStayComparabl
 
     expect_unpack_round_trip(schema, definitions, keys_a, rows);
   });
+}
+
+TEST_F(AggregateDYODKeySchemaTest, NarrowStringKeysPackLikeTheDefaultLayoutAcrossEncodings) {
+  const auto definitions = TableColumnDefinitions{{"a", DataType::Int, true}, {"b", DataType::String, true}};
+  const auto rows = std::vector<std::vector<AllTypeVariant>>{{1, pmr_string{"abc"}},
+                                                             {NullValue{}, pmr_string{"abc"}},
+                                                             {1, NullValue{}},
+                                                             {2, pmr_string{"d"}},
+                                                             {1, pmr_string{"abc"}}};
+  const auto plain = make_pack_input(definitions, rows);
+  const auto encoded = make_pack_input(definitions, rows, std::nullopt, SegmentEncodingSpec{EncodingType::Dictionary});
+  const auto schema = MixedKeySchema<1>::build(encoded.column_ids, *encoded.table, 3);
+
+  auto spill_plain = StringSpillBuffer{};
+  auto spill_encoded = StringSpillBuffer{};
+  const auto expected = pack_all_keys(schema, plain, spill_plain);
+  const auto actual = pack_all_keys(schema, encoded, spill_encoded);
+  for (auto row = size_t{0}; row < expected.size(); ++row) {
+    expect_keys_equal(schema, expected[row], actual[row]);
+  }
+  expect_unpack_round_trip(schema, definitions, actual, rows);
+}
+
+TEST_F(AggregateDYODKeySchemaTest, NarrowStringKeysDistinguishNullFromEmptyStrings) {
+  const auto definitions = TableColumnDefinitions{{"a", DataType::String, true}};
+  const auto rows =
+      std::vector<std::vector<AllTypeVariant>>{{NullValue{}}, {NullValue{}}, {pmr_string{""}}, {pmr_string{"x"}}};
+  const auto input = make_pack_input(definitions, rows, std::nullopt, SegmentEncodingSpec{EncodingType::Dictionary});
+  const auto schema = StringOnlyKeySchema<1>::build(input.column_ids, *input.table, 1);
+
+  auto spill = StringSpillBuffer{};
+  const auto keys = pack_all_keys(schema, input, spill);
+
+  expect_keys_equal(schema, keys[0], keys[1]);
+  expect_keys_not_equal(schema, keys[0], keys[2]);
+  expect_keys_not_equal(schema, keys[2], keys[3]);
+  expect_unpack_round_trip(schema, definitions, keys, rows);
+}
+
+TEST_F(AggregateDYODKeySchemaTest, AdjacentNarrowStringColumnsDoNotBleedIntoEachOther) {
+  const auto definitions = TableColumnDefinitions{{"a", DataType::String, false}, {"b", DataType::String, false}};
+  const auto rows = std::vector<std::vector<AllTypeVariant>>{
+      {pmr_string{"ab"}, pmr_string{"c"}}, {pmr_string{"a"}, pmr_string{"bc"}}, {pmr_string{"ab"}, pmr_string{"c"}}};
+  const auto input = make_pack_input(definitions, rows, std::nullopt, SegmentEncodingSpec{EncodingType::Dictionary});
+  const auto schema = StringOnlyKeySchema<1>::build(input.column_ids, *input.table, 4);
+
+  auto spill = StringSpillBuffer{};
+  const auto keys = pack_all_keys(schema, input, spill);
+
+  expect_keys_equal(schema, keys[0], keys[2]);
+  expect_keys_not_equal(schema, keys[0], keys[1]);
+  expect_unpack_round_trip(schema, definitions, keys, rows);
+}
+
+TEST_F(AggregateDYODKeySchemaTest, ContentFillingTheNarrowBlobStaysInline) {
+  const auto definitions = TableColumnDefinitions{{"a", DataType::String, false}, {"b", DataType::String, false}};
+  const auto rows = std::vector<std::vector<AllTypeVariant>>{{pmr_string{"abc"}, pmr_string{"def"}},
+                                                             {pmr_string{"ab"}, pmr_string{"d"}}};
+  const auto input = make_pack_input(definitions, rows, std::nullopt, SegmentEncodingSpec{EncodingType::Dictionary});
+  const auto schema = StringOnlyKeySchema<1>::build(input.column_ids, *input.table, 6);
+  EXPECT_EQ(schema.fixed_part_width(), 8u);
+
+  auto spill = StringSpillBuffer{};
+  const auto keys = pack_all_keys(schema, input, spill);
+
+  EXPECT_EQ(read_spill_pointer(keys[0].data(), schema.fixed_part_width()), uintptr_t{0});
+  expect_keys_not_equal(schema, keys[0], keys[1]);
+  expect_unpack_round_trip(schema, definitions, keys, rows);
 }
 
 TEST_F(AggregateDYODKeySchemaTest, NullStringBesideSpilledContentIsPreserved) {
