@@ -343,7 +343,7 @@ std::shared_ptr<AbstractSegment> AggregateDYOD::_write_groupby_segment(size_t gr
     for (auto index = start_index; index < end_index; ++index) {
       const auto group_id = occupied_group_ids[index];
       const auto chunk_offset = index - start_index;
-      const auto group_key_entry = _group_keys[group_id][groupby_column_index];
+      const auto& group_key_entry = _group_keys[group_id][groupby_column_index];
       const auto deserialized = deserialize_value<ColumnDataType, true>(group_key_entry);
 
       if (deserialized.has_value()) {
@@ -361,7 +361,7 @@ std::shared_ptr<AbstractSegment> AggregateDYOD::_write_groupby_segment(size_t gr
   for (auto index = start_index; index < end_index; ++index) {
     const auto group_id = occupied_group_ids[index];
     const auto chunk_offset = index - start_index;
-    const auto group_key_entry = _group_keys[group_id][groupby_column_index];
+    const auto& group_key_entry = _group_keys[group_id][groupby_column_index];
     values[chunk_offset] = deserialize_value<ColumnDataType, false>(group_key_entry);
   }
 
@@ -440,7 +440,7 @@ std::shared_ptr<AbstractSegment> AggregateDYOD::_write_count_distinct_aggregate_
     const std::vector<size_t>& occupied_group_ids, size_t start_index, size_t end_index) {
   using AggregateDataType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
   const auto chunk_size = end_index - start_index;
-  const auto distinct_values = aggregate_vector.accumulators();
+  const auto& distinct_values = aggregate_vector.accumulators();
   auto values = pmr_vector<AggregateDataType>(chunk_size);
 
   for (auto index = start_index; index < end_index; ++index) {
@@ -458,12 +458,12 @@ std::shared_ptr<AbstractSegment> AggregateDYOD::_write_default_aggregate_segment
     const std::vector<size_t>& occupied_group_ids, size_t start_index, size_t end_index) {
   using AggregateDataType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
   const auto chunk_size = end_index - start_index;
-  auto aggregate_values = aggregate_vector.accumulators();
+  auto& aggregate_values = aggregate_vector.accumulators();
 
   if (is_nullable) {
     auto values = pmr_vector<AggregateDataType>(chunk_size);
     auto null_values = pmr_vector<bool>(chunk_size);
-    const auto counts = aggregate_vector.counts();
+    const auto& counts = aggregate_vector.counts();
 
     for (auto index = start_index; index < end_index; ++index) {
       const auto group_id = occupied_group_ids[index];
