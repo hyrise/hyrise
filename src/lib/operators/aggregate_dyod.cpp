@@ -184,10 +184,6 @@ GroupID WorkerState::next_group_id() {
     }
   }
 
-  for (const auto& vector : _vectors) {
-    vector->occupy(_next_group_id);
-  }
-
   return _next_group_id++;
 }
 
@@ -288,13 +284,7 @@ std::shared_ptr<Table> AggregateDYOD::_write_output_table(WorkerState& worker_st
   const auto total_group_count = _group_id_map.size();
 
   if (total_group_count > 0) {
-    // _group_keys is a sparse vector. This removes the unassigned values to create a dense vector.
-    // clang-format off
-    auto view = std::views::iota(size_t{0}, _group_keys.size())
-      | std::views::filter([&](size_t index) { return _occupied_group_keys[index]; })
-      | std::views::transform([&](size_t index) { return _group_keys[index]; });
-    // clang-format on
-    auto group_keys = std::vector<GroupKey>(view.begin(), view.end());
+    const auto occupied_group_ids = _get_occupied_group_ids();
 
     for (auto start_group_index = size_t{0}; start_group_index < total_group_count; start_group_index += chunk_size) {
       const auto end_group_index = std::min(start_group_index + chunk_size, total_group_count);
@@ -308,8 +298,8 @@ std::shared_ptr<Table> AggregateDYOD::_write_output_table(WorkerState& worker_st
 
         resolve_data_type(data_type, [&](auto type) {
           using ColumnDataType = typename decltype(type)::type;
-          segments.push_back(_write_groupby_segment<ColumnDataType>(groupby_column_index, group_keys, start_group_index,
-                                                                    end_group_index));
+          segments.push_back(_write_groupby_segment<ColumnDataType>(groupby_column_index, occupied_group_ids,
+                                                                    start_group_index, end_group_index));
         });
       }
 
@@ -325,7 +315,8 @@ std::shared_ptr<Table> AggregateDYOD::_write_output_table(WorkerState& worker_st
             auto& aggregate_vector = static_cast<TypedAggregateVector<ColumnDataType, aggregate_function>&>(
                 worker_state.aggregate_vector(aggregate_index));
             segments.push_back(_write_aggregate_segment<ColumnDataType, aggregate_function>(
-                aggregate_vector, _aggregate_is_nullable(aggregate_index), start_group_index, end_group_index));
+                aggregate_vector, _aggregate_is_nullable(aggregate_index), occupied_group_ids, start_group_index,
+                end_group_index));
           });
         });
       }
@@ -339,7 +330,7 @@ std::shared_ptr<Table> AggregateDYOD::_write_output_table(WorkerState& worker_st
 
 template <typename ColumnDataType>
 std::shared_ptr<AbstractSegment> AggregateDYOD::_write_groupby_segment(size_t groupby_column_index,
-                                                                       std::vector<GroupKey>& group_keys,
+                                                                       const std::vector<size_t>& occupied_group_ids,
                                                                        size_t start_group_index,
                                                                        size_t end_group_index) {
   const auto input_table = left_input_table();
@@ -352,8 +343,9 @@ std::shared_ptr<AbstractSegment> AggregateDYOD::_write_groupby_segment(size_t gr
     auto null_values = pmr_vector<bool>(chunk_size);
 
     for (auto group_index = start_group_index; group_index < end_group_index; ++group_index) {
+      const auto group_id = occupied_group_ids[group_index];
       const auto chunk_offset = group_index - start_group_index;
-      const auto group_key_entry = group_keys[group_index][groupby_column_index];
+      const auto group_key_entry = _group_keys[group_id][groupby_column_index];
       const auto deserialized = deserialize_value<ColumnDataType, true>(group_key_entry);
 
       if (deserialized.has_value()) {
@@ -369,8 +361,9 @@ std::shared_ptr<AbstractSegment> AggregateDYOD::_write_groupby_segment(size_t gr
   auto values = pmr_vector<ColumnDataType>(chunk_size);
 
   for (auto group_index = start_group_index; group_index < end_group_index; ++group_index) {
+    const auto group_id = occupied_group_ids[group_index];
     const auto chunk_offset = group_index - start_group_index;
-    const auto group_key_entry = group_keys[group_index][groupby_column_index];
+    const auto group_key_entry = _group_keys[group_id][groupby_column_index];
     values[chunk_offset] = deserialize_value<ColumnDataType, false>(group_key_entry);
   }
 
@@ -380,28 +373,30 @@ std::shared_ptr<AbstractSegment> AggregateDYOD::_write_groupby_segment(size_t gr
 template <typename ColumnDataType, WindowFunction aggregate_function>
 std::shared_ptr<AbstractSegment> AggregateDYOD::_write_aggregate_segment(
     TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector, bool is_nullable,
-    size_t start_group_index, size_t end_group_index) {
+    const std::vector<size_t>& occupied_group_ids, size_t start_group_index, size_t end_group_index) {
   constexpr auto data_type = WindowFunctionTraits<ColumnDataType, aggregate_function>::RESULT_TYPE;
 
   if constexpr (data_type == DataType::Null) {
     Fail("Invalid combination of column type and aggregate function.");
   } else {
     if constexpr (aggregate_function == WindowFunction::Count) {
-      return _write_count_aggregate_segment(aggregate_vector, start_group_index, end_group_index);
+      return _write_count_aggregate_segment(aggregate_vector, occupied_group_ids, start_group_index, end_group_index);
     } else if constexpr (aggregate_function == WindowFunction::Avg) {
-      return _write_avg_aggregate_segment(aggregate_vector, start_group_index, end_group_index);
+      return _write_avg_aggregate_segment(aggregate_vector, occupied_group_ids, start_group_index, end_group_index);
     } else if constexpr (aggregate_function == WindowFunction::CountDistinct) {
-      return _write_count_distinct_aggregate_segment(aggregate_vector, start_group_index, end_group_index);
+      return _write_count_distinct_aggregate_segment(aggregate_vector, occupied_group_ids, start_group_index,
+                                                     end_group_index);
     } else {
-      return _write_default_aggregate_segment(aggregate_vector, is_nullable, start_group_index, end_group_index);
+      return _write_default_aggregate_segment(aggregate_vector, is_nullable, occupied_group_ids, start_group_index,
+                                              end_group_index);
     }
   }
 }
 
 template <typename ColumnDataType, WindowFunction aggregate_function>
 std::shared_ptr<AbstractSegment> AggregateDYOD::_write_avg_aggregate_segment(
-    TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector, size_t start_group_index,
-    size_t end_group_index) {
+    TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector,
+    const std::vector<size_t>& occupied_group_ids, size_t start_group_index, size_t end_group_index) {
   using AggregateDataType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
   const auto& sums = aggregate_vector.accumulators();
   const auto& counts = aggregate_vector.counts();
@@ -411,13 +406,14 @@ std::shared_ptr<AbstractSegment> AggregateDYOD::_write_avg_aggregate_segment(
   auto null_values = pmr_vector<bool>(chunk_size);
 
   for (auto group_index = start_group_index; group_index < end_group_index; ++group_index) {
+    const auto group_id = occupied_group_ids[group_index];
     const auto chunk_offset = group_index - start_group_index;
-    if (counts[group_index] == 0) {
+    if (counts[group_id] == 0) {
       null_values[chunk_offset] = true;
     } else {
       // TODO(anyone): The maximum representable RowID in Hyrise is 2^64 (minus a few reserved sentinel values).
       // So in theory, the count could exceed the range of double, although in practice, it is rather unlikely.
-      averages[chunk_offset] = sums[group_index] / static_cast<double>(counts[group_index]);
+      averages[chunk_offset] = sums[group_id] / static_cast<double>(counts[group_id]);
     }
   }
 
@@ -426,26 +422,34 @@ std::shared_ptr<AbstractSegment> AggregateDYOD::_write_avg_aggregate_segment(
 
 template <typename ColumnDataType, WindowFunction aggregate_function>
 std::shared_ptr<AbstractSegment> AggregateDYOD::_write_count_aggregate_segment(
-    TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector, size_t start_group_index,
-    size_t end_group_index) {
+    TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector,
+    const std::vector<size_t>& occupied_group_ids, size_t start_group_index, size_t end_group_index) {
   using AggregateDataType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
   const auto& counts = aggregate_vector.counts();
-  auto values = pmr_vector<AggregateDataType>(counts.begin() + start_group_index, counts.begin() + end_group_index);
+  auto values = pmr_vector<AggregateDataType>(end_group_index - start_group_index);
+
+  for (auto group_index = start_group_index; group_index < end_group_index; ++group_index) {
+    const auto chunk_offset = group_index - start_group_index;
+    const auto group_id = occupied_group_ids[group_index];
+    values[chunk_offset] = counts[group_id];
+  }
+
   return std::make_shared<ValueSegment<AggregateDataType>>(std::move(values));
 }
 
 template <typename ColumnDataType, WindowFunction aggregate_function>
 std::shared_ptr<AbstractSegment> AggregateDYOD::_write_count_distinct_aggregate_segment(
-    TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector, size_t start_group_index,
-    size_t end_group_index) {
+    TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector,
+    const std::vector<size_t>& occupied_group_ids, size_t start_group_index, size_t end_group_index) {
   using AggregateDataType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
   const auto chunk_size = end_group_index - start_group_index;
   const auto distinct_values = aggregate_vector.accumulators();
   auto values = pmr_vector<AggregateDataType>(chunk_size);
 
   for (auto group_index = start_group_index; group_index < end_group_index; ++group_index) {
+    const auto group_id = occupied_group_ids[group_index];
     const auto chunk_offset = group_index - start_group_index;
-    values[chunk_offset] = distinct_values[group_index].size();
+    values[chunk_offset] = distinct_values[group_id].size();
   }
 
   return std::make_shared<ValueSegment<AggregateDataType>>(std::move(values));
@@ -454,7 +458,7 @@ std::shared_ptr<AbstractSegment> AggregateDYOD::_write_count_distinct_aggregate_
 template <typename ColumnDataType, WindowFunction aggregate_function>
 std::shared_ptr<AbstractSegment> AggregateDYOD::_write_default_aggregate_segment(
     TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector, bool is_nullable,
-    size_t start_group_index, size_t end_group_index) {
+    const std::vector<size_t>& occupied_group_ids, size_t start_group_index, size_t end_group_index) {
   using AggregateDataType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
   const auto chunk_size = end_group_index - start_group_index;
   auto aggregate_values = aggregate_vector.accumulators();
@@ -465,12 +469,13 @@ std::shared_ptr<AbstractSegment> AggregateDYOD::_write_default_aggregate_segment
     const auto counts = aggregate_vector.counts();
 
     for (auto group_index = start_group_index; group_index < end_group_index; ++group_index) {
+      const auto group_id = occupied_group_ids[group_index];
       const auto chunk_offset = group_index - start_group_index;
-      if (counts[group_index] == 0) {
+      if (counts[group_id] == 0) {
         null_values[chunk_offset] = true;
       } else {
         // Move aggregate values in case AggregateDataType is not trivially copyable
-        values[chunk_offset] = std::move(aggregate_values[group_index]);
+        values[chunk_offset] = std::move(aggregate_values[group_id]);
       }
     }
     return std::make_shared<ValueSegment<AggregateDataType>>(std::move(values), std::move(null_values));
@@ -478,7 +483,8 @@ std::shared_ptr<AbstractSegment> AggregateDYOD::_write_default_aggregate_segment
 
   auto values = pmr_vector<AggregateDataType>(chunk_size);
   for (auto group_index = start_group_index; group_index < end_group_index; ++group_index) {
-    values[group_index - start_group_index] = aggregate_values[group_index];
+    const auto group_id = occupied_group_ids[group_index];
+    values[group_index - start_group_index] = aggregate_values[group_id];
   }
   return std::make_shared<ValueSegment<AggregateDataType>>(std::move(values));
 }
@@ -498,7 +504,7 @@ GroupID AggregateDYOD::_group_id(const GroupKey& group_key, WorkerState& worker_
 
   if (inserted) {
     _group_keys[group_id] = group_key;
-    _occupied_group_keys[group_id] = true;
+    _occupied_group_ids[group_id] = true;
   }
 
   return group_id;
@@ -512,10 +518,19 @@ std::pair<GroupID, GroupID> AggregateDYOD::_get_new_group_id_range() {
     // TODO(anyone): Figure out how to avoid this lock. Maybe use a single vector of pairs?
     std::lock_guard<std::mutex> lock(_group_keys_mutex);
     _group_keys.grow_to_at_least(max_group_id + 1);
-    _occupied_group_keys.grow_to_at_least(max_group_id + 1);
+    _occupied_group_ids.grow_to_at_least(max_group_id + 1);
   }
 
   return {next_group_id, max_group_id};
+}
+
+std::vector<size_t> AggregateDYOD::_get_occupied_group_ids() {
+  // clang-format off
+  auto view = std::views::iota(size_t{0}, _group_keys.size())
+    | std::views::filter([&](size_t index) { return _occupied_group_ids[index]; });
+  // clang-format on
+
+  return {view.begin(), view.end()};
 }
 
 void AggregateDYOD::_aggregate_chunk(WorkerState& worker_state, const std::shared_ptr<const Chunk> chunk) {

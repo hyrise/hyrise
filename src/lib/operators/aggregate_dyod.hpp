@@ -40,23 +40,12 @@ class AbstractAggregateVector {
     return _counts[group_id];
   }
 
-  void occupy(GroupID group_id) {
-    _occupied[group_id] = true;
-    _group_count++;
-  }
-
   void increment_count(GroupID group_id) {
     _counts[group_id]++;
   }
 
-  pmr_vector<size_t> counts() {
-    // clang-format off
-    auto view = std::views::iota(size_t{0}, _counts.size())
-      | std::views::filter([&](size_t index) { return _occupied[index]; })
-      | std::views::transform([&](size_t index) { return _counts[index]; });
-    // clang-format on
-
-    return pmr_vector<size_t>(view.begin(), view.end());
+  std::vector<size_t>& counts() {
+    return _counts;
   }
 
   GroupID group_count() const {
@@ -66,7 +55,6 @@ class AbstractAggregateVector {
  protected:
   size_t _group_count;
   std::vector<size_t> _counts;
-  std::vector<bool> _occupied;
 };
 
 template <typename ColumnDataType, WindowFunction aggregate_function>
@@ -82,21 +70,14 @@ struct TypedAggregateVector : AbstractAggregateVector {
     return _accumulators[group_id];
   }
 
-  pmr_vector<AccumulatorDataType> accumulators() {
-    // clang-format off
-    auto view = std::views::iota(size_t{0}, _accumulators.size())
-      | std::views::filter([&](size_t index) { return _occupied[index]; })
-      | std::views::transform([&](size_t index) { return _accumulators[index]; });
-    // clang-format on
-
-    return pmr_vector<AccumulatorDataType>(view.begin(), view.end());
+  std::vector<AccumulatorDataType>& accumulators() {
+    return _accumulators;
   }
 
   void grow_if_necessary(size_t size) override {
     if (_counts.size() < size) {
       _counts.resize(size);
       _accumulators.resize(size);
-      _occupied.resize(size);
     }
   }
 
@@ -106,14 +87,13 @@ struct TypedAggregateVector : AbstractAggregateVector {
   }
 
  protected:
-  pmr_vector<AccumulatorDataType> _accumulators;
+  std::vector<AccumulatorDataType> _accumulators;
 
   void _merge(TypedAggregateVector<ColumnDataType, aggregate_function>& other) {
     const auto new_size = std::max(_accumulators.size(), other._accumulators.size());
 
     _accumulators.resize(new_size);
     _counts.resize(new_size);
-    _occupied.resize(new_size);
 
     if constexpr (aggregate_function == WindowFunction::CountDistinct) {
       auto& other_accumulators = other._accumulators;
@@ -157,15 +137,6 @@ struct TypedAggregateVector : AbstractAggregateVector {
           aggregator(other_accumulators[index], _counts[index], _accumulators[index]);
           _counts[index] += other_counts[index];
         }
-      }
-    }
-
-    const auto other_occupied = other._occupied;
-
-    for (auto index = size_t{0}; index < new_size; ++index) {
-      if (index < other._occupied.size() && !_occupied[index] && other_occupied[index]) {
-        _occupied[index] = true;
-        _group_count++;
       }
     }
   }
@@ -242,7 +213,7 @@ class AggregateDYOD : public AbstractAggregateOperator {
   std::mutex _group_id_map_mutex;
   std::atomic<GroupID> _next_group_id;
   tbb::concurrent_vector<GroupKey> _group_keys;
-  tbb::concurrent_vector<bool> _occupied_group_keys;
+  tbb::concurrent_vector<bool> _occupied_group_ids;
   std::mutex _group_keys_mutex;
 
   std::shared_ptr<const Table> _on_execute() override;
@@ -261,39 +232,42 @@ class AggregateDYOD : public AbstractAggregateOperator {
   std::shared_ptr<Table> _write_output_table(WorkerState& worker_state);
 
   template <typename ColumnDataType>
-  std::shared_ptr<AbstractSegment> _write_groupby_segment(size_t groupby_column_index, std::vector<GroupKey>&,
+  std::shared_ptr<AbstractSegment> _write_groupby_segment(size_t groupby_column_index,
+                                                          const std::vector<size_t>& occupied_group_ids,
                                                           size_t start_group_index, size_t end_group_index);
 
   template <typename ColumnDataType, WindowFunction aggregate_function>
   std::shared_ptr<AbstractSegment> _write_aggregate_segment(
       TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector, bool is_nullable,
-      size_t start_group_index, size_t end_group_index);
+      const std::vector<size_t>& occupied_group_ids, size_t start_group_index, size_t end_group_index);
 
   template <typename ColumnDataType, WindowFunction aggregate_function>
   std::shared_ptr<AbstractSegment> _write_avg_aggregate_segment(
-      TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector, size_t start_group_index,
-      size_t end_group_index);
+      TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector,
+      const std::vector<size_t>& occupied_group_ids, size_t start_group_index, size_t end_group_index);
 
   template <typename ColumnDataType, WindowFunction aggregate_function>
   std::shared_ptr<AbstractSegment> _write_count_aggregate_segment(
-      TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector, size_t start_group_index,
-      size_t end_group_index);
+      TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector,
+      const std::vector<size_t>& occupied_group_ids, size_t start_group_index, size_t end_group_index);
 
   template <typename ColumnDataType, WindowFunction aggregate_function>
   std::shared_ptr<AbstractSegment> _write_count_distinct_aggregate_segment(
-      TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector, size_t start_group_index,
-      size_t end_group_index);
+      TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector,
+      const std::vector<size_t>& occupied_group_ids, size_t start_group_index, size_t end_group_index);
 
   template <typename ColumnDataType, WindowFunction aggregate_function>
   std::shared_ptr<AbstractSegment> _write_default_aggregate_segment(
       TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector, bool is_nullable,
-      size_t start_group_index, size_t end_group_index);
+      const std::vector<size_t>& occupied_group_ids, size_t start_group_index, size_t end_group_index);
 
   GroupID _group_id(const GroupKey& group_key, WorkerState& worker_state);
 
   std::vector<GroupID> _group_ids_for_chunk(const Chunk& chunk, WorkerState& worker_state);
 
   std::pair<GroupID, GroupID> _get_new_group_id_range();
+
+  std::vector<size_t> _get_occupied_group_ids();
 
   void _aggregate_chunk(WorkerState& state, const std::shared_ptr<const Chunk> chunk);
 
