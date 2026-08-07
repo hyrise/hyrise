@@ -355,6 +355,7 @@ template <typename ColumnDataType>
 std::shared_ptr<AbstractSegment> AggregateDYOD::_write_groupby_segment(size_t groupby_column_index,
                                                                        const std::vector<size_t>& occupied_group_ids,
                                                                        size_t start_index, size_t end_index) {
+  TRACE_EVENT("aggregate_operator", "_write_groupby_segment");
   const auto input_table = left_input_table();
   const auto column_id = _groupby_column_ids[groupby_column_index];
   const auto is_nullable = input_table->column_is_nullable(column_id);
@@ -418,6 +419,7 @@ template <typename ColumnDataType, WindowFunction aggregate_function>
 std::shared_ptr<AbstractSegment> AggregateDYOD::_write_avg_aggregate_segment(
     TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector,
     const std::vector<size_t>& occupied_group_ids, size_t start_index, size_t end_index) {
+  TRACE_EVENT("aggregate_operator", "_write_avg_aggregate_segment");
   using AggregateDataType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
   const auto& sums = aggregate_vector.accumulators();
   const auto& counts = aggregate_vector.counts();
@@ -445,6 +447,7 @@ template <typename ColumnDataType, WindowFunction aggregate_function>
 std::shared_ptr<AbstractSegment> AggregateDYOD::_write_count_aggregate_segment(
     TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector,
     const std::vector<size_t>& occupied_group_ids, size_t start_index, size_t end_index) {
+  TRACE_EVENT("aggregate_operator", "_write_count_aggregate_segment");
   using AggregateDataType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
   const auto& counts = aggregate_vector.counts();
   auto values = pmr_vector<AggregateDataType>(end_index - start_index);
@@ -462,6 +465,7 @@ template <typename ColumnDataType, WindowFunction aggregate_function>
 std::shared_ptr<AbstractSegment> AggregateDYOD::_write_count_distinct_aggregate_segment(
     TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector,
     const std::vector<size_t>& occupied_group_ids, size_t start_index, size_t end_index) {
+  TRACE_EVENT("aggregate_operator", "_write_count_distinct_aggregate_segment");
   using AggregateDataType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
   const auto chunk_size = end_index - start_index;
   const auto& distinct_values = aggregate_vector.accumulators();
@@ -480,6 +484,7 @@ template <typename ColumnDataType, WindowFunction aggregate_function>
 std::shared_ptr<AbstractSegment> AggregateDYOD::_write_default_aggregate_segment(
     TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector, bool is_nullable,
     const std::vector<size_t>& occupied_group_ids, size_t start_index, size_t end_index) {
+  TRACE_EVENT("aggregate_operator", "_write_default_aggregate_segment");
   using AggregateDataType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
   const auto chunk_size = end_index - start_index;
   auto& aggregate_values = aggregate_vector.accumulators();
