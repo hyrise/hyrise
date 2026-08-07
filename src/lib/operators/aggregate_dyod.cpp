@@ -505,8 +505,8 @@ GroupID AggregateDYOD::_group_id(const GroupKey& group_key, WorkerState& worker_
 }
 
 std::pair<GroupID, GroupID> AggregateDYOD::_get_new_group_id_range() {
-  auto next_group_id = _next_group_id.fetch_add(FUZZY_TICKET_RANGE_SIZE, std::memory_order_relaxed);
-  auto max_group_id = next_group_id + FUZZY_TICKET_RANGE_SIZE - 1;
+  auto next_group_id = _next_group_id.fetch_add(FUZZY_STEP_SIZE, std::memory_order_relaxed);
+  auto max_group_id = next_group_id + FUZZY_STEP_SIZE - 1;
 
   {
     // TODO(anyone): Figure out how to avoid this lock. Maybe use a single vector of pairs?
