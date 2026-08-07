@@ -30,10 +30,12 @@
 #include "operator_state.hpp"
 #include "operators/abstract_aggregate_operator.hpp"
 #include "operators/abstract_operator.hpp"
+#include "perfetto.h"
 #include "storage/abstract_segment.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
+#include "utils/tracing.hpp"
 
 namespace hyrise {
 

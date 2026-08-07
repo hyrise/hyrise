@@ -22,6 +22,7 @@
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/validate.hpp"
+#include "perfetto.h"
 #include "scheduler/immediate_execution_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
@@ -34,6 +35,7 @@
 #include "tpch/tpch_table_generator.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
+#include "utils/tracing.hpp"
 
 using namespace hyrise;
 using namespace expression_functional;
@@ -373,6 +375,40 @@ static void HiddenTest5AggAggAggAggAggAggAggAggAgg() {}
 
 static void HiddenTest6SingleChar() {}
 
+static std::unique_ptr<perfetto::TracingSession> start_perfetto_session() {
+  auto generator = std::mt19937{17};
+  auto random_distribution = std::uniform_int_distribution<uint32_t>();
+
+  auto track_event_cfg = perfetto::protos::gen::TrackEventConfig{};
+
+  auto args = perfetto::TracingInitArgs{};
+  args.backends = perfetto::kInProcessBackend;
+  perfetto::Tracing::Initialize(args);
+  perfetto::TrackEvent::Register();
+
+  auto cfg = perfetto::TraceConfig{};
+  cfg.add_buffers()->set_size_kb(4096);
+  auto* ds_cfg = cfg.add_data_sources()->mutable_config();
+  ds_cfg->set_name("track_event");
+  ds_cfg->set_track_event_config_raw(track_event_cfg.SerializeAsString());
+
+  auto tracing_session = std::unique_ptr<perfetto::TracingSession>(perfetto::Tracing::NewTrace());
+  tracing_session->Setup(cfg);
+  tracing_session->StartBlocking();
+
+  return tracing_session;
+}
+
+static void stop_perfetto_session(std::unique_ptr<perfetto::TracingSession> tracing_session) {
+  tracing_session->StopBlocking();
+  auto trace_data = std::vector<char>(tracing_session->ReadTraceBlocking());
+
+  auto output = std::ofstream{};
+  output.open("dyod_aggregate.perfetto-trace", std::ios::out | std::ios::binary);
+  output.write(&trace_data[0], trace_data.size());
+  output.close();
+}
+
 int main(int argc, char* argv[]) {
   if (std::filesystem::exists(FILENAME)) {
     std::filesystem::remove(FILENAME);
@@ -388,6 +424,8 @@ int main(int argc, char* argv[]) {
       const auto scale_factor = std::stof(argv[1]);
       std::cout << "Running TPC benchmarks with scale factor " << scale_factor << ".\n";
 
+      auto perfetto_session = start_perfetto_session();
+
       for (const auto& encoding_config : ENCODING_CONFIGS) {
         auto benchmark_config = std::make_shared<BenchmarkConfig>();
         benchmark_config->cache_binary_tables = true;
@@ -400,6 +438,8 @@ int main(int argc, char* argv[]) {
         TPCHQ18(scale_factor, encoding_config);
         TPCDSQ97(scale_factor, encoding_config);
       }
+
+      stop_perfetto_session(std::move(perfetto_session));
     } catch (...) {
       const auto argument = std::string{argv[1]};
       if (argument != "hidden") {
@@ -470,10 +510,14 @@ int main(int argc, char* argv[]) {
     table->last_chunk()->increase_invalid_row_count(invalid_rows);
   }
 
+  auto perfetto_session = start_perfetto_session();
+
   for (const auto& encoding_config : ENCODING_CONFIGS) {
     JOBlikeMINMAX(encoding_config, table, false);
     JOBlikeMINMAX(encoding_config, table, true);
   }
+
+  stop_perfetto_session(std::move(perfetto_session));
 
   return 0;
 }

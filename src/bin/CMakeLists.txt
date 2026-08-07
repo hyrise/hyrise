@@ -37,6 +37,21 @@ target_link_libraries(
     hyriseDYODEvaluation
 
     hyrise
+    perfetto-wrapper
+    hyriseBenchmarkLib
+)
+
+# Configure DYODProfiling
+add_executable(
+    hyriseDYODProfiling
+
+    dyod_profiling.cpp
+)
+
+target_link_libraries(
+    hyriseDYODProfiling
+
+    hyrise
     hyriseBenchmarkLib
 )
 
