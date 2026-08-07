@@ -38,6 +38,7 @@ STRONG_TYPEDEF(uint32_t, WorkerID);
 STRONG_TYPEDEF(uint32_t, TaskID);
 STRONG_TYPEDEF(uint32_t, ChunkOffset);
 
+
 // When changing the following two strong typedefs to 64-bit types, please be aware that both are used with
 // std::atomics and not all platforms that Hyrise runs on support atomic 64-bit instructions. Any Intel and AMD CPU
 // since 2010 should work fine. For 64-bit atomics on ARM CPUs, the instruction set should be at least ARMv8.1-A.
