@@ -102,6 +102,9 @@ class StandardAggregator : public AbstractAggregator {
 
   void set_worker_count(const size_t worker_count) override {
     _states.assign(worker_count, PaddedState{});
+    if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
+      _decode_scratch.resize(worker_count);
+    }
   }
 
   void accumulate(const size_t worker_id, const Chunk& chunk) override {
@@ -156,6 +159,29 @@ class StandardAggregator : public AbstractAggregator {
         ++state.count;
         return;
       }
+    }
+
+    if constexpr (std::is_same_v<ColumnDataType, pmr_string> &&
+                  (window_function == WindowFunction::Min || window_function == WindowFunction::Max)) {
+      // segment_iterate materializes every string by value; decoded views skip the per-row copies.
+      auto& decoded = _decode_scratch[worker_id];
+      decode_string_column(segment, decoded);
+      auto accumulator = std::move(state.accumulator);
+      auto count = state.count;
+      const auto row_count = decoded.values.size();
+      for (auto row = size_t{0}; row < row_count; ++row) {
+        if (decoded.nulls[row]) {
+          continue;
+        }
+        const auto value = decoded.values[row];
+        if (count == 0 || (window_function == WindowFunction::Min ? value < accumulator : value > accumulator)) {
+          accumulator = pmr_string{value};
+        }
+        ++count;
+      }
+      state.accumulator = std::move(accumulator);
+      state.count = count;
+      return;
     }
 
     // Fold through locals so the accumulator stays in a register instead of a load/store per row.
@@ -226,6 +252,7 @@ class StandardAggregator : public AbstractAggregator {
   std::string _output_name;
   ColumnID _column_id;
   std::vector<PaddedState> _states;
+  std::vector<KeyDecodeScratch::StringColumn> _decode_scratch;  // Per worker; string MIN/MAX only.
   State _final{};
 };
 
@@ -383,10 +410,25 @@ class CountDistinctAggregator : public AbstractAggregator {
 
   void set_worker_count(const size_t worker_count) override {
     _states = std::vector<PaddedState>(worker_count);
+    if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
+      _decode_scratch.resize(worker_count);
+    }
   }
 
   void accumulate(const size_t worker_id, const Chunk& chunk) override {
     auto& set = _states[worker_id].set;
+    if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
+      auto& decoded = _decode_scratch[worker_id];
+      decode_string_column(*chunk.get_segment(_column_id), decoded);
+      const auto row_count = decoded.values.size();
+      for (auto row = size_t{0}; row < row_count; ++row) {
+        if (!decoded.nulls[row]) {
+          set.insert(0, decoded.values[row]);
+        }
+      }
+      return;
+    }
+
     segment_iterate<ColumnDataType>(*chunk.get_segment(_column_id), [&](const auto& position) {
       if (position.is_null()) {
         return;
@@ -437,6 +479,7 @@ class CountDistinctAggregator : public AbstractAggregator {
   std::string _output_name;
   ColumnID _column_id;
   std::vector<PaddedState> _states;
+  std::vector<KeyDecodeScratch::StringColumn> _decode_scratch;
   int64_t _final_count{0};
 };
 
