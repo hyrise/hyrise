@@ -97,6 +97,22 @@ std::shared_ptr<Table> make_low_cardinality_table(const size_t row_count) {
   return table;
 }
 
+// Half the rows carry group value 0; the rest spread over ~30k values.
+std::shared_ptr<Table> make_skewed_table(const size_t row_count) {
+  const auto definitions = TableColumnDefinitions{
+      {"g", DataType::Int, false}, {"tag", DataType::String, false}, {"val", DataType::Int, false}};
+  const auto table = std::make_shared<Table>(definitions, TableType::Data, ChunkOffset{2048});
+
+  for (auto row = size_t{0}; row < row_count; ++row) {
+    const auto g = AllTypeVariant{row % 2 == 0 ? int32_t{0} : static_cast<int32_t>(1 + row % 30011)};
+    const auto tag = AllTypeVariant{pmr_string{"t" + std::to_string(row % 733)}};
+    const auto val = AllTypeVariant{static_cast<int32_t>(row % 1009)};
+    table->append({g, tag, val});
+  }
+
+  return table;
+}
+
 void compare_with_aggregate_hash(const std::shared_ptr<AbstractOperator>& input,
                                  const std::vector<std::pair<ColumnID, WindowFunction>>& aggregate_definitions,
                                  const std::vector<ColumnID>& groupby_column_ids) {
@@ -392,6 +408,22 @@ TEST_F(OperatorsAggregateDYODTest, MultiThreadedManyGroups) {
                               {{ColumnID{2}, WindowFunction::Sum},
                                {ColumnID{4}, WindowFunction::Min},
                                {ColumnID{3}, WindowFunction::CountDistinct}},
+                              {ColumnID{0}});
+}
+
+TEST_F(OperatorsAggregateDYODTest, MultiThreadedSkewedGroupBy) {
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+  const auto input = wrap_input(make_skewed_table(150'000));
+  compare_with_aggregate_hash(
+      input,
+      {{ColumnID{2}, WindowFunction::Sum}, {ColumnID{1}, WindowFunction::Min}, {ColumnID{0}, WindowFunction::Any}},
+      {ColumnID{0}});
+}
+
+TEST_F(OperatorsAggregateDYODTest, MultiThreadedSkewedCountDistinct) {
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+  const auto input = wrap_input(make_skewed_table(150'000));
+  compare_with_aggregate_hash(input, {{ColumnID{2}, WindowFunction::Sum}, {ColumnID{2}, WindowFunction::CountDistinct}},
                               {ColumnID{0}});
 }
 
