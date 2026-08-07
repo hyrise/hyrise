@@ -44,8 +44,8 @@ namespace hyrise {
 // group-by columns and dispatches to one of a bounded set of concrete schema types; the scatter and merge pipelines are
 // then instantiated over that one concrete type, so hash/equality compile to fixed, branch-free code. The axes:
 //
-//   NumericShortKeySchema<Width>   Width in {4,8,12,16} bytes -- numeric-only group-by. hash/equals fixed-size.
-//   NumericArbitraryKeySchema      numeric-only group-by wider than 16 bytes; runtime-length hash/equals.
+//   NumericShortKeySchema<Width>   Width in {4,8,12,16,20,24} bytes -- numeric-only group-by. hash/equals fixed-size.
+//   NumericArbitraryKeySchema      numeric-only group-by wider than 24 bytes; runtime-length hash/equals.
 //   MixedKeySchema<LenWidth>       at least one string and at least one non-string column. LenWidth in {1,2,4,8} is the
 //                                  per-string length-prefix field width.
 //   StringOnlyKeySchema<LenWidth>  all columns are strings; a MixedKeySchema with a zero-width numeric prefix.
@@ -53,7 +53,7 @@ namespace hyrise {
 // Layout (all four families), contiguous, tightly packed:
 //   [ null bitmap | numeric prefix | inline string blob | 8-byte spill pointer ]
 // The null bitmap carries one bit per nullable group-by column (present only if any group-by column is nullable) and is
-// padded so the fixed part stays a multiple of 4 bytes -- which keeps numeric widths on the {4,8,12,16} buckets and
+// padded so the fixed part stays a multiple of 4 -- which keeps numeric widths on the {4,8,12,16,20,24} buckets and
 // leaves no uninitialized interior padding, making whole-buffer equality/hash sound (the pad bytes are zero-filled and
 // compared as zero). The string blob and spill pointer are absent for numeric-only schemas.
 //
@@ -810,7 +810,7 @@ void NumericKeyLane<T>::unpack(const std::byte* key, const std::byte* null_bitma
  * Numeric-only group-by key schema whose total packed width is the compile-time constant PackedWidth.
  *
  * Selected by resolve_key_schema when every group-by column is numeric and the packed width (null bitmap + numeric
- * prefix) is one of {4,8,12,16} bytes; one template instantiation per bucket. Because the width is known at compile
+ * prefix) is one of {4,8,12,16,20,24} bytes; one instantiation per bucket. Because the width is known at compile
  * time, hash() and equals() are fixed-size and branch-free, while pack()/unpack() loop the resolved lanes.
  *
  * Invariants: packed_width() == PackedWidth for every key; keys carry no string blob or spill pointer.
@@ -818,7 +818,7 @@ void NumericKeyLane<T>::unpack(const std::byte* key, const std::byte* null_bitma
  * Ownership/lifetime/threading: one immutable instance per query, built by build() and shared read-only by all
  * workers across the scatter (pack) and merge (unpack/hash/equals) phases.
  *
- * See NumericArbitraryKeySchema (same interface for widths > 16 bytes) and the file banner for the byte layout.
+ * See NumericArbitraryKeySchema (same interface for widths > 24 bytes) and the file banner for the byte layout.
  */
 template <size_t PackedWidth>
 class NumericShortKeySchema {
@@ -959,7 +959,7 @@ bool NumericShortKeySchema<PackedWidth>::equals(const std::byte* a, const std::b
 // ------------------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------------------
 /**
- * Numeric-only group-by key schema for widths greater than 16 bytes, where the width is a runtime value.
+ * Numeric-only group-by key schema for widths greater than 24 bytes, where the width is a runtime value.
  *
  * Same interface and semantics as NumericShortKeySchema, but because the packed width is not a compile-time constant,
  * hash() and equals() operate over packed_width() rather than a fixed WIDTH. Selected by resolve_key_schema when all
@@ -981,7 +981,7 @@ class NumericArbitraryKeySchema {
    * @param group_by_column_ids ColumnIDs of the group-by columns, in output order; borrowed, read only.
    * @param input_table Table providing the columns' data types; borrowed, read only.
    * @return A fully built schema whose packed_width() is the resolved runtime width.
-   * @pre Every listed column is numeric and the resolved packed width exceeds 16 bytes.
+   * @pre Every listed column is numeric and the resolved packed width exceeds 24 bytes.
    */
   static NumericArbitraryKeySchema build(const std::vector<ColumnID>& group_by_column_ids, const Table& input_table);
 
@@ -1456,7 +1456,7 @@ bool StringOnlyKeySchema<LenWidth>::equals(const std::byte* a, const std::byte* 
  */
 struct KeySchemaChoice {
   KeyComposition composition{KeyComposition::NumericOnly};
-  size_t short_packed_width{0};  // One of {4,8,12,16} for NumericShortKeySchema; 0 when the width exceeds the buckets.
+  size_t short_packed_width{0};  // One of {4,8,12,16,20,24} for NumericShortKeySchema; 0 when the width exceeds them.
 };
 
 /**
@@ -1465,7 +1465,7 @@ struct KeySchemaChoice {
  *
  * @param group_by_column_ids ColumnIDs of the group-by columns, in output order; borrowed, read only.
  * @param input_table Table providing the columns' data types; borrowed, read only.
- * @return The composition and, for numeric-only tuples of at most 16 bytes, the packed-width bucket.
+ * @return The composition and, for numeric-only tuples of at most 24 bytes, the packed-width bucket.
  */
 inline KeySchemaChoice choose_key_schema(const std::vector<ColumnID>& group_by_column_ids, const Table& input_table) {
   auto has_string = false;
@@ -1481,7 +1481,7 @@ inline KeySchemaChoice choose_key_schema(const std::vector<ColumnID>& group_by_c
   if (!has_string) {
     const auto layout = compute_key_layout(group_by_column_ids, input_table, 0);
     const auto width = layout.fixed_part_width;
-    return {KeyComposition::NumericOnly, width <= 16 ? width : size_t{0}};
+    return {KeyComposition::NumericOnly, width <= 24 ? width : size_t{0}};
   }
   return {has_numeric ? KeyComposition::Mixed : KeyComposition::StringOnly, 0};
 }
@@ -1523,6 +1523,12 @@ void resolve_key_schema(const std::vector<ColumnID>& group_by_column_ids, const 
           return;
         case 16:
           functor(NumericShortKeySchema<16>::build(group_by_column_ids, input_table));
+          return;
+        case 20:
+          functor(NumericShortKeySchema<20>::build(group_by_column_ids, input_table));
+          return;
+        case 24:
+          functor(NumericShortKeySchema<24>::build(group_by_column_ids, input_table));
           return;
         default:
           functor(NumericArbitraryKeySchema::build(group_by_column_ids, input_table));
