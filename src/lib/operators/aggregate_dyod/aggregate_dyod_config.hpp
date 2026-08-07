@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <bit>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 
@@ -106,6 +107,44 @@ inline size_t keys_budget() {
  * @see HLL_PRECISION for the per-worker sketch precision.
  */
 constexpr size_t PARALLEL_ESTIMATE_THRESHOLD = 100'000;
+
+/**
+ * Number of chunks the estimate phase aims to feed into its sketch (unit: chunks).
+ *
+ * The estimate exists to size the partition count and the per-partition maps, so it does not need every row: above
+ * this many chunks, the phase samples every estimate_sample_stride()-th chunk and rescales the result via
+ * scale_sampled_estimate(). 16 full chunks are about one million rows, plenty for a power-of-two choice of P.
+ */
+constexpr size_t ESTIMATE_SAMPLE_CHUNKS = 16;
+
+/** Chunk stride of the estimate phase: sample every k-th chunk so about ESTIMATE_SAMPLE_CHUNKS chunks are read. */
+inline size_t estimate_sample_stride(const size_t chunk_count) {
+  return std::max(size_t{1}, chunk_count / ESTIMATE_SAMPLE_CHUNKS);
+}
+
+/**
+ * Rescale a sketch estimate taken over every stride-th chunk to the full input.
+ *
+ * Rows-per-key inside the sample cannot tell a plateaued key space from keys that merely repeat within their own
+ * chunk while every chunk brings new ones, so the growth between a half-size sample and the full sample decides the
+ * scaling: an estimate that did not grow is the true cardinality, one that doubled grows linearly with the input and
+ * is scaled by the stride, and partial growth is extrapolated as stride^log2(growth). The result is clamped to
+ * [estimate, min(total rows, estimate * stride)]; an empty sample carries no information and yields the row count.
+ */
+inline size_t scale_sampled_estimate(const size_t estimate, const size_t half_sample_estimate,
+                                     const size_t total_row_count, const size_t stride) {
+  if (stride == 1) {
+    return estimate;
+  }
+  if (estimate == 0) {
+    return total_row_count;
+  }
+  const auto growth = std::clamp(
+      static_cast<double>(estimate) / static_cast<double>(std::max(half_sample_estimate, size_t{1})), 1.0, 2.0);
+  const auto scaled = static_cast<double>(estimate) * std::pow(static_cast<double>(stride), std::log2(growth));
+  const auto ceiling = std::min(static_cast<double>(total_row_count), static_cast<double>(estimate * stride));
+  return static_cast<size_t>(std::llround(std::clamp(scaled, static_cast<double>(estimate), ceiling)));
+}
 
 /**
  * HyperLogLog register precision: the sketch uses 2^HLL_PRECISION registers (unit: bits of precision).
