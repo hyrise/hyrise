@@ -202,6 +202,16 @@ TEST_F(OperatorsAggregateDYODTest, MinMaxWithoutGroupBy) {
   compare_with_aggregate_hash(input, {{ColumnID{1}, WindowFunction::Min}, {ColumnID{1}, WindowFunction::Max}}, {});
 }
 
+TEST_F(OperatorsAggregateDYODTest, StringAggregatesWithoutGroupByOnReferenceInput) {
+  const auto input = wrap_input(to_simple_reference_table(make_input_table(30'000)));
+  compare_with_aggregate_hash(input,
+                              {{ColumnID{1}, WindowFunction::Min},
+                               {ColumnID{1}, WindowFunction::Max},
+                               {ColumnID{1}, WindowFunction::CountDistinct},
+                               {ColumnID{4}, WindowFunction::Min}},
+                              {});
+}
+
 TEST_F(OperatorsAggregateDYODTest, DictionaryMaxMinWithoutGroupBy) {
   const auto table = make_input_table(30'000);
   encode(table, EncodingType::Dictionary);
