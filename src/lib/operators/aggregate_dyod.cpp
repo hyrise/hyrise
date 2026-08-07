@@ -34,6 +34,7 @@
 #include "storage/abstract_segment.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/table.hpp"
+#include "storage/table_column_definition.hpp"
 #include "types.hpp"
 #include "utils/tracing.hpp"
 
@@ -249,11 +250,37 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
 
 std::shared_ptr<Table> AggregateDYOD::_write_output_table(WorkerState& worker_state) {
   TRACE_EVENT("aggregate_operator", "_write_output_table");
-  const auto input_table = left_input_table();
-  auto column_definitions = TableColumnDefinitions();
+  const auto column_definitions = _output_column_definitions();
 
+  const auto total_group_count = _group_id_map.size();
+  const auto chunk_count = (total_group_count + Chunk::DEFAULT_SIZE - 1) / Chunk::DEFAULT_SIZE;
+  auto chunks = std::vector<std::shared_ptr<Chunk>>(chunk_count);
+
+  if (total_group_count > 0) {
+    auto jobs = std::vector<std::shared_ptr<AbstractTask>>(chunk_count);
+    const auto occupied_group_ids = _get_occupied_group_ids();
+
+    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+      jobs[chunk_id] = std::make_shared<JobTask>([&, chunk_id]() {
+        const auto start_index = size_t{chunk_id} * Chunk::DEFAULT_SIZE;
+        const auto end_index = std::min(start_index + Chunk::DEFAULT_SIZE, total_group_count);
+        chunks[chunk_id] = _write_output_chunk(worker_state, occupied_group_ids, start_index, end_index);
+      });
+    }
+
+    {
+      TRACE_EVENT("aggregate_operator", "schedule_and_wait_for_tasks");
+      Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+    }
+  }
+
+  return std::make_shared<Table>(column_definitions, TableType::Data, chunks);
+}
+
+TableColumnDefinitions AggregateDYOD::_output_column_definitions() {
+  const auto input_table = left_input_table();
   const auto aggregate_count = _aggregates.size();
-  const auto groupby_column_count = _groupby_column_ids.size();
+  auto column_definitions = TableColumnDefinitions();
 
   for (const auto column_id : groupby_column_ids()) {
     column_definitions.emplace_back(input_table->column_name(column_id), input_table->column_data_type(column_id),
@@ -278,53 +305,50 @@ std::shared_ptr<Table> AggregateDYOD::_write_output_table(WorkerState& worker_st
     });
   }
 
-  // TODO(anyone): chunk size from the input table?
-  const auto chunk_size = Chunk::DEFAULT_SIZE;
-  const auto output_table = std::make_shared<Table>(column_definitions, TableType::Data, chunk_size);
-  const auto total_group_count = _group_id_map.size();
+  return column_definitions;
+}
 
-  if (total_group_count > 0) {
-    const auto occupied_group_ids = _get_occupied_group_ids();
+std::shared_ptr<Chunk> AggregateDYOD::_write_output_chunk(WorkerState& worker_state,
+                                                          const std::vector<size_t>& occupied_group_ids,
+                                                          size_t start_index, size_t end_index) {
+  TRACE_EVENT("aggregate_operator", "_write_output_chunk");
+  const auto input_table = left_input_table();
+  const auto aggregate_count = _aggregates.size();
+  const auto groupby_column_count = _groupby_column_ids.size();
 
-    for (auto start_index = size_t{0}; start_index < total_group_count; start_index += chunk_size) {
-      const auto end_index = std::min(start_index + chunk_size, total_group_count);
-      auto segments = Segments{};
-      segments.reserve(groupby_column_count + aggregate_count);
+  auto segments = Segments{};
+  segments.reserve(groupby_column_count + aggregate_count);
 
-      // Create one ValueSegment per grouping column
-      for (auto groupby_column_index = size_t{0}; groupby_column_index < groupby_column_count; ++groupby_column_index) {
-        const auto column_id = _groupby_column_ids[groupby_column_index];
-        const auto data_type = input_table->column_data_type(column_id);
+  // Create one ValueSegment per grouping column
+  for (auto groupby_column_index = size_t{0}; groupby_column_index < groupby_column_count; ++groupby_column_index) {
+    const auto column_id = _groupby_column_ids[groupby_column_index];
+    const auto data_type = input_table->column_data_type(column_id);
 
-        resolve_data_type(data_type, [&](auto type) {
-          using ColumnDataType = typename decltype(type)::type;
-          segments.push_back(
-              _write_groupby_segment<ColumnDataType>(groupby_column_index, occupied_group_ids, start_index, end_index));
-        });
-      }
-
-      // Create one ValueSegment per aggregate
-      for (auto aggregate_index = size_t{0}; aggregate_index < aggregate_count; ++aggregate_index) {
-        const auto aggregate = _aggregates[aggregate_index];
-
-        resolve_data_type(_aggregate_column_data_type(aggregate_index), [&](auto type) {
-          using ColumnDataType = typename decltype(type)::type;
-
-          resolve_window_function(aggregate->window_function, [&](auto type) {
-            constexpr auto aggregate_function = decltype(type)::value;
-            auto& aggregate_vector = static_cast<TypedAggregateVector<ColumnDataType, aggregate_function>&>(
-                worker_state.aggregate_vector(aggregate_index));
-            segments.push_back(_write_aggregate_segment<ColumnDataType, aggregate_function>(
-                aggregate_vector, _aggregate_is_nullable(aggregate_index), occupied_group_ids, start_index, end_index));
-          });
-        });
-      }
-
-      output_table->append_chunk(segments);
-    }
+    resolve_data_type(data_type, [&](auto type) {
+      using ColumnDataType = typename decltype(type)::type;
+      segments.emplace_back(
+          _write_groupby_segment<ColumnDataType>(groupby_column_index, occupied_group_ids, start_index, end_index));
+    });
   }
 
-  return output_table;
+  // Create one ValueSegment per aggregate
+  for (auto aggregate_index = size_t{0}; aggregate_index < aggregate_count; ++aggregate_index) {
+    const auto aggregate = _aggregates[aggregate_index];
+
+    resolve_data_type(_aggregate_column_data_type(aggregate_index), [&](auto type) {
+      using ColumnDataType = typename decltype(type)::type;
+
+      resolve_window_function(aggregate->window_function, [&](auto type) {
+        constexpr auto aggregate_function = decltype(type)::value;
+        auto& aggregate_vector = static_cast<TypedAggregateVector<ColumnDataType, aggregate_function>&>(
+            worker_state.aggregate_vector(aggregate_index));
+        segments.emplace_back(_write_aggregate_segment<ColumnDataType, aggregate_function>(
+            aggregate_vector, _aggregate_is_nullable(aggregate_index), occupied_group_ids, start_index, end_index));
+      });
+    });
+  }
+
+  return std::make_shared<Chunk>(segments);
 }
 
 template <typename ColumnDataType>
