@@ -197,7 +197,7 @@ TEST_F(AggregateDYODAccumulatorColumnTest, NumericStreamScattersRowsToTheirParti
   const auto partitions = std::vector<PartitionId>{0, 1, 0, 1};
   auto bitmap = std::vector<std::byte>(4, std::byte{0});
 
-  column.scatter(*segment, partitions, 1, heads, store, bitmap.data(), 1, 0);
+  column.scatter(*segment, 0, 4, partitions, 1, heads, store, bitmap.data(), 1, 0);
   heads.finish(store);
 
   const auto& region_0 = store.value_region(0, 0);
@@ -238,7 +238,7 @@ TEST_F(AggregateDYODAccumulatorColumnTest, StringStreamScatterFillsPartitionAren
   const auto partitions = std::vector<PartitionId>{0, 0, 0, 1};
   auto bitmap = std::vector<std::byte>(4, std::byte{0});
 
-  stream.scatter(*segment, partitions, 1, heads, store, bitmap.data(), 1, 0);
+  stream.scatter(*segment, 0, 4, partitions, 1, heads, store, bitmap.data(), 1, 0);
   heads.finish(store);
   EXPECT_EQ(bitmap[1], std::byte{1});
 
@@ -258,6 +258,69 @@ TEST_F(AggregateDYODAccumulatorColumnTest, StringStreamScatterFillsPartitionAren
   min_column.grow_to(1);
   min_column.fold(std::vector<uint32_t>{0}, {region_1.data(), region_1.size()}, {});
   EXPECT_EQ(finalize_slots(min_column, 0, 1, DataType::String)[0], AllTypeVariant{pmr_string{"fig"}});
+}
+
+TEST_F(AggregateDYODAccumulatorColumnTest, NumericStreamScattersOnlyItsRowWindow) {
+  const auto table = make_input_table({{"a", DataType::Int, true}}, {{11}, {NullValue{}}, {22}, {33}, {44}});
+  const auto segment = table->get_chunk(ChunkID{0})->get_segment(ColumnID{0});
+  const auto column = NumericValueScatterColumn<int32_t>{ColumnID{0}, true};
+
+  const auto value_stream_widths = std::vector<size_t>{sizeof(int32_t)};
+  auto store = ScatterStore{PartitionCount{2}, /*key_width=*/4, value_stream_widths, /*value_null_bitmap_width=*/1,
+                            /*needs_value_arena=*/false};
+  const auto stream_widths = std::vector<size_t>{4, sizeof(int32_t), 1};
+  auto heads = ScatterHeads{PartitionCount{2}, stream_widths.size(), stream_widths, true};
+  const auto partitions = std::vector<PartitionId>{0, 1, 0};
+  auto bitmap = std::vector<std::byte>(3, std::byte{0});
+
+  column.scatter(*segment, 1, 4, partitions, 1, heads, store, bitmap.data(), 1, 0);
+  heads.finish(store);
+
+  const auto& region_0 = store.value_region(0, 0);
+  ASSERT_EQ(region_0.size(), 2 * sizeof(int32_t));
+  auto values_0 = std::vector<int32_t>(2);
+  std::memcpy(values_0.data(), region_0.data(), region_0.size());
+  EXPECT_EQ(values_0[0], 0);
+  EXPECT_EQ(values_0[1], 33);
+
+  const auto& region_1 = store.value_region(1, 0);
+  ASSERT_EQ(region_1.size(), sizeof(int32_t));
+  auto value_1 = int32_t{};
+  std::memcpy(&value_1, region_1.data(), region_1.size());
+  EXPECT_EQ(value_1, 22);
+
+  EXPECT_EQ(bitmap[0], std::byte{1});
+  EXPECT_EQ(bitmap[1], std::byte{0});
+  EXPECT_EQ(bitmap[2], std::byte{0});
+}
+
+TEST_F(AggregateDYODAccumulatorColumnTest, StringStreamScattersOnlyItsRowWindow) {
+  const auto table = make_input_table(
+      {{"a", DataType::String, false}},
+      {{pmr_string{"pear"}}, {pmr_string{"apple"}}, {pmr_string{"fig"}}, {pmr_string{"plum"}}});
+  const auto segment = table->get_chunk(ChunkID{0})->get_segment(ColumnID{0});
+  const auto aggregates =
+      std::vector<std::shared_ptr<WindowFunctionExpression>>{make_aggregate(WindowFunction::Min, *table, ColumnID{0})};
+  const auto schema = AggregateSchema::build(aggregates, *table);
+  const auto& stream = schema.value_stream(0);
+
+  const auto value_stream_widths = std::vector<size_t>{stream.element_width()};
+  auto store = ScatterStore{PartitionCount{2}, /*key_width=*/4, value_stream_widths, /*value_null_bitmap_width=*/0,
+                            /*needs_value_arena=*/true};
+  const auto stream_widths = std::vector<size_t>{4, stream.element_width()};
+  auto heads = ScatterHeads{PartitionCount{2}, stream_widths.size(), stream_widths, false};
+  const auto partitions = std::vector<PartitionId>{0, 0};
+
+  stream.scatter(*segment, 1, 3, partitions, 1, heads, store, nullptr, 0, 0);
+  heads.finish(store);
+
+  const auto columns = schema.make_accumulator_columns();
+  auto& min_column = *columns[0];
+  const auto& region = store.value_region(0, 0);
+  ASSERT_EQ(region.size(), 2 * stream.element_width());
+  min_column.grow_to(1);
+  min_column.fold(std::vector<uint32_t>{0, 0}, {region.data(), region.size()}, {});
+  EXPECT_EQ(finalize_slots(min_column, 0, 1, DataType::String)[0], AllTypeVariant{pmr_string{"apple"}});
 }
 
 TEST_F(AggregateDYODAccumulatorColumnTest, NeedsValueArenaOnlyForStringStreams) {
@@ -431,7 +494,7 @@ TEST_F(AggregateDYODAccumulatorColumnTest, CountDistinctDedupesStringsAcrossTile
   auto heads = ScatterHeads{PartitionCount{1}, stream_widths.size(), stream_widths, true};
   const auto partitions = std::vector<PartitionId>(4, PartitionId{0});
   auto bitmap = std::vector<std::byte>(4, std::byte{0});
-  stream.scatter(*segment, partitions, 1, heads, store, bitmap.data(), 1, 0);
+  stream.scatter(*segment, 0, 4, partitions, 1, heads, store, bitmap.data(), 1, 0);
   heads.finish(store);
 
   const auto& region = store.value_region(0, 0);
@@ -483,7 +546,7 @@ TEST_F(AggregateDYODAccumulatorColumnTest, StringMinMaxCompareLexicographically)
   auto heads = ScatterHeads{PartitionCount{1}, stream_widths.size(), stream_widths, true};
   const auto partitions = std::vector<PartitionId>(4, PartitionId{0});
   auto bitmap = std::vector<std::byte>(4, std::byte{0});
-  stream.scatter(*segment, partitions, 1, heads, store, bitmap.data(), 1, 0);
+  stream.scatter(*segment, 0, 4, partitions, 1, heads, store, bitmap.data(), 1, 0);
   heads.finish(store);
 
   const auto& region = store.value_region(0, 0);

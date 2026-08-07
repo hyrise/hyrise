@@ -81,25 +81,30 @@ class AbstractValueScatterColumn {
   virtual bool is_nullable() const = 0;
 
   /**
-   * Scatter one chunk's source column into the worker's store, one typed segment_iterate pass over the whole column.
+   * Scatter rows [row_begin, row_end) of one chunk's source column into the worker's store, one typed pass over the
+   * window.
    *
-   * NULL cells push a zeroed value and set their bit in the row's field of the chunk's value-null-bitmap scratch,
-   * which the caller pushes row-wise after all value streams ran.
+   * NULL cells push a zeroed value and set their bit in the row's field of the window's value-null-bitmap scratch,
+   * which the caller pushes row-wise after all value streams ran. The window is the one the key pass claimed; the
+   * per-row arguments are indexed by window row rather than by chunk offset.
    *
    * @param segment input segment holding the source column for the current chunk; borrowed, not retained.
-   * @param row_partitions destination partition per chunk row, computed by the key pass; borrowed.
+   * @param row_begin first row of the window.
+   * @param row_end one past the window's last row; must not exceed the chunk's row count.
+   * @param row_partitions destination partition per window row, computed by the key pass; borrowed.
    * @param stream the ScatterHeads stream index of this value stream.
    * @param heads the worker's SWWC staging front-end; borrowed, mutated.
    * @param store the worker's scatter store; borrowed, mutated. String streams append payload bytes to the
    *   destination partition's value arena.
-   * @param null_bitmap the chunk's value-null-bitmap scratch, null_bitmap_width bytes per row; written only for NULL
+   * @param null_bitmap the window's value-null-bitmap scratch, null_bitmap_width bytes per row; written only for NULL
    *   cells. May be null when no value stream is nullable.
    * @param null_bitmap_width per-row width of the bitmap scratch in bytes.
    * @param null_bit_index bit position of this stream within a row's bitmap field.
    * @pre runs in the scatter phase, single-threaded per worker on that worker's own store and scratch.
    */
-  virtual void scatter(const AbstractSegment& segment, std::span<const PartitionId> row_partitions, size_t stream,
-                       ScatterHeads& heads, ScatterStore& store, std::byte* null_bitmap, size_t null_bitmap_width,
+  virtual void scatter(const AbstractSegment& segment, size_t row_begin, size_t row_end,
+                       std::span<const PartitionId> row_partitions, size_t stream, ScatterHeads& heads,
+                       ScatterStore& store, std::byte* null_bitmap, size_t null_bitmap_width,
                        uint32_t null_bit_index) const = 0;
 };
 
@@ -124,9 +129,9 @@ class NumericValueScatterColumn : public AbstractValueScatterColumn {
 
   uint32_t element_width() const override;  // sizeof(T)
   bool is_nullable() const override;
-  void scatter(const AbstractSegment& segment, std::span<const PartitionId> row_partitions, size_t stream,
-               ScatterHeads& heads, ScatterStore& store, std::byte* null_bitmap, size_t null_bitmap_width,
-               uint32_t null_bit_index) const override;
+  void scatter(const AbstractSegment& segment, size_t row_begin, size_t row_end,
+               std::span<const PartitionId> row_partitions, size_t stream, ScatterHeads& heads, ScatterStore& store,
+               std::byte* null_bitmap, size_t null_bitmap_width, uint32_t null_bit_index) const override;
 
  private:
   ColumnID _source_column;
@@ -148,22 +153,19 @@ bool NumericValueScatterColumn<T>::is_nullable() const {
 }
 
 template <typename T>
-void NumericValueScatterColumn<T>::scatter(const AbstractSegment& segment,
+void NumericValueScatterColumn<T>::scatter(const AbstractSegment& segment, const size_t row_begin, const size_t row_end,
                                            const std::span<const PartitionId> row_partitions, const size_t stream,
                                            ScatterHeads& heads, ScatterStore& store, std::byte* null_bitmap,
                                            const size_t null_bitmap_width, const uint32_t null_bit_index) const {
-  auto row = size_t{0};
-  segment_iterate<T>(segment, [&](const auto& position) {
-    const auto partition = row_partitions[row];
+  iterate_segment_window<T>(segment, row_begin, row_end, [&](const size_t row, const T* source) {
     auto value = T{};
-    if (position.is_null()) {
+    if (source) {
+      value = *source;
+    } else {
       DebugAssert(_nullable, "NULL in a non-nullable value column.");
       set_null_bit(null_bitmap + row * null_bitmap_width, null_bit_index);
-    } else {
-      value = position.value();
     }
-    heads.push(store, stream, partition, reinterpret_cast<const std::byte*>(&value), sizeof(value));
-    ++row;
+    heads.push(store, stream, row_partitions[row], reinterpret_cast<const std::byte*>(&value), sizeof(value));
   });
 }
 
@@ -190,9 +192,9 @@ class StringValueScatterColumn : public AbstractValueScatterColumn {
 
   uint32_t element_width() const override;  // sizeof(pointer, length) reference
   bool is_nullable() const override;
-  void scatter(const AbstractSegment& segment, std::span<const PartitionId> row_partitions, size_t stream,
-               ScatterHeads& heads, ScatterStore& store, std::byte* null_bitmap, size_t null_bitmap_width,
-               uint32_t null_bit_index) const override;
+  void scatter(const AbstractSegment& segment, size_t row_begin, size_t row_end,
+               std::span<const PartitionId> row_partitions, size_t stream, ScatterHeads& heads, ScatterStore& store,
+               std::byte* null_bitmap, size_t null_bitmap_width, uint32_t null_bit_index) const override;
 
  private:
   ColumnID _source_column;
@@ -210,25 +212,23 @@ inline bool StringValueScatterColumn::is_nullable() const {
   return _nullable;
 }
 
-inline void StringValueScatterColumn::scatter(const AbstractSegment& segment,
-                                              const std::span<const PartitionId> row_partitions, const size_t stream,
-                                              ScatterHeads& heads, ScatterStore& store, std::byte* null_bitmap,
-                                              const size_t null_bitmap_width, const uint32_t null_bit_index) const {
-  auto row = size_t{0};
-  segment_iterate<pmr_string>(segment, [&](const auto& position) {
+inline void StringValueScatterColumn::scatter(const AbstractSegment& segment, const size_t row_begin,
+                                              const size_t row_end, const std::span<const PartitionId> row_partitions,
+                                              const size_t stream, ScatterHeads& heads, ScatterStore& store,
+                                              std::byte* null_bitmap, const size_t null_bitmap_width,
+                                              const uint32_t null_bit_index) const {
+  iterate_segment_window<pmr_string>(segment, row_begin, row_end, [&](const size_t row, const pmr_string* value) {
     const auto partition = row_partitions[row];
     auto reference = StringValueReference{};
-    if (position.is_null()) {
+    if (value) {
+      reference.data =
+          store.value_arena(partition).append(reinterpret_cast<const std::byte*>(value->data()), value->size());
+      reference.length = value->size();
+    } else {
       DebugAssert(_nullable, "NULL in a non-nullable value column.");
       set_null_bit(null_bitmap + row * null_bitmap_width, null_bit_index);
-    } else {
-      const auto& value = position.value();
-      reference.data =
-          store.value_arena(partition).append(reinterpret_cast<const std::byte*>(value.data()), value.size());
-      reference.length = value.size();
     }
     heads.push(store, stream, partition, reinterpret_cast<const std::byte*>(&reference), sizeof(reference));
-    ++row;
   });
 }
 

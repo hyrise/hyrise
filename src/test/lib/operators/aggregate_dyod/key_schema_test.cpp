@@ -80,6 +80,31 @@ PackInput to_reference_input(const PackInput& input) {
   return reference;
 }
 
+PackInput to_single_chunk_reference_input(const PackInput& input) {
+  auto pos_list = std::make_shared<RowIDPosList>();
+  const auto row_count = input.table->get_chunk(ChunkID{0})->size();
+  for (auto chunk_offset = ChunkOffset{0}; chunk_offset < row_count; ++chunk_offset) {
+    pos_list->emplace_back(RowID{ChunkID{0}, chunk_offset});
+  }
+  pos_list->guarantee_single_chunk();
+
+  auto definitions = TableColumnDefinitions{};
+  auto segments = Segments{};
+  for (const auto column_id : input.column_ids) {
+    definitions.emplace_back(input.table->column_name(column_id), input.table->column_data_type(column_id),
+                             input.table->column_is_nullable(column_id));
+    segments.emplace_back(std::make_shared<ReferenceSegment>(input.table, column_id, pos_list));
+  }
+  const auto table = std::make_shared<Table>(definitions, TableType::References);
+  table->append_chunk(segments);
+
+  auto reference = PackInput{};
+  reference.table = table;
+  reference.column_ids = input.column_ids;
+  gather_segments(reference);
+  return reference;
+}
+
 // Prefilled with garbage so pack() has to overwrite every byte.
 template <typename KeySchema>
 std::vector<std::byte> pack_key(const KeySchema& schema, const PackInput& input, uint32_t row,
@@ -107,6 +132,22 @@ std::vector<std::vector<std::byte>> pack_all_keys(const KeySchema& schema, const
 }
 
 template <typename KeySchema>
+std::vector<std::vector<std::byte>> pack_window_keys(const KeySchema& schema, const PackInput& input,
+                                                     const size_t row_begin, const size_t row_end,
+                                                     StringSpillBuffer& spill_buffer) {
+  auto scratch = KeyDecodeScratch{};
+  schema.decode(std::span<const AbstractSegment* const>{input.segments}, row_begin, row_end, scratch);
+  auto keys = std::vector<std::vector<std::byte>>{};
+  const auto window_rows = row_end - row_begin;
+  for (auto row = uint32_t{0}; row < window_rows; ++row) {
+    auto key = std::vector<std::byte>(schema.packed_width(), std::byte{0xAA});
+    schema.pack(scratch, ChunkOffset{row}, key.data(), spill_buffer);
+    keys.emplace_back(std::move(key));
+  }
+  return keys;
+}
+
+template <typename KeySchema>
 void expect_keys_equal(const KeySchema& schema, const std::vector<std::byte>& a, const std::vector<std::byte>& b) {
   EXPECT_TRUE(schema.equals(a.data(), b.data()));
   EXPECT_TRUE(schema.equals(b.data(), a.data()));
@@ -117,6 +158,20 @@ template <typename KeySchema>
 void expect_keys_not_equal(const KeySchema& schema, const std::vector<std::byte>& a, const std::vector<std::byte>& b) {
   EXPECT_FALSE(schema.equals(a.data(), b.data()));
   EXPECT_FALSE(schema.equals(b.data(), a.data()));
+}
+
+template <typename KeySchema>
+void expect_window_matches_full_decode(const KeySchema& schema, const PackInput& input, const size_t row_begin,
+                                       const size_t row_end) {
+  auto full_spill = StringSpillBuffer{};
+  auto window_spill = StringSpillBuffer{};
+  const auto full = pack_all_keys(schema, input, full_spill);
+  const auto window = pack_window_keys(schema, input, row_begin, row_end, window_spill);
+
+  ASSERT_EQ(window.size(), row_end - row_begin);
+  for (auto row = size_t{0}; row < window.size(); ++row) {
+    expect_keys_equal(schema, full[row_begin + row], window[row]);
+  }
 }
 
 template <typename KeySchema>
@@ -925,6 +980,74 @@ TEST_F(AggregateDYODKeySchemaTest, NullRowIdsPackAsNullValues) {
   for (auto row = size_t{0}; row < expected.size(); ++row) {
     expect_keys_equal(schema, expected[row], actual[row]);
   }
+}
+
+TEST_F(AggregateDYODKeySchemaTest, WindowedDecodeMatchesTheFullDecodeSlice) {
+  const auto long_string = pmr_string(3 * STRING_BLOB_BYTES_PER_COLUMN, 'w');
+  const auto definitions = TableColumnDefinitions{
+      {"a", DataType::Int, true}, {"b", DataType::String, true}, {"c", DataType::Double, false}};
+  const auto rows = std::vector<std::vector<AllTypeVariant>>{{1, pmr_string{"abc"}, 1.5},
+                                                             {NullValue{}, pmr_string{""}, -0.5},
+                                                             {2, NullValue{}, 2.5},
+                                                             {3, long_string, 3.5},
+                                                             {4, pmr_string{"abc"}, 4.5},
+                                                             {NullValue{}, NullValue{}, 5.5}};
+  const auto input = make_pack_input(definitions, rows);
+  resolve_key_schema(input.column_ids, *input.table, [&](const auto& schema) {
+    expect_window_matches_full_decode(schema, input, 0, rows.size());
+    expect_window_matches_full_decode(schema, input, 2, 5);
+    expect_window_matches_full_decode(schema, input, 0, 1);
+    expect_window_matches_full_decode(schema, input, rows.size() - 1, rows.size());
+  });
+}
+
+TEST_F(AggregateDYODKeySchemaTest, WindowedDecodeMatchesOnDictionarySegments) {
+  const auto definitions = TableColumnDefinitions{{"a", DataType::Int, true}, {"b", DataType::Long, false}};
+  const auto rows = std::vector<std::vector<AllTypeVariant>>{{1, int64_t{10}},
+                                                             {NullValue{}, int64_t{20}},
+                                                             {3, int64_t{30}},
+                                                             {4, int64_t{40}},
+                                                             {NullValue{}, int64_t{50}}};
+  const auto input = make_pack_input(definitions, rows, std::nullopt, SegmentEncodingSpec{EncodingType::Dictionary});
+  resolve_key_schema(input.column_ids, *input.table, [&](const auto& schema) {
+    expect_window_matches_full_decode(schema, input, 1, 4);
+    expect_window_matches_full_decode(schema, input, 4, 5);
+  });
+}
+
+TEST_F(AggregateDYODKeySchemaTest, WindowedDecodeMatchesOnSingleChunkReferences) {
+  const auto definitions = TableColumnDefinitions{{"a", DataType::Int, true}, {"b", DataType::String, true}};
+  const auto rows = std::vector<std::vector<AllTypeVariant>>{{1, pmr_string{"abc"}},
+                                                             {NullValue{}, pmr_string{"de"}},
+                                                             {2, NullValue{}},
+                                                             {3, pmr_string{""}},
+                                                             {4, pmr_string{"abc"}}};
+  const auto plain = to_single_chunk_reference_input(make_pack_input(definitions, rows));
+  const auto encoded = to_single_chunk_reference_input(
+      make_pack_input(definitions, rows, std::nullopt, SegmentEncodingSpec{EncodingType::Dictionary}));
+  resolve_key_schema(plain.column_ids, *plain.table, [&](const auto& schema) {
+    expect_window_matches_full_decode(schema, plain, 1, 4);
+    expect_window_matches_full_decode(schema, encoded, 1, 4);
+    expect_window_matches_full_decode(schema, encoded, 0, 2);
+  });
+}
+
+TEST_F(AggregateDYODKeySchemaTest, WindowedDecodeMatchesOnSegmentsWithoutDirectAccess) {
+  const auto definitions = TableColumnDefinitions{{"a", DataType::Int, true}, {"b", DataType::String, true}};
+  const auto rows = std::vector<std::vector<AllTypeVariant>>{{1, pmr_string{"abc"}},
+                                                             {1, pmr_string{"abc"}},
+                                                             {NullValue{}, NullValue{}},
+                                                             {2, pmr_string{"xy"}},
+                                                             {3, pmr_string{"xy"}},
+                                                             {4, pmr_string{"z"}}};
+  const auto run_length =
+      make_pack_input(definitions, rows, std::nullopt, SegmentEncodingSpec{EncodingType::RunLength});
+  const auto reference = to_reference_input(make_pack_input(definitions, rows, ChunkOffset{2}));
+  resolve_key_schema(run_length.column_ids, *run_length.table, [&](const auto& schema) {
+    expect_window_matches_full_decode(schema, run_length, 2, 5);
+    expect_window_matches_full_decode(schema, reference, 2, 5);
+    expect_window_matches_full_decode(schema, reference, 5, 6);
+  });
 }
 
 TEST_F(AggregateDYODKeySchemaTest, StringKeysRoundTripThroughUnpack) {
