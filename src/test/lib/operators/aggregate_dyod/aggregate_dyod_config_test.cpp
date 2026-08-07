@@ -110,6 +110,22 @@ TEST_F(AggregateDYODConfigTest, MaxPartitionCountRespectsAbsoluteCeiling) {
 
 
 
+TEST_F(AggregateDYODConfigTest, MorselRowsQuartersADefaultChunk) {
+  EXPECT_EQ(MORSEL_ROWS, 16384);
+}
+
+TEST_F(AggregateDYODConfigTest, MorselCountCoversEveryRow) {
+  EXPECT_EQ(morsel_count_for(65535, MORSEL_ROWS), 4);
+  EXPECT_EQ(morsel_count_for(4 * MORSEL_ROWS, MORSEL_ROWS), 4);
+  EXPECT_EQ(morsel_count_for(4 * MORSEL_ROWS + 1, MORSEL_ROWS), 5);
+}
+
+TEST_F(AggregateDYODConfigTest, MorselCountIsAtLeastOne) {
+  EXPECT_EQ(morsel_count_for(0, MORSEL_ROWS), 1);
+  EXPECT_EQ(morsel_count_for(1, MORSEL_ROWS), 1);
+  EXPECT_EQ(morsel_count_for(MORSEL_ROWS, MORSEL_ROWS), 1);
+}
+
 TEST_F(AggregateDYODConfigTest, WorkerLimitFollowsScheduler) {
   EXPECT_EQ(worker_limit_for(true, 32), 32);
   EXPECT_EQ(worker_limit_for(false, 32), 1);
