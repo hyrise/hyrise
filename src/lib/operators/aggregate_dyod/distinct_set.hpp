@@ -9,6 +9,7 @@
 #include <type_traits>
 #include <vector>
 
+#include "operators/aggregate_dyod/hyperloglog.hpp"
 #include "operators/aggregate_dyod/key_schema.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -105,7 +106,8 @@ bool DistinctSet<ColumnType>::insert(const uint32_t slot, const ValueView value)
     entry.bits = canonical_bits(value);
   }
 
-  auto index = _entry_hash(entry) & _mask;
+  // FNV-1a's low bits carry input structure almost unchanged; mixing keeps structured keys from clustering.
+  auto index = mix64(_entry_hash(entry)) & _mask;
   while (true) {
     const auto stored = _table[index];
     if (stored == 0) {
@@ -189,7 +191,7 @@ void DistinctSet<ColumnType>::_grow_table_to(const size_t table_size) {
 
   const auto entry_count = _entries.size();
   for (auto entry_index = size_t{0}; entry_index < entry_count; ++entry_index) {
-    auto index = _entry_hash(_entries[entry_index]) & _mask;
+    auto index = mix64(_entry_hash(_entries[entry_index])) & _mask;
     while (_table[index] != 0) {
       index = (index + 1) & _mask;
     }
