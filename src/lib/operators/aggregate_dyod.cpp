@@ -663,7 +663,7 @@ struct DYODAggregateContext : public DYODAggregateResultContext<ColumnDataType, 
 
   void merge_results(DYODAggregateResult<ColumnDataType, aggregate_function>& target,
                      DYODAggregateResult<ColumnDataType, aggregate_function>& other) {
-    // Merge DYODAggregateResults depending on their WindowFunction (special handly e.g. the type of check to perform)
+    // Merge DYODAggregateResults depending on their WindowFunction (special handling e.g. for the type of check to perform)
     if constexpr (aggregate_function == WindowFunction::Min) {
       if (value_smaller(other.accumulator, target.accumulator)) {
         target.accumulator = other.accumulator;
@@ -691,7 +691,7 @@ struct DYODAggregateContext : public DYODAggregateResultContext<ColumnDataType, 
       // Here, we merge two result sets of Welford's online algorithm for calculating the Standard Deviation
       // See https://en.wikipedia.org/w/index.php?title=Algorithms_for_calculating_variance&oldid=1367183160
       // for an introduction to Welford's online aglorithm. Under section "Parallel algorithm" there is an
-      // introduction into the merging approach we are using here. It is based on:
+      // introduction into the merging approach we use here. It is based on:
       // Chan et al. (1979), Updating formulae and a pairwise algorithm for computing sample variances
       // (Technical Report No. STAN-CS-79-773). Stanford University, Department of Computer Science,
       // https://i.stanford.edu/pub/cstr/reports/cs/tr/79/773/CS-TR-79-773.pdf
@@ -819,13 +819,14 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
 /**
  * Partition the input chunks by the given group key(s). This is done by creating a vector that contains the
  * AggregateKey for each row. It is gradually built by visitors, one for each group segment.
+ * We have guarantee_single_key set to maybe_unused to avoid compiler errors for template versions that do not use it.
  */
 template <typename CheckForSingleKey, typename AggregateKey>
   requires(!std::is_same_v<AggregateKey, DYODEmptyAggregateKey>)
 KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::shared_ptr<const Table>& input_table,
                                                                      std::atomic_size_t& expected_result_size,
                                                                      bool& use_immediate_key_shortcut,
-                                                                     bool& guarantee_single_key) {
+                                                                     [[maybe_unused]] bool& guarantee_single_key) {
   auto keys_per_chunk = KeysPerChunk<AggregateKey>{};
   const auto chunk_count = input_table->chunk_count();
 
@@ -998,11 +999,6 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
             The ID 0 is reserved for NULL values. The combined IDs build an AggregateKey for each row.
             */
 
-          // TODO(anyone): CI compiler does not like that this is unused for some template parameters.
-          if (use_immediate_key_shortcut) {
-            // Find a better way.
-          }
-
           // This time, we have no idea how much space we need, so we take some memory and then rely on the automatic
           // resizing. The size is quite random, but since single memory allocations do not cost too much, we rather
           // allocate a bit too much.
@@ -1146,7 +1142,7 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
           // values.
           auto previous_max = expected_result_size.load();
           while (previous_max < id_map.size()) {
-            // expected_result_size needs to be atomatically updated as the GROUP BY columns are processed in
+            // The expected_result_size needs to be automatically updated as the GROUP BY columns are processed in
             // parallel. How to atomically update a maximum value? from https://stackoverflow.com/a/16190791/2204581
             if (expected_result_size.compare_exchange_strong(previous_max, id_map.size())) {
               break;
@@ -1165,25 +1161,25 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
 // TODO(anyone): adaptive radix mask. Possibilities include:
 //  (1) estimate distinct count and set mask accordingly.
 //  (2) adapt mask recursively based on partition size.
-//  (3) add low cardinality partitioning (all same key).
+//  (3) add low cardinality partitioning for more than one key.
 
 // 32 buckets
 constexpr auto RADIX_MASK = 0x1f;
 constexpr auto RADIX_SPLIT_MAX_BUCKETS = RADIX_MASK + 1;
 
 // Ideally, we have num_cpus jobs with a size of row_count/num_cpus each (assuming unit time per row).
-// We do guesstimation and try to limit jobs to a size of row_count/(num_cpus * IDEAL_CPU_JOB_COUNT).
-// This should give a pretty good cpu usage.
+// We do approximation and try to limit jobs to a size of row_count/(num_cpus * IDEAL_CPU_JOB_COUNT).
+// This should give a pretty good CPU usage.
 constexpr auto IDEAL_CPU_JOB_COUNT = 4;
 
-// More in-depth theoretical analysis: Assume we a workload of M rows for N cpus. The ideal time would then be M/N.
-// We assume zero time for switching, and a scheduler that randomly assigns queued jobs to any free cpu.
+// More in-depth theoretical analysis: Assume a workload of M rows for N CPUs. The ideal time would then be M/N.
+// We assume zero time for switching, and a scheduler that randomly assigns queued jobs to any free CPU.
 // Let's say we split the jobs recursively such that each job has a size of at most M/(N*k).
 // At time M/N (aka the ideal finish time), every job has been either finished or is being worked on.
-// (The argument is: When the last job is assigned, every cpu has worked full time up that point. Since the total work
+// (The argument is: When the last job is assigned, every CPU has worked full time up that point. Since the total work
 // is M, this has to be before M/N. Thus at time M/N, there is no unassigned job)
 // So in the worst case we finished M/(N*k) later than the ideal time. We are at least (1+1/k)-optimal.
-// In pratice, we have to consider preprocessing and postprocessing time, as well as non unit time per row.
+// In practice, we have to consider preprocessing and postprocessing time, as well as non unit time per row.
 
 template <typename AggregateKey>
 std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
@@ -1194,6 +1190,11 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
   }
 }
 
+/**
+ * When appropriate (using a multi-threaded scheduler and at least one groupby column), split the input table into buckets
+ * and then spawn one job per bucket for the aggregation. Otherwise, simply aggregate on the entire input table. Create an
+ * output table and write the results of the aggregation there.
+ */
 template <typename IsReferenceTable, typename AggregateKey>
 std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
   const auto aggregates_count = _aggregates.size();
@@ -1212,14 +1213,17 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
   const auto row_count = input_table->row_count();
   const auto groupby_column_count = _groupby_column_ids.size();
 
+  // The operator output and the table in which the aggregate results will be materialized exist globally.
+  // For multi-threading, write-access in guarded by _output_mutex and _aggregate_mutex respectively.
+  auto output_table = std::shared_ptr<Table>{};
+  auto aggregate_result_table = std::shared_ptr<Table>{};
+
   // If we only work on a single thread, have an empty table, or only a single group,
   // we don't bother splitting by groupby groups.
   if (!is_multi_threaded || row_count == 0 || groupby_column_count == 0) {
     auto contexts_per_column = ContextsPerColumn(aggregates_count);
     // We only enable the single group optimization if we have threads.
     _aggregate<AggregateKey>(contexts_per_column, input_table, is_multi_threaded);
-    auto output_table = std::shared_ptr<Table>{};
-    auto aggregate_result_table = std::shared_ptr<Table>{};
     _write_output(contexts_per_column, input_table, output_table, aggregate_result_table);
     return output_table;
   }
@@ -1232,7 +1236,7 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
 
   // If we have a Data table, we directly partition into PosLists and forward these to the thread-local input tables.
   // For a Reference table, we only store the ChunkOffsets since we have to resolve the PosList anyway later.
-  // TODO(anyone): figure out how pmr_vector works and if we want to use that instead of std::vector.
+  // TODO(anyone): Consider using pmr_vector instead of std::vector.
   using ReferenceList =
       std::conditional_t<std::is_same_v<IsReferenceTable, std::true_type>, std::vector<ChunkOffset>, RowIDPosList>;
   using PosLists = std::vector<std::shared_ptr<ReferenceList>>;
@@ -1244,10 +1248,10 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
     auto pos_lists = std::make_shared<PosLists>(chunk_count);
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
       auto reference_list = std::make_shared<ReferenceList>();
-      // in an ideal world, we split the the chunks perfectly accross the buckets
-      // this won't happen, some will be bigger, some will be smaller
-      // However, it is still better to prerserve instead of incrementally push_back
-      // TODO(anylone): Find a way to reserve the reference_lists.
+      // Ideally, we split the the chunks perfectly across the buckets. In practice, this won't happen,
+      // some will be bigger, some will be smaller. However, it is still better to pre-reserve instead of incrementally
+      // calling push_back
+      // TODO(anyone): Find a way to reserve the reference_lists.
       (*pos_lists)[chunk_id] = reference_list;
     }
     pos_lists_per_thread[bucket_id] = pos_lists;
@@ -1295,7 +1299,7 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
     }));
   }
 
-  // No jobs? Empty table; 1 Job? run in-place, otherwise use scheduler
+  // If there are no jobs, return an empty table. Otherwise, schedule the jobs.
   // TODO(anyone): Skip scheduler for a single job
   if (hashing_jobs.empty()) {
     return std::make_shared<Table>(input_table->column_definitions(), TableType::References);
@@ -1306,10 +1310,7 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
   // End First Split
   // After splitting into radix buckets, we can aggregate each bucket in parallel.
   // For each bucket we create a local input table that contains references to the corresponding rows of the original
-  // input table. For ReferenceSegments we re-use the code from TableScan
-
-  auto output_table = std::shared_ptr<Table>{};
-  auto aggregate_result_table = std::shared_ptr<Table>{};
+  // input table. For ReferenceSegments we re-use the code from TableScan.
 
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   jobs.reserve(RADIX_SPLIT_MAX_BUCKETS);
@@ -1319,7 +1320,7 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
       const auto pos_lists = pos_lists_per_thread[thread_id];
       const auto local_input_table = std::make_shared<Table>(input_table->column_definitions(), TableType::References);
 
-      // Scan input table for radix bucket → Populate the local input table with references to the original input table
+      // Scan input table for radix bucket and populate the local input table with references to the original input table.
       for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
         auto pos_list = (*pos_lists)[chunk_id];
         if (pos_list->empty()) {
@@ -1333,7 +1334,7 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
             out_segments[column_id] = std::make_shared<ReferenceSegment>(input_table, column_id, pos_list);
           }
         } else {
-          // Re-used from TableScan: Resolve the ReferenceSegments of the input reference table into our local table
+          // Re-used from TableScan: Resolve the ReferenceSegments of the input reference table into our local table.
           // TODO(anyone): Find a way to avoid the code duplication
           const auto& chunk_in = input_table->get_chunk(chunk_id);
           if (pos_list->size() == chunk_in->size()) {
@@ -1353,6 +1354,8 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
               const auto pos_list_in = ref_segment_in->pos_list();
               auto& filtered_pos_list = filtered_pos_lists[pos_list_in];
 
+              // We only create a new RowIdPosList if we have not yet created one for the pos_list_in.
+              // This accounts for the same PosList being used for multiple columns.
               if (!filtered_pos_list) {
                 filtered_pos_list = std::make_shared<RowIDPosList>(pos_list->size());
                 if (pos_list_in->references_single_chunk()) {
@@ -1376,7 +1379,7 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
         local_input_table->append_chunk(out_segments);
       }
 
-      // Partitioning step: Aggregate the local input table in this job, write its output into the output table
+      // Aggregate the local input table in this job, write its output into the output table
       // The output table is shared between all jobs, but no two jobs write to the same chunk. For avoiding append_chunk
       // collisions we are using a mutex in _write_output.
       const auto local_row_count = local_input_table->row_count();
@@ -1396,7 +1399,11 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
 
 const auto JOB_COUNT_ESTIMATE = ChunkID{16};
 
-// This is the unpartitioned variant. It will handle the table partitioning and call the partitioned variant below.
+/**
+ * This is the unpartitioned variant. It will handle the table partitioning for low cardinalities and call the partitioned 
+ * variant below.
+ */
+
 template <typename AggregateKey>
 void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std::shared_ptr<const Table>& input_table,
                                bool check_for_single_keys) {
@@ -1409,7 +1416,7 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std
                             : _partition_by_groupby_keys<std::false_type, AggregateKey>(
                                   input_table, expected_result_size, use_immediate_key_shortcut, guarantee_single_key);
 
-  // TODO(anyone): estimate ideal number of threads for this bucket.
+  // TODO(anyone): Estimate ideal number of threads for this bucket.
   // If we only have one group, we can easily split this thread, since we have only one result per context.
   const auto chunk_count = input_table->chunk_count();
   auto bucket_job_count = guarantee_single_key ? std::min(JOB_COUNT_ESTIMATE, chunk_count) : ChunkID{1};
@@ -1426,6 +1433,8 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std
   auto contexts_per_column_per_job = std::vector<ContextsPerColumn>{};
   contexts_per_column_per_job.reserve(bucket_job_count);
 
+  // If we have only one group in the table, further split the table into subsets of chunks, then call _aggregate
+  // separately.
   auto mini_jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   mini_jobs.reserve(bucket_job_count);
 
