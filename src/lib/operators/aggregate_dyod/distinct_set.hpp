@@ -107,7 +107,6 @@ bool DistinctSet<ColumnType>::insert(const uint32_t slot, const ValueView value)
     entry.bits = canonical_bits(value);
   }
 
-  // FNV-1a's low bits carry input structure almost unchanged; mixing keeps structured keys from clustering.
   auto index = mix64(_entry_hash(entry)) & _mask;
   while (true) {
     const auto stored = _table[index];

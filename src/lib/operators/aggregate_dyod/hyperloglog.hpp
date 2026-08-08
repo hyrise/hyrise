@@ -50,8 +50,7 @@ class HllSketch : private Noncopyable {
 
 inline HllSketch::HllSketch() : _registers(REGISTER_COUNT, uint8_t{0}) {}
 
-// MurmurHash3's 64-bit finalizer. An unfinalized FNV-1a key hash collides in its high bits -- the only ones a sketch
-// reads -- badly enough at 15 M distinct keys to halve the estimate, so add() mixes whatever hash it is fed.
+// MurmurHash3's 64-bit finalizer
 inline uint64_t mix64(uint64_t hash) {
   hash ^= hash >> 33;
   hash *= 0xff51afd7ed558ccdull;

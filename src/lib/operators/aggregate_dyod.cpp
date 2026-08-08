@@ -150,12 +150,11 @@ class StandardAggregator : public AbstractAggregator {
     const auto fold = WindowFunctionBuilder<ColumnDataType, AggregateType, window_function>{}.get_aggregate_function();
 
     if constexpr (window_function == WindowFunction::Min || window_function == WindowFunction::Max) {
-      // Pruning statistics store exact chunk extrema, so MIN/MAX usually need no segment scan.
       const auto pruning_statistics = chunk.pruning_statistics();
       if (pruning_statistics && static_cast<size_t>(_column_id) < pruning_statistics->size()) {
         const auto& attribute_statistics =
             static_cast<const AttributeStatistics<ColumnDataType>&>(*(*pruning_statistics)[_column_id]);
-        // For MIN/MAX, count only records whether a value was seen; one exact extremum represents the whole chunk.
+
         if (attribute_statistics.min_max_filter) {
           const auto& filter = *attribute_statistics.min_max_filter;
           const auto& value = window_function == WindowFunction::Min ? filter.min : filter.max;
@@ -222,7 +221,6 @@ class StandardAggregator : public AbstractAggregator {
       return;
     }
 
-    // Fold through locals so the accumulator stays in a register instead of a load/store per row.
     auto accumulator = state.accumulator;
     auto count = state.count;
     segment_iterate<ColumnDataType>(segment, [&](const auto& position) {
@@ -290,11 +288,10 @@ class StandardAggregator : public AbstractAggregator {
   std::string _output_name;
   ColumnID _column_id;
   std::vector<PaddedState> _states;
-  std::vector<KeyDecodeScratch::StringColumn> _decode_scratch;  // Per worker; string MIN/MAX only.
+  std::vector<KeyDecodeScratch::StringColumn> _decode_scratch;
   State _final{};
 };
 
-// ANY keeps the carried input column's name and nullability, like AggregateHash.
 template <typename ColumnDataType>
 class AnyAggregator : public AbstractAggregator {
   struct State {
@@ -475,7 +472,6 @@ class CountDistinctAggregator : public AbstractAggregator {
     });
   }
 
-  // A serial union of the per-worker sets does not scale; split by hash range and union the ranges independently.
   void merge() override {
     const auto worker_count = _states.size();
     if (worker_count == 1) {
@@ -647,8 +643,7 @@ void gather_group_by_segments(const Chunk& chunk, const std::vector<ColumnID>& g
 
 // Builds the result table's column definitions: the group-by columns first, then one column per aggregate. ANY carries
 // its input column's name and nullability; every other function names its column after the aggregate expression and is
-// nullable unless it is COUNT or COUNT(DISTINCT). Shared by both group-by paths; ANY never reaches the low-cardinality
-// path, so the ANY branch is simply dead there.
+// nullable unless it is COUNT or COUNT(DISTINCT).
 TableColumnDefinitions build_output_column_definitions(
     const Table& input_table, const std::vector<ColumnID>& groupby_column_ids, const AggregateSchema& aggregate_schema,
     const std::vector<std::shared_ptr<WindowFunctionExpression>>& aggregates) {
@@ -737,11 +732,9 @@ size_t estimate_cardinality(const KeySchema& key_schema, const Table& input_tabl
 // The per-query scatter layout: the value-stream metadata plus the SWWC stream widths derived from it. Computed once
 // from the AggregateSchema and shared, read-only, by the scatter and merge phases.
 struct ScatterLayout {
-  // Per value stream, plus a trailing RowID width when a row-id stream exists.
   std::vector<size_t> value_stream_widths;
   std::vector<ColumnID> value_stream_sources;
   std::vector<uint32_t> value_stream_null_bits;
-  // Value streams only, excluding the optional trailing row-id stream.
   size_t value_stream_count{0};
   uint32_t value_null_bitmap_width{0};
   bool has_value_null_bitmap{false};
@@ -750,7 +743,6 @@ struct ScatterLayout {
   size_t row_id_stream_index{0};
   size_t value_null_bitmap_stream_index{0};
   size_t piece_width{0};
-  // SWWC stream widths: key piece, value streams, optional bitmap byte.
   std::vector<size_t> stream_widths;
 };
 
@@ -889,10 +881,8 @@ void run_scatter_phase(const KeySchema& key_schema, const AggregateSchema& aggre
   });
 }
 
-// Merge phase: workers claim jobs and fold one partition's rows from a range of the stores through a dense MergeMap. A
-// job normally covers every store, but a partition holding far more rows than the others -- one hot group-by value is
-// enough -- is covered by several sub-jobs over disjoint store ranges, so it cannot serialize the phase. Returns the
-// per-worker OutputColumns the caller assembles into the result table.
+// Merge phase: workers claim jobs and fold one partition's rows from a range of the stores through a dense MergeMap.
+// Returns the per-worker OutputColumns the caller assembles into the result table.
 template <typename KeySchema>
 std::vector<OutputColumns> run_merge_phase(const KeySchema& key_schema, const AggregateSchema& aggregate_schema,
                                            const ScatterLayout& layout, std::vector<ScatterStore>& scatter_stores,
@@ -1055,7 +1045,7 @@ std::vector<OutputColumns> run_merge_phase(const KeySchema& key_schema, const Ag
 }
 
 // Low-cardinality accumulation: each worker folds its claimed morsels straight into its own private MergeMap, skipping
-// the scatter partitioning entirely. The maps are combined by the caller afterwards.
+// the scatter partitioning entirely.
 template <typename KeySchema>
 void accumulate_private_maps(const KeySchema& key_schema, const AggregateSchema& aggregate_schema,
                              const Table& input_table, const std::vector<ColumnID>& groupby_column_ids,
@@ -1289,7 +1279,6 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate_without_group_by(const Aggregat
                                                                   const Table& input_table) {
   const auto aggregators = build_aggregators(input_table, _aggregates);
 
-  // TODO(anyone): currently morsel_count == chunk_count, this has to be adjusted
   const auto morsel_count = static_cast<size_t>(input_table.chunk_count());
   const auto worker_limit = worker_limit_for(Hyrise::get().is_multi_threaded(), Hyrise::get().topology.num_cpus());
   const auto worker_count = std::clamp(morsel_count, size_t{1}, worker_limit);

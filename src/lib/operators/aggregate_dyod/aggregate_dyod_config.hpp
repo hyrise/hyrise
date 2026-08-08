@@ -10,82 +10,28 @@
 
 namespace hyrise {
 
-// Shared vocabulary and tuning values for the AggregateDYOD operator, a parallel radix-partitioned hash
-// aggregation: it estimates group-by cardinality, scatters input rows into cache-sized radix partitions using
-// software write-combining (SWWC) buffers, then merges each partition independently into a dense hash map. See
-// aggregate_dyod.hpp for the operator itself and the phase overview.
-//
-// The compile-time constants below are machine-independent inputs, not baked-in hardware assumptions. Values that
-// should scale with the deployment machine come in two steps: cache-dependent budgets (merge_tile_rows() from L1d,
-// max_partition_count() from L2, keys_budget() from L3) are a compile-time fraction applied to the queried cache
-// sizes (see cache_info.hpp), and the partition count is derived from those budgets per query; see
-// choose_partition_count() in hyperloglog.hpp.
-// Overriding the constants for experimentation is expected. The fractions are calibrated against a parameter sweep
-// on EPYC 7742 (32 KiB L1d, 512 KiB L2, 16 MiB L3 per 4-core CCX), which matches FALLBACK_CACHE_SIZES, so machines
-// without cache reporting behave exactly like the calibration target.
-
-/**
- * A count of radix partitions produced by the scatter phase.
- *
- * Holds the per-query partition count P, chosen once in the estimate phase and used unchanged by scatter and merge. P
- * governs how finely the key space is split: larger P means smaller per-partition merge maps.
- *
- * Invariants: P is a power of two, so a partition index is the low log2(P) bits of a key's hash; P lies in
- *   [min(next_pow2(max(worker_count, 1)), MAX_PARTITION_COUNT), MAX_PARTITION_COUNT].
- *
- * Ownership/lifetime/threading: a plain value computed at the estimate barrier and thereafter read-only, so every
- *   worker shares it across the scatter and merge phases without synchronization.
- *
- * @see choose_partition_count() (hyperloglog.hpp) for how P is derived, MAX_PARTITION_COUNT for the ceiling, and
- *   PartitionId for a single-partition index.
- */
 using PartitionCount = uint32_t;
 
 /**
  * Index identifying a single radix partition.
- *
- * A value in [0, P) selecting one of the P partitions; it equals the low log2(P) bits of a key's hash, which is how
- * the scatter phase routes each row and the merge phase claims work.
- *
- * Invariants: a valid id is strictly less than the current PartitionCount.
- *
- * @see PartitionCount for the number of partitions.
  */
 using PartitionId = uint32_t;
 
 /**
  * Absolute clamp on the derived partition count P (unit: partitions; always a power of two).
- *
- * Bounds per-partition bookkeeping independently of any cache size, so a machine reporting an implausibly large L2
- * cannot drive the per-partition state arbitrarily high. The cache-dependent ceiling is max_partition_count(), which
- * is the binding one on the calibration target; the lower bound on P is the worker count, applied in
- * choose_partition_count() rather than fixed here.
- *
- * @see max_partition_count() for the L2-derived ceiling, choose_partition_count() (hyperloglog.hpp), keys_budget().
  */
 constexpr PartitionCount MAX_PARTITION_COUNT = 8192;
 
 /**
  * Last-level cache bytes budgeted per distinct key in a partition's merge map (unit: bytes per key).
- *
- * Covers the probe index (8 bytes per key at the 0.5 max load factor), the packed key, and the accumulator columns
- * (whose per-slot width depends on the requested aggregates), with headroom for the input tiles streaming through
- * the same cache. 128 bytes reproduces the swept optimum of 32768 keys per partition on the calibration target.
  */
 constexpr size_t MERGE_MAP_BYTES_PER_KEY = 128;
 
 /**
- * Target number of distinct keys per partition (unit: distinct keys); the divisor when sizing P from the estimate.
- *
- * The partition count is chosen so that a single partition's dense merge map -- its probe index plus dense
- * key/accumulator storage -- is expected to stay resident in the merge worker's share of the last-level cache, the
- * cache-residency the radix split is designed to provide. The worker's share is the reported slice divided by the
- * CPUs sharing it, since every one of them runs a merge worker.
+ * Target number of distinct keys per partition; the divisor when sizing P from the estimate.
  *
  * A larger budget yields fewer, larger partitions whose merge maps risk spilling out of cache; a smaller one yields
  * more, smaller partitions at the cost of higher per-partition overhead.
- *
- * @see choose_partition_count() (hyperloglog.hpp), MAX_PARTITION_COUNT, cache_sizes() (cache_info.hpp).
  */
 inline size_t keys_budget_for(const CacheSizes& sizes) {
   return sizes.l3_bytes / sizes.llc_sharing_cpus / MERGE_MAP_BYTES_PER_KEY;
@@ -96,24 +42,15 @@ inline size_t keys_budget() {
 }
 
 /**
- * Row-count cutoff at or above which the estimate phase runs in parallel (unit: input rows).
- *
- * At or above this many rows the estimate builds per-worker HyperLogLog sketches merged register-wise; below it a
- * single-threaded pass over the group-by columns is cheaper than the scheduling overhead.
+ * Row-count cutoff at or above which the estimate phase runs in parallel.
  *
  * Raising it forces larger inputs through the single-threaded path; lowering it parallelizes smaller inputs and pays
  * scheduling overhead sooner.
- *
- * @see HLL_PRECISION for the per-worker sketch precision.
  */
 constexpr size_t PARALLEL_ESTIMATE_THRESHOLD = 100'000;
 
 /**
- * Number of chunks the estimate phase aims to feed into its sketch (unit: chunks).
- *
- * The estimate exists to size the partition count and the per-partition maps, so it does not need every row: above
- * this many chunks, the phase samples every estimate_sample_stride()-th chunk and rescales the result via
- * scale_sampled_estimate(). 16 full chunks are about one million rows, plenty for a power-of-two choice of P.
+ * Number of chunks the estimate phase aims to feed into its sketch.
  */
 constexpr size_t ESTIMATE_SAMPLE_CHUNKS = 16;
 
@@ -147,31 +84,19 @@ inline size_t scale_sampled_estimate(const size_t estimate, const size_t half_sa
 }
 
 /**
- * HyperLogLog register precision: the sketch uses 2^HLL_PRECISION registers (unit: bits of precision).
- *
- * Precision 12 gives roughly 1.6% standard error at a few KiB per sketch -- accurate enough to size the partition
- * count and the per-partition map, cheap enough to keep one sketch per worker. The sketch is fed the same packed-key
- * hash the scatter and merge phases use, so the estimate predicts the exact quantity those phases encounter.
- *
- * Raising it shrinks the estimate's standard error (steadier P sizing) at more memory and work per sketch; lowering it
- * saves memory but degrades the estimate and thus the partition-count choice.
+ * HyperLogLog register precision: the sketch uses 2^HLL_PRECISION registers.
  */
 constexpr uint8_t HLL_PRECISION = 12;
 
 /**
- * Software write-combining staging line size (unit: bytes).
- *
- * Each (stream, partition) pair buffers this many bytes before a non-temporal flush to the partition's region; sized
- * to one cache line so the flush is exactly one write-combining transaction. Decoupled from the scatter morsel
- * granularity (MORSEL_ROWS rows), so morsel size does not affect it.
- *
- * Keep it a whole cache line: a value that is not the hardware cache-line size splits or wastes write-combining
- * transactions and undoes the non-temporal store benefit.
+ * Software write-combining staging line size. Each (stream, partition) pair buffers this many bytes before a
+ * non-temporal flush to the partition's region; sized to one cache line so the flush is exactly one write-combining
+ * transaction.
  */
 constexpr size_t SWWC_LINE_BYTES = 64;
 
 /**
- * Cache-derived ceiling on the partition count P for a query scattering stream_count streams (unit: partitions).
+ * Cache-derived ceiling on the partition count P for a query scattering stream_count streams.
  *
  * The scatter phase keeps one SWWC_LINE_BYTES staging line plus one fill counter per (stream, partition) pair, so its
  * hot working set is stream_count * P * (SWWC_LINE_BYTES + sizeof(size_t)) bytes and is touched on every scattered
@@ -180,9 +105,6 @@ constexpr size_t SWWC_LINE_BYTES = 64;
  *
  * The result is rounded down to a power of two (P indexes by the low bits of a hash) and clamped by the absolute
  * MAX_PARTITION_COUNT.
- *
- * @see MAX_PARTITION_COUNT for the machine-independent clamp, choose_partition_count() (hyperloglog.hpp),
- *   ScatterHeads (scatter_store.hpp) for the staging layout.
  */
 inline PartitionCount max_partition_count_for(const CacheSizes& sizes, const size_t stream_count) {
   const auto staging_bytes_per_partition = std::max(size_t{1}, stream_count) * (SWWC_LINE_BYTES + sizeof(size_t));
@@ -195,25 +117,17 @@ inline PartitionCount max_partition_count(const size_t stream_count) {
 }
 
 /**
- * Fraction of L1d granted to the merge phase's row->slot scratch: scratch budget = L1d / this (unit: divisor).
+ * Fraction of L1d granted to the merge phase's row->slot scratch: scratch budget = L1d / this.
  *
  * A quarter leaves the rest of L1d to the key tile and accumulator lines the same loop touches.
  */
 constexpr size_t MERGE_SCRATCH_L1_DIVISOR = 4;
 
 /**
- * Row tile size for the merge phase's resolve+fold step (unit: rows).
- *
- * Each partition's rows are folded in tiles of this many rows so the transient row->slot index scratch
- * (merge_tile_rows() * sizeof(dense index)) stays L1-resident rather than growing to the whole partition: the tile is
- * sized so the scratch fills the L1d fraction granted by MERGE_SCRATCH_L1_DIVISOR. It is also the granularity at
- * which AbstractAccumulatorColumn::fold is dispatched: one virtual call per tile, amortized over a tight typed loop,
- * never per row.
+ * Row tile size for the merge phase's resolve+fold step.
  *
  * A larger tile grows the scratch until it no longer fits in L1 (defeating the tiling); a smaller one shrinks the
  * scratch but pays more virtual fold dispatches per partition.
- *
- * @see accumulator_column.hpp for the fold interface, cache_sizes() (cache_info.hpp).
  */
 inline size_t merge_tile_rows_for(const CacheSizes& sizes) {
   return sizes.l1d_bytes / MERGE_SCRATCH_L1_DIVISOR / sizeof(uint32_t);
@@ -224,7 +138,7 @@ inline size_t merge_tile_rows() {
 }
 
 /**
- * Rows at which a merge partition counts as oversized, as a multiple of the mean partition's rows (unit: factor).
+ * Rows at which a merge partition counts as oversized, as a multiple of the mean partition's rows.
  *
  * Below this the partition is close enough to the others for the merge phase to stay balanced, and the extra maps and
  * the per-key combine a split costs are not repaid.
@@ -232,7 +146,7 @@ inline size_t merge_tile_rows() {
 constexpr size_t MERGE_SPLIT_MEAN_ROW_FACTOR = 4;
 
 /**
- * Rows per expected distinct key an oversized partition must hold before it is split (unit: rows per key).
+ * Rows per expected distinct key an oversized partition must hold before it is split.
  *
  * A split folds disjoint store ranges into separate maps and combines them per key, so it pays only when the partition
  * is large because few keys repeat often: at few rows per key the combine touches nearly as many keys as the fold it
@@ -241,21 +155,13 @@ constexpr size_t MERGE_SPLIT_MEAN_ROW_FACTOR = 4;
 constexpr size_t MERGE_SPLIT_ROWS_PER_KEY = 8;
 
 /**
- * Number of ways one merge partition is split across workers; 1 leaves it to a single worker (unit: sub-jobs).
+ * Number of ways one merge partition is split across workers; 1 leaves it to a single worker.
  *
  * Each way folds a contiguous range of the scatter stores into its own map, and the maps are combined once the last
  * way is done, so a split is bounded by the stores it can be cut along as well as by the workers available to run the
  * ways. Single-threaded runs pass a worker_limit of 1 and never split. A partition qualifies only when it is oversized
  * against both the mean partition and the keys a partition is expected to hold; the number of ways then brings the
  * largest way down to about the mean partition's rows.
- *
- * @param partition_rows              Rows the partition holds across all stores.
- * @param mean_partition_rows         Rows per partition on average, i.e. the scattered row count divided by P.
- * @param expected_keys_per_partition Distinct keys a partition is expected to hold, i.e. the cardinality estimate
- *   divided by P.
- * @param store_count                 Scatter stores the partition's rows are spread over; the finest cut available.
- * @param worker_limit                Ceiling on the workers the merge phase fans out to.
- * @return The number of ways to split, in [1, min(store_count, worker_limit)].
  */
 inline size_t merge_split_ways_for(const size_t partition_rows, const size_t mean_partition_rows,
                                    const size_t expected_keys_per_partition, const size_t store_count,
@@ -272,31 +178,15 @@ inline size_t merge_split_ways_for(const size_t partition_rows, const size_t mea
 }
 
 /**
- * Inline string-blob capacity budget per string group-by column (unit: bytes).
- *
- * The total inline blob width of a string-involving key scales as
- * (STRING_BLOB_BYTES_PER_COLUMN * number_of_string_columns); a row whose length-prefixed string content exceeds its
- * blob spills to a per-partition spill buffer. Chosen so short codes and flags stay inline -- no pointer chase on
- * the equality hot path -- while the fixed part of the key stays compact; the narrow key pays off on the hash and
- * scatter hot paths even when longer strings spill.
+ * Inline string-blob capacity budget per string group-by column.
  *
  * Raising it keeps longer strings inline (fewer spills) but widens every key's fixed part, so fewer keys stay
  * cache-resident; lowering it keeps keys compact but spills more strings to the per-partition buffer.
- *
- * @see key_schema.hpp for the packed-key layout and the spill path.
  */
 constexpr size_t STRING_BLOB_BYTES_PER_COLUMN = 8;
 
 /**
- * Cap on the dictionary entries read per string group-by column when bounding the key layout (unit: entries).
- *
- * A string group-by column that is dictionary-encoded in every chunk has its value lengths bounded exactly by those
- * dictionaries, which lets the key carry 1-byte length fields and an inline blob sized to the measured maxima instead
- * of the flat STRING_BLOB_BYTES_PER_COLUMN (see choose_string_key_budget() in key_schema.hpp). Establishing that bound
- * costs one pass over the dictionary entries, summed over the chunks, so a column that has not been settled within
- * this many entries keeps the default layout. This caps the resolve-time cost per column regardless of how many chunks
- * the input has, while the columns the tightened layout targets -- short codes with a handful of distinct values --
- * stay far below it even for tables with thousands of chunks.
+ * Cap on the dictionary entries read per string group-by column when bounding the key layout.
  *
  * Raising it lets wider dictionaries be bounded at more resolve-time work; lowering it settles resolve faster but
  * leaves more group-bys on the default layout.
@@ -324,18 +214,10 @@ inline size_t key_piece_width(const size_t key_width) {
 }
 
 /**
- * Rows a worker claims at a time in the scanning phases: estimate, scatter, and the low-cardinality fold (unit: rows).
- *
- * A chunk is too coarse a unit to claim: 13 million rows are only about 200 default-sized chunks, so beyond a hundred
- * workers most of them find the cursor exhausted and how far a phase parallelizes follows the input's chunking rather
- * than the machine. Claiming (chunk, row range) morsels of this many rows decouples the two. A quarter of a default
- * chunk is coarse enough for the per-morsel setup -- one scratch resize, one segment dispatch, one atomic claim -- to
- * disappear against the rows it covers, and fine enough to keep 128 workers fed on such an input.
+ * Number of rows a worker claims at a time in the scanning phases: estimate, scatter, and the low-cardinality fold.
  *
  * Raising it drifts back towards chunk-granularity quantization at high worker counts; lowering it balances more
  * finely but pays the per-morsel setup more often.
- *
- * @see morsel_count_for() for the enumeration, worker_limit_for() -- single-threaded runs claim whole chunks instead.
  */
 constexpr size_t MORSEL_ROWS = 16'384;
 
@@ -345,7 +227,7 @@ inline size_t morsel_count_for(const size_t chunk_rows, const size_t rows_per_mo
 }
 
 /**
- * Ceiling on the number of workers a phase fans out to (unit: workers).
+ * Ceiling on the number of workers a phase fans out to.
  *
  * Under the immediate scheduler every JobTask runs sequentially on the calling thread, so per-worker state beyond one
  * store or map is pure setup and teardown; the limit is 1 there and the CPU count otherwise. It also lower-bounds the

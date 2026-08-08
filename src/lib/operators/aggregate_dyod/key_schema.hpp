@@ -37,55 +37,39 @@ namespace hyrise {
 // ============================================================================================================
 // Group-by key representation for AggregateDYOD.
 //
-// A "key" is the group-by column tuple of one row, encoded into a flat, comparable byte buffer. There is deliberately
-// no Key class -- a packed key is just raw bytes living in a scatter store, a merge-map slot, or an output row. All
-// behavior lives on a *schema*: a per-query object, built once from the group-by column definitions, that knows how to
-// pack a row into key bytes, unpack key bytes back into typed output values, hash a key, and test two keys for
-// equality. Everything the hot loops need is a const method on the schema instance taking raw byte pointers.
+// A "key" is the group-by column tuple of one row, encoded into a flat, comparable byte buffer.
 //
-// Monomorphization. The schema type is selected once per query by resolve_key_schema() (below), which inspects the
+// Monomorphization. The schema type is selected once per query by resolve_key_schema(), which inspects the
 // group-by columns and dispatches to one of a bounded set of concrete schema types; the scatter and merge pipelines are
-// then instantiated over that one concrete type, so hash/equality compile to fixed, branch-free code. The axes:
+// then instantiated over that one concrete type. The types:
 //
-//   NumericShortKeySchema<Width>   Width in {4,8,12,16,20,24} bytes -- numeric-only group-by. hash/equals fixed-size.
-//   NumericArbitraryKeySchema      numeric-only group-by wider than 24 bytes; runtime-length hash/equals.
-//   MixedKeySchema<LenWidth>       at least one string and at least one non-string column. LenWidth in {1,2,4,8} is the
-//                                  per-string length-prefix field width.
-//   StringOnlyKeySchema<LenWidth>  all columns are strings; a MixedKeySchema with a zero-width numeric prefix.
+//   NumericShortKeySchema<Width>: Width in {4,8,12,16,20,24} bytes (numeric-only group-by. hash/equals fixed-size).
+//   NumericArbitraryKeySchema: numeric-only group-by wider than 24 bytes; runtime-length hash/equals.
+//   MixedKeySchema<LenWidth>: at least one string and at least one non-string column. LenWidth in {1,2,4,8} is the
+//                             per-string length-prefix field width.
+//   StringOnlyKeySchema<LenWidth>: all columns are strings; a MixedKeySchema with a zero-width numeric prefix.
 //
-// Layout (all four families), contiguous, tightly packed:
+// Layout (all four families):
 //   [ null bitmap | numeric prefix | inline string blob | 8-byte spill pointer ]
 // The null bitmap carries one bit per nullable group-by column (present only if any group-by column is nullable) and is
-// padded so the fixed part stays a multiple of 4 -- which keeps numeric widths on the {4,8,12,16,20,24} buckets and
-// leaves no uninitialized interior padding, making whole-buffer equality/hash sound (the pad bytes are zero-filled and
-// compared as zero). The inline string blob is padded at its tail for the same reason, which is what holds the fixed
-// part on a multiple of 4 once the blob capacity is sized from measured string lengths rather than from
-// STRING_BLOB_BYTES_PER_COLUMN (see choose_string_key_budget). The string blob and spill pointer are absent for
-// numeric-only schemas.
+// padded so the fixed part stays a multiple of 4. The inline string blob is padded at its tail for the same reason,
+// which is what holds the fixed part on a multiple of 4 once the blob capacity is sized from measured string lengths
+// rather than from STRING_BLOB_BYTES_PER_COLUMN (see choose_string_key_budget). The string blob and spill pointer are
+// absent for numeric-only schemas.
 //
-// NULL is carried out of band in the null bitmap -- never as an in-band sentinel value. (An in-band "+1 and reserve 0"
-// scheme collides at TYPE_MAX in a fixed-width lane, and no byte pattern is safe for a full-range column.) A NULL
-// cell's lane/blob bytes are deterministically zero (pack() zero-fills the whole key before writing) and are never
-// read back as a value; its bit in the null bitmap is what marks it. This unifies NULL handling across
-// int, float, and string, and means the value transforms below exist only to make byte-equality match value-equality:
-//   * integer lane: bias into unsigned via sign-bit XOR (order-independent, no wider intermediate) -- full range, no
-//     reserved value.
-//   * float/double lane: canonicalize -0.0 to +0.0 and every NaN to one quiet-NaN pattern, so byte-equality matches
-//     numeric equality. No reserved NaN needed for NULL (the bitmap handles it).
-//   * string column: length-prefixed (all lengths, then all bytes) canonical form -- not delimiter-based, because
-//     adversarial embedded-NUL strings make no delimiter safe. No reserved length sentinel for NULL.
+// NULL is carried out of band in the null bitmap, never as an in-band sentinel: a "+1 and reserve 0" scheme collides
+// at TYPE_MAX, and no byte pattern is safe for a full-range column.
 // ============================================================================================================
 
 /**
  * Which column-type families a query's group-by tuple contains. Fixed once per query and used to pick the schema
- * family: NumericOnly -> NumericShort/ArbitraryKeySchema, Mixed -> MixedKeySchema, StringOnly -> StringOnlyKeySchema.
+ * type.
  */
 enum class KeyComposition : uint8_t { NumericOnly, Mixed, StringOnly };
 
 /**
  * Rewrite -0.0 to +0.0 and every NaN to the one quiet-NaN pattern, so byte-equality on the result matches value
- * equality (see the file banner). Shared by the float/double key lanes and by DistinctSet's value equality
- * (distinct_set.hpp), which must agree with key equality.
+ * equality.
  */
 inline float canonicalize(const float value) {
   if (std::isnan(value)) {
@@ -131,48 +115,24 @@ inline uint64_t hash_bytes(const std::byte* data, const size_t length) {
  * content-hash in its inline field plus an 8-byte pointer into this buffer. This bounds the fixed part of every key
  * while still supporting arbitrarily long strings, and lets equality short-circuit on the hash before a deep compare.
  *
- * Invariants: a pointer returned by append() stays valid for the lifetime of this buffer and is not invalidated by
- * later appends -- the buffer grows by chaining fresh blocks and never relocates live content. clear() invalidates all
- * previously returned pointers.
- *
- * Ownership/lifetime/threading: owned privately per partition and never shared -- one instance per (worker, partition)
- * on the scatter side, one per partition on the merge side; each is touched by a single worker, so no method
- * synchronizes. On a key's first insertion the merge side copies the spilled content out of the scatter-side buffer
- * into its own, so subsequent fold deep-compares read bytes co-located with the cache-resident MergeMap instead of
- * chasing a pointer into a cold, worker-dispersed scatter store. Used in the scatter and merge phases.
- *
- * See StringKeyColumn (writes here on pack) and MixedKeySchema / StringOnlyKeySchema (own the keys that point in).
+ * A pointer returned by append() stays valid until clear() or destruction: the buffer chains fresh blocks and never
+ * relocates live content, which is what lets a key hold a raw pointer rather than a relocatable offset.
  */
 class StringSpillBuffer : private Noncopyable {
  public:
   /**
    * Copy `length` bytes of string content into the buffer and return a stable pointer to the interned copy.
-   *
-   * @param content Pointer to the source bytes to copy in; borrowed and read only, not retained (the bytes are copied,
-   *   so the source need not outlive the call). Must reference at least `length` readable bytes.
-   * @param length Number of bytes to copy.
-   * @return Pointer to the interned copy inside this buffer. The pointer stays valid until clear() or destruction and
-   *   is never invalidated by later append() calls, because the buffer chains fresh blocks and never relocates live
-   *   content.
-   * @pre Called by the single owning worker (this buffer is not shared). Runs in the scatter phase (pack spill) and,
-   *   on a key's first insertion, on the merge side.
-   * Complexity: amortized O(length).
    */
   const std::byte* append(const std::byte* content, size_t length);
 
   /**
    * Drop all stored content while retaining allocated capacity for reuse.
-   *
-   * @post All pointers previously returned by append() are invalidated. Allocated blocks are kept so the next batch of
-   *   appends reuses them, letting a worker recycle one buffer across the successive partitions it claims.
-   * @pre Called by the owning worker only, between uses of the buffer (no live key may still point into it).
    */
   void clear();
 
   /** Free the blocks instead of keeping them for reuse. */
   void release();
 
-  /** @return Bytes used by this buffer and the blocks it holds. */
   size_t memory_usage() const;
 
  private:
@@ -227,13 +187,6 @@ inline size_t StringSpillBuffer::memory_usage() const {
   return bytes;
 }
 
-// ------------------------------------------------------------------------------------------------------------
-// Per-column key handlers. Numeric columns get a polymorphic lane (one concrete subclass per DataType), resolved once
-// at schema build; string columns are always pmr_string, so they need no type dispatch and are described by a plain
-// StringKeyColumn record. The schema drives string packing itself, row-wise, because the spill decision spans all
-// string columns of a key (there is a single spill pointer per key; see MixedKeySchema).
-// ------------------------------------------------------------------------------------------------------------
-
 // Marks a column that has no bit in the null bitmap because it is not nullable.
 constexpr uint32_t NO_NULL_BIT = std::numeric_limits<uint32_t>::max();
 
@@ -244,26 +197,17 @@ constexpr size_t EXPECTED_GROUP_BY_COLUMNS = 4;
 /**
  * Worker-local decoded copy of a row window of one chunk's group-by columns, filled by KeySchema::decode() and
  * consumed row-wise by KeySchema::pack().
- *
- * Packing a row needs all group-by columns of that row at once, so the columns are decoded window-wise into these flat
- * buffers first (one pass per column), and the per-row pack then only touches flat memory. The buffers hold the
- * window's rows alone, so their indices count from the window's first row, not from the chunk's.
- * Numeric lanes hold the equality-canonical encoded bytes (sign-bit bias / float canonicalization applied during
- * decode), zeroed for NULL rows; string columns hold the decoded values, empty for NULL rows.
- *
- * Ownership/lifetime/threading: owned by one worker and reused across the chunks it claims; capacity only grows.
- * Valid until the next decode() call.
  */
 struct KeyDecodeScratch {
   struct NumericLane {
-    std::vector<std::byte> values;  // Encoded lane bytes, row-major; zero for NULL rows.
-    std::vector<uint8_t> nulls;     // One flag per row.
+    std::vector<std::byte> values;
+    std::vector<uint8_t> nulls;
   };
 
   struct StringColumn {
-    std::vector<std::string_view> values;  // Views of the decoded values; empty for NULL rows.
-    std::vector<uint8_t> nulls;            // One flag per row.
-    std::vector<pmr_string> owned;         // Backing copies for rows whose segment storage cannot be viewed directly.
+    std::vector<std::string_view> values;
+    std::vector<uint8_t> nulls;
+    std::vector<pmr_string> owned;
   };
 
   boost::container::small_vector<NumericLane, EXPECTED_GROUP_BY_COLUMNS> numeric_lanes;
@@ -275,12 +219,6 @@ struct KeyDecodeScratch {
  *
  * One instance is resolved per numeric group-by column at schema build (concrete subclass NumericKeyLane<T> per
  * DataType) and held by the schema; decode() is then called once per chunk and unpack() once per output row.
- *
- * Ownership/lifetime/threading: owned by the schema (via unique_ptr in NumericKeyLanes) and lives for the whole query;
- * stateless and const after construction, so any worker may call decode()/unpack() concurrently on distinct buffers.
- * decode() runs in the estimate and scatter phases, unpack() in the merge phase.
- *
- * See NumericKeyLane (the concrete templated lane) and StringKeyColumn (the string-column descriptor).
  */
 class AbstractNumericKeyLane {
  public:
@@ -290,53 +228,28 @@ class AbstractNumericKeyLane {
    * Decode rows [row_begin, row_end) of one chunk's column into the lane's flat scratch buffer.
    *
    * Integer lanes apply the sign-bit-XOR bias; float/double lanes canonicalize -0.0 and NaN, so whole-buffer
-   * byte-equality matches value-equality (see the file banner). The schema's per-row pack loop copies the stored
-   * bytes into the key. NULL rows store zero bytes and set their null flag.
-   *
-   * @param segment Input segment holding this lane's group-by column for the current chunk; borrowed, read only.
-   * @param row_begin First row of the window to decode.
-   * @param row_end One past the window's last row; must not exceed the chunk's row count.
-   * @param lane Destination scratch buffers; borrowed, resized to the window's row count and overwritten, so the
-   *   window's first row is stored at index 0.
-   * @pre Runs in the estimate and scatter phases, single-threaded per worker on that worker's own scratch.
+   * byte-equality matches value-equality. The schema's per-row pack loop copies the stored bytes into the key. NULL
+   * rows store zero bytes and set their null flag.
    */
   virtual void decode(const AbstractSegment& segment, size_t row_begin, size_t row_end,
                       KeyDecodeScratch::NumericLane& lane) const = 0;
 
   /**
    * Reverse of pack(): decode this lane's value and append it (or a NULL) to its output column.
-   *
-   * @param key Start of the packed key to read; borrowed, read only.
-   * @param null_bitmap Start of the key's null bitmap; borrowed, read only. If this lane's bit is set, a NULL is
-   *   appended and the lane bytes are ignored; otherwise the bias/canonicalization of pack() is inverted.
-   * @param output Destination columns for the emitting worker; borrowed, written. Thread-local with a single writer.
-   * @param output_column_index Index of the output column this lane feeds.
-   * @param output_row 0-based index of the output row being emitted.
-   * @pre Runs in the merge phase, single-threaded per worker on that worker's own OutputColumns.
-   * @post Exactly one value (a real value or a NULL) is appended, keeping all output columns equal-length.
    */
   virtual void unpack(const std::byte* key, const std::byte* null_bitmap, OutputColumns& output,
                       size_t output_column_index, size_t output_row) const = 0;
 };
 
 /**
- * Concrete numeric lane, monomorphized over the column's C++ type T (int32_t/int64_t/float/double).
+ * Concrete numeric lane, monomorphized over the column's type T (int32_t/int64_t/float/double).
  *
  * Implements AbstractNumericKeyLane: decode() applies the sign-bit-XOR bias for integers or the -0.0/NaN
- * canonicalization for floats, and unpack() inverts it. See the file banner for why these transforms exist.
- *
- * Ownership/lifetime/threading: as AbstractNumericKeyLane -- owned by the schema, const after construction, safely
- * shared across workers.
+ * canonicalization for floats, and unpack() inverts it.
  */
 template <typename T>
 class NumericKeyLane : public AbstractNumericKeyLane {
  public:
-  /**
-   * @param column_id ColumnID of the source group-by column in the input table.
-   * @param field_offset Byte offset of this lane's field within the key buffer (within the numeric prefix).
-   * @param null_bit_index Bit index of this column within the key's null bitmap; NO_NULL_BIT if the column is not
-   *   nullable.
-   */
   NumericKeyLane(ColumnID column_id, uint32_t field_offset, uint32_t null_bit_index);
 
   void decode(const AbstractSegment& segment, size_t row_begin, size_t row_end,
@@ -345,9 +258,9 @@ class NumericKeyLane : public AbstractNumericKeyLane {
               size_t output_row) const override;
 
  private:
-  ColumnID _column_id;       // ColumnID of the source group-by column in the input table.
-  uint32_t _field_offset;    // Byte offset of this lane's field within the key buffer (numeric prefix).
-  uint32_t _null_bit_index;  // Bit in the key's null bitmap; NO_NULL_BIT if the column is not nullable.
+  ColumnID _column_id;
+  uint32_t _field_offset;
+  uint32_t _null_bit_index;
 };
 
 /**
@@ -355,20 +268,19 @@ class NumericKeyLane : public AbstractNumericKeyLane {
  *
  * Unlike the numeric lanes there is no polymorphic handler: string cells are always pmr_string, so there is no type
  * axis to dispatch on. The schema drives string packing/unpacking itself, row-wise, because the inline-vs-spill
- * decision spans all string columns of a key (a key carries a single spill pointer; see MixedKeySchema).
+ * decision spans all string columns of a key (a key carries a single spill pointer).
  */
 struct StringKeyColumn {
-  ColumnID column_id;            // ColumnID of the source group-by column in the input table.
-  uint32_t tuple_index;          // Position of this column within the group-by tuple / output row.
-  uint32_t length_field_offset;  // Byte offset of this column's length-prefix field within the key buffer.
-  uint32_t null_bit_index;       // Bit in the key's null bitmap; NO_NULL_BIT if the column is not nullable.
+  ColumnID column_id;
+  uint32_t tuple_index;
+  uint32_t length_field_offset;
+  uint32_t null_bit_index;
 };
 
-// Per-lane layout facts the schemas' pack() loops read directly.
 struct NumericLaneField {
-  uint32_t field_offset;    // Byte offset of the lane's field within the key buffer.
-  uint32_t width;           // Lane width in bytes (4 or 8).
-  uint32_t null_bit_index;  // Bit in the key's null bitmap; NO_NULL_BIT if the column is not nullable.
+  uint32_t field_offset;
+  uint32_t width;
+  uint32_t null_bit_index;
 };
 
 // One resolved numeric group-by column: the polymorphic lane plus its layout facts.
@@ -381,7 +293,7 @@ using NumericKeyLanes = boost::container::small_vector<NumericKeyLaneEntry, EXPE
 using StringKeyColumns = boost::container::small_vector<StringKeyColumn, EXPECTED_GROUP_BY_COLUMNS>;
 using KeyTupleIndices = boost::container::small_vector<uint32_t, EXPECTED_GROUP_BY_COLUMNS>;
 
-// Helpers shared by the schema families below.
+// Helpers shared by the schema types below.
 
 inline void set_null_bit(std::byte* null_bitmap, const size_t bit_index) {
   null_bitmap[bit_index / 8] |= std::byte{1} << (bit_index % 8);
@@ -644,20 +556,6 @@ inline NumericKeyLaneEntry make_numeric_lane(const DataType data_type, const Col
 /**
  * Visit rows [row_begin, row_end) of a segment that stores its values where a single row can be addressed directly,
  * calling `visitor(window_row, value)` in ascending row order.
- *
- * Those shapes are the dictionary segment, the value segment, and the reference segment whose position list stays
- * within one chunk of either -- between them they cover what a group-by scan meets in practice. Reading them by row
- * is what lets a worker pay for its own window only, instead of scanning the whole chunk to reach it.
- *
- * @tparam T The segment's column data type.
- * @param segment Segment to read; borrowed, read only.
- * @param row_begin First row of the window.
- * @param row_end One past the window's last row; must not exceed the segment's row count.
- * @param visitor Called once per window row as visitor(window_row, value), where `window_row` counts from 0 at
- *   `row_begin` and `value` points into the segment's own storage -- stable for the segment's lifetime -- or is
- *   nullptr for a NULL row.
- * @return true iff the segment is one of those shapes, in which case the window has been visited; false leaves the
- *   visitor uncalled and the caller has to scan (see iterate_segment_window()).
  */
 template <typename T, typename Visitor>
 bool iterate_stable_segment_window(const AbstractSegment& segment, const size_t row_begin, const size_t row_end,
@@ -890,21 +788,12 @@ void NumericKeyLane<T>::unpack(const std::byte* key, const std::byte* null_bitma
   output_column.append(decode_lane_value<T>(key + _field_offset));
 }
 
-// ------------------------------------------------------------------------------------------------------------
-// ------------------------------------------------------------------------------------------------------------
 /**
  * Numeric-only group-by key schema whose total packed width is the compile-time constant PackedWidth.
  *
  * Selected by resolve_key_schema when every group-by column is numeric and the packed width (null bitmap + numeric
  * prefix) is one of {4,8,12,16,20,24} bytes; one instantiation per bucket. Because the width is known at compile
  * time, hash() and equals() are fixed-size and branch-free, while pack()/unpack() loop the resolved lanes.
- *
- * Invariants: packed_width() == PackedWidth for every key; keys carry no string blob or spill pointer.
- *
- * Ownership/lifetime/threading: one immutable instance per query, built by build() and shared read-only by all
- * workers across the scatter (pack) and merge (unpack/hash/equals) phases.
- *
- * See NumericArbitraryKeySchema (same interface for widths > 24 bytes) and the file banner for the byte layout.
  */
 template <size_t PackedWidth>
 class NumericShortKeySchema {
@@ -915,18 +804,10 @@ class NumericShortKeySchema {
 
   /**
    * Build the schema for a query's group-by columns: resolve one NumericKeyLane per column and lay out the fields.
-   *
-   * @param group_by_column_ids ColumnIDs of the group-by columns, in output order; borrowed, read only.
-   * @param input_table Table providing the columns' data types; borrowed, read only.
-   * @return A fully built schema whose packed_width() equals PackedWidth.
-   * @pre Every listed column is numeric and the resolved packed width equals PackedWidth (resolve_key_schema
-   *   guarantees this before instantiating the template).
    */
   static NumericShortKeySchema build(const std::vector<ColumnID>& group_by_column_ids, const Table& input_table);
 
-  /** @return The packed key width in bytes; always the compile-time constant PackedWidth. */
   size_t packed_width() const;
-  /** @return The number of group-by columns this schema packs, which is also the group-by output column count. */
   size_t column_count() const;
 
   /**
@@ -934,14 +815,6 @@ class NumericShortKeySchema {
    *
    * The scratch holds the window's rows alone, so pack() addresses a row by its distance from `row_begin` rather than
    * by its chunk offset. Decoding a window instead of a whole chunk is what lets several workers share one chunk.
-   *
-   * @param group_by_segments Segments for the group-by columns of the current chunk, in schema order; borrowed, read
-   *   only.
-   * @param row_begin First row of the window to decode.
-   * @param row_end One past the window's last row; must not exceed the chunk's row count.
-   * @param scratch Destination scratch; borrowed, resized to the window and overwritten. Must be the calling worker's
-   *   own.
-   * @pre Runs in the estimate and scatter phases, single-threaded per worker on that worker's own scratch.
    */
   void decode(std::span<const AbstractSegment* const> group_by_segments, size_t row_begin, size_t row_end,
               KeyDecodeScratch& scratch) const;
@@ -949,47 +822,24 @@ class NumericShortKeySchema {
   void decode(std::span<const AbstractSegment* const> group_by_segments, KeyDecodeScratch& scratch) const;
   /**
    * Pack one decoded row's group-by tuple into a key buffer.
-   *
-   * @param scratch Decoded columns of the current chunk, filled by decode(); borrowed, read only.
-   * @param chunk_offset Row to pack, counted from the first row decode() was given.
-   * @param key_out Destination key buffer; borrowed, written. Must be at least PackedWidth bytes.
-   * @param spill_buffer Unused for numeric-only keys; present only for a uniform call site across schema variants.
-   * @pre Runs in the estimate and scatter phases, single-threaded per worker on that worker's own store.
-   * @post Every one of the packed_width() destination bytes is initialized; bytes not covered by a value (NULL lanes,
-   *   padding) are zero, which whole-buffer equality and hashing rely on.
    */
   void pack(const KeyDecodeScratch& scratch, ChunkOffset chunk_offset, std::byte* key_out,
             StringSpillBuffer& spill_buffer) const;
   /**
    * Unpack a packed key back into typed output values, one appended cell per group-by column.
-   *
-   * @param key Packed key to decode; borrowed, read only. Must be at least PackedWidth bytes.
-   * @param output Destination columns for the emitting worker; borrowed, written. Thread-local, single writer.
-   * @param output_row 0-based index of the output row being emitted.
-   * @pre Runs in the merge phase, single-threaded per worker on that worker's own OutputColumns.
    */
   void unpack(const std::byte* key, OutputColumns& output, size_t output_row) const;
   /**
    * Hash a packed key over its full fixed width.
-   *
-   * @param key Packed key to hash; borrowed, read only. Must be at least PackedWidth bytes.
-   * @return 64-bit hash of the PackedWidth key bytes. Equal keys always hash equal (whole-buffer byte-equality).
-   * Complexity: O(PackedWidth), fixed-size and branch-free.
    */
   uint64_t hash(const std::byte* key) const;
   /**
    * Test two packed keys for equality by comparing their full fixed width.
-   *
-   * @param a First packed key; borrowed, read only. Must be at least PackedWidth bytes.
-   * @param b Second packed key; borrowed, read only. Must be at least PackedWidth bytes.
-   * @return true iff the PackedWidth bytes of `a` and `b` are identical (a plain memcmp; NULLs and the lane value
-   *   transforms already make byte-equality match value-equality).
-   * Complexity: O(PackedWidth), fixed-size.
    */
   bool equals(const std::byte* a, const std::byte* b) const;
 
  private:
-  NumericKeyLanes _lanes;  // One lane per numeric group-by column, in schema order.
+  NumericKeyLanes _lanes;
 };
 
 template <size_t PackedWidth>
@@ -1072,19 +922,12 @@ bool NumericShortKeySchema<PackedWidth>::equals(const std::byte* a, const std::b
   return std::memcmp(a, b, PackedWidth) == 0;
 }
 
-// ------------------------------------------------------------------------------------------------------------
-// ------------------------------------------------------------------------------------------------------------
 /**
  * Numeric-only group-by key schema for widths greater than 24 bytes, where the width is a runtime value.
  *
  * Same interface and semantics as NumericShortKeySchema, but because the packed width is not a compile-time constant,
  * hash() and equals() operate over packed_width() rather than a fixed WIDTH. Selected by resolve_key_schema when all
  * group-by columns are numeric but the packed width exceeds the largest NumericShortKeySchema bucket.
- *
- * Invariants: keys carry no string blob or spill pointer; every key is exactly packed_width() bytes.
- *
- * Ownership/lifetime/threading: one immutable instance per query, shared read-only by all workers across the scatter
- * and merge phases.
  */
 class NumericArbitraryKeySchema {
  public:
@@ -1093,61 +936,25 @@ class NumericArbitraryKeySchema {
 
   /**
    * Build the schema for a query's group-by columns: resolve one NumericKeyLane per column and record the width.
-   *
-   * @param group_by_column_ids ColumnIDs of the group-by columns, in output order; borrowed, read only.
-   * @param input_table Table providing the columns' data types; borrowed, read only.
-   * @return A fully built schema whose packed_width() is the resolved runtime width.
-   * @pre Every listed column is numeric and the resolved packed width exceeds 24 bytes.
    */
   static NumericArbitraryKeySchema build(const std::vector<ColumnID>& group_by_column_ids, const Table& input_table);
 
-  /** @return The packed key width in bytes, fixed for this query but known only at runtime. */
   size_t packed_width() const;
-  /** @return The number of group-by columns this schema packs, which is also the group-by output column count. */
   size_t column_count() const;
 
-  /**
-   * Decode a window of one chunk's group-by columns into the worker's scratch; see NumericShortKeySchema::decode.
-   */
+  // decode/pack/unpack/hash/equals match NumericShortKeySchema, over the runtime packed_width() not a fixed width.
   void decode(std::span<const AbstractSegment* const> group_by_segments, size_t row_begin, size_t row_end,
               KeyDecodeScratch& scratch) const;
-  /** Decode a whole chunk's group-by columns; see NumericShortKeySchema::decode. */
   void decode(std::span<const AbstractSegment* const> group_by_segments, KeyDecodeScratch& scratch) const;
-  /**
-   * Pack one decoded row's group-by tuple into a key buffer; see NumericShortKeySchema::pack.
-   */
   void pack(const KeyDecodeScratch& scratch, ChunkOffset chunk_offset, std::byte* key_out,
             StringSpillBuffer& spill_buffer) const;
-  /**
-   * Unpack a packed key back into typed output values, one appended cell per group-by column.
-   *
-   * @param key Packed key to decode; borrowed, read only. Must be at least packed_width() bytes.
-   * @param output Destination columns for the emitting worker; borrowed, written. Thread-local, single writer.
-   * @param output_row 0-based index of the output row being emitted.
-   * @pre Runs in the merge phase, single-threaded per worker on that worker's own OutputColumns.
-   */
   void unpack(const std::byte* key, OutputColumns& output, size_t output_row) const;
-  /**
-   * Hash a packed key over its full runtime width.
-   *
-   * @param key Packed key to hash; borrowed, read only. Must be at least packed_width() bytes.
-   * @return 64-bit hash of the packed_width() key bytes. Equal keys always hash equal.
-   * Complexity: O(packed_width()).
-   */
   uint64_t hash(const std::byte* key) const;
-  /**
-   * Test two packed keys for equality by comparing their full runtime width.
-   *
-   * @param a First packed key; borrowed, read only. Must be at least packed_width() bytes.
-   * @param b Second packed key; borrowed, read only. Must be at least packed_width() bytes.
-   * @return true iff the packed_width() bytes of `a` and `b` are identical (a plain memcmp).
-   * Complexity: O(packed_width()).
-   */
   bool equals(const std::byte* a, const std::byte* b) const;
 
  private:
-  NumericKeyLanes _lanes;     // One lane per numeric group-by column, in schema order.
-  uint32_t _packed_width{0};  // Fixed packed width in bytes for this query, computed at build().
+  NumericKeyLanes _lanes;
+  uint32_t _packed_width{0};
 };
 
 inline NumericArbitraryKeySchema NumericArbitraryKeySchema::build(const std::vector<ColumnID>& group_by_column_ids,
@@ -1207,15 +1014,13 @@ inline bool NumericArbitraryKeySchema::equals(const std::byte* a, const std::byt
   return std::memcmp(a, b, _packed_width) == 0;
 }
 
-// ------------------------------------------------------------------------------------------------------------
-// ------------------------------------------------------------------------------------------------------------
 /**
  * Group-by key schema for a mix of at least one string and at least one non-string column.
  *
  * Layout: a runtime-width fixed part (null bitmap + numeric prefix + inline string blob) followed by an 8-byte spill
  * pointer. LenWidth in {1,2,4,8} is the per-string length-prefix field width; the fixed-part width is a runtime value.
  *
- * Equality (the spill-mode check is load-bearing):
+ * Equality:
  *   1. If the two keys disagree on spill mode (one pointer null, the other not) they are not equal and never fall
  *      through: identical content always makes the identical inline-vs-spill decision, so different modes prove
  *      different content, and this also avoids a deep compare through a null pointer.
@@ -1224,19 +1029,6 @@ inline bool NumericArbitraryKeySchema::equals(const std::byte* a, const std::byt
  *   4. Otherwise (both spilled, and the fixed bytes matched only on the content-hash) deep-compare the spilled bytes.
  * hash() reuses whatever the inline field holds (raw bytes hashed, or the stored content-hash reused). Equal keys are
  * always same-mode, so equal keys always hash equal.
- *
- * Invariants: every key ends with the 8-byte spill pointer; the fixed part is fixed_part_width() bytes and is the sole
- * memcmp/hash extent.
- *
- * Ownership/lifetime/threading: one immutable instance per query, shared read-only by all workers; spilled content it
- * points into lives in per-partition StringSpillBuffers. Used in the scatter (pack) and merge (unpack/hash/equals)
- * phases.
- *
- * resolve_key_schema instantiates LenWidth 4 by default and LenWidth 1 when choose_string_key_budget finds the input's
- * dictionaries bound every string length; the merge side re-interns spilled content on a key's first insertion via
- * reintern_spill() (see MergeMap).
- *
- * See StringOnlyKeySchema (this schema with a zero-width numeric prefix) and StringSpillBuffer.
  */
 template <size_t LenWidth>
 class MixedKeySchema {
@@ -1247,96 +1039,40 @@ class MixedKeySchema {
 
   /**
    * Build the schema: resolve numeric lanes and string columns, lay out the fixed part, and record its width.
-   *
-   * @param group_by_column_ids ColumnIDs of the group-by columns, in output order; borrowed, read only.
-   * @param input_table Table providing the columns' data types; borrowed, read only.
-   * @param string_blob_bytes Total inline string-blob capacity in bytes, or std::nullopt for the
-   *   STRING_BLOB_BYTES_PER_COLUMN default; resolve_key_schema passes the budget from choose_string_key_budget.
-   * @return A fully built schema with at least one string and at least one numeric column.
-   * @pre The columns include at least one string and at least one non-string column (resolve_key_schema guarantees
-   *   this before instantiating the template).
    */
   static MixedKeySchema build(const std::vector<ColumnID>& group_by_column_ids, const Table& input_table,
                               std::optional<size_t> string_blob_bytes = std::nullopt);
 
-  /** @return Upper bound of a key's footprint in bytes: fixed_part_width() plus the 8-byte spill pointer. */
-  size_t packed_width() const;
   /**
-   * @return Width in bytes of the fixed part (null bitmap + numeric prefix + inline string blob), which is exactly the
-   *   extent that hash() and equals() memcmp.
+   * Upper bound of a key's footprint in bytes: fixed_part_width() plus the 8-byte spill pointer.
    */
+  size_t packed_width() const;
+
   size_t fixed_part_width() const;
-  /** @return The number of group-by columns this schema packs, which is also the group-by output column count. */
+
   size_t column_count() const;
 
-  /**
-   * Decode a window of one chunk's group-by columns into the worker's scratch; see NumericShortKeySchema::decode.
-   */
+  // decode/pack/unpack/hash/equals as on NumericShortKeySchema; pack() spills overlong strings and equals() runs the
+  // spill-mode-aware protocol documented on the class.
   void decode(std::span<const AbstractSegment* const> group_by_segments, size_t row_begin, size_t row_end,
               KeyDecodeScratch& scratch) const;
-  /** Decode a whole chunk's group-by columns; see NumericShortKeySchema::decode. */
   void decode(std::span<const AbstractSegment* const> group_by_segments, KeyDecodeScratch& scratch) const;
-  /**
-   * Pack one decoded row's group-by tuple into a key buffer, spilling overlong strings as needed.
-   *
-   * @param scratch Decoded columns of the current chunk, filled by decode(); borrowed, read only.
-   * @param chunk_offset Row to pack, counted from the first row decode() was given.
-   * @param key_out Destination key buffer; borrowed, written. Must be at least packed_width() bytes.
-   * @param spill_buffer Per-partition overflow buffer for string content that does not fit the inline blob; borrowed,
-   *   may be appended to. Must be the buffer owned by the calling worker/partition.
-   * @pre Runs in the estimate and scatter phases, single-threaded per worker on that worker's own store and spill
-   *   buffer.
-   * @post Every one of the packed_width() destination bytes is initialized; bytes not covered by a value (NULL lanes,
-   *   padding, the blob tail, an unused spill pointer) are zero, which whole-buffer equality and hashing rely on.
-   */
   void pack(const KeyDecodeScratch& scratch, ChunkOffset chunk_offset, std::byte* key_out,
             StringSpillBuffer& spill_buffer) const;
-  /**
-   * Unpack a packed key back into typed output values, one appended cell per group-by column.
-   *
-   * @param key Packed key to decode; borrowed, read only. Any spilled string content it points to must still be live.
-   * @param output Destination columns for the emitting worker; borrowed, written. Thread-local, single writer.
-   * @param output_row 0-based index of the output row being emitted.
-   * @pre Runs in the merge phase, single-threaded per worker on that worker's own OutputColumns.
-   */
   void unpack(const std::byte* key, OutputColumns& output, size_t output_row) const;
-  /**
-   * Hash a packed key over its fixed part.
-   *
-   * @param key Packed key to hash; borrowed, read only.
-   * @return 64-bit hash over the fixed part, which covers the inline string bytes or, for a spilled key, the stored
-   *   content-hash of the spilled content. Equal keys always hash equal because equal keys are always same-mode.
-   * Complexity: O(fixed_part_width()).
-   */
   uint64_t hash(const std::byte* key) const;
-  /**
-   * Test two packed keys for equality using the four-step spill-mode-aware protocol documented on the class.
-   *
-   * @param a First packed key; borrowed, read only. Spilled content it points to must be live.
-   * @param b Second packed key; borrowed, read only. Spilled content it points to must be live.
-   * @return true iff the keys are equal: same spill mode, matching fixed part, and (when spilled) matching deep bytes.
-   * Complexity: O(fixed_part_width()) inline, plus O(string length) for the deep compare when both keys are spilled.
-   */
   bool equals(const std::byte* a, const std::byte* b) const;
   /**
    * Re-intern a spilled key's string content into `spill_buffer` and repoint the key's spill pointer there.
-   *
-   * Called by the merge side on a key's first insertion, so later deep compares read bytes co-located with the
-   * cache-resident merge map instead of chasing a pointer into a cold scatter-side buffer. A no-op for inline keys.
-   *
-   * @param key Packed key to re-intern; borrowed, its spill pointer is rewritten. The spilled content it points to
-   *   must still be live.
-   * @param spill_buffer The merge side's own buffer; borrowed, appended to.
-   * @pre Runs in the merge phase, single-threaded per worker on that worker's own map and buffer.
    */
   void reintern_spill(std::byte* key, StringSpillBuffer& spill_buffer) const;
 
  private:
-  NumericKeyLanes _numeric_lanes;          // One lane per non-string group-by column, in schema order.
-  KeyTupleIndices _numeric_tuple_indices;  // Each lane's position within the group-by tuple / output row.
-  StringKeyColumns _string_columns;        // One descriptor per string group-by column, in schema order.
-  uint32_t _blob_offset{0};                // Byte offset of the inline string blob within the key buffer.
-  uint32_t _fixed_part_width{0};           // Memcmp/hash extent in bytes, computed at build().
+  NumericKeyLanes _numeric_lanes;
+  KeyTupleIndices _numeric_tuple_indices;
+  StringKeyColumns _string_columns;
+  uint32_t _blob_offset{0};
+  uint32_t _fixed_part_width{0};
 };
 
 template <size_t LenWidth>
@@ -1431,18 +1167,8 @@ bool MixedKeySchema<LenWidth>::equals(const std::byte* a, const std::byte* b) co
   return equals_string_keys(_string_columns, LenWidth, _fixed_part_width, a, b);
 }
 
-// ------------------------------------------------------------------------------------------------------------
-// ------------------------------------------------------------------------------------------------------------
 /**
  * Group-by key schema for a tuple of only string columns: a MixedKeySchema whose numeric prefix has zero width.
- *
- * Same byte layout (with an empty numeric prefix), same spill/hash/deep-compare equality, and same LenWidth axis as
- * MixedKeySchema; see that class for the equality protocol and hash rationale. Selected by resolve_key_schema when
- * every group-by column is a string.
- *
- * Invariants and ownership/lifetime/threading match MixedKeySchema (one immutable per-query instance, shared read-only
- * across the scatter and merge phases; spilled content lives in per-partition StringSpillBuffers). As with
- * MixedKeySchema, LenWidth 4 and LenWidth 1 are instantiated (see choose_string_key_budget).
  */
 template <size_t LenWidth>
 class StringOnlyKeySchema {
@@ -1453,79 +1179,35 @@ class StringOnlyKeySchema {
 
   /**
    * Build the schema: resolve one string column per group-by column and lay out the fixed part.
-   *
-   * @param group_by_column_ids ColumnIDs of the group-by columns, in output order; borrowed, read only.
-   * @param input_table Table providing the columns' data types; borrowed, read only.
-   * @param string_blob_bytes Total inline string-blob capacity in bytes, or std::nullopt for the
-   *   STRING_BLOB_BYTES_PER_COLUMN default; resolve_key_schema passes the budget from choose_string_key_budget.
-   * @return A fully built schema in which every group-by column is a string.
-   * @pre Every listed column is a string (resolve_key_schema guarantees this before instantiating the template).
    */
   static StringOnlyKeySchema build(const std::vector<ColumnID>& group_by_column_ids, const Table& input_table,
                                    std::optional<size_t> string_blob_bytes = std::nullopt);
 
-  /** @return Upper bound of a key's footprint in bytes: fixed_part_width() plus the 8-byte spill pointer. */
+  /**
+   * Upper bound of a key's footprint in bytes: fixed_part_width() plus the 8-byte spill pointer.
+   */
   size_t packed_width() const;
-  /** @return Width in bytes of the fixed part (null bitmap + inline string blob), the memcmp/hash extent. */
+
   size_t fixed_part_width() const;
-  /** @return The number of group-by columns this schema packs, which is also the group-by output column count. */
+
   size_t column_count() const;
 
-  /**
-   * Decode a window of one chunk's group-by columns into the worker's scratch; see NumericShortKeySchema::decode.
-   */
+  // decode/pack/unpack/hash/equals/reintern_spill match MixedKeySchema; this schema is a MixedKeySchema whose numeric
+  // prefix has zero width.
   void decode(std::span<const AbstractSegment* const> group_by_segments, size_t row_begin, size_t row_end,
               KeyDecodeScratch& scratch) const;
-  /** Decode a whole chunk's group-by columns; see NumericShortKeySchema::decode. */
   void decode(std::span<const AbstractSegment* const> group_by_segments, KeyDecodeScratch& scratch) const;
-  /**
-   * Pack one decoded row's group-by tuple into a key buffer, spilling overlong strings as needed; see
-   * MixedKeySchema::pack for the spill contract.
-   */
   void pack(const KeyDecodeScratch& scratch, ChunkOffset chunk_offset, std::byte* key_out,
             StringSpillBuffer& spill_buffer) const;
-  /**
-   * Unpack a packed key back into typed output values, one appended string per group-by column.
-   *
-   * @param key Packed key to decode; borrowed, read only. Any spilled string content it points to must still be live.
-   * @param output Destination columns for the emitting worker; borrowed, written. Thread-local, single writer.
-   * @param output_row 0-based index of the output row being emitted.
-   * @pre Runs in the merge phase, single-threaded per worker on that worker's own OutputColumns.
-   */
   void unpack(const std::byte* key, OutputColumns& output, size_t output_row) const;
-  /**
-   * Hash a packed key over its fixed part.
-   *
-   * @param key Packed key to hash; borrowed, read only.
-   * @return 64-bit hash over the fixed part, which covers the inline string bytes or, for a spilled key, the stored
-   *   content-hash of the spilled content. Equal keys always hash equal.
-   * Complexity: O(fixed_part_width()).
-   */
   uint64_t hash(const std::byte* key) const;
-  /**
-   * Test two packed keys for equality using the same spill-mode-aware protocol as MixedKeySchema.
-   *
-   * @param a First packed key; borrowed, read only. Spilled content it points to must be live.
-   * @param b Second packed key; borrowed, read only. Spilled content it points to must be live.
-   * @return true iff the keys are equal: same spill mode, matching fixed part, and (when spilled) matching deep bytes.
-   * Complexity: O(fixed_part_width()) inline, plus O(string length) for the deep compare when both keys are spilled.
-   */
   bool equals(const std::byte* a, const std::byte* b) const;
-  /**
-   * Re-intern a spilled key's string content into `spill_buffer` and repoint the key's spill pointer there; see
-   * MixedKeySchema::reintern_spill. A no-op for inline keys.
-   *
-   * @param key Packed key to re-intern; borrowed, its spill pointer is rewritten. The spilled content it points to
-   *   must still be live.
-   * @param spill_buffer The merge side's own buffer; borrowed, appended to.
-   * @pre Runs in the merge phase, single-threaded per worker on that worker's own map and buffer.
-   */
   void reintern_spill(std::byte* key, StringSpillBuffer& spill_buffer) const;
 
  private:
-  StringKeyColumns _string_columns;  // One descriptor per string group-by column, in schema order.
-  uint32_t _blob_offset{0};          // Byte offset of the inline string blob within the key buffer.
-  uint32_t _fixed_part_width{0};     // Memcmp/hash extent in bytes, computed at build().
+  StringKeyColumns _string_columns;
+  uint32_t _blob_offset{0};
+  uint32_t _fixed_part_width{0};
 };
 
 template <size_t LenWidth>
@@ -1608,13 +1290,10 @@ bool StringOnlyKeySchema<LenWidth>::equals(const std::byte* a, const std::byte* 
 /**
  * How a query's string key fields are sized: the per-string length-prefix field width and the total inline blob
  * capacity, as chosen by choose_string_key_budget.
- *
- * The default -- a 4-byte length field per string column and STRING_BLOB_BYTES_PER_COLUMN of blob per string column --
- * carries strings of any length by spilling the ones that do not fit inline.
  */
 struct StringKeyBudget {
   size_t length_field_width{4};
-  std::optional<size_t> blob_bytes{};  // Total inline blob capacity; std::nullopt selects the per-column default.
+  std::optional<size_t> blob_bytes{};
 };
 
 /**
@@ -1626,18 +1305,7 @@ struct StringKeyBudget {
  * and an inline blob sized to the summed maxima instead of the flat STRING_BLOB_BYTES_PER_COLUMN per column. The blob
  * is capped at the default capacity, so one long dictionary outlier cannot widen every key; within the cap the bound
  * covers every row and keys never spill, past it the affected rows spill exactly as on the default sizing. Any column
- * outside that shape -- not dictionary-encoded in some chunk, dictionaries too large to settle within
- * `dictionary_scan_limit`, or an entry too long for a 1-byte length field -- puts the whole key back on the default
- * sizing, which handles arbitrary lengths via the spill path.
- *
- * @param group_by_column_ids ColumnIDs of the group-by columns, in output order; borrowed, read only. Non-string
- *   columns are skipped.
- * @param input_table Table whose chunks are inspected; borrowed, read only. A reference table bounds nothing, because
- *   its chunks hold ReferenceSegments rather than dictionaries.
- * @param dictionary_scan_limit Cap on the dictionary entries read per column before that column is given up on; see
- *   DICTIONARY_BOUND_SCAN_LIMIT for the value resolve_key_schema uses.
- * @return The tightened sizing, or the default one when the bound does not hold.
- * Complexity: O(dictionary_scan_limit) entry reads per string group-by column.
+ * outside that shape puts the whole key back on the default sizing, which handles arbitrary lengths via the spill path.
  */
 inline StringKeyBudget choose_string_key_budget(const std::vector<ColumnID>& group_by_column_ids,
                                                 const Table& input_table, const size_t dictionary_scan_limit) {
@@ -1687,18 +1355,13 @@ inline StringKeyBudget choose_string_key_budget(const std::vector<ColumnID>& gro
  */
 struct KeySchemaChoice {
   KeyComposition composition{KeyComposition::NumericOnly};
-  size_t short_packed_width{0};  // One of {4,8,12,16,20,24} for NumericShortKeySchema; 0 when the width exceeds them.
-  StringKeyBudget string_budget{};  // How the string fields are sized; unused for numeric-only tuples.
+  size_t short_packed_width{0};
+  StringKeyBudget string_budget{};
 };
 
 /**
- * Inspect the group-by columns and compute which schema family (and, for numeric-only tuples, which short-width
+ * Inspect the group-by columns and compute which schema type (and, for numeric-only tuples, which short-width
  * bucket) fits them; the type dispatch itself happens in resolve_key_schema.
- *
- * @param group_by_column_ids ColumnIDs of the group-by columns, in output order; borrowed, read only.
- * @param input_table Table providing the columns' data types; borrowed, read only.
- * @return The composition, for numeric-only tuples of at most 24 bytes the packed-width bucket, and for
- *   string-involving tuples the string field sizing from choose_string_key_budget.
  */
 inline KeySchemaChoice choose_key_schema(const std::vector<ColumnID>& group_by_column_ids, const Table& input_table) {
   auto has_string = false;
@@ -1727,15 +1390,6 @@ inline KeySchemaChoice choose_key_schema(const std::vector<ColumnID>& group_by_c
  * StringOnlyKeySchema, builds it, and calls functor with that concrete instance, mirroring resolve_data_type's
  * compile-time dispatch. The entire scatter+merge pipeline runs inside the functor, monomorphized over the concrete
  * schema type so pack/unpack/hash/equals compile to fixed, branch-free code.
- *
- * @tparam Functor Caller-supplied callable; invoked as functor(schema) with the concrete schema type deduced.
- * @param group_by_column_ids ColumnIDs of the group-by columns, in output order; borrowed, read only. Must be
- *   non-empty -- the zero-group-by case is a separate reduction path and must not reach here.
- * @param input_table Table providing the columns' data types; borrowed, read only.
- * @param functor The callable to run once with the built schema; borrowed.
- * @pre There is at least one group-by column.
- * @note Defined inline in this header (like resolve_data_type) because the functor is a caller-supplied type whose
- *   instantiation must be visible at the call site.
  */
 template <typename Functor>
 void resolve_key_schema(const std::vector<ColumnID>& group_by_column_ids, const Table& input_table,

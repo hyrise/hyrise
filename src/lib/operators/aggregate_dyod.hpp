@@ -102,7 +102,7 @@ class AggregateDYOD : public AbstractAggregateOperator {
    * Runs the no-GROUP-BY reduction: folds all input into a single accumulator set and emits exactly one row.
    *
    * Each worker folds its claimed chunks into a local accumulator set, the sets are combined once, and one output row
-   * is emitted unconditionally. Bypasses partitioning, HyperLogLog, and the MergeMap entirely.
+   * is emitted unconditionally. Bypasses partitioning, cardinality estimation, and the MergeMap entirely.
    */
   std::shared_ptr<Table> _aggregate_without_group_by(const AggregateSchema& aggregate_schema, const Table& input_table);
 };
