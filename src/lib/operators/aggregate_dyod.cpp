@@ -820,7 +820,6 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
 /**
  * Partition the input chunks by the given group key(s). This is done by creating a vector that contains the
  * AggregateKey for each row. It is gradually built by visitors, one for each group segment.
- * We have guarantee_single_key set to maybe_unused to avoid compiler errors for template versions that do not use it.
  */
 template <typename CheckForSingleKey, typename AggregateKey>
   requires(!std::is_same_v<AggregateKey, DYODEmptyAggregateKey>)
@@ -885,6 +884,7 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
       const auto groupby_column_id = _groupby_column_ids.at(group_column_index);
       const auto data_type = input_table->column_data_type(groupby_column_id);
       auto contains_nulls = false;
+      (void)use_immediate_key_shortcut;
 
       // If we don't check for a singular key, we skip the overhead of null checks and just assume there are nulls.
       if constexpr (std::is_same_v<CheckForSingleKey, std::false_type>) {
