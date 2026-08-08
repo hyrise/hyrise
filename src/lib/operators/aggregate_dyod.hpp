@@ -301,7 +301,8 @@ class AggregateDYOD : public AbstractAggregateOperator {
 
   GroupID _group_id(const GroupKey& group_key, WorkerState& worker_state);
 
-  std::vector<GroupID> _group_ids_for_chunk(ChunkID chunk_id, const Chunk& chunk, WorkerState& worker_state);
+  std::pair<std::vector<GroupID>, GroupID> _group_ids_for_chunk(ChunkID chunk_id, const Chunk& chunk,
+                                                                WorkerState& worker_state);
 
   std::pair<GroupID, GroupID> _get_new_group_id_range();
 
