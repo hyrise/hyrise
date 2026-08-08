@@ -663,7 +663,8 @@ struct DYODAggregateContext : public DYODAggregateResultContext<ColumnDataType, 
 
   void merge_results(DYODAggregateResult<ColumnDataType, aggregate_function>& target,
                      DYODAggregateResult<ColumnDataType, aggregate_function>& other) {
-    // Merge DYODAggregateResults depending on their WindowFunction (special handling e.g. for the type of check to perform)
+    // Merge DYODAggregateResults depending on their WindowFunction (special handling e.g. for the type of check to
+    // perform)
     if constexpr (aggregate_function == WindowFunction::Min) {
       if (value_smaller(other.accumulator, target.accumulator)) {
         target.accumulator = other.accumulator;
@@ -1320,7 +1321,8 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
       const auto pos_lists = pos_lists_per_thread[thread_id];
       const auto local_input_table = std::make_shared<Table>(input_table->column_definitions(), TableType::References);
 
-      // Scan input table for radix bucket and populate the local input table with references to the original input table.
+      // Scan input table for radix bucket and populate the local input table with references to the original input
+      // table.
       for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
         auto pos_list = (*pos_lists)[chunk_id];
         if (pos_list->empty()) {
