@@ -42,43 +42,45 @@ namespace hyrise {
 
 template <typename T>
   requires std::is_trivially_copyable_v<T>
-std::vector<std::byte> serialize_value(T value) {
-  auto bytes = std::vector<std::byte>(sizeof(T));
-  std::memcpy(bytes.data(), &value, sizeof(T));
-  return bytes;
+void serialize_value(std::vector<std::byte>& buffer, T value) {
+  const auto offset = buffer.size();
+  buffer.resize(offset + sizeof(T));
+  std::memcpy(buffer.data() + offset, &value, sizeof(T));
 }
 
-std::vector<std::byte> serialize_value(const pmr_string& value) {
-  auto bytes = std::vector<std::byte>(value.size());
-  std::memcpy(bytes.data(), value.data(), value.size());
-  return bytes;
+void serialize_value(std::vector<std::byte>& buffer, const pmr_string& value) {
+  const auto offset = buffer.size();
+  buffer.resize(offset + value.size());
+  std::memcpy(buffer.data() + offset, value.data(), value.size());
 }
 
 template <typename T>
   requires std::is_trivially_copyable_v<T>
-std::vector<std::byte> serialize_value(T value, bool is_null) {
+void serialize_value(std::vector<std::byte>& buffer, T value, bool is_null) {
   if (is_null) {
-    return std::vector<std::byte>{std::byte{0x01}};
+    buffer.push_back(std::byte{0x01});
+    return;
   }
-  auto bytes = std::vector<std::byte>(1 + sizeof(T));
-  bytes[0] = std::byte{0x00};
-  std::memcpy(bytes.data() + 1, &value, sizeof(T));
-  return bytes;
+  const auto offset = buffer.size();
+  buffer.resize(offset + 1 + sizeof(T));
+  buffer[offset] = std::byte{0x00};
+  std::memcpy(buffer.data() + offset + 1, &value, sizeof(T));
 }
 
-std::vector<std::byte> serialize_value(const pmr_string& value, bool is_null) {
+void serialize_value(std::vector<std::byte>& buffer, const pmr_string& value, bool is_null) {
   if (is_null) {
-    return std::vector<std::byte>{std::byte{0x01}};
+    buffer.push_back(std::byte{0x01});
+    return;
   }
-  auto bytes = std::vector<std::byte>(1 + value.size());
-  bytes[0] = std::byte{0x00};
-  std::memcpy(bytes.data() + 1, value.data(), value.size());
-  return bytes;
+  const auto offset = buffer.size();
+  buffer.resize(offset + 1 + value.size());
+  buffer[offset] = std::byte{0x00};
+  std::memcpy(buffer.data() + offset + 1, value.data(), value.size());
 }
 
 template <typename T, bool Nullable>
   requires std::is_trivially_copyable_v<T> && (!Nullable)
-T deserialize_value(const std::vector<std::byte>& bytes) {
+T deserialize_value(const std::span<const std::byte>& bytes) {
   T value;
   std::memcpy(&value, bytes.data(), sizeof(T));
   return value;
@@ -86,7 +88,7 @@ T deserialize_value(const std::vector<std::byte>& bytes) {
 
 template <typename T, bool Nullable>
   requires std::is_trivially_copyable_v<T> && Nullable
-std::optional<T> deserialize_value(const std::vector<std::byte>& bytes) {
+std::optional<T> deserialize_value(const std::span<const std::byte>& bytes) {
   if (bytes[0] == std::byte{0x01}) {
     return std::nullopt;
   }
@@ -97,13 +99,13 @@ std::optional<T> deserialize_value(const std::vector<std::byte>& bytes) {
 
 template <typename T, bool Nullable>
   requires std::is_same_v<T, pmr_string> && (!Nullable)
-pmr_string deserialize_value(const std::vector<std::byte>& bytes) {
+pmr_string deserialize_value(const std::span<const std::byte>& bytes) {
   return pmr_string(reinterpret_cast<const char*>(bytes.data()), bytes.size());
 }
 
 template <typename T, bool Nullable>
   requires std::is_same_v<T, pmr_string> && Nullable
-std::optional<pmr_string> deserialize_value(const std::vector<std::byte>& bytes) {
+std::optional<pmr_string> deserialize_value(const std::span<const std::byte>& bytes) {
   if (bytes[0] == std::byte{0x01}) {
     return std::nullopt;
   }
@@ -199,9 +201,7 @@ std::vector<std::unique_ptr<AbstractAggregateVector>>& WorkerState::aggregate_ve
 AggregateDYOD::AggregateDYOD(const std::shared_ptr<AbstractOperator>& input_operator,
                              const std::vector<std::shared_ptr<WindowFunctionExpression>>& aggregates,
                              const std::vector<ColumnID>& groupby_column_ids)
-    : AbstractAggregateOperator(input_operator, aggregates, groupby_column_ids) {
-  TRACE_EVENT("aggregate_operator", "constructor");
-}
+    : AbstractAggregateOperator(input_operator, aggregates, groupby_column_ids) {}
 
 const std::string& AggregateDYOD::name() const {
   static const auto name = std::string{"AggregateDYOD"};
@@ -214,8 +214,15 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
 
   _validate_aggregates();
 
+  _group_id_map.reserve(GROUP_ID_MAP_INIT_SIZE);
+
   // Aggregate chunk by chunk
   const auto chunk_count = input_table->chunk_count();
+
+  // Initialize a byte buffer every chunk and every column
+  const auto groupby_column_count = _groupby_column_ids.size();
+  _column_buffers_by_chunk.resize(chunk_count, std::vector<std::vector<std::byte>>(groupby_column_count));
+
   const auto get_new_group_id_range = [&]() {
     return _get_new_group_id_range();
   };
@@ -226,7 +233,7 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
     jobs[chunk_id] = std::make_shared<JobTask>([&, chunk_id]() {
       auto& worker_state = state.current_worker_state();
       const auto chunk = input_table->get_chunk(chunk_id);
-      _aggregate_chunk(worker_state, chunk);
+      _aggregate_chunk(worker_state, chunk_id, chunk);
     });
   }
 
@@ -561,9 +568,10 @@ std::vector<size_t> AggregateDYOD::_get_occupied_group_ids() {
   return {view.begin(), view.end()};
 }
 
-void AggregateDYOD::_aggregate_chunk(WorkerState& worker_state, const std::shared_ptr<const Chunk> chunk) {
+void AggregateDYOD::_aggregate_chunk(WorkerState& worker_state, ChunkID chunk_id,
+                                     const std::shared_ptr<const Chunk> chunk) {
   TRACE_EVENT("aggregate_operator", "_aggregate_chunk");
-  const auto group_ids = _group_ids_for_chunk(*chunk, worker_state);
+  const auto group_ids = _group_ids_for_chunk(chunk_id, *chunk, worker_state);
 
   // Compute aggregates
   const auto aggregate_count = _aggregates.size();
@@ -593,43 +601,72 @@ void AggregateDYOD::_aggregate_chunk(WorkerState& worker_state, const std::share
   }
 }
 
-std::vector<GroupID> AggregateDYOD::_group_ids_for_chunk(const Chunk& chunk, WorkerState& worker_state) {
+std::vector<GroupID> AggregateDYOD::_group_ids_for_chunk(ChunkID chunk_id, const Chunk& chunk,
+                                                         WorkerState& worker_state) {
   TRACE_EVENT("aggregate_operator", "_group_ids_for_chunk");
   const auto input_table = left_input_table();
-
-  // This is a two-dimensional vector, with the first dimension being the index of the grouping column, and the second
-  // being the chunk offset of the row.
-  auto group_keys_by_column =
-      std::vector<std::vector<GroupKeyEntry>>(_groupby_column_ids.size(), std::vector<GroupKeyEntry>(chunk.size()));
-
-  // First, compute the group keys within each column.
   const auto groupby_column_count = _groupby_column_ids.size();
-  for (auto groupby_column_index = size_t{0}; groupby_column_index < groupby_column_count; ++groupby_column_index) {
-    const auto groupby_column_id = _groupby_column_ids[groupby_column_index];
-    const auto data_type = input_table->column_data_type(groupby_column_id);
-    const auto is_nullable = input_table->column_is_nullable(groupby_column_id);
+  const auto row_count = chunk.size();
 
-    resolve_data_type(data_type, [&](auto type) {
-      using ColumnDataType = typename decltype(type)::type;
-      const auto segment = chunk.get_segment(groupby_column_id);
+  // Per grouping column, the serialized values of all rows in one buffer
+  auto& column_buffers = _column_buffers_by_chunk[chunk_id];
 
-      segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
-        group_keys_by_column[groupby_column_index][position.chunk_offset()] =
-            is_nullable ? serialize_value(position.value(), position.is_null()) : serialize_value(position.value());
+  // Per grouping column, the start position of each row into the respective column buffer
+  auto column_starts =
+      std::vector<std::vector<uint32_t>>(groupby_column_count, std::vector<uint32_t>(row_count + 1, uint32_t{0}));
+
+  {
+    TRACE_EVENT("aggregate_operator", "serialize group keys");
+    // First, compute the group keys within each column and append it to the respective column buffer.
+    for (auto groupby_column_index = size_t{0}; groupby_column_index < groupby_column_count; ++groupby_column_index) {
+      const auto groupby_column_id = _groupby_column_ids[groupby_column_index];
+      const auto data_type = input_table->column_data_type(groupby_column_id);
+      const auto is_nullable = input_table->column_is_nullable(groupby_column_id);
+      auto& column_buffer = column_buffers[groupby_column_index];
+      auto& starts = column_starts[groupby_column_index];
+
+      resolve_data_type(data_type, [&](auto type) {
+        using ColumnDataType = typename decltype(type)::type;
+        const auto segment = chunk.get_segment(groupby_column_id);
+
+        segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
+          starts[position.chunk_offset()] = static_cast<uint32_t>(column_buffer.size());
+
+          if (is_nullable) {
+            serialize_value(column_buffer, position.value(), position.is_null());
+          } else {
+            serialize_value(column_buffer, position.value());
+          }
+        });
+
+        DebugAssert(column_buffer.size() <= std::numeric_limits<uint32_t>::max(), "Column buffer is too large.");
+
+        // Store the end position of the last key.
+        starts[row_count] = static_cast<uint32_t>(column_buffer.size());
       });
-    });
+    }
   }
 
   // Then assemble the group keys per row and get the GroupID.
-  auto group_ids = std::vector<GroupID>(chunk.size());
+  auto group_ids = std::vector<GroupID>(row_count);
 
-  const auto row_count = chunk.size();
-  for (auto offset = ChunkOffset{0}; offset < row_count; ++offset) {
-    auto group_key = GroupKey(groupby_column_count);
-    for (auto groupby_column_index = size_t{0}; groupby_column_index < groupby_column_count; ++groupby_column_index) {
-      group_key[groupby_column_index] = std::move(group_keys_by_column[groupby_column_index][offset]);
+  {
+    TRACE_EVENT("aggregate_operator", "get group IDs");
+    for (auto offset = ChunkOffset{0}; offset < row_count; ++offset) {
+      auto group_key = GroupKey(groupby_column_count);
+
+      for (auto groupby_column_index = size_t{0}; groupby_column_index < groupby_column_count; ++groupby_column_index) {
+        const auto& buffer = column_buffers[groupby_column_index];
+        const auto& starts = column_starts[groupby_column_index];
+
+        const auto start = starts[offset];
+        const auto end = starts[offset + 1];
+
+        group_key[groupby_column_index] = std::span<const std::byte>(buffer).subspan(start, end - start);
+      }
+
+      group_ids[offset] = _group_id(group_key, worker_state);
     }
-    group_ids[offset] = _group_id(group_key, worker_state);
   }
 
   return group_ids;
