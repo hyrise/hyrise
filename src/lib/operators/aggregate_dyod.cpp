@@ -1145,7 +1145,7 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
           // values.
           auto previous_max = expected_result_size.load();
           while (previous_max < id_map.size()) {
-            // The expected_result_size needs to be automatically updated as the GROUP BY columns are processed in
+            // The expected_result_size needs to be atomically updated as the GROUP BY columns are processed in
             // parallel. How to atomically update a maximum value? from https://stackoverflow.com/a/16190791/2204581
             if (expected_result_size.compare_exchange_strong(previous_max, id_map.size())) {
               break;
@@ -1481,13 +1481,12 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std
       auto& context = contexts_per_column_per_job[0][aggregate_index];
       resolve_data_type(data_type, [&](auto type) {
         using ColumnDataType = typename decltype(type)::type;
-
-        for (auto job_id = ChunkID{1}; job_id < bucket_job_count; ++job_id) {
-          auto& other = contexts_per_column_per_job[job_id][aggregate_index];
-          resolve_window_function(aggregate->window_function, [&]<WindowFunction aggregate_func>() {
+        resolve_window_function(aggregate->window_function, [&]<WindowFunction aggregate_func>() {
+          for (auto job_id = ChunkID{1}; job_id < bucket_job_count; ++job_id) {
+            auto& other = contexts_per_column_per_job[job_id][aggregate_index];
             _merge_contexts<ColumnDataType, aggregate_func, AggregateKey>(context, other);
-          });
-        }
+          }
+        });
       });
     };
 
@@ -1665,8 +1664,8 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std
           const auto data_type = input_table->column_data_type(input_column_id);
 
           /*
-        Invoke correct aggregator for each segment
-        */
+          Invoke correct aggregator for each segment
+          */
 
           resolve_data_type(data_type, [&, aggregate](auto type) {
             using ColumnDataType = typename decltype(type)::type;
@@ -1961,8 +1960,8 @@ template <typename AggregateKey>
 std::shared_ptr<DYODSegmentVisitorContext> AggregateDYOD::_create_aggregate_context(
     const DataType data_type, const WindowFunction aggregate_function, std::atomic_size_t& expected_result_size) const {
   std::shared_ptr<DYODSegmentVisitorContext> context;
+  const auto size = expected_result_size.load();
   resolve_data_type(data_type, [&](auto type) {
-    const auto size = expected_result_size.load();
     using ColumnDataType = typename decltype(type)::type;
 
     resolve_window_function(aggregate_function, [&]<WindowFunction aggregate_func>() {
