@@ -881,7 +881,7 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
   for (auto group_column_index = size_t{0}; group_column_index < groupby_column_count; ++group_column_index) {
     jobs.emplace_back(std::make_shared<JobTask>([&input_table, group_column_index, &keys_per_chunk, &chunk_count,
                                                  &expected_result_size, &use_immediate_key_shortcut,
-                                                 &guarantee_single_key, this]() {
+                                                 [[maybe_unused]] & guarantee_single_key, this]() {
       const auto groupby_column_id = _groupby_column_ids.at(group_column_index);
       const auto data_type = input_table->column_data_type(groupby_column_id);
       auto contains_nulls = false;
