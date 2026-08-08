@@ -1401,9 +1401,8 @@ const auto JOB_COUNT_ESTIMATE = ChunkID{16};
 
 /**
  * This is the unpartitioned variant. It will handle the table partitioning for low cardinalities and call the partitioned 
- * variant below.
+ * variant below for the actual aggregation.
  */
-
 template <typename AggregateKey>
 void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std::shared_ptr<const Table>& input_table,
                                bool check_for_single_keys) {
@@ -1461,9 +1460,7 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std
     return;
   }
 
-  // TODO(anyone): parallelize merging ?
-  // TODO(anyone): make more pretty.
-
+  // TODO(anyone): Make more pretty.
   auto merge_jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   merge_jobs.reserve(aggregates_count);
 
@@ -1480,6 +1477,7 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std
       auto& context = contexts_per_column_per_job[0][aggregate_index];
       resolve_data_type(data_type, [&](auto type) {
         using ColumnDataType = typename decltype(type)::type;
+
         for (auto job_id = ChunkID{1}; job_id < bucket_job_count; ++job_id) {
           auto& other = contexts_per_column_per_job[job_id][aggregate_index];
           resolve_window_function(aggregate->window_function, [&]<WindowFunction aggregate_func>() {
@@ -1500,15 +1498,14 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std
   contexts_per_column = std::move(contexts_per_column_per_job[0]);
 }
 
-// This is the partioned variant. It will only aggregate on a subset of chunks.
+/**
+ * This is the partitioned variant. It will only aggregate on a subset of chunks (which can be all chunks, if no partitioning
+ * was performed previously). It performs the actual aggregation, writing the result to contexts_per_column.
+ */
 template <typename AggregateKey>
 void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std::shared_ptr<const Table>& input_table,
                                std::atomic_size_t& expected_result_size, bool& use_immediate_key_shortcut,
                                KeysPerChunk<AggregateKey>& keys_per_chunk, ChunkID start, ChunkID end) {
-  /**
-   * AGGREGATION STEP
-   */
-
   if (!_has_aggregate_functions) {
     /*
     Insert a dummy context for the DISTINCT implementation. That way, `contexts_per_column` will always have at least
@@ -1679,7 +1676,7 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std
           });
         };
         // If we cache the lookups, we do one run single threaded to write the cached results.
-        // If there are only 1 or 2 aggregates, we don't bother creating an extra thread.
+        // If there are at most two aggregates, we don't create an extra job.
         // If we use immediate key shortcuts, key_per_chunk should remain const and thus thread safe.
         if ((aggregate_index == size_t{0} && contexts_per_column.size() > 1) || aggregates_count <= 2) {
           perform_aggregation();
@@ -1767,7 +1764,8 @@ void AggregateDYOD::_write_output(ContextsPerColumn& contexts_per_column,
   }
 
   // Write the materialized columns to the aggregate_result_table. The operator output references this table's
-  // columns via `EntireChunkPosList` reference segments.
+  // columns via `EntireChunkPosList` reference segments. Note that we need the aggregate_result_table to be global
+  // to avoid creating one table per thread, which will outlive the thread as it is referenced by the output.
 
   auto first_materialized_chunk_id = ChunkID{0};
 
