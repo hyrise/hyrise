@@ -535,15 +535,29 @@ std::shared_ptr<AbstractSegment> AggregateDYOD::_write_default_aggregate_segment
 }
 
 GroupID AggregateDYOD::_group_id(const GroupKey& group_key, WorkerState& worker_state) {
-  auto it = _group_id_map.find(group_key);
-  if (it != _group_id_map.end()) {
-    return it->second;
+  GroupID group_id;
+
+  const auto visited = _group_id_map.visit(group_key, [&](const auto& entry) {
+    group_id = entry.second;
+  });
+
+  // Key already exists in group ID map
+  if (visited) {
+    return group_id;
   }
 
-  auto [insert_it, inserted] = _group_id_map.insert({group_key, worker_state.next_group_id()});
-  const auto group_id = insert_it->second;
+  // Try to insert new key
+  // TODO(anyone): This unnecessarily burns group IDs if another thread has concurrently inserted the key
+  const auto new_group_id = worker_state.next_group_id();
+
+  // clang-format off
+  const auto inserted = _group_id_map.insert_or_visit(
+    {group_key, new_group_id},
+    [&](const auto& entry) { group_id = entry.second; });  // Lost race: Use existing group ID
+  // clang-format on
 
   if (inserted) {
+    group_id = new_group_id;
     _group_keys[group_id] = group_key;
     _occupied_group_ids[group_id] = true;
   }
