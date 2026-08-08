@@ -201,9 +201,7 @@ std::vector<std::unique_ptr<AbstractAggregateVector>>& WorkerState::aggregate_ve
 AggregateDYOD::AggregateDYOD(const std::shared_ptr<AbstractOperator>& input_operator,
                              const std::vector<std::shared_ptr<WindowFunctionExpression>>& aggregates,
                              const std::vector<ColumnID>& groupby_column_ids)
-    : AbstractAggregateOperator(input_operator, aggregates, groupby_column_ids) {
-  TRACE_EVENT("aggregate_operator", "constructor");
-}
+    : AbstractAggregateOperator(input_operator, aggregates, groupby_column_ids) {}
 
 const std::string& AggregateDYOD::name() const {
   static const auto name = std::string{"AggregateDYOD"};
@@ -215,6 +213,8 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
   const auto input_table = left_input_table();
 
   _validate_aggregates();
+
+  _group_id_map.reserve(GROUP_ID_MAP_INIT_SIZE);
 
   // Aggregate chunk by chunk
   const auto chunk_count = input_table->chunk_count();

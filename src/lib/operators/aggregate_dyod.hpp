@@ -213,7 +213,7 @@ class AggregateDYOD : public AbstractAggregateOperator {
   static constexpr GroupID GROUP_ID_MAP_INIT_SIZE = 1'000'000;
 
   std::vector<DataType> _aggregate_data_types;
-  GroupIDMap _group_id_map = GroupIDMap(GROUP_ID_MAP_INIT_SIZE);
+  GroupIDMap _group_id_map;
   std::atomic<GroupID> _next_group_id;
   tbb::concurrent_vector<GroupKey> _group_keys;
   tbb::concurrent_vector<bool> _occupied_group_ids;
