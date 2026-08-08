@@ -222,20 +222,14 @@ set(
     operators/aggregate/window_function_traits.hpp
     operators/aggregate_dyod.cpp
     operators/aggregate_dyod.hpp
-    operators/aggregate_dyod/accumulator_column.cpp
     operators/aggregate_dyod/accumulator_column.hpp
     operators/aggregate_dyod/aggregate_dyod_config.hpp
-    operators/aggregate_dyod/distinct_set.cpp
+    operators/aggregate_dyod/cache_info.hpp
     operators/aggregate_dyod/distinct_set.hpp
-    operators/aggregate_dyod/hyperloglog.cpp
     operators/aggregate_dyod/hyperloglog.hpp
-    operators/aggregate_dyod/key_schema.cpp
     operators/aggregate_dyod/key_schema.hpp
-    operators/aggregate_dyod/merge_map.cpp
     operators/aggregate_dyod/merge_map.hpp
-    operators/aggregate_dyod/output_columns.cpp
     operators/aggregate_dyod/output_columns.hpp
-    operators/aggregate_dyod/scatter_store.cpp
     operators/aggregate_dyod/scatter_store.hpp
     operators/aggregate_hash.cpp
     operators/aggregate_hash.hpp

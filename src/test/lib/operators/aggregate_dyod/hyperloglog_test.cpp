@@ -1,12 +1,16 @@
 #include <array>
+#include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <limits>
+#include <tuple>
 #include <utility>
 #include <vector>
 
 #include "base_test.hpp"
 #include "operators/aggregate_dyod/aggregate_dyod_config.hpp"
 #include "operators/aggregate_dyod/hyperloglog.hpp"
+#include "operators/aggregate_dyod/key_schema.hpp"
 
 namespace hyrise {
 
@@ -18,6 +22,24 @@ uint64_t mix(const uint64_t value) {
   mixed = (mixed ^ (mixed >> 30)) * 0xbf58476d1ce4e5b9ull;
   mixed = (mixed ^ (mixed >> 27)) * 0x94d049bb133111ebull;
   return mixed ^ (mixed >> 31);
+}
+
+// What the estimate phase feeds the sketch for a single non-nullable Int group-by column.
+uint64_t packed_key_hash(const int32_t value) {
+  const auto encoded = encode_lane_value(value);
+  auto key = std::array<std::byte, sizeof(encoded)>{};
+  std::memcpy(key.data(), &encoded, sizeof(encoded));
+  return hash_bytes(key.data(), key.size());
+}
+
+// Preimage under mix64 of a hash that selects `register_index` and leaves no remaining set bits.
+uint64_t saturating_hash(const uint64_t register_index) {
+  auto value = register_index << (64 - HLL_PRECISION);
+  value ^= value >> 33;
+  value *= 0x9cb4b2f8129337dbull;
+  value ^= value >> 33;
+  value *= 0x4f74430c22a54005ull;
+  return value ^ (value >> 33);
 }
 
 void add_distinct_values(HllSketch& sketch, const size_t count, const uint64_t offset = 0) {
@@ -85,10 +107,22 @@ TEST_F(HllSketchTest, EstimatesLargeCardinality) {
               static_cast<double>(actual_count) * 0.05);
 }
 
+TEST_F(HllSketchTest, EstimatesLargeCardinalityFromPackedKeyHashes) {
+  constexpr auto actual_count = size_t{4'000'000};
+
+  auto sketch = HllSketch{};
+  for (auto value = size_t{1}; value <= actual_count; ++value) {
+    sketch.add(packed_key_hash(static_cast<int32_t>(value)));
+  }
+
+  EXPECT_NEAR(static_cast<double>(sketch.estimate()), static_cast<double>(actual_count),
+              static_cast<double>(actual_count) * 0.05);
+}
+
 TEST_F(HllSketchTest, SaturatedSketchClampsEstimate) {
   auto sketch = HllSketch{};
   for (auto register_index = uint64_t{0}; register_index < (uint64_t{1} << HLL_PRECISION); ++register_index) {
-    sketch.add(register_index << (64 - HLL_PRECISION));
+    sketch.add(saturating_hash(register_index));
   }
 
   EXPECT_EQ(sketch.estimate(), std::numeric_limits<size_t>::max());
@@ -165,45 +199,51 @@ TEST_F(HllSketchTest, WorkerSketchesCanBeMerged) {
 }
 
 TEST_F(HllSketchTest, ChoosePartitionCountZeroEstimate) {
-  EXPECT_EQ(choose_partition_count(0, 1), PartitionCount{1});
+  EXPECT_EQ(choose_partition_count(0, 1, 2), PartitionCount{1});
 }
 
 TEST_F(HllSketchTest, ChoosePartitionCountScalesWithKeysBudget) {
-  EXPECT_EQ(choose_partition_count(KEYS_BUDGET - 1, 1), PartitionCount{1});
-  EXPECT_EQ(choose_partition_count(KEYS_BUDGET, 1), PartitionCount{1});
-  EXPECT_EQ(choose_partition_count(KEYS_BUDGET + 1, 1), PartitionCount{2});
-  EXPECT_EQ(choose_partition_count(3 * KEYS_BUDGET, 1), PartitionCount{4});
+  EXPECT_EQ(choose_partition_count(keys_budget() - 1, 1, 2), PartitionCount{1});
+  EXPECT_EQ(choose_partition_count(keys_budget(), 1, 2), PartitionCount{1});
+  EXPECT_EQ(choose_partition_count(keys_budget() + 1, 1, 2), PartitionCount{2});
+  EXPECT_EQ(choose_partition_count(3 * keys_budget(), 1, 2), PartitionCount{4});
 }
 
 TEST_F(HllSketchTest, ChoosePartitionCountClampsToWorkerCount) {
-  EXPECT_EQ(choose_partition_count(1, 3), PartitionCount{4});
-  EXPECT_EQ(choose_partition_count(1, 8), PartitionCount{8});
-  EXPECT_EQ(choose_partition_count(1, static_cast<size_t>(MAX_PARTITION_COUNT)), MAX_PARTITION_COUNT);
+  EXPECT_EQ(choose_partition_count(1, 3, 2), PartitionCount{4});
+  EXPECT_EQ(choose_partition_count(1, 8, 2), PartitionCount{8});
+  EXPECT_EQ(choose_partition_count(1, max_partition_count(2), 2), max_partition_count(2));
 }
 
-TEST_F(HllSketchTest, ChoosePartitionCountClampsToMax) {
-  const auto large_cardinality = static_cast<size_t>(MAX_PARTITION_COUNT) * KEYS_BUDGET * 16;
+TEST_F(HllSketchTest, ChoosePartitionCountClampsToStagingCap) {
+  const auto large_cardinality = static_cast<size_t>(MAX_PARTITION_COUNT) * keys_budget() * 16;
 
-  EXPECT_EQ(choose_partition_count(large_cardinality, 1), MAX_PARTITION_COUNT);
+  EXPECT_EQ(choose_partition_count(large_cardinality, 1, 2), max_partition_count(2));
 }
 
-TEST_F(HllSketchTest, ChoosePartitionCountClampsOversizedWorkerCountToMax) {
-  EXPECT_EQ(choose_partition_count(1, static_cast<size_t>(MAX_PARTITION_COUNT) + 1), MAX_PARTITION_COUNT);
-  EXPECT_EQ(choose_partition_count(1, std::numeric_limits<size_t>::max()), MAX_PARTITION_COUNT);
+TEST_F(HllSketchTest, ChoosePartitionCountCapFallsWithStreamCount) {
+  const auto large_cardinality = static_cast<size_t>(MAX_PARTITION_COUNT) * keys_budget() * 16;
+
+  EXPECT_LT(choose_partition_count(large_cardinality, 1, 8), choose_partition_count(large_cardinality, 1, 2));
+}
+
+TEST_F(HllSketchTest, ChoosePartitionCountClampsOversizedWorkerCountToCap) {
+  EXPECT_EQ(choose_partition_count(1, static_cast<size_t>(MAX_PARTITION_COUNT) + 1, 2), max_partition_count(2));
+  EXPECT_EQ(choose_partition_count(1, std::numeric_limits<size_t>::max(), 2), max_partition_count(2));
 }
 
 TEST_F(HllSketchTest, ChoosePartitionCountAlwaysReturnsPowerOfTwo) {
-  const auto inputs = std::array<std::pair<size_t, size_t>, 8>{{{0, 0},
-                                                                {1, 1},
-                                                                {KEYS_BUDGET - 1, 1},
-                                                                {KEYS_BUDGET + 1, 1},
-                                                                {3 * KEYS_BUDGET, 1},
-                                                                {100 * KEYS_BUDGET, 3},
-                                                                {1'000 * KEYS_BUDGET, 64},
-                                                                {std::numeric_limits<size_t>::max() / 2, 17}}};
+  const auto inputs = std::array<std::tuple<size_t, size_t, size_t>, 8>{{{0, 0, 1},
+                                                                        {1, 1, 2},
+                                                                        {keys_budget() - 1, 1, 2},
+                                                                        {keys_budget() + 1, 1, 3},
+                                                                        {3 * keys_budget(), 1, 4},
+                                                                        {100 * keys_budget(), 3, 5},
+                                                                        {1'000 * keys_budget(), 64, 8},
+                                                                        {size_t{1} << 62, 17, 16}}};
 
-  for (const auto& [cardinality_estimate, worker_count] : inputs) {
-    EXPECT_TRUE(is_power_of_two(choose_partition_count(cardinality_estimate, worker_count)));
+  for (const auto& [cardinality_estimate, worker_count, stream_count] : inputs) {
+    EXPECT_TRUE(is_power_of_two(choose_partition_count(cardinality_estimate, worker_count, stream_count)));
   }
 }
 

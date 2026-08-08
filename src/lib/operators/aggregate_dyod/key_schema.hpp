@@ -1,23 +1,38 @@
 #pragma once
 
+#include <algorithm>
+#include <bit>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <limits>
 #include <memory>
+#include <optional>
 #include <span>
+#include <string_view>
+#include <type_traits>
+#include <utility>
 #include <vector>
 
 #include <boost/container/small_vector.hpp>
 
+#include "all_type_variant.hpp"
 #include "operators/aggregate_dyod/aggregate_dyod_config.hpp"
+#include "operators/aggregate_dyod/hyperloglog.hpp"
+#include "operators/aggregate_dyod/output_columns.hpp"
+#include "storage/abstract_segment.hpp"
+#include "storage/dictionary_segment.hpp"
+#include "storage/reference_segment.hpp"
+#include "storage/segment_iterate.hpp"
+#include "storage/table.hpp"
+#include "storage/value_segment.hpp"
+#include "storage/vector_compression/base_compressed_vector.hpp"
+#include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
-
-class AbstractSegment;
-class Table;
-class OutputColumns;
 
 // ============================================================================================================
 // Group-by key representation for AggregateDYOD.
@@ -32,8 +47,8 @@ class OutputColumns;
 // group-by columns and dispatches to one of a bounded set of concrete schema types; the scatter and merge pipelines are
 // then instantiated over that one concrete type, so hash/equality compile to fixed, branch-free code. The axes:
 //
-//   NumericShortKeySchema<Width>   Width in {4,8,12,16} bytes -- numeric-only group-by. hash/equals fixed-size.
-//   NumericArbitraryKeySchema      numeric-only group-by wider than 16 bytes; runtime-length hash/equals.
+//   NumericShortKeySchema<Width>   Width in {4,8,12,16,20,24} bytes -- numeric-only group-by. hash/equals fixed-size.
+//   NumericArbitraryKeySchema      numeric-only group-by wider than 24 bytes; runtime-length hash/equals.
 //   MixedKeySchema<LenWidth>       at least one string and at least one non-string column. LenWidth in {1,2,4,8} is the
 //                                  per-string length-prefix field width.
 //   StringOnlyKeySchema<LenWidth>  all columns are strings; a MixedKeySchema with a zero-width numeric prefix.
@@ -41,9 +56,12 @@ class OutputColumns;
 // Layout (all four families), contiguous, tightly packed:
 //   [ null bitmap | numeric prefix | inline string blob | 8-byte spill pointer ]
 // The null bitmap carries one bit per nullable group-by column (present only if any group-by column is nullable) and is
-// padded so the fixed part stays a multiple of 4 bytes -- which keeps numeric widths on the {4,8,12,16} buckets and
+// padded so the fixed part stays a multiple of 4 -- which keeps numeric widths on the {4,8,12,16,20,24} buckets and
 // leaves no uninitialized interior padding, making whole-buffer equality/hash sound (the pad bytes are zero-filled and
-// compared as zero). The string blob and spill pointer are absent for numeric-only schemas.
+// compared as zero). The inline string blob is padded at its tail for the same reason, which is what holds the fixed
+// part on a multiple of 4 once the blob capacity is sized from measured string lengths rather than from
+// STRING_BLOB_BYTES_PER_COLUMN (see choose_string_key_budget). The string blob and spill pointer are absent for
+// numeric-only schemas.
 //
 // NULL is carried out of band in the null bitmap -- never as an in-band sentinel value. (An in-band "+1 and reserve 0"
 // scheme collides at TYPE_MAX in a fixed-width lane, and no byte pattern is safe for a full-range column.) A NULL
@@ -69,12 +87,42 @@ enum class KeyComposition : uint8_t { NumericOnly, Mixed, StringOnly };
  * equality (see the file banner). Shared by the float/double key lanes and by DistinctSet's value equality
  * (distinct_set.hpp), which must agree with key equality.
  */
-float canonicalize(float value);
-double canonicalize(double value);
+inline float canonicalize(const float value) {
+  if (std::isnan(value)) {
+    return std::numeric_limits<float>::quiet_NaN();
+  }
+  if (value == 0.0f) {
+    // Rewrites -0.0 to +0.0.
+    return 0.0f;
+  }
+  return value;
+}
+
+inline double canonicalize(const double value) {
+  if (std::isnan(value)) {
+    return std::numeric_limits<double>::quiet_NaN();
+  }
+  if (value == 0.0) {
+    return 0.0;
+  }
+  return value;
+}
 
 /** FNV-1a over a byte range; the seeded overload continues a previous hash. */
-uint64_t hash_bytes(const std::byte* data, size_t length);
-uint64_t hash_bytes(const std::byte* data, size_t length, uint64_t seed);
+inline uint64_t hash_bytes(const std::byte* data, const size_t length, const uint64_t seed) {
+  constexpr auto FNV_PRIME = uint64_t{1099511628211ull};
+  auto hash = seed;
+  for (auto index = size_t{0}; index < length; ++index) {
+    hash ^= static_cast<uint64_t>(data[index]);
+    hash *= FNV_PRIME;
+  }
+  return hash;
+}
+
+inline uint64_t hash_bytes(const std::byte* data, const size_t length) {
+  constexpr auto FNV_OFFSET_BASIS = uint64_t{14695981039346656037ull};
+  return hash_bytes(data, length, FNV_OFFSET_BASIS);
+}
 
 /**
  * Overflow storage for string key content that does not fit a key's inline string blob.
@@ -121,6 +169,12 @@ class StringSpillBuffer : private Noncopyable {
    */
   void clear();
 
+  /** Free the blocks instead of keeping them for reuse. */
+  void release();
+
+  /** @return Bytes used by this buffer and the blocks it holds. */
+  size_t memory_usage() const;
+
  private:
   struct Block {
     std::unique_ptr<std::byte[]> data;
@@ -133,6 +187,45 @@ class StringSpillBuffer : private Noncopyable {
   std::vector<Block> _blocks;
   size_t _current_block{0};
 };
+
+inline const std::byte* StringSpillBuffer::append(const std::byte* content, const size_t length) {
+  while (_current_block < _blocks.size() && _blocks[_current_block].used + length > _blocks[_current_block].capacity) {
+    ++_current_block;
+  }
+  if (_current_block == _blocks.size()) {
+    auto block = Block{};
+    block.capacity = std::max(MIN_BLOCK_BYTES, length);
+    block.data = std::make_unique<std::byte[]>(block.capacity);
+    _blocks.emplace_back(std::move(block));
+  }
+
+  auto& block = _blocks[_current_block];
+  auto* destination = block.data.get() + block.used;
+  std::memcpy(destination, content, length);
+  block.used += length;
+  return destination;
+}
+
+inline void StringSpillBuffer::clear() {
+  for (auto& block : _blocks) {
+    block.used = 0;
+  }
+  _current_block = 0;
+}
+
+inline void StringSpillBuffer::release() {
+  _blocks = std::vector<Block>{};
+  _current_block = 0;
+}
+
+inline size_t StringSpillBuffer::memory_usage() const {
+  auto bytes = sizeof(*this);
+  bytes += _blocks.capacity() * sizeof(Block);
+  for (const auto& block : _blocks) {
+    bytes += block.capacity;
+  }
+  return bytes;
+}
 
 // ------------------------------------------------------------------------------------------------------------
 // Per-column key handlers. Numeric columns get a polymorphic lane (one concrete subclass per DataType), resolved once
@@ -149,11 +242,12 @@ constexpr uint32_t NO_NULL_BIT = std::numeric_limits<uint32_t>::max();
 constexpr size_t EXPECTED_GROUP_BY_COLUMNS = 4;
 
 /**
- * Worker-local decoded copy of one chunk's group-by columns, filled by KeySchema::decode() and consumed row-wise by
- * KeySchema::pack().
+ * Worker-local decoded copy of a row window of one chunk's group-by columns, filled by KeySchema::decode() and
+ * consumed row-wise by KeySchema::pack().
  *
- * Packing a row needs all group-by columns of that row at once, so the columns are decoded chunk-wise into these flat
- * buffers first (one typed segment_iterate pass per column), and the per-row pack then only touches flat memory.
+ * Packing a row needs all group-by columns of that row at once, so the columns are decoded window-wise into these flat
+ * buffers first (one pass per column), and the per-row pack then only touches flat memory. The buffers hold the
+ * window's rows alone, so their indices count from the window's first row, not from the chunk's.
  * Numeric lanes hold the equality-canonical encoded bytes (sign-bit bias / float canonicalization applied during
  * decode), zeroed for NULL rows; string columns hold the decoded values, empty for NULL rows.
  *
@@ -167,8 +261,9 @@ struct KeyDecodeScratch {
   };
 
   struct StringColumn {
-    std::vector<pmr_string> values;  // Decoded values; empty for NULL rows.
-    std::vector<uint8_t> nulls;      // One flag per row.
+    std::vector<std::string_view> values;  // Views of the decoded values; empty for NULL rows.
+    std::vector<uint8_t> nulls;            // One flag per row.
+    std::vector<pmr_string> owned;         // Backing copies for rows whose segment storage cannot be viewed directly.
   };
 
   boost::container::small_vector<NumericLane, EXPECTED_GROUP_BY_COLUMNS> numeric_lanes;
@@ -192,17 +287,21 @@ class AbstractNumericKeyLane {
   virtual ~AbstractNumericKeyLane() = default;
 
   /**
-   * Decode one chunk's column into the lane's flat scratch buffer.
+   * Decode rows [row_begin, row_end) of one chunk's column into the lane's flat scratch buffer.
    *
    * Integer lanes apply the sign-bit-XOR bias; float/double lanes canonicalize -0.0 and NaN, so whole-buffer
    * byte-equality matches value-equality (see the file banner). The schema's per-row pack loop copies the stored
    * bytes into the key. NULL rows store zero bytes and set their null flag.
    *
    * @param segment Input segment holding this lane's group-by column for the current chunk; borrowed, read only.
-   * @param lane Destination scratch buffers; borrowed, resized to the chunk's row count and overwritten.
+   * @param row_begin First row of the window to decode.
+   * @param row_end One past the window's last row; must not exceed the chunk's row count.
+   * @param lane Destination scratch buffers; borrowed, resized to the window's row count and overwritten, so the
+   *   window's first row is stored at index 0.
    * @pre Runs in the estimate and scatter phases, single-threaded per worker on that worker's own scratch.
    */
-  virtual void decode(const AbstractSegment& segment, KeyDecodeScratch::NumericLane& lane) const = 0;
+  virtual void decode(const AbstractSegment& segment, size_t row_begin, size_t row_end,
+                      KeyDecodeScratch::NumericLane& lane) const = 0;
 
   /**
    * Reverse of pack(): decode this lane's value and append it (or a NULL) to its output column.
@@ -240,7 +339,8 @@ class NumericKeyLane : public AbstractNumericKeyLane {
    */
   NumericKeyLane(ColumnID column_id, uint32_t field_offset, uint32_t null_bit_index);
 
-  void decode(const AbstractSegment& segment, KeyDecodeScratch::NumericLane& lane) const override;
+  void decode(const AbstractSegment& segment, size_t row_begin, size_t row_end,
+              KeyDecodeScratch::NumericLane& lane) const override;
   void unpack(const std::byte* key, const std::byte* null_bitmap, OutputColumns& output, size_t output_column_index,
               size_t output_row) const override;
 
@@ -281,13 +381,522 @@ using NumericKeyLanes = boost::container::small_vector<NumericKeyLaneEntry, EXPE
 using StringKeyColumns = boost::container::small_vector<StringKeyColumn, EXPECTED_GROUP_BY_COLUMNS>;
 using KeyTupleIndices = boost::container::small_vector<uint32_t, EXPECTED_GROUP_BY_COLUMNS>;
 
+// Helpers shared by the schema families below.
+
+inline void set_null_bit(std::byte* null_bitmap, const size_t bit_index) {
+  null_bitmap[bit_index / 8] |= std::byte{1} << (bit_index % 8);
+}
+
+inline bool null_bit_set(const std::byte* null_bitmap, const size_t bit_index) {
+  return (null_bitmap[bit_index / 8] & (std::byte{1} << (bit_index % 8))) != std::byte{0};
+}
+
+inline size_t numeric_lane_width(const DataType data_type) {
+  switch (data_type) {
+    case DataType::Int:
+    case DataType::Float:
+      return 4;
+    case DataType::Long:
+    case DataType::Double:
+      return 8;
+    default:
+      Fail("Not a numeric data type.");
+  }
+}
+
+inline uint32_t encode_lane_value(const int32_t value) {
+  return static_cast<uint32_t>(value) ^ (uint32_t{1} << 31);
+}
+
+inline uint64_t encode_lane_value(const int64_t value) {
+  return static_cast<uint64_t>(value) ^ (uint64_t{1} << 63);
+}
+
+inline uint32_t encode_lane_value(const float value) {
+  return std::bit_cast<uint32_t>(canonicalize(value));
+}
+
+inline uint64_t encode_lane_value(const double value) {
+  return std::bit_cast<uint64_t>(canonicalize(value));
+}
+
+template <typename T>
+T decode_lane_value(const std::byte* field) {
+  if constexpr (std::is_same_v<T, int32_t>) {
+    auto encoded = uint32_t{};
+    std::memcpy(&encoded, field, sizeof(encoded));
+    return static_cast<int32_t>(encoded ^ (uint32_t{1} << 31));
+  } else if constexpr (std::is_same_v<T, int64_t>) {
+    auto encoded = uint64_t{};
+    std::memcpy(&encoded, field, sizeof(encoded));
+    return static_cast<int64_t>(encoded ^ (uint64_t{1} << 63));
+  } else {
+    auto value = T{};
+    std::memcpy(&value, field, sizeof(value));
+    return value;
+  }
+}
+
+// Assumes a little-endian machine.
+inline void write_length_field(std::byte* key, const uint32_t field_offset, const size_t length_field_width,
+                               const size_t length) {
+  if (length_field_width < sizeof(uint64_t)) {
+    Assert(length < (uint64_t{1} << (8 * length_field_width)), "String length exceeds the length-prefix field.");
+  }
+  const auto value = static_cast<uint64_t>(length);
+  std::memcpy(key + field_offset, &value, length_field_width);
+}
+
+inline size_t read_length_field(const std::byte* key, const uint32_t field_offset, const size_t length_field_width) {
+  auto value = uint64_t{0};
+  std::memcpy(&value, key + field_offset, length_field_width);
+  return static_cast<size_t>(value);
+}
+
+inline uintptr_t read_spill_pointer(const std::byte* key, const size_t fixed_part_width) {
+  auto pointer_value = uintptr_t{0};
+  std::memcpy(&pointer_value, key + fixed_part_width, sizeof(pointer_value));
+  return pointer_value;
+}
+
+inline void pack_numeric_lanes(const NumericKeyLanes& lanes, const KeyDecodeScratch& scratch,
+                               const ChunkOffset chunk_offset, std::byte* key_out) {
+  const auto lane_count = lanes.size();
+  for (auto index = size_t{0}; index < lane_count; ++index) {
+    const auto& field = lanes[index].field;
+    const auto& lane = scratch.numeric_lanes[index];
+    if (lane.nulls[chunk_offset]) {
+      set_null_bit(key_out, field.null_bit_index);
+      continue;
+    }
+    const auto* source = lane.values.data() + size_t{chunk_offset} * field.width;
+    if (field.width == 4) {
+      std::memcpy(key_out + field.field_offset, source, 4);
+    } else {
+      std::memcpy(key_out + field.field_offset, source, 8);
+    }
+  }
+}
+
+inline void pack_string_columns(const StringKeyColumns& string_columns, const size_t length_field_width,
+                                const size_t blob_offset, const size_t fixed_part_width,
+                                const KeyDecodeScratch& scratch, const ChunkOffset chunk_offset, std::byte* key_out,
+                                StringSpillBuffer& spill_buffer) {
+  auto total_length = size_t{0};
+  const auto column_count = string_columns.size();
+  for (auto index = size_t{0}; index < column_count; ++index) {
+    const auto& column = string_columns[index];
+    const auto& decoded = scratch.string_columns[index];
+    if (decoded.nulls[chunk_offset]) {
+      DebugAssert(column.null_bit_index != NO_NULL_BIT, "NULL in a non-nullable group-by column.");
+      set_null_bit(key_out, column.null_bit_index);
+      continue;
+    }
+    const auto& value = decoded.values[chunk_offset];
+    write_length_field(key_out, column.length_field_offset, length_field_width, value.size());
+    total_length += value.size();
+  }
+
+  // NULL rows decode to empty views with a null data pointer, which must not reach memcpy.
+  const auto blob_capacity = fixed_part_width - blob_offset;
+  if (total_length <= blob_capacity) {
+    auto* cursor = key_out + blob_offset;
+    for (auto index = size_t{0}; index < column_count; ++index) {
+      if (scratch.string_columns[index].nulls[chunk_offset]) {
+        continue;
+      }
+      const auto& value = scratch.string_columns[index].values[chunk_offset];
+      std::memcpy(cursor, value.data(), value.size());
+      cursor += value.size();
+    }
+    return;
+  }
+
+  auto content = std::vector<std::byte>{};
+  content.reserve(total_length);
+  for (auto index = size_t{0}; index < column_count; ++index) {
+    if (scratch.string_columns[index].nulls[chunk_offset]) {
+      continue;
+    }
+    const auto& value = scratch.string_columns[index].values[chunk_offset];
+    const auto* bytes = reinterpret_cast<const std::byte*>(value.data());
+    content.insert(content.end(), bytes, bytes + value.size());
+  }
+  const auto* interned = spill_buffer.append(content.data(), content.size());
+  const auto content_hash = hash_bytes(content.data(), content.size());
+  std::memcpy(key_out + blob_offset, &content_hash, sizeof(content_hash));
+  const auto pointer_value = reinterpret_cast<uintptr_t>(interned);
+  std::memcpy(key_out + fixed_part_width, &pointer_value, sizeof(pointer_value));
+}
+
+inline bool equals_string_keys(const StringKeyColumns& string_columns, const size_t length_field_width,
+                               const size_t fixed_part_width, const std::byte* a, const std::byte* b) {
+  const auto pointer_a = read_spill_pointer(a, fixed_part_width);
+  const auto pointer_b = read_spill_pointer(b, fixed_part_width);
+  if ((pointer_a != 0) != (pointer_b != 0)) {
+    return false;
+  }
+  if (std::memcmp(a, b, fixed_part_width) != 0) {
+    return false;
+  }
+  if (pointer_a == 0) {
+    return true;
+  }
+
+  auto total_length = size_t{0};
+  for (const auto& column : string_columns) {
+    total_length += read_length_field(a, column.length_field_offset, length_field_width);
+  }
+  return std::memcmp(reinterpret_cast<const std::byte*>(pointer_a), reinterpret_cast<const std::byte*>(pointer_b),
+                     total_length) == 0;
+}
+
+struct KeyLayout {
+  struct Column {
+    DataType data_type{DataType::Null};
+    bool is_string{false};
+    uint32_t field_offset{0};  // numeric lane offset, or string length-field offset
+    uint32_t null_bit_index{NO_NULL_BIT};
+  };
+
+  boost::container::small_vector<Column, EXPECTED_GROUP_BY_COLUMNS> columns;
+  size_t string_count{0};
+  size_t blob_offset{0};
+  size_t fixed_part_width{0};
+};
+
+// `string_blob_bytes` is the total inline blob capacity; std::nullopt spends STRING_BLOB_BYTES_PER_COLUMN on every
+// string column, while a caller that has bounded the string lengths passes the tighter budget it measured. Either way
+// the blob is padded at its tail so the fixed part stays a multiple of 4 bytes.
+inline KeyLayout compute_key_layout(const std::vector<ColumnID>& group_by_column_ids, const Table& input_table,
+                                    const size_t length_field_width,
+                                    const std::optional<size_t> string_blob_bytes = std::nullopt) {
+  auto layout = KeyLayout{};
+  layout.columns.reserve(group_by_column_ids.size());
+
+  auto nullable_count = uint32_t{0};
+  auto numeric_width = size_t{0};
+  for (const auto column_id : group_by_column_ids) {
+    auto column = KeyLayout::Column{};
+    column.data_type = input_table.column_data_type(column_id);
+    column.is_string = column.data_type == DataType::String;
+    if (input_table.column_is_nullable(column_id)) {
+      column.null_bit_index = nullable_count;
+      ++nullable_count;
+    }
+    if (!column.is_string) {
+      numeric_width += numeric_lane_width(column.data_type);
+    } else {
+      ++layout.string_count;
+    }
+    layout.columns.emplace_back(column);
+  }
+
+  // The null bitmap region is padded to a multiple of 4 bytes.
+  const auto bitmap_region = nullable_count > 0 ? ((nullable_count + 7) / 8 + 3) / 4 * 4 : size_t{0};
+
+  auto numeric_cursor = bitmap_region;
+  auto length_field_cursor = bitmap_region + numeric_width;
+  for (auto& column : layout.columns) {
+    if (column.is_string) {
+      column.field_offset = static_cast<uint32_t>(length_field_cursor);
+      length_field_cursor += length_field_width;
+    } else {
+      column.field_offset = static_cast<uint32_t>(numeric_cursor);
+      numeric_cursor += numeric_lane_width(column.data_type);
+    }
+  }
+
+  layout.blob_offset = length_field_cursor;
+  if (layout.string_count == 0) {
+    layout.fixed_part_width = layout.blob_offset;
+    return layout;
+  }
+
+  const auto blob_bytes = string_blob_bytes.value_or(STRING_BLOB_BYTES_PER_COLUMN * layout.string_count);
+  layout.fixed_part_width = (layout.blob_offset + blob_bytes + 3) / 4 * 4;
+  return layout;
+}
+
+inline NumericKeyLaneEntry make_numeric_lane(const DataType data_type, const ColumnID column_id,
+                                             const uint32_t field_offset, const uint32_t null_bit_index) {
+  auto lane = std::unique_ptr<AbstractNumericKeyLane>{};
+  switch (data_type) {
+    case DataType::Int:
+      lane = std::make_unique<NumericKeyLane<int32_t>>(column_id, field_offset, null_bit_index);
+      break;
+    case DataType::Long:
+      lane = std::make_unique<NumericKeyLane<int64_t>>(column_id, field_offset, null_bit_index);
+      break;
+    case DataType::Float:
+      lane = std::make_unique<NumericKeyLane<float>>(column_id, field_offset, null_bit_index);
+      break;
+    case DataType::Double:
+      lane = std::make_unique<NumericKeyLane<double>>(column_id, field_offset, null_bit_index);
+      break;
+    default:
+      Fail("Not a numeric group-by column.");
+  }
+  return {std::move(lane),
+          NumericLaneField{field_offset, static_cast<uint32_t>(numeric_lane_width(data_type)), null_bit_index}};
+}
+
+/**
+ * Visit rows [row_begin, row_end) of a segment that stores its values where a single row can be addressed directly,
+ * calling `visitor(window_row, value)` in ascending row order.
+ *
+ * Those shapes are the dictionary segment, the value segment, and the reference segment whose position list stays
+ * within one chunk of either -- between them they cover what a group-by scan meets in practice. Reading them by row
+ * is what lets a worker pay for its own window only, instead of scanning the whole chunk to reach it.
+ *
+ * @tparam T The segment's column data type.
+ * @param segment Segment to read; borrowed, read only.
+ * @param row_begin First row of the window.
+ * @param row_end One past the window's last row; must not exceed the segment's row count.
+ * @param visitor Called once per window row as visitor(window_row, value), where `window_row` counts from 0 at
+ *   `row_begin` and `value` points into the segment's own storage -- stable for the segment's lifetime -- or is
+ *   nullptr for a NULL row.
+ * @return true iff the segment is one of those shapes, in which case the window has been visited; false leaves the
+ *   visitor uncalled and the caller has to scan (see iterate_segment_window()).
+ */
+template <typename T, typename Visitor>
+bool iterate_stable_segment_window(const AbstractSegment& segment, const size_t row_begin, const size_t row_end,
+                                   const Visitor& visitor) {
+  // The attribute vector's compression is resolved once per window, so reading a value id costs no virtual call.
+  const auto visit_dictionary = [&](const DictionarySegment<T>& dictionary_segment, const auto& row_to_id) {
+    const auto& dictionary = *dictionary_segment.dictionary();
+    const auto null_value_id = dictionary_segment.null_value_id();
+    resolve_compressed_vector_type(*dictionary_segment.attribute_vector(), [&](const auto& attribute_vector) {
+      const auto decompressor = attribute_vector.create_decompressor();
+      for (auto row = row_begin; row < row_end; ++row) {
+        const auto value_id = row_to_id(decompressor, row);
+        visitor(row - row_begin, value_id == null_value_id ? nullptr : &dictionary[value_id]);
+      }
+    });
+  };
+
+  if (const auto* dictionary_segment = dynamic_cast<const DictionarySegment<T>*>(&segment)) {
+    visit_dictionary(*dictionary_segment, [](const auto& decompressor, const size_t row) {
+      return ValueID{decompressor.get(row)};
+    });
+    return true;
+  }
+
+  if (const auto* value_segment = dynamic_cast<const ValueSegment<T>*>(&segment)) {
+    const auto& values = value_segment->values();
+    const auto* null_values = value_segment->is_nullable() ? &value_segment->null_values() : nullptr;
+    for (auto row = row_begin; row < row_end; ++row) {
+      const auto is_null = null_values && (*null_values)[row];
+      visitor(row - row_begin, is_null ? nullptr : &values[row]);
+    }
+    return true;
+  }
+
+  const auto* reference_segment = dynamic_cast<const ReferenceSegment*>(&segment);
+  if (!reference_segment) {
+    return false;
+  }
+  const auto& pos_list = *reference_segment->pos_list();
+  if (!pos_list.references_single_chunk() || pos_list.empty()) {
+    return false;
+  }
+
+  const auto target = reference_segment->referenced_table()
+                          ->get_chunk(pos_list.common_chunk_id())
+                          ->get_segment(reference_segment->referenced_column_id());
+  if (const auto* dictionary_segment = dynamic_cast<const DictionarySegment<T>*>(target.get())) {
+    visit_dictionary(*dictionary_segment, [&](const auto& decompressor, const size_t row) {
+      return ValueID{decompressor.get(pos_list[row].chunk_offset)};
+    });
+    return true;
+  }
+  if (const auto* value_segment = dynamic_cast<const ValueSegment<T>*>(target.get())) {
+    const auto& values = value_segment->values();
+    const auto* null_values = value_segment->is_nullable() ? &value_segment->null_values() : nullptr;
+    for (auto row = row_begin; row < row_end; ++row) {
+      const auto chunk_offset = pos_list[row].chunk_offset;
+      const auto is_null = null_values && (*null_values)[chunk_offset];
+      visitor(row - row_begin, is_null ? nullptr : &values[chunk_offset]);
+    }
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Visit rows [row_begin, row_end) of any segment, calling `visitor(window_row, value)` as
+ * iterate_stable_segment_window() does.
+ *
+ * A segment outside the directly addressable shapes is scanned whole and the rows outside the window are dropped, so
+ * it costs one scan of the chunk per window: a phase claiming windows over such a segment falls back to chunk
+ * granularity in cost, never in correctness. Its values reach the visitor as a pointer that is valid for the duration
+ * of the call only, so a visitor that keeps the value must copy it.
+ */
+template <typename T, typename Visitor>
+void iterate_segment_window(const AbstractSegment& segment, const size_t row_begin, const size_t row_end,
+                            const Visitor& visitor) {
+  if (iterate_stable_segment_window<T>(segment, row_begin, row_end, visitor)) {
+    return;
+  }
+
+  auto row = size_t{0};
+  segment_iterate<T>(segment, [&](const auto& position) {
+    const auto segment_row = row++;
+    if (segment_row < row_begin || segment_row >= row_end) {
+      return;
+    }
+    if (position.is_null()) {
+      visitor(segment_row - row_begin, nullptr);
+      return;
+    }
+    const auto& value = position.value();
+    visitor(segment_row - row_begin, &value);
+  });
+}
+
+inline void decode_numeric_lanes(const NumericKeyLanes& lanes,
+                                 const std::span<const AbstractSegment* const> group_by_segments,
+                                 const size_t row_begin, const size_t row_end, KeyDecodeScratch& scratch) {
+  const auto lane_count = lanes.size();
+  scratch.numeric_lanes.resize(lane_count);
+  for (auto index = size_t{0}; index < lane_count; ++index) {
+    lanes[index].lane->decode(*group_by_segments[index], row_begin, row_end, scratch.numeric_lanes[index]);
+  }
+}
+
+// The decoded views point into the segment's own storage wherever that storage is stable for the chunk's lifetime;
+// only segments outside those shapes are copied into the scratch's `owned` backing.
+inline void decode_string_column(const AbstractSegment& segment, const size_t row_begin, const size_t row_end,
+                                 KeyDecodeScratch::StringColumn& column) {
+  const auto window_rows = row_end - row_begin;
+  column.values.resize(window_rows);
+  column.nulls.resize(window_rows);
+
+  const auto viewed = iterate_stable_segment_window<pmr_string>(
+      segment, row_begin, row_end, [&](const size_t row, const pmr_string* value) {
+        if (value) {
+          column.values[row] = std::string_view{*value};
+          column.nulls[row] = 0;
+        } else {
+          column.values[row] = {};
+          column.nulls[row] = 1;
+        }
+      });
+  if (viewed) {
+    return;
+  }
+
+  column.owned.resize(window_rows);
+  auto row = size_t{0};
+  segment_iterate<pmr_string>(segment, [&](const auto& position) {
+    const auto segment_row = row++;
+    if (segment_row < row_begin || segment_row >= row_end) {
+      return;
+    }
+    const auto window_row = segment_row - row_begin;
+    if (position.is_null()) {
+      column.values[window_row] = {};
+      column.nulls[window_row] = 1;
+    } else {
+      column.owned[window_row] = position.value();
+      column.values[window_row] = std::string_view{column.owned[window_row]};
+      column.nulls[window_row] = 0;
+    }
+  });
+}
+
+inline void decode_string_column(const AbstractSegment& segment, KeyDecodeScratch::StringColumn& column) {
+  decode_string_column(segment, 0, segment.size(), column);
+}
+
+inline void decode_string_key_columns(const StringKeyColumns& string_columns,
+                                      const std::span<const AbstractSegment* const> group_by_segments,
+                                      const size_t row_begin, const size_t row_end, KeyDecodeScratch& scratch) {
+  const auto string_count = string_columns.size();
+  scratch.string_columns.resize(string_count);
+  for (auto index = size_t{0}; index < string_count; ++index) {
+    decode_string_column(*group_by_segments[string_columns[index].tuple_index], row_begin, row_end,
+                         scratch.string_columns[index]);
+  }
+}
+
+inline void unpack_string_columns(const StringKeyColumns& string_columns, const size_t length_field_width,
+                                  const size_t blob_offset, const size_t fixed_part_width, const std::byte* key,
+                                  OutputColumns& output) {
+  const auto pointer_value = read_spill_pointer(key, fixed_part_width);
+  const auto* cursor = pointer_value != 0 ? reinterpret_cast<const std::byte*>(pointer_value) : key + blob_offset;
+
+  for (const auto& column : string_columns) {
+    auto& output_column = static_cast<TypedOutputColumn<pmr_string>&>(output.column(column.tuple_index));
+    if (column.null_bit_index != NO_NULL_BIT && null_bit_set(key, column.null_bit_index)) {
+      output_column.append_null();
+      continue;
+    }
+    const auto length = read_length_field(key, column.length_field_offset, length_field_width);
+    output_column.append(pmr_string{reinterpret_cast<const char*>(cursor), length});
+    cursor += length;
+  }
+}
+
+inline void reintern_spilled_key(const StringKeyColumns& string_columns, const size_t length_field_width,
+                                 const size_t fixed_part_width, std::byte* key, StringSpillBuffer& spill_buffer) {
+  const auto pointer_value = read_spill_pointer(key, fixed_part_width);
+  if (pointer_value == 0) {
+    return;
+  }
+
+  auto total_length = size_t{0};
+  for (const auto& column : string_columns) {
+    total_length += read_length_field(key, column.length_field_offset, length_field_width);
+  }
+  const auto* interned = spill_buffer.append(reinterpret_cast<const std::byte*>(pointer_value), total_length);
+  const auto new_pointer = reinterpret_cast<uintptr_t>(interned);
+  std::memcpy(key + fixed_part_width, &new_pointer, sizeof(new_pointer));
+}
+
+template <typename T>
+NumericKeyLane<T>::NumericKeyLane(const ColumnID column_id, const uint32_t field_offset, const uint32_t null_bit_index)
+    : _column_id{column_id}, _field_offset{field_offset}, _null_bit_index{null_bit_index} {}
+
+template <typename T>
+void NumericKeyLane<T>::decode(const AbstractSegment& segment, const size_t row_begin, const size_t row_end,
+                               KeyDecodeScratch::NumericLane& lane) const {
+  using Encoded = decltype(encode_lane_value(T{}));
+  const auto window_rows = row_end - row_begin;
+  lane.values.resize(window_rows * sizeof(Encoded));
+  lane.nulls.resize(window_rows);
+  auto* values = lane.values.data();
+  iterate_segment_window<T>(segment, row_begin, row_end, [&](const size_t row, const T* value) {
+    auto encoded = Encoded{};
+    if (value) {
+      encoded = encode_lane_value(*value);
+      lane.nulls[row] = 0;
+    } else {
+      DebugAssert(_null_bit_index != NO_NULL_BIT, "NULL in a non-nullable group-by column.");
+      lane.nulls[row] = 1;
+    }
+    std::memcpy(values + row * sizeof(Encoded), &encoded, sizeof(encoded));
+  });
+}
+
+template <typename T>
+void NumericKeyLane<T>::unpack(const std::byte* key, const std::byte* null_bitmap, OutputColumns& output,
+                               const size_t output_column_index, const size_t /*output_row*/) const {
+  auto& output_column = static_cast<TypedOutputColumn<T>&>(output.column(output_column_index));
+  if (_null_bit_index != NO_NULL_BIT && null_bit_set(null_bitmap, _null_bit_index)) {
+    output_column.append_null();
+    return;
+  }
+  output_column.append(decode_lane_value<T>(key + _field_offset));
+}
+
 // ------------------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------------------
 /**
  * Numeric-only group-by key schema whose total packed width is the compile-time constant PackedWidth.
  *
  * Selected by resolve_key_schema when every group-by column is numeric and the packed width (null bitmap + numeric
- * prefix) is one of {4,8,12,16} bytes; one template instantiation per bucket. Because the width is known at compile
+ * prefix) is one of {4,8,12,16,20,24} bytes; one instantiation per bucket. Because the width is known at compile
  * time, hash() and equals() are fixed-size and branch-free, while pack()/unpack() loop the resolved lanes.
  *
  * Invariants: packed_width() == PackedWidth for every key; keys carry no string blob or spill pointer.
@@ -295,7 +904,7 @@ using KeyTupleIndices = boost::container::small_vector<uint32_t, EXPECTED_GROUP_
  * Ownership/lifetime/threading: one immutable instance per query, built by build() and shared read-only by all
  * workers across the scatter (pack) and merge (unpack/hash/equals) phases.
  *
- * See NumericArbitraryKeySchema (same interface for widths > 16 bytes) and the file banner for the byte layout.
+ * See NumericArbitraryKeySchema (same interface for widths > 24 bytes) and the file banner for the byte layout.
  */
 template <size_t PackedWidth>
 class NumericShortKeySchema {
@@ -321,19 +930,28 @@ class NumericShortKeySchema {
   size_t column_count() const;
 
   /**
-   * Decode one chunk's group-by columns into the worker's scratch, one pass per column.
+   * Decode rows [row_begin, row_end) of one chunk's group-by columns into the worker's scratch, one pass per column.
+   *
+   * The scratch holds the window's rows alone, so pack() addresses a row by its distance from `row_begin` rather than
+   * by its chunk offset. Decoding a window instead of a whole chunk is what lets several workers share one chunk.
    *
    * @param group_by_segments Segments for the group-by columns of the current chunk, in schema order; borrowed, read
    *   only.
-   * @param scratch Destination scratch; borrowed, resized and overwritten. Must be the calling worker's own.
+   * @param row_begin First row of the window to decode.
+   * @param row_end One past the window's last row; must not exceed the chunk's row count.
+   * @param scratch Destination scratch; borrowed, resized to the window and overwritten. Must be the calling worker's
+   *   own.
    * @pre Runs in the estimate and scatter phases, single-threaded per worker on that worker's own scratch.
    */
+  void decode(std::span<const AbstractSegment* const> group_by_segments, size_t row_begin, size_t row_end,
+              KeyDecodeScratch& scratch) const;
+  /** Decode a whole chunk's group-by columns via the windowed overload. */
   void decode(std::span<const AbstractSegment* const> group_by_segments, KeyDecodeScratch& scratch) const;
   /**
    * Pack one decoded row's group-by tuple into a key buffer.
    *
    * @param scratch Decoded columns of the current chunk, filled by decode(); borrowed, read only.
-   * @param chunk_offset Row within the decoded chunk to pack.
+   * @param chunk_offset Row to pack, counted from the first row decode() was given.
    * @param key_out Destination key buffer; borrowed, written. Must be at least PackedWidth bytes.
    * @param spill_buffer Unused for numeric-only keys; present only for a uniform call site across schema variants.
    * @pre Runs in the estimate and scatter phases, single-threaded per worker on that worker's own store.
@@ -374,10 +992,90 @@ class NumericShortKeySchema {
   NumericKeyLanes _lanes;  // One lane per numeric group-by column, in schema order.
 };
 
+template <size_t PackedWidth>
+NumericShortKeySchema<PackedWidth> NumericShortKeySchema<PackedWidth>::build(
+    const std::vector<ColumnID>& group_by_column_ids, const Table& input_table) {
+  const auto layout = compute_key_layout(group_by_column_ids, input_table, 0);
+  Assert(layout.string_count == 0, "NumericShortKeySchema requires numeric-only group-by columns.");
+  Assert(layout.fixed_part_width == PackedWidth, "Resolved packed width does not match the schema's template width.");
+
+  auto schema = NumericShortKeySchema{};
+  const auto column_count = group_by_column_ids.size();
+  for (auto index = size_t{0}; index < column_count; ++index) {
+    const auto& column = layout.columns[index];
+    schema._lanes.emplace_back(
+        make_numeric_lane(column.data_type, group_by_column_ids[index], column.field_offset, column.null_bit_index));
+  }
+  return schema;
+}
+
+template <size_t PackedWidth>
+size_t NumericShortKeySchema<PackedWidth>::packed_width() const {
+  return PackedWidth;
+}
+
+template <size_t PackedWidth>
+size_t NumericShortKeySchema<PackedWidth>::column_count() const {
+  return _lanes.size();
+}
+
+template <size_t PackedWidth>
+void NumericShortKeySchema<PackedWidth>::decode(const std::span<const AbstractSegment* const> group_by_segments,
+                                                const size_t row_begin, const size_t row_end,
+                                                KeyDecodeScratch& scratch) const {
+  decode_numeric_lanes(_lanes, group_by_segments, row_begin, row_end, scratch);
+}
+
+template <size_t PackedWidth>
+void NumericShortKeySchema<PackedWidth>::decode(const std::span<const AbstractSegment* const> group_by_segments,
+                                                KeyDecodeScratch& scratch) const {
+  decode(group_by_segments, 0, group_by_segments.front()->size(), scratch);
+}
+
+template <size_t PackedWidth>
+void NumericShortKeySchema<PackedWidth>::unpack(const std::byte* key, OutputColumns& output,
+                                                const size_t output_row) const {
+  const auto lane_count = _lanes.size();
+  for (auto index = size_t{0}; index < lane_count; ++index) {
+    _lanes[index].lane->unpack(key, key, output, index, output_row);
+  }
+}
+
+template <size_t PackedWidth>
+void NumericShortKeySchema<PackedWidth>::pack(const KeyDecodeScratch& scratch, const ChunkOffset chunk_offset,
+                                              std::byte* key_out, StringSpillBuffer& /*spill_buffer*/) const {
+  std::memset(key_out, 0, PackedWidth);
+  pack_numeric_lanes(_lanes, scratch, chunk_offset, key_out);
+}
+
+template <size_t PackedWidth>
+uint64_t NumericShortKeySchema<PackedWidth>::hash(const std::byte* key) const {
+  // One multiply-mix round per word beats byte-wise FNV-1a; the hash runs up to three times per row (estimate,
+  // scatter routing, merge probing), and its low bits pick the partition.
+  auto hash = uint64_t{0};
+  auto offset = size_t{0};
+  for (; offset + 8 <= PackedWidth; offset += 8) {
+    auto word = uint64_t{};
+    std::memcpy(&word, key + offset, 8);
+    hash = mix64(hash ^ word);
+  }
+  if constexpr (PackedWidth % 8 != 0) {
+    auto word = uint32_t{};
+    std::memcpy(&word, key + offset, 4);
+    hash = mix64(hash ^ word);
+  }
+  return hash;
+}
+
+template <size_t PackedWidth>
+bool NumericShortKeySchema<PackedWidth>::equals(const std::byte* a, const std::byte* b) const {
+  return std::memcmp(a, b, PackedWidth) == 0;
+}
+
 // ------------------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------------------
 /**
- * Numeric-only group-by key schema for widths greater than 16 bytes, where the width is a runtime value.
+ * Numeric-only group-by key schema for widths greater than 24 bytes, where the width is a runtime value.
  *
  * Same interface and semantics as NumericShortKeySchema, but because the packed width is not a compile-time constant,
  * hash() and equals() operate over packed_width() rather than a fixed WIDTH. Selected by resolve_key_schema when all
@@ -399,7 +1097,7 @@ class NumericArbitraryKeySchema {
    * @param group_by_column_ids ColumnIDs of the group-by columns, in output order; borrowed, read only.
    * @param input_table Table providing the columns' data types; borrowed, read only.
    * @return A fully built schema whose packed_width() is the resolved runtime width.
-   * @pre Every listed column is numeric and the resolved packed width exceeds 16 bytes.
+   * @pre Every listed column is numeric and the resolved packed width exceeds 24 bytes.
    */
   static NumericArbitraryKeySchema build(const std::vector<ColumnID>& group_by_column_ids, const Table& input_table);
 
@@ -409,8 +1107,11 @@ class NumericArbitraryKeySchema {
   size_t column_count() const;
 
   /**
-   * Decode one chunk's group-by columns into the worker's scratch; see NumericShortKeySchema::decode.
+   * Decode a window of one chunk's group-by columns into the worker's scratch; see NumericShortKeySchema::decode.
    */
+  void decode(std::span<const AbstractSegment* const> group_by_segments, size_t row_begin, size_t row_end,
+              KeyDecodeScratch& scratch) const;
+  /** Decode a whole chunk's group-by columns; see NumericShortKeySchema::decode. */
   void decode(std::span<const AbstractSegment* const> group_by_segments, KeyDecodeScratch& scratch) const;
   /**
    * Pack one decoded row's group-by tuple into a key buffer; see NumericShortKeySchema::pack.
@@ -449,6 +1150,63 @@ class NumericArbitraryKeySchema {
   uint32_t _packed_width{0};  // Fixed packed width in bytes for this query, computed at build().
 };
 
+inline NumericArbitraryKeySchema NumericArbitraryKeySchema::build(const std::vector<ColumnID>& group_by_column_ids,
+                                                                  const Table& input_table) {
+  const auto layout = compute_key_layout(group_by_column_ids, input_table, 0);
+  Assert(layout.string_count == 0, "NumericArbitraryKeySchema requires numeric-only group-by columns.");
+
+  auto schema = NumericArbitraryKeySchema{};
+  schema._packed_width = static_cast<uint32_t>(layout.fixed_part_width);
+  const auto column_count = group_by_column_ids.size();
+  for (auto index = size_t{0}; index < column_count; ++index) {
+    const auto& column = layout.columns[index];
+    schema._lanes.emplace_back(
+        make_numeric_lane(column.data_type, group_by_column_ids[index], column.field_offset, column.null_bit_index));
+  }
+  return schema;
+}
+
+inline size_t NumericArbitraryKeySchema::packed_width() const {
+  return _packed_width;
+}
+
+inline size_t NumericArbitraryKeySchema::column_count() const {
+  return _lanes.size();
+}
+
+inline void NumericArbitraryKeySchema::decode(const std::span<const AbstractSegment* const> group_by_segments,
+                                              const size_t row_begin, const size_t row_end,
+                                              KeyDecodeScratch& scratch) const {
+  decode_numeric_lanes(_lanes, group_by_segments, row_begin, row_end, scratch);
+}
+
+inline void NumericArbitraryKeySchema::decode(const std::span<const AbstractSegment* const> group_by_segments,
+                                              KeyDecodeScratch& scratch) const {
+  decode(group_by_segments, 0, group_by_segments.front()->size(), scratch);
+}
+
+inline void NumericArbitraryKeySchema::unpack(const std::byte* key, OutputColumns& output,
+                                              const size_t output_row) const {
+  const auto lane_count = _lanes.size();
+  for (auto index = size_t{0}; index < lane_count; ++index) {
+    _lanes[index].lane->unpack(key, key, output, index, output_row);
+  }
+}
+
+inline void NumericArbitraryKeySchema::pack(const KeyDecodeScratch& scratch, const ChunkOffset chunk_offset,
+                                            std::byte* key_out, StringSpillBuffer& /*spill_buffer*/) const {
+  std::memset(key_out, 0, _packed_width);
+  pack_numeric_lanes(_lanes, scratch, chunk_offset, key_out);
+}
+
+inline uint64_t NumericArbitraryKeySchema::hash(const std::byte* key) const {
+  return mix64(hash_bytes(key, _packed_width));
+}
+
+inline bool NumericArbitraryKeySchema::equals(const std::byte* a, const std::byte* b) const {
+  return std::memcmp(a, b, _packed_width) == 0;
+}
+
 // ------------------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------------------
 /**
@@ -474,8 +1232,9 @@ class NumericArbitraryKeySchema {
  * points into lives in per-partition StringSpillBuffers. Used in the scatter (pack) and merge (unpack/hash/equals)
  * phases.
  *
- * Only LenWidth 4 is explicitly instantiated for now (see resolve_key_schema); the merge side re-interns spilled
- * content on a key's first insertion via reintern_spill() (see MergeMap).
+ * resolve_key_schema instantiates LenWidth 4 by default and LenWidth 1 when choose_string_key_budget finds the input's
+ * dictionaries bound every string length; the merge side re-interns spilled content on a key's first insertion via
+ * reintern_spill() (see MergeMap).
  *
  * See StringOnlyKeySchema (this schema with a zero-width numeric prefix) and StringSpillBuffer.
  */
@@ -491,11 +1250,14 @@ class MixedKeySchema {
    *
    * @param group_by_column_ids ColumnIDs of the group-by columns, in output order; borrowed, read only.
    * @param input_table Table providing the columns' data types; borrowed, read only.
+   * @param string_blob_bytes Total inline string-blob capacity in bytes, or std::nullopt for the
+   *   STRING_BLOB_BYTES_PER_COLUMN default; resolve_key_schema passes the budget from choose_string_key_budget.
    * @return A fully built schema with at least one string and at least one numeric column.
    * @pre The columns include at least one string and at least one non-string column (resolve_key_schema guarantees
    *   this before instantiating the template).
    */
-  static MixedKeySchema build(const std::vector<ColumnID>& group_by_column_ids, const Table& input_table);
+  static MixedKeySchema build(const std::vector<ColumnID>& group_by_column_ids, const Table& input_table,
+                              std::optional<size_t> string_blob_bytes = std::nullopt);
 
   /** @return Upper bound of a key's footprint in bytes: fixed_part_width() plus the 8-byte spill pointer. */
   size_t packed_width() const;
@@ -508,14 +1270,17 @@ class MixedKeySchema {
   size_t column_count() const;
 
   /**
-   * Decode one chunk's group-by columns into the worker's scratch; see NumericShortKeySchema::decode.
+   * Decode a window of one chunk's group-by columns into the worker's scratch; see NumericShortKeySchema::decode.
    */
+  void decode(std::span<const AbstractSegment* const> group_by_segments, size_t row_begin, size_t row_end,
+              KeyDecodeScratch& scratch) const;
+  /** Decode a whole chunk's group-by columns; see NumericShortKeySchema::decode. */
   void decode(std::span<const AbstractSegment* const> group_by_segments, KeyDecodeScratch& scratch) const;
   /**
    * Pack one decoded row's group-by tuple into a key buffer, spilling overlong strings as needed.
    *
    * @param scratch Decoded columns of the current chunk, filled by decode(); borrowed, read only.
-   * @param chunk_offset Row within the decoded chunk to pack.
+   * @param chunk_offset Row to pack, counted from the first row decode() was given.
    * @param key_out Destination key buffer; borrowed, written. Must be at least packed_width() bytes.
    * @param spill_buffer Per-partition overflow buffer for string content that does not fit the inline blob; borrowed,
    *   may be appended to. Must be the buffer owned by the calling worker/partition.
@@ -574,6 +1339,98 @@ class MixedKeySchema {
   uint32_t _fixed_part_width{0};           // Memcmp/hash extent in bytes, computed at build().
 };
 
+template <size_t LenWidth>
+MixedKeySchema<LenWidth> MixedKeySchema<LenWidth>::build(const std::vector<ColumnID>& group_by_column_ids,
+                                                         const Table& input_table,
+                                                         const std::optional<size_t> string_blob_bytes) {
+  const auto layout = compute_key_layout(group_by_column_ids, input_table, LenWidth, string_blob_bytes);
+  Assert(layout.string_count > 0 && layout.string_count < group_by_column_ids.size(),
+         "MixedKeySchema requires at least one string and at least one non-string group-by column.");
+
+  auto schema = MixedKeySchema{};
+  schema._blob_offset = static_cast<uint32_t>(layout.blob_offset);
+  schema._fixed_part_width = static_cast<uint32_t>(layout.fixed_part_width);
+  const auto column_count = group_by_column_ids.size();
+  for (auto index = size_t{0}; index < column_count; ++index) {
+    const auto& column = layout.columns[index];
+    if (column.is_string) {
+      schema._string_columns.emplace_back(StringKeyColumn{group_by_column_ids[index], static_cast<uint32_t>(index),
+                                                          column.field_offset, column.null_bit_index});
+    } else {
+      schema._numeric_lanes.emplace_back(
+          make_numeric_lane(column.data_type, group_by_column_ids[index], column.field_offset, column.null_bit_index));
+      schema._numeric_tuple_indices.emplace_back(static_cast<uint32_t>(index));
+    }
+  }
+  return schema;
+}
+
+template <size_t LenWidth>
+void MixedKeySchema<LenWidth>::decode(const std::span<const AbstractSegment* const> group_by_segments,
+                                      const size_t row_begin, const size_t row_end, KeyDecodeScratch& scratch) const {
+  const auto lane_count = _numeric_lanes.size();
+  scratch.numeric_lanes.resize(lane_count);
+  for (auto index = size_t{0}; index < lane_count; ++index) {
+    _numeric_lanes[index].lane->decode(*group_by_segments[_numeric_tuple_indices[index]], row_begin, row_end,
+                                       scratch.numeric_lanes[index]);
+  }
+  decode_string_key_columns(_string_columns, group_by_segments, row_begin, row_end, scratch);
+}
+
+template <size_t LenWidth>
+void MixedKeySchema<LenWidth>::decode(const std::span<const AbstractSegment* const> group_by_segments,
+                                      KeyDecodeScratch& scratch) const {
+  decode(group_by_segments, 0, group_by_segments.front()->size(), scratch);
+}
+
+template <size_t LenWidth>
+void MixedKeySchema<LenWidth>::unpack(const std::byte* key, OutputColumns& output, const size_t output_row) const {
+  const auto lane_count = _numeric_lanes.size();
+  for (auto index = size_t{0}; index < lane_count; ++index) {
+    _numeric_lanes[index].lane->unpack(key, key, output, _numeric_tuple_indices[index], output_row);
+  }
+  unpack_string_columns(_string_columns, LenWidth, _blob_offset, _fixed_part_width, key, output);
+}
+
+template <size_t LenWidth>
+void MixedKeySchema<LenWidth>::reintern_spill(std::byte* key, StringSpillBuffer& spill_buffer) const {
+  reintern_spilled_key(_string_columns, LenWidth, _fixed_part_width, key, spill_buffer);
+}
+
+template <size_t LenWidth>
+size_t MixedKeySchema<LenWidth>::packed_width() const {
+  return _fixed_part_width + sizeof(uintptr_t);
+}
+
+template <size_t LenWidth>
+size_t MixedKeySchema<LenWidth>::fixed_part_width() const {
+  return _fixed_part_width;
+}
+
+template <size_t LenWidth>
+size_t MixedKeySchema<LenWidth>::column_count() const {
+  return _numeric_lanes.size() + _string_columns.size();
+}
+
+template <size_t LenWidth>
+void MixedKeySchema<LenWidth>::pack(const KeyDecodeScratch& scratch, const ChunkOffset chunk_offset, std::byte* key_out,
+                                    StringSpillBuffer& spill_buffer) const {
+  std::memset(key_out, 0, packed_width());
+  pack_numeric_lanes(_numeric_lanes, scratch, chunk_offset, key_out);
+  pack_string_columns(_string_columns, LenWidth, _blob_offset, _fixed_part_width, scratch, chunk_offset, key_out,
+                      spill_buffer);
+}
+
+template <size_t LenWidth>
+uint64_t MixedKeySchema<LenWidth>::hash(const std::byte* key) const {
+  return mix64(hash_bytes(key, _fixed_part_width));
+}
+
+template <size_t LenWidth>
+bool MixedKeySchema<LenWidth>::equals(const std::byte* a, const std::byte* b) const {
+  return equals_string_keys(_string_columns, LenWidth, _fixed_part_width, a, b);
+}
+
 // ------------------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------------------
 /**
@@ -585,7 +1442,7 @@ class MixedKeySchema {
  *
  * Invariants and ownership/lifetime/threading match MixedKeySchema (one immutable per-query instance, shared read-only
  * across the scatter and merge phases; spilled content lives in per-partition StringSpillBuffers). As with
- * MixedKeySchema, only LenWidth 4 is explicitly instantiated for now.
+ * MixedKeySchema, LenWidth 4 and LenWidth 1 are instantiated (see choose_string_key_budget).
  */
 template <size_t LenWidth>
 class StringOnlyKeySchema {
@@ -599,10 +1456,13 @@ class StringOnlyKeySchema {
    *
    * @param group_by_column_ids ColumnIDs of the group-by columns, in output order; borrowed, read only.
    * @param input_table Table providing the columns' data types; borrowed, read only.
+   * @param string_blob_bytes Total inline string-blob capacity in bytes, or std::nullopt for the
+   *   STRING_BLOB_BYTES_PER_COLUMN default; resolve_key_schema passes the budget from choose_string_key_budget.
    * @return A fully built schema in which every group-by column is a string.
    * @pre Every listed column is a string (resolve_key_schema guarantees this before instantiating the template).
    */
-  static StringOnlyKeySchema build(const std::vector<ColumnID>& group_by_column_ids, const Table& input_table);
+  static StringOnlyKeySchema build(const std::vector<ColumnID>& group_by_column_ids, const Table& input_table,
+                                   std::optional<size_t> string_blob_bytes = std::nullopt);
 
   /** @return Upper bound of a key's footprint in bytes: fixed_part_width() plus the 8-byte spill pointer. */
   size_t packed_width() const;
@@ -612,8 +1472,11 @@ class StringOnlyKeySchema {
   size_t column_count() const;
 
   /**
-   * Decode one chunk's group-by columns into the worker's scratch; see NumericShortKeySchema::decode.
+   * Decode a window of one chunk's group-by columns into the worker's scratch; see NumericShortKeySchema::decode.
    */
+  void decode(std::span<const AbstractSegment* const> group_by_segments, size_t row_begin, size_t row_end,
+              KeyDecodeScratch& scratch) const;
+  /** Decode a whole chunk's group-by columns; see NumericShortKeySchema::decode. */
   void decode(std::span<const AbstractSegment* const> group_by_segments, KeyDecodeScratch& scratch) const;
   /**
    * Pack one decoded row's group-by tuple into a key buffer, spilling overlong strings as needed; see
@@ -665,12 +1528,167 @@ class StringOnlyKeySchema {
   uint32_t _fixed_part_width{0};     // Memcmp/hash extent in bytes, computed at build().
 };
 
+template <size_t LenWidth>
+StringOnlyKeySchema<LenWidth> StringOnlyKeySchema<LenWidth>::build(const std::vector<ColumnID>& group_by_column_ids,
+                                                                   const Table& input_table,
+                                                                   const std::optional<size_t> string_blob_bytes) {
+  const auto layout = compute_key_layout(group_by_column_ids, input_table, LenWidth, string_blob_bytes);
+  Assert(layout.string_count == group_by_column_ids.size(),
+         "StringOnlyKeySchema requires string-only group-by columns.");
+
+  auto schema = StringOnlyKeySchema{};
+  schema._blob_offset = static_cast<uint32_t>(layout.blob_offset);
+  schema._fixed_part_width = static_cast<uint32_t>(layout.fixed_part_width);
+  const auto column_count = group_by_column_ids.size();
+  for (auto index = size_t{0}; index < column_count; ++index) {
+    const auto& column = layout.columns[index];
+    schema._string_columns.emplace_back(StringKeyColumn{group_by_column_ids[index], static_cast<uint32_t>(index),
+                                                        column.field_offset, column.null_bit_index});
+  }
+  return schema;
+}
+
+template <size_t LenWidth>
+void StringOnlyKeySchema<LenWidth>::decode(const std::span<const AbstractSegment* const> group_by_segments,
+                                           const size_t row_begin, const size_t row_end,
+                                           KeyDecodeScratch& scratch) const {
+  decode_string_key_columns(_string_columns, group_by_segments, row_begin, row_end, scratch);
+}
+
+template <size_t LenWidth>
+void StringOnlyKeySchema<LenWidth>::decode(const std::span<const AbstractSegment* const> group_by_segments,
+                                           KeyDecodeScratch& scratch) const {
+  decode(group_by_segments, 0, group_by_segments.front()->size(), scratch);
+}
+
+template <size_t LenWidth>
+void StringOnlyKeySchema<LenWidth>::unpack(const std::byte* key, OutputColumns& output,
+                                           const size_t /*output_row*/) const {
+  unpack_string_columns(_string_columns, LenWidth, _blob_offset, _fixed_part_width, key, output);
+}
+
+template <size_t LenWidth>
+void StringOnlyKeySchema<LenWidth>::reintern_spill(std::byte* key, StringSpillBuffer& spill_buffer) const {
+  reintern_spilled_key(_string_columns, LenWidth, _fixed_part_width, key, spill_buffer);
+}
+
+template <size_t LenWidth>
+size_t StringOnlyKeySchema<LenWidth>::packed_width() const {
+  return _fixed_part_width + sizeof(uintptr_t);
+}
+
+template <size_t LenWidth>
+size_t StringOnlyKeySchema<LenWidth>::fixed_part_width() const {
+  return _fixed_part_width;
+}
+
+template <size_t LenWidth>
+size_t StringOnlyKeySchema<LenWidth>::column_count() const {
+  return _string_columns.size();
+}
+
+template <size_t LenWidth>
+void StringOnlyKeySchema<LenWidth>::pack(const KeyDecodeScratch& scratch, const ChunkOffset chunk_offset,
+                                         std::byte* key_out, StringSpillBuffer& spill_buffer) const {
+  std::memset(key_out, 0, packed_width());
+  pack_string_columns(_string_columns, LenWidth, _blob_offset, _fixed_part_width, scratch, chunk_offset, key_out,
+                      spill_buffer);
+}
+
+template <size_t LenWidth>
+uint64_t StringOnlyKeySchema<LenWidth>::hash(const std::byte* key) const {
+  return mix64(hash_bytes(key, _fixed_part_width));
+}
+
+template <size_t LenWidth>
+bool StringOnlyKeySchema<LenWidth>::equals(const std::byte* a, const std::byte* b) const {
+  return equals_string_keys(_string_columns, LenWidth, _fixed_part_width, a, b);
+}
+
 /**
- * The schema family and short-width bucket resolve_key_schema dispatches on, computed by choose_key_schema.
+ * How a query's string key fields are sized: the per-string length-prefix field width and the total inline blob
+ * capacity, as chosen by choose_string_key_budget.
+ *
+ * The default -- a 4-byte length field per string column and STRING_BLOB_BYTES_PER_COLUMN of blob per string column --
+ * carries strings of any length by spilling the ones that do not fit inline.
+ */
+struct StringKeyBudget {
+  size_t length_field_width{4};
+  std::optional<size_t> blob_bytes{};  // Total inline blob capacity; std::nullopt selects the per-column default.
+};
+
+/**
+ * Derive the tightest string-key field sizing the input table's encodings prove correct.
+ *
+ * A string group-by column stored as a DictionarySegment<pmr_string> in every chunk has its value lengths bounded
+ * exactly by those dictionaries: no row of that column can be longer than the longest dictionary entry. When that holds
+ * for every string group-by column and every maximum fits a 1-byte length field, the key can carry 1-byte length fields
+ * and an inline blob sized to the summed maxima instead of the flat STRING_BLOB_BYTES_PER_COLUMN per column. The blob
+ * is capped at the default capacity, so one long dictionary outlier cannot widen every key; within the cap the bound
+ * covers every row and keys never spill, past it the affected rows spill exactly as on the default sizing. Any column
+ * outside that shape -- not dictionary-encoded in some chunk, dictionaries too large to settle within
+ * `dictionary_scan_limit`, or an entry too long for a 1-byte length field -- puts the whole key back on the default
+ * sizing, which handles arbitrary lengths via the spill path.
+ *
+ * @param group_by_column_ids ColumnIDs of the group-by columns, in output order; borrowed, read only. Non-string
+ *   columns are skipped.
+ * @param input_table Table whose chunks are inspected; borrowed, read only. A reference table bounds nothing, because
+ *   its chunks hold ReferenceSegments rather than dictionaries.
+ * @param dictionary_scan_limit Cap on the dictionary entries read per column before that column is given up on; see
+ *   DICTIONARY_BOUND_SCAN_LIMIT for the value resolve_key_schema uses.
+ * @return The tightened sizing, or the default one when the bound does not hold.
+ * Complexity: O(dictionary_scan_limit) entry reads per string group-by column.
+ */
+inline StringKeyBudget choose_string_key_budget(const std::vector<ColumnID>& group_by_column_ids,
+                                                const Table& input_table, const size_t dictionary_scan_limit) {
+  const auto chunk_count = input_table.chunk_count();
+  auto blob_bytes = size_t{0};
+  auto string_column_count = size_t{0};
+  for (const auto column_id : group_by_column_ids) {
+    if (input_table.column_data_type(column_id) != DataType::String) {
+      continue;
+    }
+    ++string_column_count;
+
+    auto scanned_entries = size_t{0};
+    auto max_length = size_t{0};
+    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+      const auto chunk = input_table.get_chunk(chunk_id);
+      if (!chunk) {
+        continue;
+      }
+      const auto segment = chunk->get_segment(column_id);
+      const auto* dictionary_segment = dynamic_cast<const DictionarySegment<pmr_string>*>(segment.get());
+      if (!dictionary_segment) {
+        return {};
+      }
+
+      const auto& dictionary = *dictionary_segment->dictionary();
+      scanned_entries += dictionary.size();
+      if (scanned_entries > dictionary_scan_limit) {
+        return {};
+      }
+      for (const auto& entry : dictionary) {
+        max_length = std::max(max_length, entry.size());
+      }
+    }
+
+    if (max_length > 255) {
+      return {};
+    }
+    blob_bytes += max_length;
+  }
+  return {1, std::min(blob_bytes, STRING_BLOB_BYTES_PER_COLUMN * string_column_count)};
+}
+
+/**
+ * The schema family, short-width bucket, and string field sizing resolve_key_schema dispatches on, computed by
+ * choose_key_schema.
  */
 struct KeySchemaChoice {
   KeyComposition composition{KeyComposition::NumericOnly};
-  size_t short_packed_width{0};  // One of {4,8,12,16} for NumericShortKeySchema; 0 when the width exceeds the buckets.
+  size_t short_packed_width{0};  // One of {4,8,12,16,20,24} for NumericShortKeySchema; 0 when the width exceeds them.
+  StringKeyBudget string_budget{};  // How the string fields are sized; unused for numeric-only tuples.
 };
 
 /**
@@ -679,9 +1697,28 @@ struct KeySchemaChoice {
  *
  * @param group_by_column_ids ColumnIDs of the group-by columns, in output order; borrowed, read only.
  * @param input_table Table providing the columns' data types; borrowed, read only.
- * @return The composition and, for numeric-only tuples of at most 16 bytes, the packed-width bucket.
+ * @return The composition, for numeric-only tuples of at most 24 bytes the packed-width bucket, and for
+ *   string-involving tuples the string field sizing from choose_string_key_budget.
  */
-KeySchemaChoice choose_key_schema(const std::vector<ColumnID>& group_by_column_ids, const Table& input_table);
+inline KeySchemaChoice choose_key_schema(const std::vector<ColumnID>& group_by_column_ids, const Table& input_table) {
+  auto has_string = false;
+  auto has_numeric = false;
+  for (const auto column_id : group_by_column_ids) {
+    if (input_table.column_data_type(column_id) == DataType::String) {
+      has_string = true;
+    } else {
+      has_numeric = true;
+    }
+  }
+
+  if (!has_string) {
+    const auto layout = compute_key_layout(group_by_column_ids, input_table, 0);
+    const auto width = layout.fixed_part_width;
+    return {KeyComposition::NumericOnly, width <= 24 ? width : size_t{0}};
+  }
+  return {has_numeric ? KeyComposition::Mixed : KeyComposition::StringOnly, 0,
+          choose_string_key_budget(group_by_column_ids, input_table, DICTIONARY_BOUND_SCAN_LIMIT)};
+}
 
 /**
  * Resolve the concrete key-schema type for a query's group-by columns and invoke `functor` with the built schema.
@@ -704,7 +1741,6 @@ template <typename Functor>
 void resolve_key_schema(const std::vector<ColumnID>& group_by_column_ids, const Table& input_table,
                         const Functor& functor) {
   Assert(!group_by_column_ids.empty(), "resolve_key_schema requires at least one group-by column.");
-  // For now, string length fields are always 4 bytes wide.
   const auto choice = choose_key_schema(group_by_column_ids, input_table);
   switch (choice.composition) {
     case KeyComposition::NumericOnly:
@@ -721,16 +1757,34 @@ void resolve_key_schema(const std::vector<ColumnID>& group_by_column_ids, const 
         case 16:
           functor(NumericShortKeySchema<16>::build(group_by_column_ids, input_table));
           return;
+        case 20:
+          functor(NumericShortKeySchema<20>::build(group_by_column_ids, input_table));
+          return;
+        case 24:
+          functor(NumericShortKeySchema<24>::build(group_by_column_ids, input_table));
+          return;
         default:
           functor(NumericArbitraryKeySchema::build(group_by_column_ids, input_table));
           return;
       }
     case KeyComposition::Mixed:
-      functor(MixedKeySchema<4>::build(group_by_column_ids, input_table));
-      return;
+      switch (choice.string_budget.length_field_width) {
+        case 1:
+          functor(MixedKeySchema<1>::build(group_by_column_ids, input_table, choice.string_budget.blob_bytes));
+          return;
+        default:
+          functor(MixedKeySchema<4>::build(group_by_column_ids, input_table, choice.string_budget.blob_bytes));
+          return;
+      }
     case KeyComposition::StringOnly:
-      functor(StringOnlyKeySchema<4>::build(group_by_column_ids, input_table));
-      return;
+      switch (choice.string_budget.length_field_width) {
+        case 1:
+          functor(StringOnlyKeySchema<1>::build(group_by_column_ids, input_table, choice.string_budget.blob_bytes));
+          return;
+        default:
+          functor(StringOnlyKeySchema<4>::build(group_by_column_ids, input_table, choice.string_budget.blob_bytes));
+          return;
+      }
   }
   Fail("Invalid KeyComposition.");
 }

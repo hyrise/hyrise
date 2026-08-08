@@ -9,9 +9,11 @@
 #include "base_test.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/window_function_expression.hpp"
+#include "hyrise.hpp"
 #include "operators/aggregate_dyod.hpp"
 #include "operators/aggregate_hash.hpp"
 #include "operators/table_wrapper.hpp"
+#include "scheduler/node_queue_scheduler.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/pos_lists/row_id_pos_list.hpp"
@@ -39,13 +41,13 @@ void encode(const std::shared_ptr<Table>& table, const EncodingType encoding_typ
 }
 
 // The d values are multiples of 0.5, so per-group sums are exact regardless of fold order.
-std::shared_ptr<Table> make_input_table(const size_t row_count) {
+std::shared_ptr<Table> make_input_table(const size_t row_count, const ChunkOffset chunk_size = ChunkOffset{2048}) {
   const auto definitions = TableColumnDefinitions{{"a", DataType::Int, true},
                                                   {"b", DataType::String, true},
                                                   {"c", DataType::Int, false},
                                                   {"d", DataType::Double, true},
                                                   {"e", DataType::String, false}};
-  const auto table = std::make_shared<Table>(definitions, TableType::Data, ChunkOffset{2048});
+  const auto table = std::make_shared<Table>(definitions, TableType::Data, chunk_size);
 
   for (auto row = size_t{0}; row < row_count; ++row) {
     const auto a = row % 97 == 0 ? AllTypeVariant{NullValue{}} : AllTypeVariant{static_cast<int32_t>(row % 20011)};
@@ -76,12 +78,13 @@ std::shared_ptr<TableWrapper> make_input(const size_t row_count) {
   return wrap_input(make_input_table(row_count));
 }
 
-std::shared_ptr<Table> make_low_cardinality_table(const size_t row_count) {
+std::shared_ptr<Table> make_low_cardinality_table(const size_t row_count,
+                                                  const ChunkOffset chunk_size = ChunkOffset{2048}) {
   const auto definitions = TableColumnDefinitions{{"flag", DataType::Int, false},
                                                   {"status", DataType::String, false},
                                                   {"val_i", DataType::Int, true},
                                                   {"val_d", DataType::Double, true}};
-  const auto table = std::make_shared<Table>(definitions, TableType::Data, ChunkOffset{2048});
+  const auto table = std::make_shared<Table>(definitions, TableType::Data, chunk_size);
 
   for (auto row = size_t{0}; row < row_count; ++row) {
     const auto flag = AllTypeVariant{static_cast<int32_t>(row % 4)};
@@ -90,6 +93,22 @@ std::shared_ptr<Table> make_low_cardinality_table(const size_t row_count) {
     const auto val_d =
         row % 7 == 0 ? AllTypeVariant{NullValue{}} : AllTypeVariant{static_cast<double>(row % 200) * 0.5};
     table->append({flag, status, val_i, val_d});
+  }
+
+  return table;
+}
+
+// Half the rows carry group value 0; the rest spread over ~30k values.
+std::shared_ptr<Table> make_skewed_table(const size_t row_count) {
+  const auto definitions = TableColumnDefinitions{
+      {"g", DataType::Int, false}, {"tag", DataType::String, false}, {"val", DataType::Int, false}};
+  const auto table = std::make_shared<Table>(definitions, TableType::Data, ChunkOffset{2048});
+
+  for (auto row = size_t{0}; row < row_count; ++row) {
+    const auto g = AllTypeVariant{row % 2 == 0 ? int32_t{0} : static_cast<int32_t>(1 + row % 30011)};
+    const auto tag = AllTypeVariant{pmr_string{"t" + std::to_string(row % 733)}};
+    const auto val = AllTypeVariant{static_cast<int32_t>(row % 1009)};
+    table->append({g, tag, val});
   }
 
   return table;
@@ -198,6 +217,16 @@ TEST_F(OperatorsAggregateDYODTest, CountDistinctWithoutGroupBy) {
 TEST_F(OperatorsAggregateDYODTest, MinMaxWithoutGroupBy) {
   const auto input = make_input(30'000);
   compare_with_aggregate_hash(input, {{ColumnID{1}, WindowFunction::Min}, {ColumnID{1}, WindowFunction::Max}}, {});
+}
+
+TEST_F(OperatorsAggregateDYODTest, StringAggregatesWithoutGroupByOnReferenceInput) {
+  const auto input = wrap_input(to_simple_reference_table(make_input_table(30'000)));
+  compare_with_aggregate_hash(input,
+                              {{ColumnID{1}, WindowFunction::Min},
+                               {ColumnID{1}, WindowFunction::Max},
+                               {ColumnID{1}, WindowFunction::CountDistinct},
+                               {ColumnID{4}, WindowFunction::Min}},
+                              {});
 }
 
 TEST_F(OperatorsAggregateDYODTest, DictionaryMaxMinWithoutGroupBy) {
@@ -338,6 +367,103 @@ TEST_F(OperatorsAggregateDYODTest, LowCardinalityPathSingleChunkNoCombine) {
                                {ColumnID{2}, WindowFunction::Max},
                                {INVALID_COLUMN_ID, WindowFunction::Count}},
                               {ColumnID{0}, ColumnID{1}});
+}
+
+TEST_F(OperatorsAggregateDYODTest, LowCardinalityPathStringValues) {
+  const auto input = make_input(30'000);
+  compare_with_aggregate_hash(input,
+                              {{ColumnID{1}, WindowFunction::Min},
+                               {ColumnID{1}, WindowFunction::Max},
+                               {ColumnID{1}, WindowFunction::Count},
+                               {ColumnID{4}, WindowFunction::Min},
+                               {ColumnID{3}, WindowFunction::Sum}},
+                              {ColumnID{2}});
+}
+
+TEST_F(OperatorsAggregateDYODTest, MultiThreadedLowCardinalityCombine) {
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+  const auto input = make_input(30'000);
+  compare_with_aggregate_hash(input,
+                              {{ColumnID{1}, WindowFunction::Min},
+                               {ColumnID{1}, WindowFunction::Max},
+                               {ColumnID{3}, WindowFunction::Sum},
+                               {ColumnID{3}, WindowFunction::Avg},
+                               {INVALID_COLUMN_ID, WindowFunction::Count}},
+                              {ColumnID{2}});
+}
+
+TEST_F(OperatorsAggregateDYODTest, MultiThreadedCountDistinctWithoutGroupBy) {
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+  const auto input = make_input(30'000);
+  compare_with_aggregate_hash(input,
+                              {{ColumnID{2}, WindowFunction::CountDistinct},
+                               {ColumnID{1}, WindowFunction::CountDistinct},
+                               {ColumnID{3}, WindowFunction::CountDistinct}},
+                              {});
+}
+
+TEST_F(OperatorsAggregateDYODTest, MultiThreadedManyGroups) {
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+  const auto input = make_input(120'000);
+  compare_with_aggregate_hash(input,
+                              {{ColumnID{2}, WindowFunction::Sum},
+                               {ColumnID{4}, WindowFunction::Min},
+                               {ColumnID{3}, WindowFunction::CountDistinct}},
+                              {ColumnID{0}});
+}
+
+TEST_F(OperatorsAggregateDYODTest, MultiThreadedFewChunksManyGroups) {
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+  const auto input = wrap_input(make_input_table(120'000, ChunkOffset{65'535}));
+  compare_with_aggregate_hash(input,
+                              {{ColumnID{2}, WindowFunction::Sum},
+                               {ColumnID{4}, WindowFunction::Min},
+                               {ColumnID{3}, WindowFunction::Avg},
+                               {INVALID_COLUMN_ID, WindowFunction::Count}},
+                              {ColumnID{0}});
+}
+
+TEST_F(OperatorsAggregateDYODTest, MultiThreadedSingleChunkManyGroups) {
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+  const auto input = wrap_input(make_input_table(50'000, ChunkOffset{65'535}));
+  compare_with_aggregate_hash(input,
+                              {{ColumnID{2}, WindowFunction::Sum},
+                               {ColumnID{1}, WindowFunction::Max},
+                               {ColumnID{0}, WindowFunction::Any}},
+                              {ColumnID{0}, ColumnID{1}});
+}
+
+TEST_F(OperatorsAggregateDYODTest, MultiThreadedFewChunksLowCardinality) {
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+  const auto input = wrap_input(make_low_cardinality_table(120'000, ChunkOffset{65'535}));
+  compare_with_aggregate_hash(input,
+                              {{ColumnID{3}, WindowFunction::Sum},
+                               {ColumnID{2}, WindowFunction::Min},
+                               {INVALID_COLUMN_ID, WindowFunction::Count}},
+                              {ColumnID{0}, ColumnID{1}});
+}
+
+TEST_F(OperatorsAggregateDYODTest, MultiThreadedSingleChunkLowCardinality) {
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+  const auto input = wrap_input(make_low_cardinality_table(50'000, ChunkOffset{65'535}));
+  compare_with_aggregate_hash(
+      input, {{ColumnID{3}, WindowFunction::Avg}, {ColumnID{2}, WindowFunction::Max}}, {ColumnID{1}});
+}
+
+TEST_F(OperatorsAggregateDYODTest, MultiThreadedSkewedGroupBy) {
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+  const auto input = wrap_input(make_skewed_table(150'000));
+  compare_with_aggregate_hash(
+      input,
+      {{ColumnID{2}, WindowFunction::Sum}, {ColumnID{1}, WindowFunction::Min}, {ColumnID{0}, WindowFunction::Any}},
+      {ColumnID{0}});
+}
+
+TEST_F(OperatorsAggregateDYODTest, MultiThreadedSkewedCountDistinct) {
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+  const auto input = wrap_input(make_skewed_table(150'000));
+  compare_with_aggregate_hash(input, {{ColumnID{2}, WindowFunction::Sum}, {ColumnID{2}, WindowFunction::CountDistinct}},
+                              {ColumnID{0}});
 }
 
 }  // namespace hyrise

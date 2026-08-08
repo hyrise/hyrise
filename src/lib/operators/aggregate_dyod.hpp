@@ -34,7 +34,7 @@ class AbstractAggregator;
  *      alone does not make the non-temporal stores visible.
  *   3. MERGE: Workers claim partitions; for each, they stream every worker's scattered rows for that partition
  *      through a dense open-addressing MergeMap (resolve key -> dense slot, fold value into slot), tiled at
- *      MERGE_TILE_ROWS so the row->slot scratch stays L1-resident, then flush finalized groups into the worker's own
+ *      merge_tile_rows() so the row->slot scratch stays L1-resident, then flush finalized groups into the worker's own
  *      thread-local OutputColumns. The output table is the concatenation of all workers' chunks.
  *
  * The scatter+merge pipeline is monomorphized once per query over the key schema chosen by resolve_key_schema(), so
@@ -73,7 +73,7 @@ class AggregateDYOD : public AbstractAggregateOperator {
 
  private:
   /**
-   * Builds the AggregateSchema and output column definitions and validates the requested aggregates.
+   * Builds the AggregateSchema and validates the requested aggregates.
    */
   AggregateSchema _prepare(const Table& input_table);
 
@@ -89,7 +89,7 @@ class AggregateDYOD : public AbstractAggregateOperator {
                                     const Table& input_table);
 
   /**
-   * When the cardinality estimate is below `LOW_CARDINALITY_THRESHOLD` this execution path is taken. Partitioning via
+   * When the cardinality estimate is below low_cardinality_threshold() this execution path is taken. Partitioning via
    * Scatter is skipped and each worker repeatedly takes chunks, folds them into a thread-local MergeMap and in the end
    * all MergeMaps of the workers are combined into a single MergeMap which is then used for output generation.
    */
