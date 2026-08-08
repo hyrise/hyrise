@@ -239,7 +239,7 @@ class AggregateDYOD : public AbstractAggregateOperator {
 
   // Initial size of the group ID map and vectors
   // TODO(anyone): Replace with proper estimate of group cardinality based on input table.
-  static constexpr GroupID GROUP_ID_INITIAL_SIZE = 1'000'000;
+  static constexpr GroupID GROUP_ID_INITIAL_SIZE = 100'000;
 
   std::vector<DataType> _aggregate_data_types;
   GroupIDMap _group_id_map;
