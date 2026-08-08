@@ -208,9 +208,12 @@ class AggregateDYOD : public AbstractAggregateOperator {
   // https://github.com/danielxue/global-hash-tables-strike-back/blob/main/common/src/fuzzy_counter.rs#L56
   static constexpr GroupID FUZZY_STEP_SIZE = 256;
 
+  // Initial size of the group ID map
+  // TODO(anyone): Replace with proper estimate of group cardinality based on input table.
+  static constexpr GroupID GROUP_ID_MAP_INIT_SIZE = 1'000'000;
+
   std::vector<DataType> _aggregate_data_types;
-  GroupIDMap _group_id_map;
-  std::mutex _group_id_map_mutex;
+  GroupIDMap _group_id_map = GroupIDMap(GROUP_ID_MAP_INIT_SIZE);
   std::atomic<GroupID> _next_group_id;
   tbb::concurrent_vector<GroupKey> _group_keys;
   tbb::concurrent_vector<bool> _occupied_group_ids;
