@@ -20,11 +20,9 @@
 #include "operators/abstract_aggregate_operator.hpp"
 #include "operators/abstract_operator.hpp"
 #include "operators/aggregate/window_function_traits.hpp"
-#include "operators/aggregate_hash.hpp"
 #include "operators/operator_state.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_scheduler.hpp"
-#include "scheduler/immediate_execution_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/chunk.hpp"
 #include "storage/table.hpp"
@@ -48,7 +46,6 @@ constexpr auto FINALIZE_ROWS_BATCH_SIZE = size_t{1} << 16;
 struct NoGroupByWorkerState : public Noncopyable {
   void merge(NoGroupByWorkerState& other) {
     if (other.aggregate_states.empty()) {
-      // This worker was handed a state, but never processed a chunk.
       return;
     }
     if (aggregate_states.empty()) {
@@ -144,9 +141,7 @@ TableColumnDefinitions _build_output_column_definitions(
 // ---------------------------------------------- No-group-by path -----------------------------------------------
 
 // Aggregates every chunk of the input into per-worker states: one job per chunk, with the jobs pulling chunks from a
-// shared counter. Every worker accumulates into its own state, so the jobs never share an accumulator. For an empty
-// input, the main thread's state is initialized instead; its empty aggregation states yield the results for zero rows
-// (NULL, or 0 for the counting aggregates).
+// shared counter/cursor. Every worker accumulates into its own state, so the jobs never share an accumulator.
 void _accumulate_no_groupby_states(const std::shared_ptr<const Table>& input_table,
                                    const std::vector<AggregateInfo>& aggregate_infos,
                                    OperatorSharedState<NoGroupByWorkerState>& operator_state) {
@@ -159,7 +154,7 @@ void _accumulate_no_groupby_states(const std::shared_ptr<const Table>& input_tab
       return worker_state;
     }
 
-    worker_state.aggregate_info = aggregate_infos;  // every worker needs the same info to merge its states
+    worker_state.aggregate_info = aggregate_infos;  // Every worker needs the same info to merge its states
     worker_state.aggregate_states.resize(aggregate_count);
     for (auto aggregate_id = size_t{0}; aggregate_id < aggregate_count; ++aggregate_id) {
       const auto& info = aggregate_infos[aggregate_id];
@@ -185,7 +180,7 @@ void _accumulate_no_groupby_states(const std::shared_ptr<const Table>& input_tab
 
   for (auto job_id = size_t{0}; job_id < chunk_count; ++job_id) {
     jobs.emplace_back(std::make_shared<JobTask>([&, chunk_count]() {
-      // A job runs to completion on the worker that picked it up, so the states obtained here are ours alone for as
+      // A job runs to completion on the worker that picked it up, so the states obtained here are ours for as
       // long as we process chunks.
       auto& aggregate_states = initialized_worker_state().aggregate_states;
 
@@ -249,8 +244,8 @@ std::shared_ptr<const Table> AggregateDYOD::no_groupby_aggregate() {
   const auto input_table = left_input_table();
   const auto aggregate_infos = _build_aggregate_infos(_aggregates, input_table);
 
-  // Every worker aggregates the chunks it processes into its own state; the states are combined into the single result
-  // row once all chunks have been processed (at most one state per worker, regardless of the number of chunks).
+  // Every worker aggregates the chunks it processes into its own state. Then, the states are combined into the single
+  // result row once all chunks have been processed (at most one state per worker, regardless of the number of chunks).
   auto operator_state = OperatorSharedState<NoGroupByWorkerState>{};
   _accumulate_no_groupby_states(input_table, aggregate_infos, operator_state);
   const auto& aggregate_states = operator_state.merge_worker_states().aggregate_states;
@@ -295,8 +290,8 @@ std::vector<std::shared_ptr<void>> _allocate_intermediate_results(const std::vec
   return intermediate_results;
 }
 
-// The returned vectors' chunks are only allocated once the emitted `allocation_jobs` have run; the caller schedules
-// them so that they overlap with the accumulate phase.
+// The returned vectors' chunks are only allocated once the emitted `allocation_jobs` have run. This allows the caller
+// to schedule them so that they overlap with the accumulate phase.
 std::pair<std::vector<std::shared_ptr<BaseChunkedVector>>, std::vector<std::shared_ptr<ChunkedVector<bool>>>>
 _allocate_final_results(const TableColumnDefinitions& column_definitions, const size_t group_count,
                         std::vector<std::shared_ptr<AbstractTask>>& allocation_jobs) {
@@ -347,11 +342,11 @@ void spill_local_hash_table_to_global_aggregate_result(
     boost::unordered::erase_if(local_hash_table, [&](auto& entry) {
       auto& [ticket, state] = entry;
       if (intermediate_result_atomics[ticket].test_and_set()) {
-        return false;  // we do not spill and skip this entry.
+        return false;  // We do not spill and skip this entry.
       }
       global_aggregate_result->operator[](ticket).merge(state);
       intermediate_result_atomics[ticket].clear();
-      return true;  // sucessfully spilled - erase the entry.
+      return true;  // Sucessfully spilled -> erase the entry.
     });
   }
 }
@@ -416,7 +411,7 @@ void _accumulate_job(const uint64_t* const tickets, uint32_t row_index,
 }
 
 // Accumulates all chunks of all aggregates into the shared per-group intermediate results. Each of the `thread_count`
-// jobs round-robins over the aggregates and pulls chunks from a per-aggregate counter, accumulating into a bounded
+// jobs round-robins over the aggregates and pulls chunks from a per-aggregate counter, accumulating into a fixed-size
 // thread-local hash table that is spilled into the shared states (guarded by one atomic flag per group).
 void _delegate_accumulate(const std::shared_ptr<const Table>& input_table,
                           const std::vector<AggregateInfo>& aggregate_infos, const uint64_t* const tickets,
@@ -430,14 +425,13 @@ void _delegate_accumulate(const std::shared_ptr<const Table>& input_table,
     return;
   }
 
-  auto chunk_id_per_aggregate = std::vector<std::atomic<size_t>>(aggregate_count);  // ChunkID
+  auto chunk_id_per_aggregate = std::vector<std::atomic<size_t>>(aggregate_count);
   // One flag per (aggregate, group): guards the merge of a local hash table entry into the global state.
   auto intermediate_result_atomics = std::vector<std::vector<std::atomic_flag>>(aggregate_count);
   for (auto& per_aggregate_atomics : intermediate_result_atomics) {
     per_aggregate_atomics = std::vector<std::atomic_flag>(group_count);
   }
 
-  // We have one job as a worker. This creates virtual sub-jobs per aggregate and per chunk.
   const auto job_main = [&](const uint32_t job_id) {
     const auto chunk_count = input_table->chunk_count();
     const auto initial_aggregate_id = job_id % aggregate_count;
@@ -587,8 +581,7 @@ void _build_groupby_output_columns(const std::shared_ptr<const Table>& input_tab
     }
   }
 
-  // `seen` claims a group for one job of the scan path; the hash-table path visits every group exactly once and needs
-  // no claim.
+  // For the non-hash-table path, `seen` allows us to skip tickets that were already written out.
   auto groupby_nulls = std::vector<std::vector<uint8_t>>(groupby_column_count);
   auto groupby_seen = std::vector<std::vector<std::atomic_flag>>(groupby_column_count);
   for (auto groupby_index = uint32_t{0}; groupby_index < groupby_column_count; ++groupby_index) {
@@ -600,7 +593,7 @@ void _build_groupby_output_columns(const std::shared_ptr<const Table>& input_tab
 
   // Builds one part of one group-by column: a single chunk of the source column for the scan path, a range of
   // hash-table slots for the hash-table path. The parts of a column write disjoint output slots, and the columns
-  // write disjoint `final_results` slots, so all of them run as one flat set of jobs.
+  // write disjoint `final_results` slots.
   const auto build_groupby_part = [&](const uint32_t groupby_index, const size_t first_part_index,
                                       const size_t end_part_index) {
     const auto groupby_column_id = groupby_column_ids[groupby_index];
@@ -766,9 +759,7 @@ std::shared_ptr<const Table> AggregateDYOD::groupby_aggregate() {
   const auto input_table = left_input_table();
   const auto aggregate_count = _aggregates.size();
   const auto groupby_column_count = _groupby_column_ids.size();
-
-  // TODO(@forUnity): decide this elsewhere and make sure this is correct
-  const auto thread_count = std::max(size_t{1}, Hyrise::get().topology.num_cpus() - 1);
+  const auto thread_count = Hyrise::get().topology.num_cpus();
 
   auto groups = _compute_groups(_groupby_column_ids, input_table);
   const auto group_count = groups->group_count;
@@ -776,7 +767,7 @@ std::shared_ptr<const Table> AggregateDYOD::groupby_aggregate() {
 
   const auto aggregate_infos = _build_aggregate_infos(_aggregates, input_table);
 
-  // The output schema is [group-by columns..., aggregate columns...]. Here we only define the columns; the group-by
+  // The output schema is [group-by columns..., aggregate columns...]. Here we only define the columns. the group-by
   // output segments and the aggregate segments are each filled by their own jobs.
   const auto column_definitions =
       _build_output_column_definitions(*input_table, _groupby_column_ids, _aggregates, aggregate_infos);
@@ -793,6 +784,7 @@ std::shared_ptr<const Table> AggregateDYOD::groupby_aggregate() {
 
   // The final result columns are first read after the accumulate phase (by `_build_groupby_output_columns` and
   // `_finalize_grouped_aggregates`), so their allocation jobs run concurrently with it and stay off the critical path.
+  // We do this because the final results use `pmr_vector` which does not rely on trivial default construction.
   auto final_result_allocation_jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   const auto [final_results, final_result_nulls] =
       _allocate_final_results(column_definitions, group_count, final_result_allocation_jobs);
@@ -822,11 +814,6 @@ std::shared_ptr<const Table> AggregateDYOD::groupby_aggregate() {
   _emit_aggregate_columns(aggregate_infos, column_definitions, groupby_column_count, final_results, final_result_nulls,
                           output_chunks);
 
-  auto cleanup_job = std::make_shared<JobTask>([groups = std::move(groups)]() mutable {
-    groups.reset();
-  });
-  cleanup_job->schedule();
-
   auto result_table = std::make_shared<Table>(column_definitions, TableType::Data);
   for (auto& chunk_segments : output_chunks) {
     result_table->append_chunk(std::move(chunk_segments));
@@ -854,15 +841,6 @@ std::shared_ptr<AbstractOperator> AggregateDYOD::_on_deep_copy(
 }
 
 std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
-  // Fallback to the standard aggregate operator if the code is running concurrently.
-  const auto is_immediate_scheduler =
-      std::dynamic_pointer_cast<ImmediateExecutionScheduler>(Hyrise::get().scheduler()) != nullptr;
-  if (is_immediate_scheduler && !_groupby_column_ids.empty()) {
-    const auto fallback_operator =
-        std::make_shared<AggregateHash>(mutable_left_input(), _aggregates, _groupby_column_ids);
-    fallback_operator->execute();
-    return fallback_operator->get_output();
-  }
   _validate_aggregates();
 
   if (_groupby_column_ids.empty()) {
