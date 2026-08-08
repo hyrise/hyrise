@@ -827,7 +827,7 @@ template <typename CheckForSingleKey, typename AggregateKey>
 KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::shared_ptr<const Table>& input_table,
                                                                      std::atomic_size_t& expected_result_size,
                                                                      bool& use_immediate_key_shortcut,
-                                                                     [[maybe_unused]] bool& guarantee_single_key) {
+                                                                     bool& guarantee_single_key) {
   auto keys_per_chunk = KeysPerChunk<AggregateKey>{};
   const auto chunk_count = input_table->chunk_count();
 
@@ -880,8 +880,8 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
   const auto groupby_column_count = _groupby_column_ids.size();
   for (auto group_column_index = size_t{0}; group_column_index < groupby_column_count; ++group_column_index) {
     jobs.emplace_back(std::make_shared<JobTask>([&input_table, group_column_index, &keys_per_chunk, &chunk_count,
-                                                 &expected_result_size, &use_immediate_key_shortcut, this,
-                                                 [[maybe_unused]] & guarantee_single_key]() {
+                                                 &expected_result_size, [[maybe_unused]] & use_immediate_key_shortcut,
+                                                 &guarantee_single_key, this]() {
       const auto groupby_column_id = _groupby_column_ids.at(group_column_index);
       const auto data_type = input_table->column_data_type(groupby_column_id);
       auto contains_nulls = false;
@@ -1000,10 +1000,12 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
             The ID 0 is reserved for NULL values. The combined IDs build an AggregateKey for each row.
             */
 
-          // This time, we have no idea how much space we need, so we take some memory and then rely on the automatic
-          // resizing. The size is quite random, but since single memory allocations do not cost too much, we rather
-          // allocate a bit too much.
-          auto temp_buffer = std::pmr::monotonic_buffer_resource(1'000'000);
+          (void)
+
+              // This time, we have no idea how much space we need, so we take some memory and then rely on the automatic
+              // resizing. The size is quite random, but since single memory allocations do not cost too much, we rather
+              // allocate a bit too much.
+              auto temp_buffer = std::pmr::monotonic_buffer_resource(1'000'000);
           auto allocator = PolymorphicAllocator<std::pair<const ColumnDataType, DYODAggregateKeyEntry>>{&temp_buffer};
 
           auto id_map = boost::unordered_flat_map<ColumnDataType, DYODAggregateKeyEntry, std::hash<ColumnDataType>,
