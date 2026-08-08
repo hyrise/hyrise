@@ -35,11 +35,23 @@ template <typename AggregateKey>
 struct GroupByContext;
 
 /*
-Operator to aggregate columns by certain functions, such as min, max, sum, average, count and stddev_samp. The output is a table
- with value segments. As with most operators we do not guarantee a stable operation with regards to positions -
- i.e. your sorting order.
+Variant of the AggregateHash operator that uses parallel execution to speed up the aggregation.
 
-For implementation details, please check the wiki: https://github.com/hyrise/hyrise/wiki/Operators_Aggregate
+For more information on the base AggregateHash operator, take a look at aggregate_hash.hpp and check the wiki under
+https://github.com/hyrise/hyrise/wiki/Operators_Aggregate.
+
+## Approach to multithreading
+
+AggregateDYOD uses two different kind of splits to parallelize the aggregation-phase.
+
+The first split does radix partitioning over the hashes of the groupby keys, multiple groupby keys get combined into one
+hash value using hash_combine. The constant RADIX_MASK defines the bitmask that is used to determine the bucket for each
+groupby key. For each bucket, we run the complete aggregation pipeline in their own job, similar to the one found in the
+AggregateHash operator, including table creation. Note that this split creates buckets without overlapping keys. As a
+result, we are able to use the resulting table as-is, meaing we can append the results of each bucket to the final output
+table.
+
+Second split: TODO(anyone) do we not do the second split of large buckets right now?
 */
 
 /*
