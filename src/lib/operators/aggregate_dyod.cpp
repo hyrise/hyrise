@@ -209,7 +209,18 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
 
   _validate_aggregates();
 
-  _group_id_map.reserve(GROUP_ID_MAP_INIT_SIZE);
+  {
+    TRACE_EVENT("aggregate_operator", "_group_id_map.reserve");
+    _group_id_map.reserve(GROUP_ID_INITIAL_SIZE);
+  }
+  {
+    TRACE_EVENT("aggregate_operator", "_group_keys.reserve");
+    _group_keys.reserve(GROUP_ID_INITIAL_SIZE);
+  }
+  {
+    TRACE_EVENT("aggregate_operator", "_occupied_group_ids.reserve");
+    _occupied_group_ids.reserve(GROUP_ID_INITIAL_SIZE);
+  }
 
   // Aggregate chunk by chunk
   const auto chunk_count = input_table->chunk_count();
