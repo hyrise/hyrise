@@ -21,6 +21,8 @@
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/validate.hpp"
+#include "scheduler/immediate_execution_scheduler.hpp"
+#include "scheduler/node_queue_scheduler.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/mvcc_data.hpp"
 #include "storage/table.hpp"
@@ -41,11 +43,18 @@ TEST_F(OperatorsAggregateHashTest, EmptyHash) {
   EXPECT_EQ(std::hash<AggregateKeySmallVector>()(AggregateKeySmallVector{}), 0);
 }
 
+template <typename Operator, bool IsMultithreaded>
+struct AggregateTestConfiguration {
+  using OperatorType = Operator;
+  static constexpr bool is_multithreaded = IsMultithreaded;
+};
+
 template <typename T>
 void test_output(const std::shared_ptr<AbstractOperator> in,
                  const std::vector<std::pair<ColumnID, WindowFunction>>& aggregate_definitions,
                  const std::vector<ColumnID>& groupby_column_ids, const std::string& file_name,
                  const bool test_aggregate_on_reference_table = true) {
+  using Operator = T::OperatorType;
   in->never_clear_output();
 
   // Load expected results from file.
@@ -66,7 +75,7 @@ void test_output(const std::shared_ptr<AbstractOperator> in,
 
   {
     // Test the Aggregate on stored table data.
-    auto aggregate = std::make_shared<T>(in, aggregates, groupby_column_ids);
+    auto aggregate = std::make_shared<Operator>(in, aggregates, groupby_column_ids);
     aggregate->execute();
     EXPECT_TABLE_EQ_UNORDERED(aggregate->get_output(), expected_result);
   }
@@ -77,7 +86,7 @@ void test_output(const std::shared_ptr<AbstractOperator> in,
     table_scan->execute();
 
     // Perform the Aggregate on a reference table
-    const auto aggregate = std::make_shared<T>(table_scan, aggregates, groupby_column_ids);
+    const auto aggregate = std::make_shared<Operator>(table_scan, aggregates, groupby_column_ids);
     aggregate->execute();
     EXPECT_TABLE_EQ_UNORDERED(aggregate->get_output(), expected_result);
   }
@@ -195,7 +204,13 @@ class OperatorsAggregateTest : public BaseTest {
   }
 
  protected:
-  void SetUp() override {}
+  void SetUp() override {
+    if constexpr (T::is_multithreaded) {
+      Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+    } else {
+      Hyrise::get().set_scheduler(std::make_shared<ImmediateExecutionScheduler>());
+    }
+  }
 
   inline static std::shared_ptr<TableWrapper> _table_wrapper_1_0, _table_wrapper_1_0_null, _table_wrapper_1_1,
       _table_wrapper_1_1_null, _table_wrapper_1_1_large, _table_wrapper_join_1, _table_wrapper_join_2,
@@ -205,21 +220,25 @@ class OperatorsAggregateTest : public BaseTest {
       _table_wrapper_int_int;
 };
 
-using AggregateTypes = ::testing::Types<AggregateDYOD, AggregateHash, AggregateSort>;
+using AggregateTypes =
+    ::testing::Types<AggregateTestConfiguration<AggregateDYOD, false>, AggregateTestConfiguration<AggregateHash, false>,
+                     AggregateTestConfiguration<AggregateSort, false>, AggregateTestConfiguration<AggregateDYOD, true>>;
+
 TYPED_TEST_SUITE(OperatorsAggregateTest, AggregateTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(OperatorsAggregateTest, OperatorName) {
+  using Operator = typename TypeParam::OperatorType;
   const auto table = this->_table_wrapper_1_1->get_output();
   const auto aggregate_expressions = std::vector<std::shared_ptr<WindowFunctionExpression>>{
       max_(pqp_column_(ColumnID{1}, table->column_data_type(ColumnID{1}), table->column_name(ColumnID{1})))};
   auto aggregate =
-      std::make_shared<TypeParam>(this->_table_wrapper_1_1, aggregate_expressions, std::vector<ColumnID>{ColumnID{0}});
+      std::make_shared<Operator>(this->_table_wrapper_1_1, aggregate_expressions, std::vector<ColumnID>{ColumnID{0}});
 
-  if constexpr (std::is_same_v<TypeParam, AggregateHash>) {
+  if constexpr (std::is_same_v<Operator, AggregateHash>) {
     EXPECT_EQ(aggregate->name(), "AggregateHash");
-  } else if constexpr (std::is_same_v<TypeParam, AggregateSort>) {
+  } else if constexpr (std::is_same_v<Operator, AggregateSort>) {
     EXPECT_EQ(aggregate->name(), "AggregateSort");
-  } else if constexpr (std::is_same_v<TypeParam, AggregateDYOD>) {
+  } else if constexpr (std::is_same_v<Operator, AggregateDYOD>) {
     EXPECT_EQ(aggregate->name(), "AggregateDYOD");
   } else {
     Fail("Unknown aggregate type");
@@ -227,39 +246,43 @@ TYPED_TEST(OperatorsAggregateTest, OperatorName) {
 }
 
 TYPED_TEST(OperatorsAggregateTest, OperatorDescription) {
+  using Operator = typename TypeParam::OperatorType;
   const auto table = this->_table_wrapper_1_1->get_output();
   const auto aggregate_expressions = std::vector<std::shared_ptr<WindowFunctionExpression>>{
       max_(pqp_column_(ColumnID{1}, table->column_data_type(ColumnID{1}), table->column_name(ColumnID{1})))};
   const auto aggregate =
-      std::make_shared<TypeParam>(this->_table_wrapper_1_1, aggregate_expressions, std::vector<ColumnID>{ColumnID{0}});
+      std::make_shared<Operator>(this->_table_wrapper_1_1, aggregate_expressions, std::vector<ColumnID>{ColumnID{0}});
   EXPECT_EQ(aggregate->description(DescriptionMode::SingleLine), aggregate->name() + " GroupBy {Column #0} MAX(b)");
   EXPECT_EQ(aggregate->description(DescriptionMode::MultiLine), aggregate->name() + "\nGroupBy {Column #0}\nMAX(b)");
 }
 
 TYPED_TEST(OperatorsAggregateTest, CannotSumStringColumns) {
+  using Operator = typename TypeParam::OperatorType;
   const auto table = this->_table_wrapper_1_1_string->get_output();
   const auto aggregate_expressions = std::vector<std::shared_ptr<WindowFunctionExpression>>{
       sum_(pqp_column_(ColumnID{0}, table->column_data_type(ColumnID{0}), table->column_name(ColumnID{0})))};
-  auto aggregate = std::make_shared<TypeParam>(this->_table_wrapper_1_1_string, aggregate_expressions,
-                                               std::vector<ColumnID>{ColumnID{0}});
+  auto aggregate = std::make_shared<Operator>(this->_table_wrapper_1_1_string, aggregate_expressions,
+                                              std::vector<ColumnID>{ColumnID{0}});
   EXPECT_THROW(aggregate->execute(), std::logic_error);
 }
 
 TYPED_TEST(OperatorsAggregateTest, CannotAvgStringColumns) {
+  using Operator = typename TypeParam::OperatorType;
   const auto table = this->_table_wrapper_1_1_string->get_output();
   const auto aggregate_expressions = std::vector<std::shared_ptr<WindowFunctionExpression>>{
       avg_(pqp_column_(ColumnID{0}, table->column_data_type(ColumnID{0}), table->column_name(ColumnID{0})))};
-  auto aggregate = std::make_shared<TypeParam>(this->_table_wrapper_1_1_string, aggregate_expressions,
-                                               std::vector<ColumnID>{ColumnID{0}});
+  auto aggregate = std::make_shared<Operator>(this->_table_wrapper_1_1_string, aggregate_expressions,
+                                              std::vector<ColumnID>{ColumnID{0}});
   EXPECT_THROW(aggregate->execute(), std::logic_error);
 }
 
 TYPED_TEST(OperatorsAggregateTest, CannotStandardDeviationSampleStringColumns) {
+  using Operator = typename TypeParam::OperatorType;
   const auto table = this->_table_wrapper_1_1_string->get_output();
   const auto aggregate_expressions = std::vector<std::shared_ptr<WindowFunctionExpression>>{standard_deviation_sample_(
       pqp_column_(ColumnID{0}, table->column_data_type(ColumnID{0}), table->column_name(ColumnID{0})))};
-  auto aggregate = std::make_shared<TypeParam>(this->_table_wrapper_1_1_string, aggregate_expressions,
-                                               std::vector<ColumnID>{ColumnID{0}});
+  auto aggregate = std::make_shared<Operator>(this->_table_wrapper_1_1_string, aggregate_expressions,
+                                              std::vector<ColumnID>{ColumnID{0}});
   EXPECT_THROW(aggregate->execute(), std::logic_error);
 }
 
@@ -275,8 +298,9 @@ TYPED_TEST(OperatorsAggregateTest, AnyOnGroupWithMultipleEntries) {
   const auto aggregate_expressions = std::vector<std::shared_ptr<WindowFunctionExpression>>{
       any_(pqp_column_(ColumnID{2}, table->column_data_type(ColumnID{2}), table->column_name(ColumnID{2})))};
 
+  using Operator = typename TypeParam::OperatorType;
   auto aggregate =
-      std::make_shared<TypeParam>(filtered, aggregate_expressions, std::vector<ColumnID>{ColumnID{0}, ColumnID{1}});
+      std::make_shared<Operator>(filtered, aggregate_expressions, std::vector<ColumnID>{ColumnID{0}, ColumnID{1}});
   aggregate->execute();
 
   // Column 2 stores the value 20 twice for the remaining group.
@@ -624,9 +648,10 @@ TYPED_TEST(OperatorsAggregateTest, TwoGroupbyAndNoAggregate) {
 }
 
 TYPED_TEST(OperatorsAggregateTest, NoGroupbyAndNoAggregate) {
+  using Operator = TypeParam::OperatorType;
   EXPECT_THROW(
-      std::make_shared<TypeParam>(this->_table_wrapper_1_1_string,
-                                  std::vector<std::shared_ptr<WindowFunctionExpression>>{}, std::vector<ColumnID>{}),
+      std::make_shared<Operator>(this->_table_wrapper_1_1_string,
+                                 std::vector<std::shared_ptr<WindowFunctionExpression>>{}, std::vector<ColumnID>{}),
       std::logic_error);
 }
 
@@ -905,8 +930,9 @@ TYPED_TEST(OperatorsAggregateTest, StringVariations) {
 
   // No aggregate expressions, i.e., aggregate acts as DISTINCT
   const auto aggregate_expressions = std::vector<std::shared_ptr<WindowFunctionExpression>>{};
+  using Operator = TypeParam::OperatorType;
   const auto aggregate =
-      std::make_shared<TypeParam>(table_wrapper, aggregate_expressions, std::vector<ColumnID>{ColumnID{0}});
+      std::make_shared<Operator>(table_wrapper, aggregate_expressions, std::vector<ColumnID>{ColumnID{0}});
   aggregate->execute();
 
   const auto& result = aggregate->get_output();
@@ -922,6 +948,7 @@ TYPED_TEST(OperatorsAggregateTest, StringVariations) {
 }
 
 TYPED_TEST(OperatorsAggregateTest, FilteredDictionary) {
+  using Operator = TypeParam::OperatorType;
   const auto table =
       std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}, {"b", DataType::Int, false}},
                               TableType::Data, Chunk::DEFAULT_SIZE, UseMvcc::Yes);
@@ -961,7 +988,7 @@ TYPED_TEST(OperatorsAggregateTest, FilteredDictionary) {
         TableColumnDefinitions{{"MIN(b)", DataType::Int, true}, {"MAX(b)", DataType::Int, true}}, TableType::Data);
     expected_result->append({int32_t{1}, int32_t{1}});
 
-    const auto aggregate = std::make_shared<TypeParam>(validate, aggregate_expressions, std::vector<ColumnID>{});
+    const auto aggregate = std::make_shared<Operator>(validate, aggregate_expressions, std::vector<ColumnID>{});
     aggregate->execute();
     EXPECT_TABLE_EQ_UNORDERED(aggregate->get_output(), expected_result);
   }
@@ -976,7 +1003,7 @@ TYPED_TEST(OperatorsAggregateTest, FilteredDictionary) {
     expected_result->append({int32_t{1}, int32_t{1}, int32_t{1}});
 
     const auto aggregate =
-        std::make_shared<TypeParam>(validate, aggregate_expressions, std::vector<ColumnID>{ColumnID{0}});
+        std::make_shared<Operator>(validate, aggregate_expressions, std::vector<ColumnID>{ColumnID{0}});
     aggregate->execute();
     EXPECT_TABLE_EQ_UNORDERED(aggregate->get_output(), expected_result);
   }
