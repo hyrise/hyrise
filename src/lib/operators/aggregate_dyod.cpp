@@ -1435,8 +1435,8 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std
 
   // If we have only one group in the table, further split the table into subsets of chunks, then call _aggregate
   // separately.
-  auto mini_jobs = std::vector<std::shared_ptr<AbstractTask>>{};
-  mini_jobs.reserve(bucket_job_count);
+  auto aggregate_jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+  aggregate_jobs.reserve(bucket_job_count);
 
   const auto aggregates_count = _aggregates.size();
   for (auto job_id = ChunkID{0}; job_id < bucket_job_count; ++job_id) {
@@ -1453,36 +1453,49 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std
     if (bucket_job_count == 1) {
       aggregate_bucket();
     } else {
-      mini_jobs.emplace_back(std::make_shared<JobTask>(aggregate_bucket));
+      aggregate_jobs.emplace_back(std::make_shared<JobTask>(aggregate_bucket));
     }
   }
-  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(mini_jobs);
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(aggregate_jobs);
   if (input_table->empty()) {
     return;
   }
 
   // TODO(anyone): parallelize merging ?
   // TODO(anyone): make more pretty.
+
+  auto merge_jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+  merge_jobs.reserve(aggregates_count);
+
   for (auto aggregate_index = ColumnID{0}; aggregate_index < aggregates_count; ++aggregate_index) {
-    const auto& aggregate = _aggregates[aggregate_index];
-    const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
-    const auto input_column_id = pqp_column.column_id;
+    const auto merge_one_aggregate = [&, aggregate_index]() {
+      const auto& aggregate = _aggregates[aggregate_index];
+      const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
+      const auto input_column_id = pqp_column.column_id;
 
-    // Output column for COUNT(*).
-    const auto data_type =
-        input_column_id == INVALID_COLUMN_ID ? DataType::Long : input_table->column_data_type(input_column_id);
+      // Output column for COUNT(*).
+      const auto data_type =
+          input_column_id == INVALID_COLUMN_ID ? DataType::Long : input_table->column_data_type(input_column_id);
 
-    auto& context = contexts_per_column_per_job[0][aggregate_index];
-    resolve_data_type(data_type, [&](auto type) {
-      using ColumnDataType = typename decltype(type)::type;
-      for (auto job_id = ChunkID{1}; job_id < bucket_job_count; ++job_id) {
-        auto& other = contexts_per_column_per_job[job_id][aggregate_index];
-        resolve_window_function(aggregate->window_function, [&]<WindowFunction aggregate_func>() {
-          _merge_contexts<ColumnDataType, aggregate_func, AggregateKey>(context, other);
-        });
-      }
-    });
+      auto& context = contexts_per_column_per_job[0][aggregate_index];
+      resolve_data_type(data_type, [&](auto type) {
+        using ColumnDataType = typename decltype(type)::type;
+        for (auto job_id = ChunkID{1}; job_id < bucket_job_count; ++job_id) {
+          auto& other = contexts_per_column_per_job[job_id][aggregate_index];
+          resolve_window_function(aggregate->window_function, [&]<WindowFunction aggregate_func>() {
+            _merge_contexts<ColumnDataType, aggregate_func, AggregateKey>(context, other);
+          });
+        }
+      });
+    };
+
+    if (aggregates_count == 1) {
+      merge_one_aggregate();
+    } else {
+      merge_jobs.emplace_back(std::make_shared<JobTask>(merge_one_aggregate));
+    }
   }
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(merge_jobs);
 
   contexts_per_column = std::move(contexts_per_column_per_job[0]);
 }
