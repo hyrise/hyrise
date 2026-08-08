@@ -11,7 +11,7 @@
 #include <vector>
 
 #include <boost/container_hash/hash.hpp>
-#include <oneapi/tbb/concurrent_unordered_map.h>  // NOLINT(build/include_order)
+#include <boost/unordered/concurrent_flat_map.hpp>
 
 #include "abstract_aggregate_operator.hpp"
 #include "abstract_read_only_operator.hpp"
@@ -57,7 +57,7 @@ struct GroupKeyEqual {
   }
 };
 
-using GroupIDMap = tbb::concurrent_unordered_map<GroupKey, GroupID, GroupKeyHash, GroupKeyEqual>;
+using GroupIDMap = boost::concurrent_flat_map<GroupKey, GroupID, GroupKeyHash, GroupKeyEqual>;
 
 class AbstractAggregateVector {
  public:
@@ -239,7 +239,7 @@ class AggregateDYOD : public AbstractAggregateOperator {
 
   // Initial size of the group ID map and vectors
   // TODO(anyone): Replace with proper estimate of group cardinality based on input table.
-  static constexpr GroupID GROUP_ID_INITIAL_SIZE = 1'000'000;
+  static constexpr GroupID GROUP_ID_INITIAL_SIZE = 100'000;
 
   std::vector<DataType> _aggregate_data_types;
   GroupIDMap _group_id_map;
