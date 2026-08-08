@@ -199,7 +199,9 @@ std::vector<std::unique_ptr<AbstractAggregateVector>>& WorkerState::aggregate_ve
 AggregateDYOD::AggregateDYOD(const std::shared_ptr<AbstractOperator>& input_operator,
                              const std::vector<std::shared_ptr<WindowFunctionExpression>>& aggregates,
                              const std::vector<ColumnID>& groupby_column_ids)
-    : AbstractAggregateOperator(input_operator, aggregates, groupby_column_ids) {}
+    : AbstractAggregateOperator(input_operator, aggregates, groupby_column_ids) {
+  TRACE_EVENT("aggregate_operator", "constructor");
+}
 
 const std::string& AggregateDYOD::name() const {
   static const auto name = std::string{"AggregateDYOD"};
