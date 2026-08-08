@@ -247,7 +247,10 @@ class AggregateDYOD : public AbstractAggregateOperator {
   tbb::concurrent_vector<GroupKey> _group_keys;
   tbb::concurrent_vector<bool> _occupied_group_ids;
   std::mutex _group_keys_mutex;
-  std::vector<std::vector<std::vector<std::byte>>> _column_buffers_by_chunk;
+
+  // One group key buffer per chunk. Group keys entries (i.e., the serialized groupby column values) for a
+  // single row are stored sequentially in the buffer.
+  std::vector<std::vector<std::byte>> _group_key_buffers;
 
   std::shared_ptr<const Table> _on_execute() override;
 

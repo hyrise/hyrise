@@ -214,9 +214,8 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
   // Aggregate chunk by chunk
   const auto chunk_count = input_table->chunk_count();
 
-  // Initialize a byte buffer every chunk and every column
-  const auto groupby_column_count = _groupby_column_ids.size();
-  _column_buffers_by_chunk.resize(chunk_count, std::vector<std::vector<std::byte>>(groupby_column_count));
+  // Initialize a byte buffer every chunk
+  _group_key_buffers.resize(chunk_count);
 
   const auto get_new_group_id_range = [&]() {
     return _get_new_group_id_range();
@@ -624,8 +623,8 @@ std::pair<std::vector<GroupID>, GroupID> AggregateDYOD::_group_ids_for_chunk(Chu
   const auto groupby_column_count = _groupby_column_ids.size();
   const auto row_count = chunk.size();
 
-  // Per grouping column, the serialized values of all rows in one buffer
-  auto& column_buffers = _column_buffers_by_chunk[chunk_id];
+  // Per grouping column, the serialized values of all rows in a chunk
+  auto column_buffers = std::vector<std::vector<std::byte>>(groupby_column_count);
 
   // Per grouping column, the start position of each row into the respective column buffer
   auto column_starts =
@@ -667,19 +666,39 @@ std::pair<std::vector<GroupID>, GroupID> AggregateDYOD::_group_ids_for_chunk(Chu
   auto group_ids = std::vector<GroupID>(row_count);
   auto max_group_id = GroupID{0};
 
+  // One buffer for all group keys in a chunk
+  auto& chunk_buffer = _group_key_buffers[chunk_id];
+
+  // Resize the chunk buffer first. Spans into the chunk buffer might become otherwise
+  // become invalid due to resizes.
+  auto total_bytes = size_t{0};
+
+  for (const auto& column_buffer : column_buffers) {
+    total_bytes += column_buffer.size();
+  }
+
+  chunk_buffer.resize(total_bytes);
+
   {
     TRACE_EVENT("aggregate_operator", "get group IDs");
     for (auto offset = ChunkOffset{0}; offset < row_count; ++offset) {
       auto group_key = GroupKey(groupby_column_count);
 
       for (auto groupby_column_index = size_t{0}; groupby_column_index < groupby_column_count; ++groupby_column_index) {
-        const auto& buffer = column_buffers[groupby_column_index];
-        const auto& starts = column_starts[groupby_column_index];
+        const auto& column_buffer = column_buffers[groupby_column_index];
+        const auto& column_buffer_starts = column_starts[groupby_column_index];
 
-        const auto start = starts[offset];
-        const auto end = starts[offset + 1];
+        const auto column_buffer_start = column_buffer_starts[offset];
+        const auto column_buffer_end = column_buffer_starts[offset + 1];
 
-        group_key[groupby_column_index] = std::span<const std::byte>(buffer).subspan(start, end - start);
+        // Copy serialized group key entries from the local column buffers to the global chunk buffer
+        const auto chunk_buffer_start = chunk_buffer.size();
+        chunk_buffer.insert(chunk_buffer.end(), column_buffer.begin() + column_buffer_start,
+                            column_buffer.begin() + column_buffer_end);
+        const auto chunk_buffer_end = chunk_buffer.size();
+
+        group_key[groupby_column_index] =
+            std::span<const std::byte>(chunk_buffer).subspan(chunk_buffer_start, chunk_buffer_end - chunk_buffer_start);
       }
 
       const auto group_id = _group_id(group_key, worker_state);
