@@ -395,7 +395,7 @@ static std::unique_ptr<perfetto::TracingSession> start_perfetto_session() {
   perfetto::TrackEvent::Register();
 
   auto cfg = perfetto::TraceConfig{};
-  cfg.add_buffers()->set_size_kb(4096);
+  cfg.add_buffers()->set_size_kb(1024 * 128);
   auto* ds_cfg = cfg.add_data_sources()->mutable_config();
   ds_cfg->set_name("track_event");
   ds_cfg->set_track_event_config_raw(track_event_cfg.SerializeAsString());
