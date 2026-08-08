@@ -42,38 +42,40 @@ namespace hyrise {
 
 template <typename T>
   requires std::is_trivially_copyable_v<T>
-std::vector<std::byte> serialize_value(T value) {
-  auto bytes = std::vector<std::byte>(sizeof(T));
-  std::memcpy(bytes.data(), &value, sizeof(T));
-  return bytes;
+void serialize_value(std::vector<std::byte>& buffer, T value) {
+  const auto offset = buffer.size();
+  buffer.resize(offset + sizeof(T));
+  std::memcpy(buffer.data() + offset, &value, sizeof(T));
 }
 
-std::vector<std::byte> serialize_value(const pmr_string& value) {
-  auto bytes = std::vector<std::byte>(value.size());
-  std::memcpy(bytes.data(), value.data(), value.size());
-  return bytes;
+void serialize_value(std::vector<std::byte>& buffer, const pmr_string& value) {
+  const auto offset = buffer.size();
+  buffer.resize(offset + value.size());
+  std::memcpy(buffer.data() + offset, value.data(), value.size());
 }
 
 template <typename T>
   requires std::is_trivially_copyable_v<T>
-std::vector<std::byte> serialize_value(T value, bool is_null) {
+void serialize_value(std::vector<std::byte>& buffer, T value, bool is_null) {
   if (is_null) {
-    return std::vector<std::byte>{std::byte{0x01}};
+    buffer.push_back(std::byte{0x01});
+    return;
   }
-  auto bytes = std::vector<std::byte>(1 + sizeof(T));
-  bytes[0] = std::byte{0x00};
-  std::memcpy(bytes.data() + 1, &value, sizeof(T));
-  return bytes;
+  const auto offset = buffer.size();
+  buffer.resize(offset + 1 + sizeof(T));
+  buffer[offset] = std::byte{0x00};
+  std::memcpy(buffer.data() + offset + 1, &value, sizeof(T));
 }
 
-std::vector<std::byte> serialize_value(const pmr_string& value, bool is_null) {
+void serialize_value(std::vector<std::byte>& buffer, const pmr_string& value, bool is_null) {
   if (is_null) {
-    return std::vector<std::byte>{std::byte{0x01}};
+    buffer.push_back(std::byte{0x01});
+    return;
   }
-  auto bytes = std::vector<std::byte>(1 + value.size());
-  bytes[0] = std::byte{0x00};
-  std::memcpy(bytes.data() + 1, value.data(), value.size());
-  return bytes;
+  const auto offset = buffer.size();
+  buffer.resize(offset + 1 + value.size());
+  buffer[offset] = std::byte{0x00};
+  std::memcpy(buffer.data() + offset + 1, value.data(), value.size());
 }
 
 template <typename T, bool Nullable>
@@ -596,39 +598,61 @@ void AggregateDYOD::_aggregate_chunk(WorkerState& worker_state, const std::share
 std::vector<GroupID> AggregateDYOD::_group_ids_for_chunk(const Chunk& chunk, WorkerState& worker_state) {
   TRACE_EVENT("aggregate_operator", "_group_ids_for_chunk");
   const auto input_table = left_input_table();
-
-  // This is a two-dimensional vector, with the first dimension being the index of the grouping column, and the second
-  // being the chunk offset of the row.
-  auto group_keys_by_column =
-      std::vector<std::vector<GroupKeyEntry>>(_groupby_column_ids.size(), std::vector<GroupKeyEntry>(chunk.size()));
-
-  // First, compute the group keys within each column.
   const auto groupby_column_count = _groupby_column_ids.size();
+  const auto row_count = chunk.size();
+
+  // Per grouping column, the serialized values of all rows in one buffer
+  auto column_buffers = std::vector<std::vector<std::byte>>(groupby_column_count);
+
+  // Per grouping column, the start position of each row into the respective column buffer
+  auto column_starts =
+      std::vector<std::vector<uint32_t>>(groupby_column_count, std::vector<uint32_t>(row_count + 1, uint32_t{0}));
+
+  // First, compute the group keys within each column and append it to the respective column buffer.
   for (auto groupby_column_index = size_t{0}; groupby_column_index < groupby_column_count; ++groupby_column_index) {
     const auto groupby_column_id = _groupby_column_ids[groupby_column_index];
     const auto data_type = input_table->column_data_type(groupby_column_id);
     const auto is_nullable = input_table->column_is_nullable(groupby_column_id);
+    auto& column_buffer = column_buffers[groupby_column_index];
+    auto& starts = column_starts[groupby_column_index];
 
     resolve_data_type(data_type, [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
       const auto segment = chunk.get_segment(groupby_column_id);
 
       segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
-        group_keys_by_column[groupby_column_index][position.chunk_offset()] =
-            is_nullable ? serialize_value(position.value(), position.is_null()) : serialize_value(position.value());
+        starts[position.chunk_offset()] = static_cast<uint32_t>(column_buffer.size());
+
+        if (is_nullable) {
+          serialize_value(column_buffer, position.value(), position.is_null());
+        } else {
+          serialize_value(column_buffer, position.value());
+        }
       });
+
+      DebugAssert(column_buffer.size() <= std::numeric_limits<uint32_t>::max(), "Column buffer is too large.");
+
+      // Store the end position of the last key.
+      starts[row_count] = static_cast<uint32_t>(column_buffer.size());
     });
   }
 
   // Then assemble the group keys per row and get the GroupID.
-  auto group_ids = std::vector<GroupID>(chunk.size());
+  auto group_ids = std::vector<GroupID>(row_count);
 
-  const auto row_count = chunk.size();
   for (auto offset = ChunkOffset{0}; offset < row_count; ++offset) {
     auto group_key = GroupKey(groupby_column_count);
+
     for (auto groupby_column_index = size_t{0}; groupby_column_index < groupby_column_count; ++groupby_column_index) {
-      group_key[groupby_column_index] = std::move(group_keys_by_column[groupby_column_index][offset]);
+      const auto& buffer = column_buffers[groupby_column_index];
+      const auto& starts = column_starts[groupby_column_index];
+
+      const auto start = starts[offset];
+      const auto end = starts[offset + 1];
+
+      group_key[groupby_column_index] = std::vector(buffer.begin() + start, buffer.begin() + end);
     }
+
     group_ids[offset] = _group_id(group_key, worker_state);
   }
 
