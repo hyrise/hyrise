@@ -9,8 +9,8 @@
 #include "expression/window_function_expression.hpp"
 #include "operators/abstract_aggregate_operator.hpp"
 #include "operators/abstract_read_only_operator.hpp"
-#include "operators/aggregate_dyod/accumulator_column.hpp"
 #include "operators/aggregate_dyod/aggregate_dyod_config.hpp"
+#include "operators/aggregate_dyod/aggregate_schema.hpp"
 #include "types.hpp"
 
 namespace hyrise {

@@ -10,7 +10,7 @@
 #include "base_test.hpp"
 #include "operators/aggregate_dyod/aggregate_dyod_config.hpp"
 #include "operators/aggregate_dyod/hyperloglog.hpp"
-#include "operators/aggregate_dyod/key_schema.hpp"
+#include "operators/aggregate_dyod/key_primitives.hpp"
 
 namespace hyrise {
 

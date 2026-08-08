@@ -224,13 +224,20 @@ set(
     operators/aggregate_dyod.hpp
     operators/aggregate_dyod/accumulator_column.hpp
     operators/aggregate_dyod/aggregate_dyod_config.hpp
+    operators/aggregate_dyod/aggregate_schema.hpp
     operators/aggregate_dyod/cache_info.hpp
     operators/aggregate_dyod/distinct_set.hpp
     operators/aggregate_dyod/hyperloglog.hpp
+    operators/aggregate_dyod/key_primitives.hpp
     operators/aggregate_dyod/key_schema.hpp
     operators/aggregate_dyod/merge_map.hpp
+    operators/aggregate_dyod/mixed_key_schema.hpp
+    operators/aggregate_dyod/numeric_arbitrary_key_schema.hpp
+    operators/aggregate_dyod/numeric_short_key_schema.hpp
     operators/aggregate_dyod/output_columns.hpp
     operators/aggregate_dyod/scatter_store.hpp
+    operators/aggregate_dyod/string_only_key_schema.hpp
+    operators/aggregate_dyod/value_scatter_column.hpp
     operators/aggregate_hash.cpp
     operators/aggregate_hash.hpp
     operators/aggregate_sort.cpp
