@@ -162,7 +162,6 @@ WorkerState::WorkerState(const std::vector<std::shared_ptr<WindowFunctionExpress
       resolve_window_function(aggregate->window_function, [&](auto type) {
         constexpr auto aggregate_function = decltype(type)::value;
         _vectors[aggregate_index] = std::make_unique<TypedAggregateVector<ColumnDataType, aggregate_function>>();
-        _vectors[aggregate_index]->grow_if_necessary(_max_group_id + 1);
       });
     });
   }
@@ -181,10 +180,6 @@ GroupID WorkerState::next_group_id() {
     auto [next_group_id, max_group_id] = _get_new_group_id_range();
     _next_group_id = next_group_id;
     _max_group_id = max_group_id;
-
-    for (const auto& vector : _vectors) {
-      vector->grow_if_necessary(_max_group_id + 1);
-    }
   }
 
   return _next_group_id++;
@@ -251,7 +246,11 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
   // SQL requires a single output row if the input table is empty and there is no GROUP BY clause.
   // We ensure this by inserting a single group into the group ID mapping before writing the output table.
   if (_group_id_map.empty() && _groupby_column_ids.empty()) {
-    _group_id(GroupKey{}, merged_worker_states);
+    const auto group_id = _group_id(GroupKey{}, merged_worker_states);
+
+    for (auto& aggregate_vector : merged_worker_states.aggregate_vectors()) {
+      aggregate_vector->grow_if_necessary(group_id + 1);
+    }
   }
 
   return _write_output_table(merged_worker_states);
@@ -527,11 +526,7 @@ std::shared_ptr<AbstractSegment> AggregateDYOD::_write_default_aggregate_segment
 GroupID AggregateDYOD::_group_id(const GroupKey& group_key, WorkerState& worker_state) {
   auto it = _group_id_map.find(group_key);
   if (it != _group_id_map.end()) {
-    const auto group_id = it->second;
-    for (auto& aggregate_vector : worker_state.aggregate_vectors()) {
-      aggregate_vector->grow_if_necessary(group_id + 1);
-    }
-    return group_id;
+    return it->second;
   }
 
   auto [insert_it, inserted] = _group_id_map.insert({group_key, worker_state.next_group_id()});
@@ -571,7 +566,14 @@ std::vector<size_t> AggregateDYOD::_get_occupied_group_ids() {
 void AggregateDYOD::_aggregate_chunk(WorkerState& worker_state, ChunkID chunk_id,
                                      const std::shared_ptr<const Chunk> chunk) {
   TRACE_EVENT("aggregate_operator", "_aggregate_chunk");
-  const auto group_ids = _group_ids_for_chunk(chunk_id, *chunk, worker_state);
+  const auto [group_ids, max_group_id] = _group_ids_for_chunk(chunk_id, *chunk, worker_state);
+
+  // Grow the aggregate vectors once per chunk
+  if (!group_ids.empty()) {
+    for (auto& aggregate_vector : worker_state.aggregate_vectors()) {
+      aggregate_vector->grow_if_necessary(max_group_id + 1);
+    }
+  }
 
   // Compute aggregates
   const auto aggregate_count = _aggregates.size();
@@ -601,8 +603,8 @@ void AggregateDYOD::_aggregate_chunk(WorkerState& worker_state, ChunkID chunk_id
   }
 }
 
-std::vector<GroupID> AggregateDYOD::_group_ids_for_chunk(ChunkID chunk_id, const Chunk& chunk,
-                                                         WorkerState& worker_state) {
+std::pair<std::vector<GroupID>, GroupID> AggregateDYOD::_group_ids_for_chunk(ChunkID chunk_id, const Chunk& chunk,
+                                                                             WorkerState& worker_state) {
   TRACE_EVENT("aggregate_operator", "_group_ids_for_chunk");
   const auto input_table = left_input_table();
   const auto groupby_column_count = _groupby_column_ids.size();
@@ -649,6 +651,7 @@ std::vector<GroupID> AggregateDYOD::_group_ids_for_chunk(ChunkID chunk_id, const
 
   // Then assemble the group keys per row and get the GroupID.
   auto group_ids = std::vector<GroupID>(row_count);
+  auto max_group_id = GroupID{0};
 
   {
     TRACE_EVENT("aggregate_operator", "get group IDs");
@@ -665,11 +668,13 @@ std::vector<GroupID> AggregateDYOD::_group_ids_for_chunk(ChunkID chunk_id, const
         group_key[groupby_column_index] = std::span<const std::byte>(buffer).subspan(start, end - start);
       }
 
-      group_ids[offset] = _group_id(group_key, worker_state);
+      const auto group_id = _group_id(group_key, worker_state);
+      group_ids[offset] = group_id;
+      max_group_id = std::max(max_group_id, group_id);
     }
   }
 
-  return group_ids;
+  return {group_ids, max_group_id};
 }
 
 template <typename ColumnDataType, WindowFunction aggregate_function>
