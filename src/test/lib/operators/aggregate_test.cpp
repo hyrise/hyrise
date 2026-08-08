@@ -54,7 +54,7 @@ void test_output(const std::shared_ptr<AbstractOperator> in,
                  const std::vector<std::pair<ColumnID, WindowFunction>>& aggregate_definitions,
                  const std::vector<ColumnID>& groupby_column_ids, const std::string& file_name,
                  const bool test_aggregate_on_reference_table = true) {
-  using Operator = T::OperatorType;
+  using Operator = typename T::OperatorType;
   in->never_clear_output();
 
   // Load expected results from file.
@@ -648,7 +648,7 @@ TYPED_TEST(OperatorsAggregateTest, TwoGroupbyAndNoAggregate) {
 }
 
 TYPED_TEST(OperatorsAggregateTest, NoGroupbyAndNoAggregate) {
-  using Operator = TypeParam::OperatorType;
+  using Operator = typename TypeParam::OperatorType;
   EXPECT_THROW(
       std::make_shared<Operator>(this->_table_wrapper_1_1_string,
                                  std::vector<std::shared_ptr<WindowFunctionExpression>>{}, std::vector<ColumnID>{}),
@@ -930,7 +930,7 @@ TYPED_TEST(OperatorsAggregateTest, StringVariations) {
 
   // No aggregate expressions, i.e., aggregate acts as DISTINCT
   const auto aggregate_expressions = std::vector<std::shared_ptr<WindowFunctionExpression>>{};
-  using Operator = TypeParam::OperatorType;
+  using Operator = typename TypeParam::OperatorType;
   const auto aggregate =
       std::make_shared<Operator>(table_wrapper, aggregate_expressions, std::vector<ColumnID>{ColumnID{0}});
   aggregate->execute();
@@ -948,7 +948,7 @@ TYPED_TEST(OperatorsAggregateTest, StringVariations) {
 }
 
 TYPED_TEST(OperatorsAggregateTest, FilteredDictionary) {
-  using Operator = TypeParam::OperatorType;
+  using Operator = typename TypeParam::OperatorType;
   const auto table =
       std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}, {"b", DataType::Int, false}},
                               TableType::Data, Chunk::DEFAULT_SIZE, UseMvcc::Yes);
