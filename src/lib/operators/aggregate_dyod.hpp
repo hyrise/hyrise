@@ -26,9 +26,38 @@
 namespace hyrise {
 
 using GroupID = size_t;
-using GroupKeyEntry = std::vector<std::byte>;
+using GroupKeyEntry = std::span<const std::byte>;
 using GroupKey = std::vector<GroupKeyEntry>;
-using GroupIDMap = tbb::concurrent_unordered_map<GroupKey, GroupID, boost::hash<GroupKey>>;
+
+struct GroupKeyHash {
+  size_t operator()(const GroupKey& key) const {
+    auto seed = size_t{0};
+
+    for (const auto& entry : key) {
+      boost::hash_range(seed, entry.begin(), entry.end());
+    }
+
+    return seed;
+  }
+};
+
+struct GroupKeyEqual {
+  bool operator()(const GroupKey& a, const GroupKey& b) const {
+    if (a.size() != b.size()) {
+      return false;
+    }
+
+    for (size_t i = 0; i < a.size(); ++i) {
+      if (!std::ranges::equal(a[i], b[i])) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+};
+
+using GroupIDMap = tbb::concurrent_unordered_map<GroupKey, GroupID, GroupKeyHash, GroupKeyEqual>;
 
 class AbstractAggregateVector {
  public:
@@ -178,19 +207,19 @@ std::vector<std::byte> serialize_value(const pmr_string& value, bool is_null);
 
 template <typename T, bool Nullable>
   requires std::is_trivially_copyable_v<T> && (!Nullable)
-T deserialize_value(const std::vector<std::byte>& bytes);
+T deserialize_value(const std::span<const std::byte>& bytes);
 
 template <typename T, bool Nullable>
   requires std::is_trivially_copyable_v<T> && Nullable
-std::optional<T> deserialize_value(const std::vector<std::byte>& bytes);
+std::optional<T> deserialize_value(const std::span<const std::byte>& bytes);
 
 template <typename T, bool Nullable>
   requires std::is_same_v<T, pmr_string> && (!Nullable)
-pmr_string deserialize_value(const std::vector<std::byte>& bytes);
+pmr_string deserialize_value(const std::span<const std::byte>& bytes);
 
 template <typename T, bool Nullable>
   requires std::is_same_v<T, pmr_string> && Nullable
-std::optional<pmr_string> deserialize_value(const std::vector<std::byte>& bytes);
+std::optional<pmr_string> deserialize_value(const std::span<const std::byte>& bytes);
 
 template <typename Functor>
 void resolve_window_function(WindowFunction window_function, Functor&& functor);
@@ -218,6 +247,7 @@ class AggregateDYOD : public AbstractAggregateOperator {
   tbb::concurrent_vector<GroupKey> _group_keys;
   tbb::concurrent_vector<bool> _occupied_group_ids;
   std::mutex _group_keys_mutex;
+  std::vector<std::vector<std::vector<std::byte>>> _column_buffers_by_chunk;
 
   std::shared_ptr<const Table> _on_execute() override;
 
@@ -271,13 +301,13 @@ class AggregateDYOD : public AbstractAggregateOperator {
 
   GroupID _group_id(const GroupKey& group_key, WorkerState& worker_state);
 
-  std::vector<GroupID> _group_ids_for_chunk(const Chunk& chunk, WorkerState& worker_state);
+  std::vector<GroupID> _group_ids_for_chunk(ChunkID chunk_id, const Chunk& chunk, WorkerState& worker_state);
 
   std::pair<GroupID, GroupID> _get_new_group_id_range();
 
   std::vector<size_t> _get_occupied_group_ids();
 
-  void _aggregate_chunk(WorkerState& state, const std::shared_ptr<const Chunk> chunk);
+  void _aggregate_chunk(WorkerState& state, ChunkID chunk_id, const std::shared_ptr<const Chunk> chunk);
 
   template <typename ColumnDataType, WindowFunction aggregate_function>
   void _aggregate_segment(TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector,
