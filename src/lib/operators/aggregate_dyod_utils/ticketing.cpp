@@ -49,8 +49,7 @@ RowFormat _create_row_format(const TableColumnDefinitions& column_definitions,
     }
   }
 
-  // The null bitmap is only present when at least one group-by column is nullable. Otherwise the rows are 8 bytes
-  // shorter.
+  // The null bitmap is only present when at least one group-by column is nullable.
   const auto null_bitmap_size = stores_nulls ? sizeof(uint64_t) : uint64_t{0};
   const auto data_offset = null_bitmap_size;  // null bitmap (if present)
   const auto null_bitmap_offset = uint64_t{0};
@@ -70,7 +69,7 @@ RowFormat _create_row_format(const TableColumnDefinitions& column_definitions,
 // Materializes one string group-by column of a chunk into the packed rows. Dispatches on the
 // segment's concrete type so value/dictionary segments (and single-chunk references to them) can point rows straight
 // at the segment's own string storage instead of copying. Other kinds fall back to the generic copying iterator.
-// `materialized.string_pointer_needs_copy` records, per string column, whether its long-string pointers reference the
+// materialized.string_pointer_needs_copy` records, per string column, whether its long-string pointers reference the
 // transient per-chunk arena (and so must be promoted on insert) or stable source memory.
 void _materialize_string_column(const RowFormat& format, const std::shared_ptr<AbstractSegment>& segment,
                                 const size_t group_by_column_index, const size_t string_col_index,
@@ -93,7 +92,7 @@ void _materialize_string_column(const RowFormat& format, const std::shared_ptr<A
   };
 
   // Writes a string that lives in stable memory (a value/dictionary segment owned by the input or by a
-  // referenced table): the inline bytes, plus a direct pointer into that memory for long strings.
+  // referenced table).
   const auto write_stable_string = [&](const RowView& row, const pmr_string& value) {
     if (write_inline(row, value.c_str(), value.size())) {
       row.set_string_ptr(string_col_index, const_cast<char*>(value.c_str()));
@@ -110,9 +109,10 @@ void _materialize_string_column(const RowFormat& format, const std::shared_ptr<A
     }
   };
 
-  // `needs_copy` is a `std::bool_constant` (see `with_string_segment_iterate`), so only the taken branch is compiled
-  // for any given segment kind and no per-row check remains.
   auto chunk_offset = size_t{0};
+
+  // `needs_copy` is a `std::bool_constant` (see `with_string_segment_iterate`). It is set depending on, so only the
+  // taken branch is compiled for any given segment kind and no per-row check remains.
   const auto callback = [&](const auto& str_value, const bool is_null, const auto needs_copy) {
     const auto row = row_at(chunk_offset);
     ++chunk_offset;
@@ -134,7 +134,7 @@ void _materialize_string_column(const RowFormat& format, const std::shared_ptr<A
   materialized.string_pointer_needs_copy.push_back(needs_copy);
 }
 
-// TODO(@forUnity): think about alignment and padding, also sort string_columns to be last in groupby columns?
+// TODO(@anyone): think about alignment and padding, also sort string_columns to be last in groupby columns?
 void _materialize_rows(const RowFormat& format, const std::shared_ptr<const Chunk>& chunk,
                        const std::vector<ColumnID>& groupby_column_ids, MaterializedRows& materialized) {
   const auto chunk_size = chunk->size();
@@ -177,13 +177,13 @@ void _materialize_rows(const RowFormat& format, const std::shared_ptr<const Chun
   }
 }
 
-const auto THREAD_COUNT = Hyrise::get().topology.num_cpus() - 1;  // leave one core for the scheduler
+const auto THREAD_COUNT = Hyrise::get().topology.num_cpus();
 
 constexpr auto TICKET_RANGE_LENGTH = uint64_t{1} << 10;  // 1024 tickets per thread
 
 // Copies a materialized key row into `arena` so it outlives the transient materialize buffer. Long strings that still
-// live in the per-chunk arena are copied alongside it. Strings that already point at stable source memory (value and
-// dictionary paths) are left as is.
+// live in the per-chunk arena are copied alongside it. Strings that already point at stable source memory (value,
+// dictionary segments or referenced ones) are left as is.
 GroupKey _promote_key_row(const RowFormat& format, const uint8_t* const row_ptr, const uint64_t row_hash,
                           const MaterializedRows& materialized, std::pmr::monotonic_buffer_resource& arena) {
   auto* const row_copy = static_cast<uint8_t*>(arena.allocate(format.row_size, alignof(uint64_t)));
@@ -206,7 +206,7 @@ GroupKey _promote_key_row(const RowFormat& format, const uint8_t* const row_ptr,
   return GroupKey{.row = row_copy, .hash = row_hash};
 }
 
-// Returns the number of all unused tickets.
+// Returns the number of unused tickets, after removing all trailing gaps from the fuzzy ticketing.
 template <typename HashTable>
 uint64_t remove_fuzzy_ticketing_gaps(std::vector<std::pair<uint64_t, uint64_t>>& ticket_gaps,
                                      std::unique_ptr<uint64_t[]>& tickets, const uint64_t row_count,
@@ -224,8 +224,7 @@ uint64_t remove_fuzzy_ticketing_gaps(std::vector<std::pair<uint64_t, uint64_t>>&
         unused_before_gap[gap_index] + (ticket_gaps[gap_index].second - ticket_gaps[gap_index].first);
   }
 
-  // A used ticket never falls inside a gap, so it must be shifted down by the total size of all gaps lying entirely
-  // below it, which is simply how many gap starts precede it.
+  // A used ticket must be shifted down by the total size of all gaps preceeding it.
   const auto compact = [&](const uint64_t ticket) {
     const auto gaps_below = static_cast<size_t>(
         std::lower_bound(sorted_gap_starts.begin(), sorted_gap_starts.end(), ticket) - sorted_gap_starts.begin());
@@ -248,6 +247,8 @@ uint64_t remove_fuzzy_ticketing_gaps(std::vector<std::pair<uint64_t, uint64_t>>&
   }
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(compaction_jobs);
 
+  // When we only have a single groupby-column, the global hash table is not used for emitting the result. So we do not
+  // need to remap it.
   if (!ignore_hash_map) {
     global_hash_table.remap_tickets(compact);
   }
@@ -255,11 +256,11 @@ uint64_t remove_fuzzy_ticketing_gaps(std::vector<std::pair<uint64_t, uint64_t>>&
   return unused_before_gap[job_count];
 }
 
-// Concurrent multi-column path that materialize each row's group-by key into a packed row format, hashs it and probes
-// a shared, lock-free `ConcurrentTicketMap`. Because that map is fixed-capacity, its size is estimated up front from
-// the first chunk. Each thread hands out tickets from its own claimed range, so the shared range cursor is fought over
-// once per range rather than once per group. The trailing unused tickets of each thread's last range are compacted
-// afterwards so the final tickets form a dense [0, group_count) range.
+// Multi-column path that materialize each row's group-by key into a packed row format, hashes it and probes
+// a shared, lock-free `ConcurrentTicketMap`. Each thread hands out tickets from its own claimed range, so the shared
+// range 'cursor' is fought over once per range rather than once per group (= fuzzy ticketing). The trailing unused
+// tickets of each thread's last range are compacted afterwards so the final tickets form a dense [0, group_count)
+// range.
 std::shared_ptr<GroupKeyData> _compute_groups_multi_column(const std::vector<ColumnID>& groupby_column_ids,
                                                            const std::shared_ptr<const Table>& input_table) {
   const auto row_format = _create_row_format(input_table->column_definitions(), groupby_column_ids);
@@ -295,8 +296,8 @@ std::shared_ptr<GroupKeyData> _compute_groups_multi_column(const std::vector<Col
   group_key_data->tickets = std::make_unique_for_overwrite<uint64_t[]>(row_count);
   auto& global_hash_table = group_key_data->global_hash_table;
 
-  // Fuzzy ticketing: each thread claims a disjoint [n*TICKET_RANGE_LENGTH, (n+1)*TICKET_RANGE_LENGTH) range from this
-  // shared cursor and only touches it once per range, not once per group.
+  // Fuzzy ticketing: each thread claims a disjoint [n * TICKET_RANGE_LENGTH, (n + 1) * TICKET_RANGE_LENGTH) range from
+  // this shared cursor and only touches it once per range, not once per group.
   auto next_ticket_range_start = std::atomic<uint64_t>{0};
 
   const auto process_chunk = [&](const ChunkID chunk_id, MaterializedRows& materialized,
@@ -305,6 +306,10 @@ std::shared_ptr<GroupKeyData> _compute_groups_multi_column(const std::vector<Col
     const auto& chunk = input_table->get_chunk(chunk_id);
     _materialize_rows(row_format, chunk, groupby_column_ids, materialized);
 
+    const auto promote_key = [&](const GroupKey& key) {
+      return _promote_key_row(row_format, key.row, key.hash, materialized, arena);
+    };
+
     global_hash_table.register_prober();
     auto* row_ptr = materialized.rows.get();
     const auto chunk_start = ticket_offsets[chunk_id];
@@ -312,13 +317,10 @@ std::shared_ptr<GroupKeyData> _compute_groups_multi_column(const std::vector<Col
       const auto row_view = RowView{row_ptr, row_format};
       const auto row_hash = compute_hash(row_view.key_bytes(), row_format.key_length);
 
-      // Copy the key row into this thread's arena up front (the map stores the key verbatim on insert and
-      // the probe row is transient), then offer the candidate ticket `next_ticket`. Because ticket ranges are disjoint
-      // across threads, the returned ticket equals `next_ticket` exactly when this call inserted, in which case we
-      // consume the candidate and refill the range when it runs out. On a hit the map keeps the winner's copy and ours
-      // is simply left unused in the arena.
-      const auto group_key = _promote_key_row(row_format, row_ptr, row_hash, materialized, arena);
-      const auto ticket = global_hash_table.try_emplace(group_key, next_ticket);
+      const auto ticket =
+          global_hash_table.try_emplace(GroupKey{row_view.key_bytes(), row_hash}, next_ticket, promote_key);
+
+      // If the ticket was inserted, then increment the ticket. If our range is exhausted, claim a new one.
       if (ticket == next_ticket) {
         ++next_ticket;
         if (next_ticket >= ticket_range_end) {
@@ -343,10 +345,9 @@ std::shared_ptr<GroupKeyData> _compute_groups_multi_column(const std::vector<Col
     arenas.emplace_back(std::make_unique<std::pmr::monotonic_buffer_resource>());
   }
 
-  // When a thread stops it usually leaves a trailing gap [next_ticket, ticket_range_end) of unused tickets at the end
+  // When a thread stops it leaves a trailing gap [next_ticket, ticket_range_end) of unused tickets at the end
   // of its last claimed range. We record these per-thread gaps here and compact them out below so the final tickets
-  // form a dense [0, group_count) range. The ranges tile the ticket space contiguously, so the only gaps are these
-  // trailing ones.
+  // form a contiguous [0, group_count) range.
   auto ticket_gaps = std::vector<std::pair<uint64_t, uint64_t>>(job_count);
   auto next_chunk_id = std::atomic<uint32_t>{0};
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
@@ -383,9 +384,6 @@ std::shared_ptr<GroupKeyData> _compute_groups_multi_column(const std::vector<Col
 }
 
 // Fast path for a single non-string group-by column. Here the value is the key, so we do not need to materialize rows.
-// Like the multi-column path, ticketing is kept separate from building the output column: the hot loop only grows the
-// value->ticket map and emits tickets.
-
 std::shared_ptr<GroupKeyData> _compute_groups_single_column(const ColumnID groupby_column_id,
                                                             const std::shared_ptr<const Table>& input_table) {
   const auto data_type = input_table->column_data_type(groupby_column_id);
@@ -398,9 +396,8 @@ std::shared_ptr<GroupKeyData> _compute_groups_single_column(const ColumnID group
     if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
       Fail("The single-column fast path is not used for string columns.");
     } else {
-      // The value is the key, so no rows are materialized: the hot loop only grows a `value -> ticket` map and emits
-      // tickets. Fuzzy ticketing is preserved - each thread hands out tickets from its own claimed range - so the map
-      // just stores and returns the caller's candidate ticket (see `ConcurrentTicketMap`).
+      // The value is the key, so no rows are materialized: the hot loop only populates a `value -> ticket` map and
+      // emits tickets. Fuzzy ticketing is used as well: Each thread hands out tickets from its own claimed range.
       // NULL is a group of its own, but the threads cannot agree on a ticket for it without synchronizing. We
       // therefore reserve ticket 0 for it up front whenever the column can contain NULLs, so every thread can emit it
       // without coordination. If no NULL shows up, the reserved ticket is compacted away like any other unused ticket
@@ -449,9 +446,6 @@ std::shared_ptr<GroupKeyData> _compute_groups_single_column(const ColumnID group
             DebugAssert(reserves_null_ticket, "Found a NULL in a column that the table declares as non-nullable.");
             has_null.store(true, std::memory_order_relaxed);
           } else {
-            // Offer the candidate ticket `next_ticket`; the map returns this group's ticket. Because ticket ranges are
-            // disjoint across threads, the returned ticket equals `next_ticket` exactly when this call inserted, in
-            // which case we consume the candidate and refill the range when it runs out.
             current_ticket = value_to_ticket.try_emplace(position.value(), next_ticket);
             if (current_ticket == next_ticket) {
               ++next_ticket;
@@ -472,9 +466,7 @@ std::shared_ptr<GroupKeyData> _compute_groups_single_column(const ColumnID group
 
       // Threads steal chunks from a shared cursor and hand out tickets from their own ranges. When a thread stops it
       // usually leaves a trailing gap [next_ticket, ticket_range_end) of unused tickets at the end of its last claimed
-      // range. We record these per-thread gaps here and compact them out below so the final tickets form a dense
-      // [0, group_count) range. The ranges tile the ticket space contiguously, so the only gaps are these trailing
-      // ones.
+      // range. We record these per-thread gaps here and compact them out below.
       auto ticket_gaps = std::vector<std::pair<uint64_t, uint64_t>>(job_count);
       auto next_chunk_id = std::atomic<uint32_t>{0};
 

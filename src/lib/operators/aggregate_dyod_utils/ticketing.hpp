@@ -243,8 +243,8 @@ struct RowView {
 
   // The bytes that participate in hashing and equality: the null bitmap plus the inline key data (length + prefix
   // for strings).
-  const uint8_t* key_bytes() const {
-    return reinterpret_cast<const uint8_t*>(base + format.null_bitmap_offset);
+  uint8_t* key_bytes() const {
+    return reinterpret_cast<uint8_t*>(base + format.null_bitmap_offset);
   }
 
   size_t string_col_count() const {

@@ -107,6 +107,13 @@ class ConcurrentTicketMap {
   }
 
   uint64_t try_emplace(const Key& key, const uint64_t ticket) {
+    return try_emplace(key, ticket, [](const Key& probe_key) -> const Key& {
+      return probe_key;
+    });
+  }
+
+  template <typename Fn>
+  uint64_t try_emplace(const Key& key, const uint64_t ticket, Fn&& promote_key) {
     const auto hash = fmix64(static_cast<uint64_t>(_hash(key)));
 
     while (true) {
@@ -119,7 +126,7 @@ class ConcurrentTicketMap {
         if (state == EMPTY) {
           auto expected = EMPTY;
           if (slot.state.compare_exchange_strong(expected, CLAIMED)) {
-            slot.key = key;
+            slot.key = promote_key(key);
             slot.state = ticket + TICKET_BIAS;
             return ticket;
           }
