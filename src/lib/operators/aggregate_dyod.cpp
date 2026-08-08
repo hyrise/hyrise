@@ -608,52 +608,58 @@ std::vector<GroupID> AggregateDYOD::_group_ids_for_chunk(const Chunk& chunk, Wor
   auto column_starts =
       std::vector<std::vector<uint32_t>>(groupby_column_count, std::vector<uint32_t>(row_count + 1, uint32_t{0}));
 
-  // First, compute the group keys within each column and append it to the respective column buffer.
-  for (auto groupby_column_index = size_t{0}; groupby_column_index < groupby_column_count; ++groupby_column_index) {
-    const auto groupby_column_id = _groupby_column_ids[groupby_column_index];
-    const auto data_type = input_table->column_data_type(groupby_column_id);
-    const auto is_nullable = input_table->column_is_nullable(groupby_column_id);
-    auto& column_buffer = column_buffers[groupby_column_index];
-    auto& starts = column_starts[groupby_column_index];
+  {
+    TRACE_EVENT("aggregate_operator", "serialize group keys");
+    // First, compute the group keys within each column and append it to the respective column buffer.
+    for (auto groupby_column_index = size_t{0}; groupby_column_index < groupby_column_count; ++groupby_column_index) {
+      const auto groupby_column_id = _groupby_column_ids[groupby_column_index];
+      const auto data_type = input_table->column_data_type(groupby_column_id);
+      const auto is_nullable = input_table->column_is_nullable(groupby_column_id);
+      auto& column_buffer = column_buffers[groupby_column_index];
+      auto& starts = column_starts[groupby_column_index];
 
-    resolve_data_type(data_type, [&](auto type) {
-      using ColumnDataType = typename decltype(type)::type;
-      const auto segment = chunk.get_segment(groupby_column_id);
+      resolve_data_type(data_type, [&](auto type) {
+        using ColumnDataType = typename decltype(type)::type;
+        const auto segment = chunk.get_segment(groupby_column_id);
 
-      segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
-        starts[position.chunk_offset()] = static_cast<uint32_t>(column_buffer.size());
+        segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
+          starts[position.chunk_offset()] = static_cast<uint32_t>(column_buffer.size());
 
-        if (is_nullable) {
-          serialize_value(column_buffer, position.value(), position.is_null());
-        } else {
-          serialize_value(column_buffer, position.value());
-        }
+          if (is_nullable) {
+            serialize_value(column_buffer, position.value(), position.is_null());
+          } else {
+            serialize_value(column_buffer, position.value());
+          }
+        });
+
+        DebugAssert(column_buffer.size() <= std::numeric_limits<uint32_t>::max(), "Column buffer is too large.");
+
+        // Store the end position of the last key.
+        starts[row_count] = static_cast<uint32_t>(column_buffer.size());
       });
-
-      DebugAssert(column_buffer.size() <= std::numeric_limits<uint32_t>::max(), "Column buffer is too large.");
-
-      // Store the end position of the last key.
-      starts[row_count] = static_cast<uint32_t>(column_buffer.size());
-    });
+    }
   }
 
   // Then assemble the group keys per row and get the GroupID.
   auto group_ids = std::vector<GroupID>(row_count);
 
-  for (auto offset = ChunkOffset{0}; offset < row_count; ++offset) {
-    auto group_key = GroupKey(groupby_column_count);
+  {
+    TRACE_EVENT("aggregate_operator", "get group IDs");
+    for (auto offset = ChunkOffset{0}; offset < row_count; ++offset) {
+      auto group_key = GroupKey(groupby_column_count);
 
-    for (auto groupby_column_index = size_t{0}; groupby_column_index < groupby_column_count; ++groupby_column_index) {
-      const auto& buffer = column_buffers[groupby_column_index];
-      const auto& starts = column_starts[groupby_column_index];
+      for (auto groupby_column_index = size_t{0}; groupby_column_index < groupby_column_count; ++groupby_column_index) {
+        const auto& buffer = column_buffers[groupby_column_index];
+        const auto& starts = column_starts[groupby_column_index];
 
-      const auto start = starts[offset];
-      const auto end = starts[offset + 1];
+        const auto start = starts[offset];
+        const auto end = starts[offset + 1];
 
-      group_key[groupby_column_index] = std::vector(buffer.begin() + start, buffer.begin() + end);
+        group_key[groupby_column_index] = std::vector(buffer.begin() + start, buffer.begin() + end);
+      }
+
+      group_ids[offset] = _group_id(group_key, worker_state);
     }
-
-    group_ids[offset] = _group_id(group_key, worker_state);
   }
 
   return group_ids;
