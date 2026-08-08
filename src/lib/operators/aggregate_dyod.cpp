@@ -596,15 +596,15 @@ void dyod_write_output_group_columns(const std::shared_ptr<const Table>& input_t
   }
 }
 
-}  // namespace
-
-namespace hyrise {
-
 inline bool has_aggregate_functions(const std::vector<std::shared_ptr<WindowFunctionExpression>>& aggregates) {
   return !aggregates.empty() && !std::ranges::all_of(aggregates, [](const auto& aggregate_expression) {
     return aggregate_expression->window_function == WindowFunction::Any;
   });
 }
+
+}  // namespace
+
+namespace hyrise {
 
 AggregateDYOD::AggregateDYOD(const std::shared_ptr<AbstractOperator>& input_operator,
                              const std::vector<std::shared_ptr<WindowFunctionExpression>>& aggregates,
@@ -663,6 +663,7 @@ struct DYODAggregateContext : public DYODAggregateResultContext<ColumnDataType, 
 
   void merge_results(DYODAggregateResult<ColumnDataType, aggregate_function>& target,
                      DYODAggregateResult<ColumnDataType, aggregate_function>& other) {
+    // Merge DYODAggregateResults depending on their WindowFunction (special handly e.g. the type of check to perform)
     if constexpr (aggregate_function == WindowFunction::Min) {
       if (value_smaller(other.accumulator, target.accumulator)) {
         target.accumulator = other.accumulator;
@@ -687,28 +688,42 @@ struct DYODAggregateContext : public DYODAggregateResultContext<ColumnDataType, 
       target.accumulator.merge(other.accumulator);
     }
     if constexpr (aggregate_function == WindowFunction::StandardDeviationSample) {
-      // TODO(anyone): make more readable
-      // copy old values
-      auto count = target.accumulator[0];
-      auto mean = target.accumulator[1];
-      auto squared_distance_from_mean = target.accumulator[2];
+      // Here, we merge two result sets of Welford's online algorithm for calculating the Standard Deviation
+      // See https://en.wikipedia.org/w/index.php?title=Algorithms_for_calculating_variance&oldid=1367183160
+      // for an introduction to Welford's online aglorithm. Under section "Parallel algorithm" there is an
+      // introduction into the merging approach we are using here. It is based on:
+      // Chan et al. (1979), Updating formulae and a pairwise algorithm for computing sample variances
+      // (Technical Report No. STAN-CS-79-773). Stanford University, Department of Computer Science,
+      // https://i.stanford.edu/pub/cstr/reports/cs/tr/79/773/CS-TR-79-773.pdf
 
-      target.accumulator[0] = count + other.accumulator[0];
-      auto delta = other.accumulator[1] - mean;
-      target.accumulator[1] = (count * mean + other.accumulator[0] * other.accumulator[1]) / target.accumulator[0];
-      target.accumulator[2] = squared_distance_from_mean + other.accumulator[2] +
-                              (delta * delta * count * other.accumulator[0]) / target.accumulator[0];
+      auto a_count = target.accumulator[0];
+      auto a_mean = target.accumulator[1];
+      auto a_squared_distance_from_mean = target.accumulator[2];
 
-      if (target.accumulator[0] > 1) {
+      auto b_count = other.accumulator[0];
+      auto b_mean = other.accumulator[1];
+      auto b_squared_distance_from_mean = other.accumulator[2];
+
+      auto ab_count = a_count + b_count;
+      auto delta = b_mean - a_mean;
+      auto ab_mean = (a_count * a_mean + b_count * b_mean) / ab_count;
+      auto ab_squared_distance_from_mean = a_squared_distance_from_mean + b_squared_distance_from_mean +
+                                           ((delta * delta * a_count * b_count) / ab_count);
+
+      if (ab_count > 1) {
         // The SQL standard defines VAR_SAMP (which is the basis of STDDEV_SAMP) as NULL if the number of values is 1.
-        const auto variance = target.accumulator[2] / (target.accumulator[0] - 1);
+        const auto variance = ab_squared_distance_from_mean / (ab_count - 1);
         target.accumulator[3] = std::sqrt(variance);
       }
+
+      target.accumulator[0] = ab_count;
+      target.accumulator[1] = ab_mean;
+      target.accumulator[2] = ab_squared_distance_from_mean;
     }
     target.has_aggregates |= other.has_aggregates;
   }
 
-  // Currently only merges two contexts with a single result i.e., a single group.
+  // Currently we only merge two contexts with a single result i.e., a single group.
   void merge(std::shared_ptr<DYODAggregateContext<ColumnDataType, aggregate_function, AggregateKey>>& other) {
     DebugAssert(other->results.size() <= 1, "Expected other to have at most one result.");
     DebugAssert(other->results.size() >= 1, "Expected other to have at least one result.");
@@ -1196,6 +1211,7 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
   const auto is_multi_threaded = Hyrise::get().is_multi_threaded();
   const auto row_count = input_table->row_count();
   const auto groupby_column_count = _groupby_column_ids.size();
+
   // If we only work on a single thread, have an empty table, or only a single group,
   // we don't bother splitting by groupby groups.
   if (!is_multi_threaded || row_count == 0 || groupby_column_count == 0) {
@@ -1207,6 +1223,10 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
     _write_output(contexts_per_column, input_table, output_table, aggregate_result_table);
     return output_table;
   }
+
+  // First Split: Hash all groupby keys in parallel and populate the pos_list for each radix bucket with the
+  // corresponding RowIDs for Data Tables or chunk_offsets for Reference tables.
+
   const auto num_cpus = Hyrise::get().topology.num_cpus();
   const auto max_job_size = row_count / (num_cpus * IDEAL_CPU_JOB_COUNT);
 
@@ -1217,13 +1237,18 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
       std::conditional_t<std::is_same_v<IsReferenceTable, std::true_type>, std::vector<ChunkOffset>, RowIDPosList>;
   using PosLists = std::vector<std::shared_ptr<ReferenceList>>;
 
-  auto pos_lists_per_thread = std::vector<std::shared_ptr<PosLists>>(RADIX_SPLIT_MAX_BUCKETS);
+  auto pos_lists_per_thread = std::array<std::shared_ptr<PosLists>, RADIX_SPLIT_MAX_BUCKETS>();
 
   const auto chunk_count = input_table->chunk_count();
   for (auto bucket_id = size_t{0}; bucket_id < RADIX_SPLIT_MAX_BUCKETS; ++bucket_id) {
     auto pos_lists = std::make_shared<PosLists>(chunk_count);
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-      (*pos_lists)[chunk_id] = std::make_shared<ReferenceList>();
+      auto reference_list = std::make_shared<ReferenceList>();
+      // in an ideal world, we split the the chunks perfectly accross the buckets
+      // this won't happen, some will be bigger, some will be smaller
+      // However, it is still better to prerserve instead of incrementally push_back
+      // TODO(anylone): Find a way to reserve the reference_lists.
+      (*pos_lists)[chunk_id] = reference_list;
     }
     pos_lists_per_thread[bucket_id] = pos_lists;
   }
@@ -1247,7 +1272,7 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
           using ColumnDataType = typename decltype(type)::type;
 
           const auto& abstract_segment = chunk->get_segment(column_id);
-          const auto hash_f = std::hash<ColumnDataType>{};
+          const auto hash_f = std::hash<ColumnDataType>{};  // TODO(anyone): Use a better hash function
 
           segment_iterate<ColumnDataType>(*abstract_segment, [&](const auto& position) {
             auto value = position.is_null() ? 0 : hash_f(position.value());
@@ -1260,17 +1285,28 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
         // see definition of pos_lists_per_thread
         const auto value = hashes[chunk_offset];
         const auto key = value & RADIX_MASK;
+        const auto& current_pos_list = *pos_lists_per_thread[key];
         if constexpr (std::is_same_v<IsReferenceTable, std::true_type>) {
-          pos_lists_per_thread[key]->at(chunk_id)->push_back(chunk_offset);
+          current_pos_list[chunk_id]->push_back(chunk_offset);
         } else {
-          pos_lists_per_thread[key]->at(chunk_id)->push_back(RowID{chunk_id, chunk_offset});
+          current_pos_list[chunk_id]->push_back(RowID{chunk_id, chunk_offset});
         }
       }
     }));
   }
-  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(hashing_jobs);
 
-  // SPLIT END
+  // No jobs? Empty table; 1 Job? run in-place, otherwise use scheduler
+  // TODO(anyone): Skip scheduler for a single job
+  if (hashing_jobs.empty()) {
+    return std::make_shared<Table>(input_table->column_definitions(), TableType::References);
+  } else {
+    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(hashing_jobs);
+  }
+
+  // End First Split
+  // After splitting into radix buckets, we can aggregate each bucket in parallel.
+  // For each bucket we create a local input table that contains references to the corresponding rows of the original
+  // input table. For ReferenceSegments we re-use the code from TableScan
 
   auto output_table = std::shared_ptr<Table>{};
   auto aggregate_result_table = std::shared_ptr<Table>{};
@@ -1283,21 +1319,22 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
       const auto pos_lists = pos_lists_per_thread[thread_id];
       const auto local_input_table = std::make_shared<Table>(input_table->column_definitions(), TableType::References);
 
-      // Scan input table for radix bucket.
+      // Scan input table for radix bucket → Populate the local input table with references to the original input table
       for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-        auto pos_list = pos_lists->at(chunk_id);
+        auto pos_list = (*pos_lists)[chunk_id];
         if (pos_list->empty()) {
           continue;
         }
         auto out_segments = Segments{};
-        out_segments.reserve(column_count);
         if constexpr (std::is_same_v<IsReferenceTable, std::false_type>) {
           pos_list->guarantee_single_chunk();
+          out_segments.resize(column_count);
           for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
-            out_segments.push_back(std::make_shared<ReferenceSegment>(input_table, column_id, pos_list));
+            out_segments[column_id] = std::make_shared<ReferenceSegment>(input_table, column_id, pos_list);
           }
         } else {
-          // This mostly copy pasta from TableScan.
+          // Re-used from TableScan: Resolve the ReferenceSegments of the input reference table into our local table
+          // TODO(anyone): Find a way to avoid the code duplication
           const auto& chunk_in = input_table->get_chunk(chunk_id);
           if (pos_list->size() == chunk_in->size()) {
             // Shortcut - the entire input reference segment matches, so we can simply forward that chunk.
@@ -1306,6 +1343,7 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
           } else {
             auto filtered_pos_lists = std::map<std::shared_ptr<const AbstractPosList>, std::shared_ptr<RowIDPosList>>{};
 
+            out_segments.resize(column_count);
             for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
               const auto segment_in = chunk_in->get_segment(column_id);
 
@@ -1331,19 +1369,16 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
 
               const auto table_out = ref_segment_in->referenced_table();
               const auto column_id_out = ref_segment_in->referenced_column_id();
-              const auto ref_segment_out =
-                  std::make_shared<ReferenceSegment>(table_out, column_id_out, filtered_pos_list);
-              out_segments.emplace_back(ref_segment_out);
+              out_segments[column_id] = std::make_shared<ReferenceSegment>(table_out, column_id_out, filtered_pos_list);
             }
           }
         }
         local_input_table->append_chunk(out_segments);
       }
 
-      /**
-       * PARTITIONING STEP
-       */
-
+      // Partitioning step: Aggregate the local input table in this job, write its output into the output table
+      // The output table is shared between all jobs, but no two jobs write to the same chunk. For avoiding append_chunk
+      // collisions we are using a mutex in _write_output.
       const auto local_row_count = local_input_table->row_count();
 
       auto contexts_per_column = ContextsPerColumn(aggregates_count);
@@ -1353,6 +1388,7 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
     }));
   }
 
+  // TODO(anyone): Skip scheduler for a single job
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 
   return output_table;
@@ -1687,8 +1723,8 @@ void AggregateDYOD::_write_output(ContextsPerColumn& contexts_per_column,
    * Write the output.
    *
    * At this point, we collected the GROUP BY columns as reference segments, which are split using the default chunk
-   * size (minus gap rows, see comments on NULL_ID). Similarly, the aggregate values are split into chunks. Both are currently stored in 
-   * intermediate_result. We write the materialized aggregate columns to the (global) aggregate_result_table, then store 
+   * size (minus gap rows, see comments on NULL_ID). Similarly, the aggregate values are split into chunks. Both are currently stored in
+   * intermediate_result. We write the materialized aggregate columns to the (global) aggregate_result_table, then store
    * reference segments to those columns as well as the groupby keys to the output table.
   */
 
