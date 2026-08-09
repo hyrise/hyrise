@@ -1260,9 +1260,8 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
   const auto chunk_count = input_table->chunk_count();
   for (auto bucket_id = size_t{0}; bucket_id < RADIX_SPLIT_MAX_BUCKETS; ++bucket_id) {
     auto pos_lists = std::make_shared<PosLists>(chunk_count);
-    auto& pos_lists_reference = *pos_lists;
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-      pos_lists_reference[chunk_id] = std::make_shared<ReferenceList>();
+      (*pos_lists)[chunk_id] = std::make_shared<ReferenceList>();
     }
     pos_lists_per_job[bucket_id] = pos_lists;
   }
@@ -1386,20 +1385,17 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
               // We only create a new RowIdPosList if we have not yet created one for the pos_list_in.
               // This accounts for the same PosList being used for multiple columns.
               if (!filtered_pos_list) {
-                auto& pos_list_in_reference = *pos_list_in;
-
                 filtered_pos_list = std::make_shared<RowIDPosList>(pos_list->size());
-                auto& filtered_pos_list_reference = *filtered_pos_list;
 
-                if (pos_list_in_reference.references_single_chunk()) {
-                  filtered_pos_list_reference.guarantee_single_chunk();
+                if (pos_list_in->references_single_chunk()) {
+                  filtered_pos_list->guarantee_single_chunk();
                 }
 
                 auto offset = size_t{0};
 
                 for (const auto& match : *pos_list) {
-                  const auto row_id = pos_list_in_reference[match];
-                  filtered_pos_list_reference[offset] = row_id;
+                  const auto row_id = (*pos_list_in)[match];
+                  (*filtered_pos_list)[offset] = row_id;
                   ++offset;
                 }
               }
