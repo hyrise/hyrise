@@ -58,6 +58,17 @@ namespace {
 using namespace hyrise;
 using namespace hyrise::expression_functional;
 
+// splitmix64 hash mix finalizer
+// Steele, G. L., Lea, D., & Flood, C. H. (2014). Fast splittable pseudorandom number generators.
+// ACM SIGPLAN Notices, 49(10), 453–472. https://doi.org/10.1145/2714064.2660195
+inline size_t hash_mix(size_t x) {
+  x += 0x9e3779b97f4a7c15ULL;
+  x = (x ^ (x >> 30)) * 0xbf58476d1ce4e5b9ULL;
+  x = (x ^ (x >> 27)) * 0x94d049bb133111ebULL;
+  x = x ^ (x >> 31);
+  return x;
+}
+
 /**
  * The following template functions write the aggregated values for the different aggregate functions. They are separate
  * and templated to avoid compiler errors for invalid type/function combinations.
@@ -92,7 +103,7 @@ bool dyod_write_aggregate_values(const DYODAggregateResults<ColumnDataType, aggr
                                     } else {
                                       values.emplace_back();
                                       null_values.emplace_back(true);
-                                      null_written = true;
+                                      null_written.store(true, std::memory_order_relaxed);
                                     }
                                   }
                                 });
@@ -178,7 +189,7 @@ bool dyod_write_aggregate_values(const DYODAggregateResults<ColumnDataType, aggr
           } else {
             values.emplace_back();
             null_values.emplace_back(true);
-            null_written = true;
+            null_written.store(true, std::memory_order_relaxed);
           }
         }
       });
@@ -224,7 +235,7 @@ bool dyod_write_aggregate_values(const DYODAggregateResults<ColumnDataType, aggr
                                       // STDDEV_SAMP is undefined for lists with less than two elements.
                                       values.emplace_back();
                                       null_values.emplace_back(true);
-                                      null_written = true;
+                                      null_written.store(true, std::memory_order_relaxed);
                                     }
                                   }
                                 });
@@ -1237,28 +1248,23 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
   const auto num_cpus = Hyrise::get().topology.num_cpus();
   const auto max_job_size = row_count / (num_cpus * IDEAL_CPU_JOB_COUNT);
 
-  // If we have a Data table, we directly partition into PosLists and forward these to the thread-local input tables.
+  // If we have a Data table, we directly partition into PosLists and forward these to the job/thread-local input tables.
   // For a Reference table, we only store the ChunkOffsets since we have to resolve the PosList anyway later.
   // TODO(anyone): Consider using pmr_vector instead of std::vector.
   using ReferenceList =
       std::conditional_t<std::is_same_v<IsReferenceTable, std::true_type>, std::vector<ChunkOffset>, RowIDPosList>;
   using PosLists = std::vector<std::shared_ptr<ReferenceList>>;
 
-  auto pos_lists_per_thread = std::array<std::shared_ptr<PosLists>, RADIX_SPLIT_MAX_BUCKETS>();
+  auto pos_lists_per_job = std::array<std::shared_ptr<PosLists>, RADIX_SPLIT_MAX_BUCKETS>();
 
   const auto chunk_count = input_table->chunk_count();
   for (auto bucket_id = size_t{0}; bucket_id < RADIX_SPLIT_MAX_BUCKETS; ++bucket_id) {
     auto pos_lists = std::make_shared<PosLists>(chunk_count);
     auto& pos_lists_reference = *pos_lists;
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-      auto reference_list = std::make_shared<ReferenceList>();
-      // Ideally, we split the the chunks perfectly across the buckets. In practice, this won't happen,
-      // some will be bigger, some will be smaller. However, it is still better to pre-reserve instead of incrementally
-      // calling push_back
-      // TODO(anyone): Find a way to reserve the reference_lists.
-      pos_lists_reference[chunk_id] = reference_list;
+      pos_lists_reference[chunk_id] = std::make_shared<ReferenceList>();
     }
-    pos_lists_per_thread[bucket_id] = pos_lists;
+    pos_lists_per_job[bucket_id] = pos_lists;
   }
 
   auto hashing_jobs = std::vector<std::shared_ptr<AbstractTask>>{};
@@ -1285,19 +1291,29 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
           segment_iterate<ColumnDataType>(*abstract_segment, [&](const auto& position) {
             auto value = position.is_null() ? 0 : hash_f(position.value());
 
-            boost::hash_combine(hashes[position.chunk_offset()], value);
+            boost::hash_combine(hashes[position.chunk_offset()], hash_mix(value));
           });
         });
       }
+
+      // Cache pointers in a local array to avoid repeated lookups from the array
+      // Here we can also reserve some space before pushing back the RowIDs/chunk_offsets,
+      // approximately chunk_size / RADIX_SPLIT_MAX_BUCKETS
+      // This is probably not accurate, but better than reserving nothing.
+      std::array<std::shared_ptr<ReferenceList>, RADIX_SPLIT_MAX_BUCKETS> local_pos_lists;
+      for (auto i = 0; i < RADIX_SPLIT_MAX_BUCKETS; ++i) {
+        local_pos_lists[i] = pos_lists_per_job[i]->at(chunk_id);
+        local_pos_lists[i]->reserve(chunk_size / RADIX_SPLIT_MAX_BUCKETS);
+      }
+
       for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
-        // see definition of pos_lists_per_thread
+        // see definition of pos_lists_per_job
         const auto value = hashes[chunk_offset];
         const auto key = value & RADIX_MASK;
-        const auto& current_pos_list = *pos_lists_per_thread[key];
         if constexpr (std::is_same_v<IsReferenceTable, std::true_type>) {
-          current_pos_list[chunk_id]->push_back(chunk_offset);
+          local_pos_lists[key]->push_back(chunk_offset);
         } else {
-          current_pos_list[chunk_id]->push_back(RowID{chunk_id, chunk_offset});
+          local_pos_lists[key]->push_back(RowID{chunk_id, chunk_offset});
         }
       }
     }));
@@ -1319,16 +1335,22 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   jobs.reserve(RADIX_SPLIT_MAX_BUCKETS);
 
-  for (auto thread_id = size_t{0}; thread_id < RADIX_SPLIT_MAX_BUCKETS; ++thread_id) {
-    jobs.emplace_back(std::make_shared<JobTask>([&, thread_id]() {
-      const auto pos_lists = pos_lists_per_thread[thread_id];
-      const auto& pos_lists_reference = *pos_lists;
-      const auto local_input_table = std::make_shared<Table>(input_table->column_definitions(), TableType::References);
+  for (auto job_id = size_t{0}; job_id < RADIX_SPLIT_MAX_BUCKETS; ++job_id) {
+    const auto& pos_lists = *pos_lists_per_job[job_id];
+    const auto bucket_is_empty = std::all_of(pos_lists.begin(), pos_lists.end(), [](const auto& pos_list) {
+      return pos_list->empty();
+    });
 
+    if (bucket_is_empty) {
+      continue;
+    }
+
+    jobs.emplace_back(std::make_shared<JobTask>([&]() {
+      const auto local_input_table = std::make_shared<Table>(input_table->column_definitions(), TableType::References);
       // Scan input table for radix bucket and populate the local input table with references to the original input
       // table.
       for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-        auto pos_list = pos_lists_reference[chunk_id];
+        auto pos_list = pos_lists[chunk_id];
         if (pos_list->empty()) {
           continue;
         }
@@ -1412,7 +1434,7 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
 const auto JOB_COUNT_ESTIMATE = ChunkID{16};
 
 /**
- * This is the unpartitioned variant. It will handle the table partitioning for low cardinalities and call the partitioned 
+ * This is the unpartitioned variant. It will handle the table partitioning for low cardinalities and call the partitioned
  * variant below for the actual aggregation.
  */
 template <typename AggregateKey>
@@ -1427,8 +1449,8 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std
                             : _partition_by_groupby_keys<std::false_type, AggregateKey>(
                                   input_table, expected_result_size, use_immediate_key_shortcut, guarantee_single_key);
 
-  // TODO(anyone): Estimate ideal number of threads for this bucket.
-  // If we only have one group, we can easily split this thread, since we have only one result per context.
+  // TODO(anyone): Estimate ideal number of jobs/threads for this bucket.
+  // If we only have one group, we can easily split this job, since we have only one result per context.
   const auto chunk_count = input_table->chunk_count();
   auto bucket_job_count = guarantee_single_key ? std::min(JOB_COUNT_ESTIMATE, chunk_count) : ChunkID{1};
 
