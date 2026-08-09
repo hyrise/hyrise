@@ -62,3 +62,6 @@
 [submodule "third_party/perfetto"]
 	path = third_party/perfetto
 	url = https://github.com/google/perfetto
+[submodule "third_party/seq"]
+	path = third_party/seq
+	url = https://github.com/Thermadiag/seq.git
