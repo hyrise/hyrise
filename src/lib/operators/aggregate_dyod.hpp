@@ -51,6 +51,7 @@ struct SingleThreadedState {
   boost::unordered_flat_map<GroupKey, GroupID, GroupKeyHash, GroupKeyEqual> group_id_map;
   GroupID next_group_id{0};
   std::vector<GroupKey> group_keys;
+  std::vector<std::vector<RowID>> row_ids;
   std::vector<bool> occupied_group_ids;
 };
 
@@ -58,6 +59,7 @@ struct MultiThreadedState {
   tbb::concurrent_unordered_map<GroupKey, GroupID, GroupKeyHash, GroupKeyEqual> group_id_map;
   std::atomic<GroupID> next_group_id{0};
   tbb::concurrent_vector<GroupKey> group_keys;
+  tbb::concurrent_vector<std::vector<RowID>> row_ids;
   std::mutex group_keys_mutex;
   tbb::concurrent_vector<bool> occupied_group_ids;
 };
@@ -142,7 +144,8 @@ class AggregateDYOD : public AbstractAggregateOperator {
       const std::vector<size_t>& occupied_group_ids, size_t start_index, size_t end_index);
 
   template <typename StateType>
-  GroupID _group_id(StateType& state, const GroupKey& group_key, WorkerState& worker_state);
+  GroupID _group_id(StateType& state, std::vector<RowID>& row_ids, const GroupKey& group_key,
+                    WorkerState& worker_state);
 
   std::pair<std::vector<GroupID>, GroupID> _group_ids_for_chunk(ChunkID chunk_id, const Chunk& chunk,
                                                                 WorkerState& worker_state);
