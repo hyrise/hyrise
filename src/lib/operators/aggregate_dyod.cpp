@@ -1249,13 +1249,14 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
   const auto chunk_count = input_table->chunk_count();
   for (auto bucket_id = size_t{0}; bucket_id < RADIX_SPLIT_MAX_BUCKETS; ++bucket_id) {
     auto pos_lists = std::make_shared<PosLists>(chunk_count);
+    auto& pos_lists_reference = *pos_lists;
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
       auto reference_list = std::make_shared<ReferenceList>();
       // Ideally, we split the the chunks perfectly across the buckets. In practice, this won't happen,
       // some will be bigger, some will be smaller. However, it is still better to pre-reserve instead of incrementally
       // calling push_back
       // TODO(anyone): Find a way to reserve the reference_lists.
-      (*pos_lists)[chunk_id] = reference_list;
+      pos_lists_reference[chunk_id] = reference_list;
     }
     pos_lists_per_thread[bucket_id] = pos_lists;
   }
@@ -1321,12 +1322,13 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
   for (auto thread_id = size_t{0}; thread_id < RADIX_SPLIT_MAX_BUCKETS; ++thread_id) {
     jobs.emplace_back(std::make_shared<JobTask>([&, thread_id]() {
       const auto pos_lists = pos_lists_per_thread[thread_id];
+      const auto& pos_lists_reference = *pos_lists;
       const auto local_input_table = std::make_shared<Table>(input_table->column_definitions(), TableType::References);
 
       // Scan input table for radix bucket and populate the local input table with references to the original input
       // table.
       for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-        auto pos_list = (*pos_lists)[chunk_id];
+        auto pos_list = pos_lists_reference[chunk_id];
         if (pos_list->empty()) {
           continue;
         }
@@ -1356,20 +1358,26 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
               DebugAssert(ref_segment_in, "All segments should be of type ReferenceSegment.");
 
               const auto pos_list_in = ref_segment_in->pos_list();
+
               auto& filtered_pos_list = filtered_pos_lists[pos_list_in];
 
               // We only create a new RowIdPosList if we have not yet created one for the pos_list_in.
               // This accounts for the same PosList being used for multiple columns.
               if (!filtered_pos_list) {
+                auto& pos_list_in_reference = *pos_list_in;
+
                 filtered_pos_list = std::make_shared<RowIDPosList>(pos_list->size());
-                if (pos_list_in->references_single_chunk()) {
-                  filtered_pos_list->guarantee_single_chunk();
+                auto& filtered_pos_list_reference = *filtered_pos_list;
+
+                if (pos_list_in_reference.references_single_chunk()) {
+                  filtered_pos_list_reference.guarantee_single_chunk();
                 }
 
                 auto offset = size_t{0};
+
                 for (const auto& match : *pos_list) {
-                  const auto row_id = (*pos_list_in)[match];
-                  (*filtered_pos_list)[offset] = row_id;
+                  const auto row_id = pos_list_in_reference[match];
+                  filtered_pos_list_reference[offset] = row_id;
                   ++offset;
                 }
               }
@@ -1823,11 +1831,12 @@ void AggregateDYOD::_write_output(ContextsPerColumn& contexts_per_column,
       }
 
       auto reference_segments = std::make_shared<Segments>(num_output_columns);
+      auto& reference_segments_reference = *reference_segments;
 
       for (const auto column_id : reference_segment_indexes) {
         DebugAssert(std::dynamic_pointer_cast<const ReferenceSegment>(intermediate_result[chunk_id][column_id]),
                     "Expected a ReferenceSegment at this position.");
-        (*reference_segments)[column_id] = intermediate_result[chunk_id][column_id];
+        reference_segments_reference[column_id] = intermediate_result[chunk_id][column_id];
       }
 
       const auto materialized_table_column_count = entireposlist_indexes.size();
@@ -1843,8 +1852,9 @@ void AggregateDYOD::_write_output(ContextsPerColumn& contexts_per_column,
                     "Unexpected reference segment at this position.");
         const auto entire_chunk_pos_list =
             std::make_shared<EntireChunkPosList>(ChunkID{first_materialized_chunk_id + chunk_id}, chunk_size);
-        (*reference_segments)[entireposlist_indexes[materialized_table_column_id]] = std::make_shared<ReferenceSegment>(
-            aggregate_result_table, materialized_table_column_id, entire_chunk_pos_list);
+        reference_segments_reference[entireposlist_indexes[materialized_table_column_id]] =
+            std::make_shared<ReferenceSegment>(aggregate_result_table, materialized_table_column_id,
+                                               entire_chunk_pos_list);
       }
       output_chunks.emplace_back(reference_segments);
     }
