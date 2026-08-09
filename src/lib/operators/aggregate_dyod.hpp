@@ -1,30 +1,27 @@
 #pragma once
 
-#include <algorithm>
+#include <atomic>
+#include <cstddef>
+#include <functional>
 #include <memory>
-#include <optional>
-#include <ranges>
+#include <mutex>
 #include <string>
 #include <unordered_map>
-#include <unordered_set>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include <boost/container_hash/hash.hpp>
 #include <boost/unordered/unordered_flat_map.hpp>
 #include <oneapi/tbb/concurrent_unordered_map.h>  // NOLINT(build/include_order)
+#include <oneapi/tbb/concurrent_vector.h>         // NOLINT(build/include_order)
 
 #include "abstract_aggregate_operator.hpp"
-#include "abstract_read_only_operator.hpp"
 #include "aggregate/aggregate_vector.hpp"
 #include "aggregate/types.hpp"
 #include "aggregate/window_function_traits.hpp"
 #include "expression/window_function_expression.hpp"
-#include "resolve_type.hpp"
-#include "storage/reference_segment.hpp"
-#include "storage/value_segment.hpp"
 #include "types.hpp"
-#include "utils/assert.hpp"
 
 namespace hyrise {
 

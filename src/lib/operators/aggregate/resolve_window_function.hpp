@@ -1,5 +1,10 @@
 #pragma once
 
+#include <type_traits>
+
+#include "expression/window_function_expression.hpp"
+#include "utils/assert.hpp"
+
 namespace hyrise {
 
 template <typename Functor>

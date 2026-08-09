@@ -1,9 +1,12 @@
 #pragma once
 
 #include <algorithm>
+#include <cstddef>
+#include <type_traits>
 #include <unordered_set>
 #include <vector>
 
+#include "operators/abstract_aggregate_operator.hpp"
 #include "types.hpp"
 #include "window_function_traits.hpp"
 

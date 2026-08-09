@@ -1,6 +1,11 @@
 #pragma once
 
+#include <algorithm>
+#include <cstddef>
+#include <span>
 #include <vector>
+
+#include <boost/container_hash/hash.hpp>
 
 namespace hyrise {
 

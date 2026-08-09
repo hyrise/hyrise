@@ -1,5 +1,10 @@
 #pragma once
 
+#include <cstddef>
+#include <cstring>
+#include <type_traits>
+#include <vector>
+
 namespace hyrise {
 
 template <typename T>
