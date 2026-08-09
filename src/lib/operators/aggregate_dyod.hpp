@@ -11,6 +11,7 @@
 #include <vector>
 
 #include <boost/container_hash/hash.hpp>
+#include <boost/unordered/unordered_flat_map.hpp>
 #include <oneapi/tbb/concurrent_unordered_map.h>  // NOLINT(build/include_order)
 
 #include "abstract_aggregate_operator.hpp"
@@ -223,7 +224,7 @@ template <typename Functor>
 void resolve_window_function(WindowFunction window_function, Functor&& functor);
 
 struct SingleThreadedState {
-  std::unordered_map<GroupKey, GroupID, GroupKeyHash, GroupKeyEqual> group_id_map;
+  boost::unordered_flat_map<GroupKey, GroupID, GroupKeyHash, GroupKeyEqual> group_id_map;
   GroupID next_group_id{0};
   std::vector<GroupKey> group_keys;
   std::vector<bool> occupied_group_ids;
