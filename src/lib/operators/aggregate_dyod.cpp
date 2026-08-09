@@ -337,30 +337,9 @@ std::shared_ptr<AbstractSegment> AggregateDYOD::_write_groupby_segment(size_t gr
 }
 
 template <typename ColumnDataType, WindowFunction aggregate_function>
+  requires(aggregate_function == WindowFunction::Avg && std::is_arithmetic_v<ColumnDataType>)
 std::shared_ptr<AbstractSegment> AggregateDYOD::_write_aggregate_segment(
-    TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector, bool is_nullable,
-    const std::vector<size_t>& occupied_group_ids, size_t start_index, size_t end_index) {
-  constexpr auto data_type = WindowFunctionTraits<ColumnDataType, aggregate_function>::RESULT_TYPE;
-
-  if constexpr (data_type == DataType::Null) {
-    Fail("Invalid combination of column type and aggregate function.");
-  } else {
-    if constexpr (aggregate_function == WindowFunction::Count) {
-      return _write_count_aggregate_segment(aggregate_vector, occupied_group_ids, start_index, end_index);
-    } else if constexpr (aggregate_function == WindowFunction::Avg) {
-      return _write_avg_aggregate_segment(aggregate_vector, occupied_group_ids, start_index, end_index);
-    } else if constexpr (aggregate_function == WindowFunction::CountDistinct) {
-      return _write_count_distinct_aggregate_segment(aggregate_vector, occupied_group_ids, start_index, end_index);
-    } else {
-      return _write_default_aggregate_segment(aggregate_vector, is_nullable, occupied_group_ids, start_index,
-                                              end_index);
-    }
-  }
-}
-
-template <typename ColumnDataType, WindowFunction aggregate_function>
-std::shared_ptr<AbstractSegment> AggregateDYOD::_write_avg_aggregate_segment(
-    TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector,
+    TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector, bool /*is_nullable*/,
     const std::vector<size_t>& occupied_group_ids, size_t start_index, size_t end_index) {
   TRACE_EVENT("aggregate_operator", "_write_avg_aggregate_segment");
   using AggregateDataType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
@@ -387,8 +366,9 @@ std::shared_ptr<AbstractSegment> AggregateDYOD::_write_avg_aggregate_segment(
 }
 
 template <typename ColumnDataType, WindowFunction aggregate_function>
-std::shared_ptr<AbstractSegment> AggregateDYOD::_write_count_aggregate_segment(
-    TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector,
+  requires(aggregate_function == WindowFunction::Count)
+std::shared_ptr<AbstractSegment> AggregateDYOD::_write_aggregate_segment(
+    TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector, bool /*is_nullable*/,
     const std::vector<size_t>& occupied_group_ids, size_t start_index, size_t end_index) {
   TRACE_EVENT("aggregate_operator", "_write_count_aggregate_segment");
   using AggregateDataType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
@@ -405,8 +385,9 @@ std::shared_ptr<AbstractSegment> AggregateDYOD::_write_count_aggregate_segment(
 }
 
 template <typename ColumnDataType, WindowFunction aggregate_function>
-std::shared_ptr<AbstractSegment> AggregateDYOD::_write_count_distinct_aggregate_segment(
-    TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector,
+  requires(aggregate_function == WindowFunction::CountDistinct)
+std::shared_ptr<AbstractSegment> AggregateDYOD::_write_aggregate_segment(
+    TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector, bool /*is_nullable*/,
     const std::vector<size_t>& occupied_group_ids, size_t start_index, size_t end_index) {
   TRACE_EVENT("aggregate_operator", "_write_count_distinct_aggregate_segment");
   using AggregateDataType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
@@ -424,7 +405,7 @@ std::shared_ptr<AbstractSegment> AggregateDYOD::_write_count_distinct_aggregate_
 }
 
 template <typename ColumnDataType, WindowFunction aggregate_function>
-std::shared_ptr<AbstractSegment> AggregateDYOD::_write_default_aggregate_segment(
+std::shared_ptr<AbstractSegment> AggregateDYOD::_write_aggregate_segment(
     TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector, bool is_nullable,
     const std::vector<size_t>& occupied_group_ids, size_t start_index, size_t end_index) {
   TRACE_EVENT("aggregate_operator", "_write_default_aggregate_segment");
@@ -456,6 +437,14 @@ std::shared_ptr<AbstractSegment> AggregateDYOD::_write_default_aggregate_segment
     values[index - start_index] = aggregate_values[group_id];
   }
   return std::make_shared<ValueSegment<AggregateDataType>>(std::move(values));
+}
+
+template <typename ColumnDataType, WindowFunction aggregate_function>
+  requires(WindowFunctionTraits<ColumnDataType, aggregate_function>::RESULT_TYPE == DataType::Null)
+std::shared_ptr<AbstractSegment> AggregateDYOD::_write_aggregate_segment(
+    TypedAggregateVector<ColumnDataType, aggregate_function>& /*aggregate_vector*/, bool /*is_nullable*/,
+    const std::vector<size_t>& /*occupied_group_ids*/, size_t /*start_index*/, size_t /*end_index*/) {
+  Fail("Invalid combination of column type and aggregate function.");
 }
 
 template <typename StateType>

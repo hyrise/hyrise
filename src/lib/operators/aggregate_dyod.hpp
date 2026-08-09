@@ -116,27 +116,31 @@ class AggregateDYOD : public AbstractAggregateOperator {
                                                           size_t start_index, size_t end_index);
 
   template <typename ColumnDataType, WindowFunction aggregate_function>
+    requires(aggregate_function == WindowFunction::Avg && std::is_arithmetic_v<ColumnDataType>)
   std::shared_ptr<AbstractSegment> _write_aggregate_segment(
       TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector, bool is_nullable,
       const std::vector<size_t>& occupied_group_ids, size_t start_index, size_t end_index);
 
   template <typename ColumnDataType, WindowFunction aggregate_function>
-  std::shared_ptr<AbstractSegment> _write_avg_aggregate_segment(
-      TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector,
+    requires(aggregate_function == WindowFunction::Count)
+  std::shared_ptr<AbstractSegment> _write_aggregate_segment(
+      TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector, bool is_nullable,
       const std::vector<size_t>& occupied_group_ids, size_t start_index, size_t end_index);
 
   template <typename ColumnDataType, WindowFunction aggregate_function>
-  std::shared_ptr<AbstractSegment> _write_count_aggregate_segment(
-      TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector,
+    requires(aggregate_function == WindowFunction::CountDistinct)
+  std::shared_ptr<AbstractSegment> _write_aggregate_segment(
+      TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector, bool is_nullable,
       const std::vector<size_t>& occupied_group_ids, size_t start_index, size_t end_index);
 
   template <typename ColumnDataType, WindowFunction aggregate_function>
-  std::shared_ptr<AbstractSegment> _write_count_distinct_aggregate_segment(
-      TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector,
+  std::shared_ptr<AbstractSegment> _write_aggregate_segment(
+      TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector, bool is_nullable,
       const std::vector<size_t>& occupied_group_ids, size_t start_index, size_t end_index);
 
   template <typename ColumnDataType, WindowFunction aggregate_function>
-  std::shared_ptr<AbstractSegment> _write_default_aggregate_segment(
+    requires(WindowFunctionTraits<ColumnDataType, aggregate_function>::RESULT_TYPE == DataType::Null)
+  std::shared_ptr<AbstractSegment> _write_aggregate_segment(
       TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector, bool is_nullable,
       const std::vector<size_t>& occupied_group_ids, size_t start_index, size_t end_index);
 
