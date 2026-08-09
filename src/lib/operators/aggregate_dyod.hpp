@@ -57,8 +57,6 @@ struct GroupKeyEqual {
   }
 };
 
-using GroupIDMap = tbb::concurrent_unordered_map<GroupKey, GroupID, GroupKeyHash, GroupKeyEqual>;
-
 class AbstractAggregateVector {
  public:
   virtual ~AbstractAggregateVector() = default;
@@ -224,6 +222,21 @@ std::optional<pmr_string> deserialize_value(const std::span<const std::byte>& by
 template <typename Functor>
 void resolve_window_function(WindowFunction window_function, Functor&& functor);
 
+struct SingleThreadedState {
+  std::unordered_map<GroupKey, GroupID, GroupKeyHash, GroupKeyEqual> group_id_map;
+  GroupID next_group_id{0};
+  std::vector<GroupKey> group_keys;
+  std::vector<bool> occupied_group_ids;
+};
+
+struct MultiThreadedState {
+  tbb::concurrent_unordered_map<GroupKey, GroupID, GroupKeyHash, GroupKeyEqual> group_id_map;
+  std::atomic<GroupID> next_group_id{0};
+  tbb::concurrent_vector<GroupKey> group_keys;
+  std::mutex group_keys_mutex;
+  tbb::concurrent_vector<bool> occupied_group_ids;
+};
+
 class AggregateDYOD : public AbstractAggregateOperator {
  public:
   AggregateDYOD(const std::shared_ptr<AbstractOperator>& input_operator,
@@ -242,11 +255,8 @@ class AggregateDYOD : public AbstractAggregateOperator {
   static constexpr GroupID GROUP_ID_INITIAL_SIZE = 100'000;
 
   std::vector<DataType> _aggregate_data_types;
-  GroupIDMap _group_id_map;
-  std::atomic<GroupID> _next_group_id;
-  tbb::concurrent_vector<GroupKey> _group_keys;
-  tbb::concurrent_vector<bool> _occupied_group_ids;
-  std::mutex _group_keys_mutex;
+
+  std::variant<SingleThreadedState, MultiThreadedState> _state;
 
   // One group key buffer per chunk. Group keys entries (i.e., the serialized groupby column values) for a
   // single row are stored sequentially in the buffer.
@@ -302,12 +312,17 @@ class AggregateDYOD : public AbstractAggregateOperator {
       TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector, bool is_nullable,
       const std::vector<size_t>& occupied_group_ids, size_t start_index, size_t end_index);
 
-  GroupID _group_id(const GroupKey& group_key, WorkerState& worker_state);
+  template <typename StateType>
+  GroupID _group_id(StateType& state, const GroupKey& group_key, WorkerState& worker_state);
 
   std::pair<std::vector<GroupID>, GroupID> _group_ids_for_chunk(ChunkID chunk_id, const Chunk& chunk,
                                                                 WorkerState& worker_state);
 
   std::pair<GroupID, GroupID> _get_new_group_id_range();
+
+  std::pair<GroupID, GroupID> _get_new_group_id_range(SingleThreadedState& state);
+
+  std::pair<GroupID, GroupID> _get_new_group_id_range(MultiThreadedState& state);
 
   std::vector<size_t> _get_occupied_group_ids();
 

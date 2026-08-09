@@ -209,14 +209,24 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
 
   _validate_aggregates();
 
-  {
-    TRACE_EVENT("aggregate_operator", "_group_keys.reserve");
-    _group_keys.reserve(GROUP_ID_INITIAL_SIZE);
+  if (Hyrise::get().is_multi_threaded()) {
+    _state.emplace<MultiThreadedState>();
+  } else {
+    _state.emplace<SingleThreadedState>();
   }
-  {
-    TRACE_EVENT("aggregate_operator", "_occupied_group_ids.reserve");
-    _occupied_group_ids.reserve(GROUP_ID_INITIAL_SIZE);
-  }
+
+  std::visit(
+      [&](auto& state) {
+        {
+          TRACE_EVENT("aggregate_operator", "_group_keys.reserve");
+          state.group_keys.reserve(GROUP_ID_INITIAL_SIZE);
+        }
+        {
+          TRACE_EVENT("aggregate_operator", "_occupied_group_ids.reserve");
+          state.occupied_group_ids.reserve(GROUP_ID_INITIAL_SIZE);
+        }
+      },
+      _state);
 
   // Aggregate chunk by chunk
   const auto chunk_count = input_table->chunk_count();
@@ -251,13 +261,17 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
 
   // SQL requires a single output row if the input table is empty and there is no GROUP BY clause.
   // We ensure this by inserting a single group into the group ID mapping before writing the output table.
-  if (_group_id_map.empty() && _groupby_column_ids.empty()) {
-    const auto group_id = _group_id(GroupKey{}, merged_worker_states);
+  std::visit(
+      [&](auto& state) {
+        if (state.group_id_map.empty() && _groupby_column_ids.empty()) {
+          const auto group_id = _group_id(state, GroupKey{}, merged_worker_states);
 
-    for (auto& aggregate_vector : merged_worker_states.aggregate_vectors()) {
-      aggregate_vector->grow_if_necessary(group_id + 1);
-    }
-  }
+          for (auto& aggregate_vector : merged_worker_states.aggregate_vectors()) {
+            aggregate_vector->grow_if_necessary(group_id + 1);
+          }
+        }
+      },
+      _state);
 
   return _write_output_table(merged_worker_states);
 }
@@ -266,7 +280,11 @@ std::shared_ptr<Table> AggregateDYOD::_write_output_table(WorkerState& worker_st
   TRACE_EVENT("aggregate_operator", "_write_output_table");
   const auto column_definitions = _output_column_definitions();
 
-  const auto total_group_count = _group_id_map.size();
+  const auto total_group_count = std::visit(
+      [&](auto& state) {
+        return state.group_id_map.size();
+      },
+      _state);
   const auto chunk_count = (total_group_count + Chunk::DEFAULT_SIZE - 1) / Chunk::DEFAULT_SIZE;
   auto chunks = std::vector<std::shared_ptr<Chunk>>(chunk_count);
 
@@ -379,30 +397,38 @@ std::shared_ptr<AbstractSegment> AggregateDYOD::_write_groupby_segment(size_t gr
     auto values = pmr_vector<ColumnDataType>(chunk_size);
     auto null_values = pmr_vector<bool>(chunk_size);
 
-    for (auto index = start_index; index < end_index; ++index) {
-      const auto group_id = occupied_group_ids[index];
-      const auto chunk_offset = index - start_index;
-      const auto& group_key_entry = _group_keys[group_id][groupby_column_index];
-      const auto deserialized = deserialize_value<ColumnDataType, true>(group_key_entry);
+    std::visit(
+        [&](auto& state) {
+          for (auto index = start_index; index < end_index; ++index) {
+            const auto group_id = occupied_group_ids[index];
+            const auto chunk_offset = index - start_index;
+            const auto& group_key_entry = state.group_keys[group_id][groupby_column_index];
+            const auto deserialized = deserialize_value<ColumnDataType, true>(group_key_entry);
 
-      if (deserialized.has_value()) {
-        values[chunk_offset] = deserialized.value();
-      } else {
-        null_values[chunk_offset] = true;
-      }
-    }
+            if (deserialized.has_value()) {
+              values[chunk_offset] = deserialized.value();
+            } else {
+              null_values[chunk_offset] = true;
+            }
+          }
+        },
+        _state);
 
     return std::make_shared<ValueSegment<ColumnDataType>>(std::move(values), std::move(null_values));
   }
 
   auto values = pmr_vector<ColumnDataType>(chunk_size);
 
-  for (auto index = start_index; index < end_index; ++index) {
-    const auto group_id = occupied_group_ids[index];
-    const auto chunk_offset = index - start_index;
-    const auto& group_key_entry = _group_keys[group_id][groupby_column_index];
-    values[chunk_offset] = deserialize_value<ColumnDataType, false>(group_key_entry);
-  }
+  std::visit(
+      [&](auto& state) {
+        for (auto index = start_index; index < end_index; ++index) {
+          const auto group_id = occupied_group_ids[index];
+          const auto chunk_offset = index - start_index;
+          const auto& group_key_entry = state.group_keys[group_id][groupby_column_index];
+          values[chunk_offset] = deserialize_value<ColumnDataType, false>(group_key_entry);
+        }
+      },
+      _state);
 
   return std::make_shared<ValueSegment<ColumnDataType>>(std::move(values));
 }
@@ -529,44 +555,67 @@ std::shared_ptr<AbstractSegment> AggregateDYOD::_write_default_aggregate_segment
   return std::make_shared<ValueSegment<AggregateDataType>>(std::move(values));
 }
 
-GroupID AggregateDYOD::_group_id(const GroupKey& group_key, WorkerState& worker_state) {
-  auto it = _group_id_map.find(group_key);
-  if (it != _group_id_map.end()) {
+template <typename StateType>
+GroupID AggregateDYOD::_group_id(StateType& state, const GroupKey& group_key, WorkerState& worker_state) {
+  auto it = state.group_id_map.find(group_key);
+  if (it != state.group_id_map.end()) {
     return it->second;
   }
 
-  auto [insert_it, inserted] = _group_id_map.insert({group_key, worker_state.next_group_id()});
+  auto [insert_it, inserted] = state.group_id_map.insert({group_key, worker_state.next_group_id()});
   const auto group_id = insert_it->second;
 
   if (inserted) {
-    _group_keys[group_id] = group_key;
-    _occupied_group_ids[group_id] = true;
+    state.group_keys[group_id] = group_key;
+    state.occupied_group_ids[group_id] = true;
   }
 
   return group_id;
 }
 
 std::pair<GroupID, GroupID> AggregateDYOD::_get_new_group_id_range() {
-  auto next_group_id = _next_group_id.fetch_add(FUZZY_STEP_SIZE, std::memory_order_relaxed);
+  return std::visit(
+      [&](auto& state) {
+        return _get_new_group_id_range(state);
+      },
+      _state);
+}
+
+std::pair<GroupID, GroupID> AggregateDYOD::_get_new_group_id_range(SingleThreadedState& state) {
+  state.next_group_id += FUZZY_STEP_SIZE;
+  auto max_group_id = state.next_group_id + FUZZY_STEP_SIZE - 1;
+
+  state.group_keys.resize(max_group_id + 1);
+  state.occupied_group_ids.resize(max_group_id + 1);
+
+  return {state.next_group_id, max_group_id};
+}
+
+std::pair<GroupID, GroupID> AggregateDYOD::_get_new_group_id_range(MultiThreadedState& state) {
+  auto next_group_id = state.next_group_id.fetch_add(FUZZY_STEP_SIZE, std::memory_order_relaxed);
   auto max_group_id = next_group_id + FUZZY_STEP_SIZE - 1;
 
   {
     // TODO(anyone): Figure out how to avoid this lock. Maybe use a single vector of pairs?
-    std::lock_guard<std::mutex> lock(_group_keys_mutex);
-    _group_keys.grow_to_at_least(max_group_id + 1);
-    _occupied_group_ids.grow_to_at_least(max_group_id + 1);
+    std::lock_guard<std::mutex> lock(state.group_keys_mutex);
+    state.group_keys.grow_to_at_least(max_group_id + 1);
+    state.occupied_group_ids.grow_to_at_least(max_group_id + 1);
   }
 
   return {next_group_id, max_group_id};
 }
 
 std::vector<size_t> AggregateDYOD::_get_occupied_group_ids() {
-  // clang-format off
-  auto view = std::views::iota(size_t{0}, _group_keys.size())
-    | std::views::filter([&](size_t index) { return _occupied_group_ids[index]; });
-  // clang-format on
+  return std::visit(
+      [&](auto& state) {
+        // clang-format off
+    auto view = std::views::iota(size_t{0}, state.group_keys.size())
+      | std::views::filter([&](size_t index) { return state.occupied_group_ids[index]; });
+        // clang-format on
 
-  return {view.begin(), view.end()};
+        return std::vector<size_t>(view.begin(), view.end());
+      },
+      _state);
 }
 
 void AggregateDYOD::_aggregate_chunk(WorkerState& worker_state, ChunkID chunk_id,
@@ -672,33 +721,37 @@ std::pair<std::vector<GroupID>, GroupID> AggregateDYOD::_group_ids_for_chunk(Chu
 
   chunk_buffer.resize(total_bytes);
 
-  {
-    TRACE_EVENT("aggregate_operator", "get group IDs");
-    for (auto offset = ChunkOffset{0}; offset < row_count; ++offset) {
-      auto group_key = GroupKey(groupby_column_count);
+  std::visit(
+      [&](auto& state) {
+        TRACE_EVENT("aggregate_operator", "get group IDs");
 
-      for (auto groupby_column_index = size_t{0}; groupby_column_index < groupby_column_count; ++groupby_column_index) {
-        const auto& column_buffer = column_buffers[groupby_column_index];
-        const auto& column_buffer_starts = column_starts[groupby_column_index];
+        for (auto offset = ChunkOffset{0}; offset < row_count; ++offset) {
+          auto group_key = GroupKey(groupby_column_count);
 
-        const auto column_buffer_start = column_buffer_starts[offset];
-        const auto column_buffer_end = column_buffer_starts[offset + 1];
+          for (auto groupby_column_index = size_t{0}; groupby_column_index < groupby_column_count;
+               ++groupby_column_index) {
+            const auto& column_buffer = column_buffers[groupby_column_index];
+            const auto& column_buffer_starts = column_starts[groupby_column_index];
 
-        // Copy serialized group key entries from the local column buffers to the global chunk buffer
-        const auto chunk_buffer_start = chunk_buffer.size();
-        chunk_buffer.insert(chunk_buffer.end(), column_buffer.begin() + column_buffer_start,
-                            column_buffer.begin() + column_buffer_end);
-        const auto chunk_buffer_end = chunk_buffer.size();
+            const auto column_buffer_start = column_buffer_starts[offset];
+            const auto column_buffer_end = column_buffer_starts[offset + 1];
 
-        group_key[groupby_column_index] =
-            std::span<const std::byte>(chunk_buffer).subspan(chunk_buffer_start, chunk_buffer_end - chunk_buffer_start);
-      }
+            // Copy serialized group key entries from the local column buffers to the global chunk buffer
+            const auto chunk_buffer_start = chunk_buffer.size();
+            chunk_buffer.insert(chunk_buffer.end(), column_buffer.begin() + column_buffer_start,
+                                column_buffer.begin() + column_buffer_end);
+            const auto chunk_buffer_end = chunk_buffer.size();
 
-      const auto group_id = _group_id(group_key, worker_state);
-      group_ids[offset] = group_id;
-      max_group_id = std::max(max_group_id, group_id);
-    }
-  }
+            group_key[groupby_column_index] = std::span<const std::byte>(chunk_buffer)
+                                                  .subspan(chunk_buffer_start, chunk_buffer_end - chunk_buffer_start);
+          }
+
+          const auto group_id = _group_id(state, group_key, worker_state);
+          group_ids[offset] = group_id;
+          max_group_id = std::max(max_group_id, group_id);
+        }
+      },
+      _state);
 
   return {group_ids, max_group_id};
 }
