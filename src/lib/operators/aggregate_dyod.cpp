@@ -1238,7 +1238,6 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
 
   // If we have a Data table, we directly partition into PosLists and forward these to the job-local input tables.
   // For a Reference table, we only store the ChunkOffsets since we have to resolve the PosList anyway later.
-  // TODO(anyone): Consider using pmr_vector instead of std::vector.
   using ReferenceList =
       std::conditional_t<std::is_same_v<IsReferenceTable, std::true_type>, std::vector<ChunkOffset>, RowIDPosList>;
   using PosLists = std::vector<std::shared_ptr<ReferenceList>>;
@@ -1273,7 +1272,7 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
           using ColumnDataType = typename decltype(type)::type;
 
           const auto& abstract_segment = chunk->get_segment(column_id);
-          const auto hash_f = std::hash<ColumnDataType>{};  // TODO(anyone): Use a better hash function
+          const auto hash_f = std::hash<ColumnDataType>{};
 
           segment_iterate<ColumnDataType>(*abstract_segment, [&](const auto& position) {
             auto value = position.is_null() ? 0 : hash_f(position.value());
@@ -1307,7 +1306,6 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
   }
 
   // If there are no jobs, return an empty table. Otherwise, schedule the jobs.
-  // TODO(anyone): Skip scheduler for a single job
   if (hashing_jobs.empty()) {
     return std::make_shared<Table>(input_table->column_definitions(), TableType::References);
   } else {
@@ -1350,7 +1348,7 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
           }
         } else {
           // Re-used from TableScan: Resolve the ReferenceSegments of the input reference table into our local table.
-          // TODO(anyone): Find a way to avoid the code duplication
+          // TODO(anyone): Find a way to avoid the code duplication between this implementation and TableScan.
           const auto& chunk_in = input_table->get_chunk(chunk_id);
           if (pos_list->size() == chunk_in->size()) {
             // Shortcut - the entire input reference segment matches, so we can simply forward that chunk.
