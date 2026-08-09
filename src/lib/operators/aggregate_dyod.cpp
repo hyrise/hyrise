@@ -434,7 +434,7 @@ std::shared_ptr<AbstractSegment> AggregateDYOD::_write_aggregate_segment(
   auto values = pmr_vector<AggregateDataType>(chunk_size);
   for (auto index = start_index; index < end_index; ++index) {
     const auto group_id = occupied_group_ids[index];
-    values[index - start_index] = aggregate_values[group_id];
+    values[index - start_index] = std::move(aggregate_values[group_id]);
   }
   return std::make_shared<ValueSegment<AggregateDataType>>(std::move(values));
 }
