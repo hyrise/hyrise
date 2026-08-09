@@ -641,9 +641,7 @@ std::shared_ptr<AbstractOperator> AggregateDYOD::_on_deep_copy(
 
 void AggregateDYOD::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
-void AggregateDYOD::_on_cleanup() {
-  // TODO(anyone): cleanup
-}
+void AggregateDYOD::_on_cleanup() {}
 
 /*
 Visitor context for the AggregateVisitor. The DYODAggregateResultContext can be used without knowing the AggregateKey,
