@@ -1248,7 +1248,7 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
   const auto num_cpus = Hyrise::get().topology.num_cpus();
   const auto max_job_size = row_count / (num_cpus * IDEAL_CPU_JOB_COUNT);
 
-  // If we have a Data table, we directly partition into PosLists and forward these to the job/thread-local input tables.
+  // If we have a Data table, we directly partition into PosLists and forward these to the job-local input tables.
   // For a Reference table, we only store the ChunkOffsets since we have to resolve the PosList anyway later.
   // TODO(anyone): Consider using pmr_vector instead of std::vector.
   using ReferenceList =
