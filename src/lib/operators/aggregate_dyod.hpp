@@ -233,12 +233,28 @@ class AggregateDYOD : public AbstractAggregateOperator {
                                                                        const WindowFunction aggregate_function,
                                                                        std::atomic_size_t& expected_result_size) const;
 
+  // Ideally, we have num_cpus jobs with a size of row_count/num_cpus each (assuming unit time per row).
+  // We do approximation and try to limit jobs to a size of row_count/(num_cpus * IDEAL_CPU_JOB_COUNT).
+  // This should give a pretty good CPU usage.
+
+  // More in-depth theoretical analysis: Assume a workload of M rows for N CPUs. The ideal time would then be M/N.
+  // We assume zero time for switching, and a scheduler that randomly assigns queued jobs to any free CPU.
+  // Let's say we split the jobs recursively such that each job has a size of at most M/(N*k).
+  // At time M/N (aka the ideal finish time), every job has been either finished or is being worked on.
+  // (The argument is: When the last job is assigned, every CPU has worked full time up that point. Since the total work
+  // is M, this has to be before M/N. Thus at time M/N, there is no unassigned job)
+  // So in the worst case we finished M/(N*k) later than the ideal time. We are at least (1+1/k)-optimal.
+  // In practice, we have to consider preprocessing and postprocessing time, as well as non unit time per row.
+  ChunkOffset _max_job_size;
+
   bool _has_aggregate_functions;
   bool _aggregate_writing_started = false;
   bool _output_writing_started = false;
   std::mutex _aggregate_mutex = std::mutex{};
   std::mutex _output_mutex = std::mutex{};
 };
+
+constexpr auto IDEAL_CPU_JOB_COUNT = 4;
 
 }  // namespace hyrise
 

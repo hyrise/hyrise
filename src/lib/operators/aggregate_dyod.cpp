@@ -622,7 +622,10 @@ AggregateDYOD::AggregateDYOD(const std::shared_ptr<AbstractOperator>& input_oper
                              const std::vector<ColumnID>& groupby_column_ids)
     : AbstractAggregateOperator(input_operator, aggregates, groupby_column_ids,
                                 std::make_unique<OperatorPerformanceData<OperatorSteps>>()),
-      _has_aggregate_functions(has_aggregate_functions(_aggregates)) {}
+      _has_aggregate_functions(has_aggregate_functions(_aggregates)) {
+  const auto num_cpus = Hyrise::get().topology.num_cpus();
+  _max_job_size = left_input_table()->row_count() / (num_cpus * IDEAL_CPU_JOB_COUNT);
+}
 
 const std::string& AggregateDYOD::name() const {
   static const auto name = std::string{"AggregateDYOD"};
@@ -1181,20 +1184,6 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
 constexpr auto RADIX_MASK = 0x1f;
 constexpr auto RADIX_SPLIT_MAX_BUCKETS = RADIX_MASK + 1;
 
-// Ideally, we have num_cpus jobs with a size of row_count/num_cpus each (assuming unit time per row).
-// We do approximation and try to limit jobs to a size of row_count/(num_cpus * IDEAL_CPU_JOB_COUNT).
-// This should give a pretty good CPU usage.
-constexpr auto IDEAL_CPU_JOB_COUNT = 4;
-
-// More in-depth theoretical analysis: Assume a workload of M rows for N CPUs. The ideal time would then be M/N.
-// We assume zero time for switching, and a scheduler that randomly assigns queued jobs to any free CPU.
-// Let's say we split the jobs recursively such that each job has a size of at most M/(N*k).
-// At time M/N (aka the ideal finish time), every job has been either finished or is being worked on.
-// (The argument is: When the last job is assigned, every CPU has worked full time up that point. Since the total work
-// is M, this has to be before M/N. Thus at time M/N, there is no unassigned job)
-// So in the worst case we finished M/(N*k) later than the ideal time. We are at least (1+1/k)-optimal.
-// In practice, we have to consider preprocessing and postprocessing time, as well as non unit time per row.
-
 template <typename AggregateKey>
 std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
   if (left_input_table()->type() == TableType::Data) {
@@ -1244,9 +1233,6 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
 
   // First Split: Hash all groupby keys in parallel and populate the pos_list for each radix bucket with the
   // corresponding RowIDs for Data Tables or chunk_offsets for Reference tables.
-
-  const auto num_cpus = Hyrise::get().topology.num_cpus();
-  const auto max_job_size = row_count / (num_cpus * IDEAL_CPU_JOB_COUNT);
 
   // If we have a Data table, we directly partition into PosLists and forward these to the job-local input tables.
   // For a Reference table, we only store the ChunkOffsets since we have to resolve the PosList anyway later.
@@ -1415,13 +1401,12 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
       const auto local_row_count = local_input_table->row_count();
 
       auto contexts_per_column = ContextsPerColumn(aggregates_count);
-      _aggregate<AggregateKey>(contexts_per_column, local_input_table, local_row_count > max_job_size);
+      _aggregate<AggregateKey>(contexts_per_column, local_input_table, local_row_count > _max_job_size);
 
       _write_output(contexts_per_column, local_input_table, output_table, aggregate_result_table);
     }));
   }
 
-  // TODO(anyone): Skip scheduler for a single job
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 
   return output_table;
@@ -1448,7 +1433,9 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std
   // TODO(anyone): Estimate ideal number of jobs/threads for this bucket.
   // If we only have one group, we can easily split this job, since we have only one result per context.
   const auto chunk_count = input_table->chunk_count();
-  auto bucket_job_count = guarantee_single_key ? std::min(JOB_COUNT_ESTIMATE, chunk_count) : ChunkID{1};
+  auto bucket_job_count = (guarantee_single_key && input_table->row_count() > _max_job_size)
+                              ? std::min(JOB_COUNT_ESTIMATE, chunk_count)
+                              : ChunkID{1};
 
   // We have an empty table or cannot enable single key optimization, so just skip the rest.
   if (bucket_job_count < 2) {
