@@ -1173,10 +1173,14 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
   return keys_per_chunk;
 }
 
-// TODO(anyone): adaptive radix mask. Possibilities include:
-//  (1) estimate distinct count and set mask accordingly.
-//  (2) adapt mask recursively based on partition size.
-//  (3) add low cardinality partitioning for more than one key.
+// TODO(anyone): Adaptive radix mask. Possibilities include:
+//  (1) Estimate distinct count and set mask accordingly. A possibility might be using HyperLogLog,
+// the implementation for which already exists in a distinct branch, but which is not used yet. The main
+// challenge is using it in a way where the overhead for going through the entire table does not cancel out
+// the performance gain of the better estimate.
+//  (2) Adapt mask recursively based on partition size, likely also in combination with a HyperLogLog, which
+// would then be called during bucket creation. This also has the advantage that the same estimate can be used
+// to choose low cardinality splitting where appropriate.
 
 // 32 buckets
 constexpr auto RADIX_MASK = 0x1f;
@@ -1477,6 +1481,10 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std
 
   // We merge the aggregate contexts in parallel for all aggregates, calling the _merge_contexts()
   // function. See documentation there for details.
+
+  // TODO(anyone): Implement merging for more than one key. This would then allow for a second split
+  // on buckets with low cardinality but more than one key, requiring a HyperLogLog or similar to estimate
+  // cardinality.
   auto merge_jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   merge_jobs.reserve(aggregates_count);
 
