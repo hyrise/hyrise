@@ -588,7 +588,8 @@ std::pair<std::vector<GroupID>, GroupID> AggregateDYOD::_group_ids_for_chunk(Chu
           }
         });
 
-        DebugAssert(column_buffer.size() <= std::numeric_limits<uint32_t>::max(), "Column buffer is too large.");
+        Assert(column_buffer.size() <= std::numeric_limits<uint32_t>::max(),
+               "Column buffer is too large and buffer start positions may be invalid.");
 
         // Store the end position of the last key.
         starts[row_count] = static_cast<uint32_t>(column_buffer.size());
