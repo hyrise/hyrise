@@ -603,15 +603,14 @@ std::pair<std::vector<GroupID>, GroupID> AggregateDYOD::_group_ids_for_chunk(Chu
   // One buffer for all group keys in a chunk
   auto& chunk_buffer = _group_key_buffers[chunk_id];
 
-  // Resize the chunk buffer first. Spans into the chunk buffer might become otherwise
-  // become invalid due to resizes.
+  // Reserve capacity in the chunk buffer first so that spans referencing it are stable.
   auto total_bytes = size_t{0};
 
   for (const auto& column_buffer : column_buffers) {
     total_bytes += column_buffer.size();
   }
 
-  chunk_buffer.resize(total_bytes);
+  chunk_buffer.reserve(total_bytes);
 
   std::visit(
       [&](auto& state) {
@@ -633,6 +632,7 @@ std::pair<std::vector<GroupID>, GroupID> AggregateDYOD::_group_ids_for_chunk(Chu
             chunk_buffer.insert(chunk_buffer.end(), column_buffer.begin() + column_buffer_start,
                                 column_buffer.begin() + column_buffer_end);
             const auto chunk_buffer_end = chunk_buffer.size();
+            DebugAssert(chunk_buffer.size() <= total_bytes, "Chunk buffer was resized and may have invalidated spans.");
 
             group_key[groupby_column_index] = std::span<const std::byte>(chunk_buffer)
                                                   .subspan(chunk_buffer_start, chunk_buffer_end - chunk_buffer_start);
