@@ -235,7 +235,7 @@ class AggregateDYOD : public AbstractAggregateOperator {
  protected:
   // The paper uses a default step size of 256
   // https://github.com/danielxue/global-hash-tables-strike-back/blob/main/common/src/fuzzy_counter.rs#L56
-  static constexpr GroupID FUZZY_STEP_SIZE = 256;
+  static constexpr GroupID FUZZY_STEP_SIZE = 128;
 
   // Initial size of the group ID map and vectors
   // TODO(anyone): Replace with proper estimate of group cardinality based on input table.
