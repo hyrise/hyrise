@@ -1186,13 +1186,14 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
 constexpr auto RADIX_MASK = 0x1f;
 constexpr auto RADIX_SPLIT_MAX_BUCKETS = RADIX_MASK + 1;
 
+/**
+ * Used to hide the setting of the second template parameter, implementation deferred to the version with two template
+ * parameters.
+ */
 template <typename AggregateKey>
 std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
-  if (left_input_table()->type() == TableType::Data) {
-    return _partition_and_aggregate<std::false_type, AggregateKey>();
-  } else {
-    return _partition_and_aggregate<std::true_type, AggregateKey>();
-  }
+  return left_input_table()->type() == TableType::Data ? _partition_and_aggregate<std::false_type, AggregateKey>()
+                                                       : _partition_and_aggregate<std::true_type, AggregateKey>();
 }
 
 /**
