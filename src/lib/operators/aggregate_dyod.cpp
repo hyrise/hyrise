@@ -306,10 +306,10 @@ std::shared_ptr<AbstractSegment> AggregateDYOD::_write_groupby_segment(size_t gr
             const auto group_id = occupied_group_ids[index];
             const auto chunk_offset = index - start_index;
             const auto& group_key_entry = state.group_keys[group_id][groupby_column_index];
-            const auto deserialized = deserialize_value<ColumnDataType, true>(group_key_entry);
+            auto deserialized = deserialize_value<ColumnDataType, true>(group_key_entry);
 
             if (deserialized.has_value()) {
-              values[chunk_offset] = deserialized.value();
+              values[chunk_offset] = std::move(deserialized.value());
             } else {
               null_values[chunk_offset] = true;
             }
