@@ -55,7 +55,7 @@ WorkerState::WorkerState(const std::vector<std::shared_ptr<WindowFunctionExpress
   _vectors.resize(aggregate_count);
 
   for (auto aggregate_index = size_t{0}; aggregate_index < aggregate_count; ++aggregate_index) {
-    const auto aggregate = aggregates[aggregate_index];
+    const auto& aggregate = aggregates[aggregate_index];
     const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
     const auto data_type = pqp_column.data_type();
 
@@ -147,7 +147,7 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
     jobs[chunk_id] = std::make_shared<JobTask>([&, chunk_id]() {
       auto& worker_state = state.current_worker_state();
       const auto chunk = input_table->get_chunk(chunk_id);
-      _aggregate_chunk(worker_state, chunk_id, chunk);
+      _aggregate_chunk(worker_state, chunk_id, *chunk);
     });
   }
 
@@ -268,7 +268,7 @@ std::shared_ptr<Chunk> AggregateDYOD::_write_output_chunk(WorkerState& worker_st
 
   // Create one ValueSegment per aggregate
   for (auto aggregate_index = size_t{0}; aggregate_index < aggregate_count; ++aggregate_index) {
-    const auto aggregate = _aggregates[aggregate_index];
+    const auto& aggregate = _aggregates[aggregate_index];
 
     resolve_data_type(_aggregate_column_data_type(aggregate_index), [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
@@ -512,10 +512,9 @@ std::vector<size_t> AggregateDYOD::_get_occupied_group_ids() {
       _state);
 }
 
-void AggregateDYOD::_aggregate_chunk(WorkerState& worker_state, ChunkID chunk_id,
-                                     const std::shared_ptr<const Chunk> chunk) {
+void AggregateDYOD::_aggregate_chunk(WorkerState& worker_state, ChunkID chunk_id, const Chunk& chunk) {
   TRACE_EVENT("aggregate_operator", "_aggregate_chunk");
-  const auto [group_ids, max_group_id] = _group_ids_for_chunk(chunk_id, *chunk, worker_state);
+  const auto [group_ids, max_group_id] = _group_ids_for_chunk(chunk_id, chunk, worker_state);
 
   // Grow the aggregate vectors once per chunk
   if (!group_ids.empty()) {
@@ -538,7 +537,7 @@ void AggregateDYOD::_aggregate_chunk(WorkerState& worker_state, ChunkID chunk_id
       continue;
     }
 
-    const auto segment = chunk->get_segment(column_id);
+    const auto segment = chunk.get_segment(column_id);
 
     resolve_data_type(pqp_column.data_type(), [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
@@ -717,7 +716,7 @@ bool AggregateDYOD::_aggregate_is_nullable(size_t aggregate_index) {
   if (aggregate_function == WindowFunction::Any) {
     // TODO(anyone): Figure out why exactly this is true only for ANY
     const auto input_table = left_input_table();
-    const auto aggregate = _aggregates[aggregate_index];
+    const auto& aggregate = _aggregates[aggregate_index];
     const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
     return input_table->column_is_nullable(pqp_column.column_id);
   }
@@ -726,14 +725,14 @@ bool AggregateDYOD::_aggregate_is_nullable(size_t aggregate_index) {
 }
 
 DataType AggregateDYOD::_aggregate_column_data_type(size_t aggregate_index) {
-  const auto aggregate = _aggregates[aggregate_index];
+  const auto& aggregate = _aggregates[aggregate_index];
   const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
   return pqp_column.data_type();
 }
 
 std::string AggregateDYOD::_aggregate_column_name(size_t aggregate_index) {
   const auto input_table = left_input_table();
-  const auto aggregate = _aggregates[aggregate_index];
+  const auto& aggregate = _aggregates[aggregate_index];
   const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
   return input_table->column_name(pqp_column.column_id);
 }

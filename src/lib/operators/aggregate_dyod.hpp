@@ -158,7 +158,7 @@ class AggregateDYOD : public AbstractAggregateOperator {
 
   std::vector<size_t> _get_occupied_group_ids();
 
-  void _aggregate_chunk(WorkerState& state, ChunkID chunk_id, const std::shared_ptr<const Chunk> chunk);
+  void _aggregate_chunk(WorkerState& state, ChunkID chunk_id, const Chunk& chunk);
 
   template <typename ColumnDataType, WindowFunction aggregate_function>
   void _aggregate_segment(TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector,
