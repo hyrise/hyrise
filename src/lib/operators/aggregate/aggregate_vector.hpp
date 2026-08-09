@@ -27,12 +27,7 @@ class AbstractAggregateVector {
     return _counts;
   }
 
-  GroupID group_count() const {
-    return _group_count;
-  }
-
  protected:
-  size_t _group_count;
   std::vector<size_t> _counts;
 };
 
