@@ -47,7 +47,7 @@ AggregateDYOD uses two different kinds of splits to parallelize the aggregation-
 The first split does radix partitioning over the hashes of the groupby keys, multiple groupby keys get combined into one
 hash value using hash_combine. The constant RADIX_MASK defines the bitmask that is used to determine the bucket for each
 groupby key. For each bucket, we run the complete aggregation pipeline in their own job, similar to the one found in the
-AggregateHash operator. Note that this split creates buckets without overlapping keys. As a result, we are able to use 
+AggregateHash operator. Note that this split creates buckets without overlapping keys. As a result, we are able to use
 the resulting chunks as-is, meaning we can append the results of each bucket to the final output table.
 
 The second split handles large tables with low cardinality (currently only for a single group, but expanding to generally
@@ -56,8 +56,6 @@ and then merging the results.
 */
 
 /*
-
-
 For each group in the output, one DYODAggregateResult is created per aggregate function. If no GROUP BY columns are used,
 one DYODAggregateResult exists per aggregate function.
 
@@ -256,6 +254,7 @@ class AggregateDYOD : public AbstractAggregateOperator {
   std::mutex _output_mutex = std::mutex{};
 };
 
+// Number of Jobs that should be created per CPU
 constexpr auto IDEAL_CPU_JOB_COUNT = 4;
 
 }  // namespace hyrise

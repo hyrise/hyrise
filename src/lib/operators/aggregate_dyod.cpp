@@ -58,9 +58,12 @@ namespace {
 using namespace hyrise;
 using namespace hyrise::expression_functional;
 
-// splitmix64 hash mix finalizer
-// Steele, G. L., Lea, D., & Flood, C. H. (2014). Fast splittable pseudorandom number generators.
-// ACM SIGPLAN Notices, 49(10), 453–472. https://doi.org/10.1145/2714064.2660195
+/**
+ * splitmix64 hash mix finalizer
+ *
+ * Based on: Steele, G. L., Lea, D., & Flood, C. H. (2014). Fast splittable pseudorandom number generators.
+ * ACM SIGPLAN Notices, 49(10), 453–472. https://doi.org/10.1145/2714064.2660195
+ */
 inline size_t hash_mix(size_t x) {
   x += 0x9e3779b97f4a7c15ULL;
   x = (x ^ (x >> 30)) * 0xbf58476d1ce4e5b9ULL;
@@ -320,11 +323,6 @@ void dyod_split_results_chunk_wise(const bool write_nulls,
 void dyod_prepare_output(std::vector<Segments>& output, const size_t chunk_count, const size_t column_count) {
   DebugAssert(output.empty() || output.size() == chunk_count,
               "Output data structure should be either empty or already prepared.");
-
-  if (output.size() == chunk_count) {
-    return;
-  }
-
   while (output.size() < chunk_count) {
     output.emplace_back(column_count);
   }
@@ -1414,7 +1412,7 @@ std::shared_ptr<Table> AggregateDYOD::_execute_operator() {
 }
 
 /**
- * This is the unpartitioned variant. It will handle the table partitioning for low cardinalities and call 
+ * This is the unpartitioned variant. It will handle the table partitioning for low cardinalities and call
  * _aggregate_partition for the actual aggregation.
  */
 template <typename AggregateKey>
@@ -1683,10 +1681,7 @@ void AggregateDYOD::_aggregate_partition(ContextsPerColumn& contexts_per_column,
           const auto abstract_segment = chunk_in->get_segment(input_column_id);
           const auto data_type = input_table->column_data_type(input_column_id);
 
-          /*
-          Invoke correct aggregator for each segment
-          */
-
+          // Invoke correct aggregator for each segment
           resolve_data_type(data_type, [&, aggregate](auto type) {
             using ColumnDataType = typename decltype(type)::type;
 
@@ -1722,12 +1717,10 @@ void AggregateDYOD::_write_output(ContextsPerColumn& contexts_per_column,
 
   auto intermediate_result = std::vector<Segments>();
 
-  /**
-   * If only GROUP BY columns (including ANY pseudo-aggregates) are written, we need to call `dyod_get_aggregate_key`.
-   *   Example: SELECT c_custkey, c_name FROM customer GROUP BY c_custkey, c_name (same as SELECT DISTINCT), which
-   *            is rewritten to group only on c_custkey and collect c_name as an ANY pseudo-aggregate.
-   * Otherwise, it is called by the first call to `_write_aggregate_output`.
-   **/
+  // If only GROUP BY columns (including ANY pseudo-aggregates) are written, we need to call `dyod_get_aggregate_key`.
+  //   Example: SELECT c_custkey, c_name FROM customer GROUP BY c_custkey, c_name (same as SELECT DISTINCT), which
+  //            is rewritten to group only on c_custkey and collect c_name as an ANY pseudo-aggregate.
+  // Otherwise, it is called by the first call to `_write_aggregate_output`.
   if (!_has_aggregate_functions) {
     auto context = std::static_pointer_cast<DYODAggregateResultContext<DistinctColumnType, WindowFunction::Min>>(
         contexts_per_column[0]);
@@ -1736,9 +1729,7 @@ void AggregateDYOD::_write_output(ContextsPerColumn& contexts_per_column,
                                     output_column_definitions, intermediate_result);
   }
 
-  /*
-  Write the aggregated columns to the output.
-  */
+  // Write the aggregated columns to the output.
   auto aggregate_index = ColumnID{0};
   for (const auto& aggregate : _aggregates) {
     const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
@@ -1761,14 +1752,11 @@ void AggregateDYOD::_write_output(ContextsPerColumn& contexts_per_column,
     ++aggregate_index;
   }
 
-  /**
-   * Write the output.
-   *
-   * At this point, we collected the GROUP BY columns as reference segments, which are split using the default chunk
-   * size (minus gap rows, see comments on NULL_ID). Similarly, the aggregate values are split into chunks. Both are currently stored in
-   * intermediate_result. We write the materialized aggregate columns to the (global) aggregate_result_table, then store
-   * reference segments to those columns as well as the groupby keys to the output table.
-  */
+  // Write the output:
+  // At this point, we collected the GROUP BY columns as reference segments, which are split using the default chunk
+  // size (minus gap rows, see comments on NULL_ID). Similarly, the aggregate values are split into chunks. Both are currently stored in
+  // intermediate_result. We write the materialized aggregate columns to the (global) aggregate_result_table, then store
+  // reference segments to those columns as well as the groupby keys to the output table.
 
   auto reference_segment_indexes = std::vector<ColumnID>(_groupby_column_ids.size());
   auto entireposlist_indexes = std::vector<ColumnID>{};
@@ -1789,7 +1777,6 @@ void AggregateDYOD::_write_output(ContextsPerColumn& contexts_per_column,
   // Write the materialized columns to the aggregate_result_table. The operator output references this table's
   // columns via `EntireChunkPosList` reference segments. Note that we need the aggregate_result_table to be global
   // to avoid creating one table per thread, which will outlive the thread as it is referenced by the output.
-
   auto first_materialized_chunk_id = ChunkID{0};
 
   if (!entireposlist_indexes.empty()) {
@@ -1890,7 +1877,6 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
   // We do not want the overhead of a vector with heap storage when we have a limited number of aggregate columns.
   // However, more specializations mean more compile time. We now have specializations for 0, 1, 2, and >2 GROUP BY
   // columns.
-
   switch (_groupby_column_ids.size()) {
     case 0:
       return _execute_operator<DYODEmptyAggregateKey>();
