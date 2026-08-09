@@ -1477,7 +1477,8 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std
     return;
   }
 
-  // TODO(anyone): Make more pretty.
+  // We merge the aggregate contexts in parallel for all aggregates, calling the _merge_contexts()
+  // function. See documentation there for details.
   auto merge_jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   merge_jobs.reserve(aggregates_count);
 
