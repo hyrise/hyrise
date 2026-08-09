@@ -16,6 +16,8 @@
 
 #include "abstract_aggregate_operator.hpp"
 #include "abstract_read_only_operator.hpp"
+#include "aggregate/aggregate_vector.hpp"
+#include "aggregate/types.hpp"
 #include "aggregate/window_function_traits.hpp"
 #include "expression/window_function_expression.hpp"
 #include "resolve_type.hpp"
@@ -25,150 +27,6 @@
 #include "utils/assert.hpp"
 
 namespace hyrise {
-
-using GroupID = size_t;
-using GroupKeyEntry = std::span<const std::byte>;
-using GroupKey = std::vector<GroupKeyEntry>;
-
-struct GroupKeyHash {
-  size_t operator()(const GroupKey& key) const {
-    auto seed = size_t{0};
-
-    for (const auto& entry : key) {
-      boost::hash_range(seed, entry.begin(), entry.end());
-    }
-
-    return seed;
-  }
-};
-
-struct GroupKeyEqual {
-  bool operator()(const GroupKey& a, const GroupKey& b) const {
-    if (a.size() != b.size()) {
-      return false;
-    }
-
-    for (size_t i = 0; i < a.size(); ++i) {
-      if (!std::ranges::equal(a[i], b[i])) {
-        return false;
-      }
-    }
-
-    return true;
-  }
-};
-
-class AbstractAggregateVector {
- public:
-  virtual ~AbstractAggregateVector() = default;
-  virtual void grow_if_necessary(size_t size) = 0;
-  virtual void merge(AbstractAggregateVector& other) = 0;
-
-  size_t count(GroupID group_id) {
-    return _counts[group_id];
-  }
-
-  void increment_count(GroupID group_id) {
-    _counts[group_id]++;
-  }
-
-  std::vector<size_t>& counts() {
-    return _counts;
-  }
-
-  GroupID group_count() const {
-    return _group_count;
-  }
-
- protected:
-  size_t _group_count;
-  std::vector<size_t> _counts;
-};
-
-template <typename ColumnDataType, WindowFunction aggregate_function>
-struct TypedAggregateVector : AbstractAggregateVector {
-  using AggregateDataType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
-  using DistinctValues = std::unordered_set<ColumnDataType>;
-  using AccumulatorDataType =
-      std::conditional_t<aggregate_function == WindowFunction::CountDistinct, DistinctValues, AggregateDataType>;
-
- public:
-  // The mutable accessor is needed because aggregator functions mutate values directly.
-  AccumulatorDataType& accumulator(GroupID group_id) {
-    return _accumulators[group_id];
-  }
-
-  std::vector<AccumulatorDataType>& accumulators() {
-    return _accumulators;
-  }
-
-  void grow_if_necessary(size_t size) override {
-    if (_counts.size() < size) {
-      _counts.resize(size);
-      _accumulators.resize(size);
-    }
-  }
-
-  void merge(AbstractAggregateVector& other) override {
-    auto& typed_other = static_cast<TypedAggregateVector<ColumnDataType, aggregate_function>&>(other);
-    _merge(typed_other);
-  }
-
- protected:
-  std::vector<AccumulatorDataType> _accumulators;
-
-  void _merge(TypedAggregateVector<ColumnDataType, aggregate_function>& other) {
-    const auto new_size = std::max(_accumulators.size(), other._accumulators.size());
-
-    _accumulators.resize(new_size);
-    _counts.resize(new_size);
-
-    if constexpr (aggregate_function == WindowFunction::CountDistinct) {
-      auto& other_accumulators = other._accumulators;
-      const auto other_size = other_accumulators.size();
-
-      for (auto index = size_t{0}; index < new_size; ++index) {
-        if (index < other_size) {
-          _accumulators[index].merge(other_accumulators[index]);
-        }
-      }
-    } else if constexpr (aggregate_function == WindowFunction::Count) {
-      const auto& other_counts = other._counts;
-      const auto other_size = other_counts.size();
-
-      for (auto index = size_t{0}; index < new_size; ++index) {
-        if (index < other_size && other_counts[index] > 0) {
-          _counts[index] += other_counts[index];
-        }
-      }
-    } else if constexpr (aggregate_function == WindowFunction::Any) {
-      const auto& other_accumulators = other._accumulators;
-      const auto& other_counts = other._counts;
-      const auto other_size = other_accumulators.size();
-
-      for (auto index = size_t{0}; index < new_size; ++index) {
-        if (_counts[index] == 0 && index < other_size && other_counts[index] > 0) {
-          _accumulators[index] = other_accumulators[index];
-          _counts[index] += other_counts[index];
-        }
-      }
-    } else {
-      const auto& other_accumulators = other._accumulators;
-      const auto& other_counts = other._counts;
-      const auto other_size = other_accumulators.size();
-
-      auto aggregator =
-          WindowFunctionBuilder<AggregateDataType, AggregateDataType, aggregate_function>().get_aggregate_function();
-
-      for (auto index = size_t{0}; index < new_size; ++index) {
-        if (index < other_size && other_counts[index] > 0) {
-          aggregator(other_accumulators[index], _counts[index], _accumulators[index]);
-          _counts[index] += other_counts[index];
-        }
-      }
-    }
-  }
-};
 
 class WorkerState : public Noncopyable {
  public:
@@ -191,37 +49,6 @@ class WorkerState : public Noncopyable {
   std::function<std::pair<GroupID, GroupID>()> _get_new_group_id_range;
   std::vector<std::unique_ptr<AbstractAggregateVector>> _vectors;
 };
-
-template <typename T>
-  requires std::is_trivially_copyable_v<T>
-std::vector<std::byte> serialize_value(T value);
-
-std::vector<std::byte> serialize_value(const pmr_string& value);
-
-template <typename T>
-  requires std::is_trivially_copyable_v<T>
-std::vector<std::byte> serialize_value(T value, bool is_null);
-
-std::vector<std::byte> serialize_value(const pmr_string& value, bool is_null);
-
-template <typename T, bool Nullable>
-  requires std::is_trivially_copyable_v<T> && (!Nullable)
-T deserialize_value(const std::span<const std::byte>& bytes);
-
-template <typename T, bool Nullable>
-  requires std::is_trivially_copyable_v<T> && Nullable
-std::optional<T> deserialize_value(const std::span<const std::byte>& bytes);
-
-template <typename T, bool Nullable>
-  requires std::is_same_v<T, pmr_string> && (!Nullable)
-pmr_string deserialize_value(const std::span<const std::byte>& bytes);
-
-template <typename T, bool Nullable>
-  requires std::is_same_v<T, pmr_string> && Nullable
-std::optional<pmr_string> deserialize_value(const std::span<const std::byte>& bytes);
-
-template <typename Functor>
-void resolve_window_function(WindowFunction window_function, Functor&& functor);
 
 struct SingleThreadedState {
   boost::unordered_flat_map<GroupKey, GroupID, GroupKeyHash, GroupKeyEqual> group_id_map;
