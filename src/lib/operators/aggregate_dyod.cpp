@@ -454,6 +454,8 @@ GroupID AggregateDYOD::_group_id(StateType& state, const GroupKey& group_key, Wo
     return it->second;
   }
 
+  // TODO(anyone): This may allocate a group ID even if there was a race and another thread inserted the key first.
+  // Not a correctness problem, but it might hurt performance.
   auto [insert_it, inserted] = state.group_id_map.insert({group_key, worker_state.next_group_id()});
   const auto group_id = insert_it->second;
 
