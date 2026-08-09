@@ -375,7 +375,7 @@ void resolve_window_function(WindowFunction window_function, const Functor& func
 }
 
 // `visit_and_get_result` is called once per row when iterating over a column that is to be aggregated. The row's `key`
-// has been calculated as part of `_partition_by_groupby_keys`. We also pass in the `row_id` of that row. This row id
+// has been calculated as part of `_create_hash_keys`. We also pass in the `row_id` of that row. This row id
 // is stored in `Results` so that we can later use it to reconstruct the values in the GROUP BY columns. If the operator
 // calculates multiple aggregate functions, we only need to perform this lookup as part of the first aggregate function.
 // By setting CacheResultIds to true_type, we can store the result of the lookup in the AggregateKey. Following
@@ -819,10 +819,10 @@ void AggregateDYOD::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, 
 
 template <typename CheckForSingleKey, typename AggregateKey>
   requires(std::is_same_v<AggregateKey, DYODEmptyAggregateKey>)
-KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::shared_ptr<const Table>& input_table,
-                                                                     std::atomic_size_t& expected_result_size,
-                                                                     bool& use_immediate_key_shortcut,
-                                                                     bool& guarantee_single_key) {
+KeysPerChunk<AggregateKey> AggregateDYOD::_create_hash_keys(const std::shared_ptr<const Table>& input_table,
+                                                            std::atomic_size_t& expected_result_size,
+                                                            bool& use_immediate_key_shortcut,
+                                                            bool& guarantee_single_key) {
   if constexpr (std::is_same_v<CheckForSingleKey, std::true_type>) {
     guarantee_single_key = true;
   }
@@ -835,10 +835,10 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::
  */
 template <typename CheckForSingleKey, typename AggregateKey>
   requires(!std::is_same_v<AggregateKey, DYODEmptyAggregateKey>)
-KeysPerChunk<AggregateKey> AggregateDYOD::_partition_by_groupby_keys(const std::shared_ptr<const Table>& input_table,
-                                                                     std::atomic_size_t& expected_result_size,
-                                                                     [[maybe_unused]] bool& use_immediate_key_shortcut,
-                                                                     bool& guarantee_single_key) {
+KeysPerChunk<AggregateKey> AggregateDYOD::_create_hash_keys(const std::shared_ptr<const Table>& input_table,
+                                                            std::atomic_size_t& expected_result_size,
+                                                            [[maybe_unused]] bool& use_immediate_key_shortcut,
+                                                            bool& guarantee_single_key) {
   auto keys_per_chunk = KeysPerChunk<AggregateKey>{};
   const auto chunk_count = input_table->chunk_count();
 
@@ -1191,9 +1191,9 @@ constexpr auto RADIX_SPLIT_MAX_BUCKETS = RADIX_MASK + 1;
  * parameters.
  */
 template <typename AggregateKey>
-std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
-  return left_input_table()->type() == TableType::Data ? _partition_and_aggregate<std::false_type, AggregateKey>()
-                                                       : _partition_and_aggregate<std::true_type, AggregateKey>();
+std::shared_ptr<Table> AggregateDYOD::_execute_operator() {
+  return left_input_table()->type() == TableType::Data ? _execute_operator<std::false_type, AggregateKey>()
+                                                       : _execute_operator<std::true_type, AggregateKey>();
 }
 
 /**
@@ -1202,7 +1202,7 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
  * output table and write the results of the aggregation there.
  */
 template <typename IsReferenceTable, typename AggregateKey>
-std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
+std::shared_ptr<Table> AggregateDYOD::_execute_operator() {
   const auto aggregates_count = _aggregates.size();
   const auto& input_table = left_input_table();
   const auto column_count = input_table->column_count();
@@ -1414,8 +1414,8 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
 }
 
 /**
- * This is the unpartitioned variant. It will handle the table partitioning for low cardinalities and call the partitioned
- * variant below for the actual aggregation.
+ * This is the unpartitioned variant. It will handle the table partitioning for low cardinalities and call 
+ * _aggregate_partition for the actual aggregation.
  */
 template <typename AggregateKey>
 void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std::shared_ptr<const Table>& input_table,
@@ -1424,9 +1424,9 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std
   bool use_immediate_key_shortcut = false;
   bool guarantee_single_key = false;
   auto keys_per_chunk = check_for_single_keys
-                            ? _partition_by_groupby_keys<std::true_type, AggregateKey>(
+                            ? _create_hash_keys<std::true_type, AggregateKey>(
                                   input_table, expected_result_size, use_immediate_key_shortcut, guarantee_single_key)
-                            : _partition_by_groupby_keys<std::false_type, AggregateKey>(
+                            : _create_hash_keys<std::false_type, AggregateKey>(
                                   input_table, expected_result_size, use_immediate_key_shortcut, guarantee_single_key);
 
   // If we only have one group, we can easily split this job, since we have only one result per context.
@@ -1440,8 +1440,8 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std
 
   // We have an empty table or cannot enable single key optimization, so just skip the rest.
   if (bucket_job_count < 2) {
-    _aggregate<AggregateKey>(contexts_per_column, input_table, expected_result_size, use_immediate_key_shortcut,
-                             keys_per_chunk, ChunkID{0}, chunk_count);
+    _aggregate_partition<AggregateKey>(contexts_per_column, input_table, expected_result_size,
+                                       use_immediate_key_shortcut, keys_per_chunk, ChunkID{0}, chunk_count);
     return;
   }
 
@@ -1463,8 +1463,8 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std
       const auto job_end =
           static_cast<ChunkID>((job_id + 1 == bucket_job_count) ? (chunk_count) : ((job_id + 1) * job_size));
 
-      _aggregate<AggregateKey>(contexts_per_column_per_job[job_id], input_table, expected_result_size,
-                               use_immediate_key_shortcut, keys_per_chunk, job_start, job_end);
+      _aggregate_partition<AggregateKey>(contexts_per_column_per_job[job_id], input_table, expected_result_size,
+                                         use_immediate_key_shortcut, keys_per_chunk, job_start, job_end);
     };
 
     if (bucket_job_count == 1) {
@@ -1525,9 +1525,10 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std
  * was performed previously). It performs the actual aggregation, writing the result to contexts_per_column.
  */
 template <typename AggregateKey>
-void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std::shared_ptr<const Table>& input_table,
-                               std::atomic_size_t& expected_result_size, bool& use_immediate_key_shortcut,
-                               KeysPerChunk<AggregateKey>& keys_per_chunk, ChunkID start, ChunkID end) {
+void AggregateDYOD::_aggregate_partition(ContextsPerColumn& contexts_per_column,
+                                         const std::shared_ptr<const Table>& input_table,
+                                         std::atomic_size_t& expected_result_size, bool& use_immediate_key_shortcut,
+                                         KeysPerChunk<AggregateKey>& keys_per_chunk, ChunkID start, ChunkID end) {
   if (!_has_aggregate_functions) {
     /*
     Insert a dummy context for the DISTINCT implementation. That way, `contexts_per_column` will always have at least
@@ -1892,14 +1893,14 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
 
   switch (_groupby_column_ids.size()) {
     case 0:
-      return _partition_and_aggregate<DYODEmptyAggregateKey>();
+      return _execute_operator<DYODEmptyAggregateKey>();
     case 1:
       // No need for a complex data structure if we only have one entry.
-      return _partition_and_aggregate<DYODAggregateKeyEntry>();
+      return _execute_operator<DYODAggregateKeyEntry>();
     case 2:
-      return _partition_and_aggregate<std::array<DYODAggregateKeyEntry, 2>>();
+      return _execute_operator<std::array<DYODAggregateKeyEntry, 2>>();
     default:
-      return _partition_and_aggregate<DYODAggregateKeySmallVector>();
+      return _execute_operator<DYODAggregateKeySmallVector>();
   }
 }
 

@@ -172,36 +172,38 @@ class AggregateDYOD : public AbstractAggregateOperator {
  protected:
   std::shared_ptr<const Table> _on_execute() override;
 
+  // Note that this function exists in AggregateHash under the name '_partition_by_groupby_keys'. It has been
+  // renamed for better readability, buts its contents were not altered significantly.
   template <typename CheckForSingleKey, typename AggregateKey>
     requires(std::is_same_v<AggregateKey, DYODEmptyAggregateKey>)
-  KeysPerChunk<AggregateKey> _partition_by_groupby_keys(const std::shared_ptr<const Table>& input_table,
-                                                        std::atomic_size_t& expected_result_size,
-                                                        bool& use_immediate_key_shortcut, bool& guarantee_single_key);
+  KeysPerChunk<AggregateKey> _create_hash_keys(const std::shared_ptr<const Table>& input_table,
+                                               std::atomic_size_t& expected_result_size,
+                                               bool& use_immediate_key_shortcut, bool& guarantee_single_key);
 
   template <typename CheckForSingleKey, typename AggregateKey>
     requires(!std::is_same_v<AggregateKey, DYODEmptyAggregateKey>)
-  KeysPerChunk<AggregateKey> _partition_by_groupby_keys(const std::shared_ptr<const Table>& input_table,
-                                                        std::atomic_size_t& expected_result_size,
-                                                        bool& use_immediate_key_shortcut, bool& guarantee_single_key);
+  KeysPerChunk<AggregateKey> _create_hash_keys(const std::shared_ptr<const Table>& input_table,
+                                               std::atomic_size_t& expected_result_size,
+                                               bool& use_immediate_key_shortcut, bool& guarantee_single_key);
 
   template <typename AggregateKey>
   void _aggregate(ContextsPerColumn& contexts_per_column, const std::shared_ptr<const Table>& input_table,
                   bool check_for_single_keys);
 
   template <typename AggregateKey>
-  void _aggregate(ContextsPerColumn& contexts_per_column, const std::shared_ptr<const Table>& input_table,
-                  std::atomic_size_t& expected_result_size, bool& use_immediate_key_shortcut,
-                  KeysPerChunk<AggregateKey>& keys_per_chunk, ChunkID start, ChunkID end);
+  void _aggregate_partition(ContextsPerColumn& contexts_per_column, const std::shared_ptr<const Table>& input_table,
+                            std::atomic_size_t& expected_result_size, bool& use_immediate_key_shortcut,
+                            KeysPerChunk<AggregateKey>& keys_per_chunk, ChunkID start, ChunkID end);
 
   template <typename ColumnDataType, WindowFunction aggregate_function, typename AggregateKey>
   void _merge_contexts(std::shared_ptr<DYODSegmentVisitorContext>& target,
                        std::shared_ptr<DYODSegmentVisitorContext>& other);
 
   template <typename AggregateKey>
-  std::shared_ptr<Table> _partition_and_aggregate();
+  std::shared_ptr<Table> _execute_operator();
 
   template <typename IsReferenceTable, typename AggregateKey>
-  std::shared_ptr<Table> _partition_and_aggregate();
+  std::shared_ptr<Table> _execute_operator();
 
   std::shared_ptr<AbstractOperator> _on_deep_copy(
       const std::shared_ptr<AbstractOperator>& copied_left_input,
