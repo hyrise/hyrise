@@ -4,7 +4,7 @@ namespace hyrise {
 
 template <typename T>
   requires std::is_trivially_copyable_v<T>
-void serialize_value(std::vector<std::byte>& buffer, T value) {
+void serialize_value(std::vector<std::byte>& buffer, const T& value) {
   const auto offset = buffer.size();
   buffer.resize(offset + sizeof(T));
   std::memcpy(buffer.data() + offset, &value, sizeof(T));
@@ -18,7 +18,7 @@ void serialize_value(std::vector<std::byte>& buffer, const pmr_string& value) {
 
 template <typename T>
   requires std::is_trivially_copyable_v<T>
-void serialize_value(std::vector<std::byte>& buffer, T value, bool is_null) {
+void serialize_value(std::vector<std::byte>& buffer, const T& value, bool is_null) {
   if (is_null) {
     buffer.push_back(std::byte{0x01});
     return;
