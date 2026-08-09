@@ -624,7 +624,7 @@ AggregateDYOD::AggregateDYOD(const std::shared_ptr<AbstractOperator>& input_oper
                                 std::make_unique<OperatorPerformanceData<OperatorSteps>>()),
       _has_aggregate_functions(has_aggregate_functions(_aggregates)) {
   const auto num_cpus = Hyrise::get().topology.num_cpus();
-  _max_job_size = left_input_table()->row_count() / (num_cpus * IDEAL_CPU_JOB_COUNT);
+  _max_job_size = std::max(size_t{1}, left_input_table()->row_count() / (num_cpus * IDEAL_CPU_JOB_COUNT));
 }
 
 const std::string& AggregateDYOD::name() const {
@@ -1412,8 +1412,6 @@ std::shared_ptr<Table> AggregateDYOD::_partition_and_aggregate() {
   return output_table;
 }
 
-const auto JOB_COUNT_ESTIMATE = ChunkID{16};
-
 /**
  * This is the unpartitioned variant. It will handle the table partitioning for low cardinalities and call the partitioned
  * variant below for the actual aggregation.
@@ -1430,12 +1428,14 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std
                             : _partition_by_groupby_keys<std::false_type, AggregateKey>(
                                   input_table, expected_result_size, use_immediate_key_shortcut, guarantee_single_key);
 
-  // TODO(anyone): Estimate ideal number of jobs/threads for this bucket.
   // If we only have one group, we can easily split this job, since we have only one result per context.
+  // Note that guarantee_single_key is only set to true if the local row count is above the max_job_size.
+  // We estimate the number of jobs needed with the local row count divided by the max_job_size, which
+  // assumes even distribution of rows amongst the chunks.
+  // TODO(anyone): Estimate ideal number of jobs/threads for this bucket.
   const auto chunk_count = input_table->chunk_count();
-  auto bucket_job_count = (guarantee_single_key && input_table->row_count() > _max_job_size)
-                              ? std::min(JOB_COUNT_ESTIMATE, chunk_count)
-                              : ChunkID{1};
+  const auto job_count_estimate = static_cast<const ChunkID>(input_table->row_count() / _max_job_size);
+  auto bucket_job_count = guarantee_single_key ? std::min(job_count_estimate, chunk_count) : ChunkID{1};
 
   // We have an empty table or cannot enable single key optimization, so just skip the rest.
   if (bucket_job_count < 2) {

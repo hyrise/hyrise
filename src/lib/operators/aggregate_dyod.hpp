@@ -245,7 +245,7 @@ class AggregateDYOD : public AbstractAggregateOperator {
   // is M, this has to be before M/N. Thus at time M/N, there is no unassigned job)
   // So in the worst case we finished M/(N*k) later than the ideal time. We are at least (1+1/k)-optimal.
   // In practice, we have to consider preprocessing and postprocessing time, as well as non unit time per row.
-  ChunkOffset _max_job_size;
+  size_t _max_job_size;
 
   bool _has_aggregate_functions;
   bool _aggregate_writing_started = false;
