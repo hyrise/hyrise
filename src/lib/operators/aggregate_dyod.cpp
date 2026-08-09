@@ -210,6 +210,10 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
   _validate_aggregates();
 
   {
+    TRACE_EVENT("aggregate_operator", "_group_id_map.reserve");
+    _group_id_map.reserve(GROUP_ID_INITIAL_SIZE);
+  }
+  {
     TRACE_EVENT("aggregate_operator", "_group_keys.reserve");
     _group_keys.reserve(GROUP_ID_INITIAL_SIZE);
   }
