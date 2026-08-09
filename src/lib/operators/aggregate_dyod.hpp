@@ -11,7 +11,7 @@
 #include <vector>
 
 #include <boost/container_hash/hash.hpp>
-#include <seq/concurrent_map.hpp>
+#include <oneapi/tbb/concurrent_unordered_map.h>  // NOLINT(build/include_order)
 
 #include "abstract_aggregate_operator.hpp"
 #include "abstract_read_only_operator.hpp"
@@ -57,7 +57,7 @@ struct GroupKeyEqual {
   }
 };
 
-using GroupIDMap = seq::concurrent_map<GroupKey, GroupID, GroupKeyHash, GroupKeyEqual>;
+using GroupIDMap = tbb::concurrent_unordered_map<GroupKey, GroupID, GroupKeyHash, GroupKeyEqual>;
 
 class AbstractAggregateVector {
  public:
