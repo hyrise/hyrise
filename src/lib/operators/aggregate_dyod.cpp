@@ -547,7 +547,7 @@ GroupID AggregateDYOD::_group_id(const GroupKey& group_key, WorkerState& worker_
 
   // clang-format off
   const auto inserted = _group_id_map.insert_or_visit(
-    {group_key, new_group_id},
+    std::pair<GroupKey, GroupID>{group_key, new_group_id},
     [&](const auto& entry) { group_id = entry.second; });  // Lost race: Use existing group ID
   // clang-format on
 

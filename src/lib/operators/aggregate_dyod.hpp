@@ -11,7 +11,7 @@
 #include <vector>
 
 #include <boost/container_hash/hash.hpp>
-#include <boost/unordered/concurrent_flat_map.hpp>
+#include <seq/concurrent_map.hpp>
 
 #include "abstract_aggregate_operator.hpp"
 #include "abstract_read_only_operator.hpp"
@@ -57,7 +57,7 @@ struct GroupKeyEqual {
   }
 };
 
-using GroupIDMap = boost::concurrent_flat_map<GroupKey, GroupID, GroupKeyHash, GroupKeyEqual>;
+using GroupIDMap = seq::concurrent_map<GroupKey, GroupID, GroupKeyHash, GroupKeyEqual>;
 
 class AbstractAggregateVector {
  public:

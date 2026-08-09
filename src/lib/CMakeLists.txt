@@ -776,6 +776,7 @@ target_link_libraries_system(
     concurrentqueue
     cxxopts
     nlohmann_json::nlohmann_json
+    seq
     sparse_map
     SQLite::SQLite3
     tbb
