@@ -34,6 +34,8 @@
 #include "operators/abstract_operator.hpp"
 #include "perfetto.h"
 #include "storage/abstract_segment.hpp"
+#include "storage/pos_lists/entire_chunk_pos_list.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
@@ -119,8 +121,8 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
   std::visit(
       [&](auto& state) {
         {
-          TRACE_EVENT("aggregate_operator", "_group_keys.reserve");
-          state.group_keys.reserve(GROUP_ID_INITIAL_SIZE);
+          TRACE_EVENT("aggregate_operator", "_row_ids.reserve");
+          state.row_ids.reserve(GROUP_ID_INITIAL_SIZE);
         }
         {
           TRACE_EVENT("aggregate_operator", "_occupied_group_ids.reserve");
@@ -165,7 +167,10 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
   std::visit(
       [&](auto& state) {
         if (state.group_id_map.empty() && _groupby_column_ids.empty()) {
-          const auto group_id = _group_id(state, GroupKey{}, merged_worker_states);
+          // There are no groupby columns, so the row IDs and group keys are never needed anyway.
+          auto dummy_row_ids = std::vector<RowID>{};
+          auto dummy_group_key = GroupKey{};
+          const auto group_id = _group_id(state, dummy_row_ids, dummy_group_key, merged_worker_states);
 
           for (auto& aggregate_vector : merged_worker_states.aggregate_vectors()) {
             aggregate_vector->grow_if_necessary(group_id + 1);
@@ -180,6 +185,7 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
 std::shared_ptr<Table> AggregateDYOD::_write_output_table(WorkerState& worker_state) {
   TRACE_EVENT("aggregate_operator", "_write_output_table");
   const auto column_definitions = _output_column_definitions();
+  const auto aggregate_count = _aggregates.size();
 
   const auto total_group_count = std::visit(
       [&](auto& state) {
@@ -187,40 +193,85 @@ std::shared_ptr<Table> AggregateDYOD::_write_output_table(WorkerState& worker_st
       },
       _state);
   const auto chunk_count = (total_group_count + Chunk::DEFAULT_SIZE - 1) / Chunk::DEFAULT_SIZE;
-  auto chunks = std::vector<std::shared_ptr<Chunk>>(chunk_count);
+  const auto occupied_group_ids = _get_occupied_group_ids();
 
-  if (total_group_count > 0) {
-    auto jobs = std::vector<std::shared_ptr<AbstractTask>>(chunk_count);
-    const auto occupied_group_ids = _get_occupied_group_ids();
+  // Chunks for the temporary data table containing aggregate columns
+  auto aggregate_chunks = std::vector<std::shared_ptr<Chunk>>(chunk_count);
 
-    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-      jobs[chunk_id] = std::make_shared<JobTask>([&, chunk_id]() {
-        const auto start_index = size_t{chunk_id} * Chunk::DEFAULT_SIZE;
-        const auto end_index = std::min(start_index + Chunk::DEFAULT_SIZE, total_group_count);
-        chunks[chunk_id] = _write_output_chunk(worker_state, occupied_group_ids, start_index, end_index);
-      });
-    }
+  {
+    TRACE_EVENT("aggregate_operator", "write temporary aggregate chunks");
 
-    {
-      TRACE_EVENT("aggregate_operator", "schedule_and_wait_for_tasks");
+    if (total_group_count > 0 && aggregate_count > 0) {
+      auto jobs = std::vector<std::shared_ptr<AbstractTask>>(chunk_count);
+
+      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+        jobs[chunk_id] = std::make_shared<JobTask>([&, chunk_id]() {
+          const auto start_index = size_t{chunk_id} * Chunk::DEFAULT_SIZE;
+          const auto end_index = std::min(start_index + Chunk::DEFAULT_SIZE, total_group_count);
+          aggregate_chunks[chunk_id] =
+              _write_aggregate_output_chunk(worker_state, occupied_group_ids, start_index, end_index);
+        });
+      }
+
       Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
     }
   }
 
-  return std::make_shared<Table>(column_definitions, TableType::Data, chunks);
+  auto aggregates_table =
+      std::make_shared<Table>(_aggregate_column_definitions(), TableType::Data, std::move(aggregate_chunks));
+
+  // Chunks for the actual output reference table. The chunks consist only of ReferenceSegments referencing the
+  // input table (for groupby columns) or the temporaray table created above (for aggregate columns).
+  auto reference_chunks = std::vector<std::shared_ptr<Chunk>>(chunk_count);
+
+  {
+    TRACE_EVENT("aggregate_operator", "write reference chunks");
+
+    if (total_group_count > 0) {
+      auto jobs = std::vector<std::shared_ptr<AbstractTask>>(chunk_count);
+
+      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+        jobs[chunk_id] = std::make_shared<JobTask>([&, chunk_id]() {
+          const auto start_index = size_t{chunk_id} * Chunk::DEFAULT_SIZE;
+          const auto end_index = std::min(start_index + Chunk::DEFAULT_SIZE, total_group_count);
+          reference_chunks[chunk_id] =
+              _write_reference_chunk(aggregates_table, chunk_id, occupied_group_ids, start_index, end_index);
+        });
+      }
+
+      Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+    }
+  }
+
+  return std::make_shared<Table>(column_definitions, TableType::References, std::move(reference_chunks));
 }
 
 TableColumnDefinitions AggregateDYOD::_output_column_definitions() {
-  const auto input_table = left_input_table();
-  const auto aggregate_count = _aggregates.size();
-  auto column_definitions = TableColumnDefinitions();
+  auto column_definitions = _groupby_column_definitions();
+  const auto aggregate_column_definitions = _aggregate_column_definitions();
+  column_definitions.insert(column_definitions.end(), aggregate_column_definitions.begin(),
+                            aggregate_column_definitions.end());
+  return column_definitions;
+}
 
+TableColumnDefinitions AggregateDYOD::_groupby_column_definitions() {
+  const auto input_table = left_input_table();
+  auto column_definitions = TableColumnDefinitions{};
+
+  column_definitions.reserve(_groupby_column_ids.size());
   for (const auto column_id : groupby_column_ids()) {
     column_definitions.emplace_back(input_table->column_name(column_id), input_table->column_data_type(column_id),
                                     input_table->column_is_nullable(column_id));
   }
 
-  for (auto aggregate_index = size_t{0}; aggregate_index < aggregate_count; ++aggregate_index) {
+  return column_definitions;
+}
+
+TableColumnDefinitions AggregateDYOD::_aggregate_column_definitions() {
+  auto column_definitions = TableColumnDefinitions{};
+  column_definitions.reserve(_aggregates.size());
+
+  for (auto aggregate_index = size_t{0}; aggregate_index < _aggregates.size(); ++aggregate_index) {
     const auto& aggregate = _aggregates[aggregate_index];
     resolve_data_type(_aggregate_column_data_type(aggregate_index), [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
@@ -241,30 +292,15 @@ TableColumnDefinitions AggregateDYOD::_output_column_definitions() {
   return column_definitions;
 }
 
-std::shared_ptr<Chunk> AggregateDYOD::_write_output_chunk(WorkerState& worker_state,
-                                                          const std::vector<size_t>& occupied_group_ids,
-                                                          size_t start_index, size_t end_index) {
-  TRACE_EVENT("aggregate_operator", "_write_output_chunk");
-  const auto input_table = left_input_table();
+std::shared_ptr<Chunk> AggregateDYOD::_write_aggregate_output_chunk(WorkerState& worker_state,
+                                                                    const std::vector<size_t>& occupied_group_ids,
+                                                                    size_t start_index, size_t end_index) {
+  TRACE_EVENT("aggregate_operator", "_write_aggregate_output_chunk");
   const auto aggregate_count = _aggregates.size();
-  const auto groupby_column_count = _groupby_column_ids.size();
 
   auto segments = Segments{};
-  segments.reserve(groupby_column_count + aggregate_count);
+  segments.reserve(aggregate_count);
 
-  // Create one ValueSegment per grouping column
-  for (auto groupby_column_index = size_t{0}; groupby_column_index < groupby_column_count; ++groupby_column_index) {
-    const auto column_id = _groupby_column_ids[groupby_column_index];
-    const auto data_type = input_table->column_data_type(column_id);
-
-    resolve_data_type(data_type, [&](auto type) {
-      using ColumnDataType = typename decltype(type)::type;
-      segments.emplace_back(
-          _write_groupby_segment<ColumnDataType>(groupby_column_index, occupied_group_ids, start_index, end_index));
-    });
-  }
-
-  // Create one ValueSegment per aggregate
   for (auto aggregate_index = size_t{0}; aggregate_index < aggregate_count; ++aggregate_index) {
     const auto& aggregate = _aggregates[aggregate_index];
 
@@ -284,54 +320,67 @@ std::shared_ptr<Chunk> AggregateDYOD::_write_output_chunk(WorkerState& worker_st
   return std::make_shared<Chunk>(segments);
 }
 
-template <typename ColumnDataType>
+std::shared_ptr<Chunk> AggregateDYOD::_write_reference_chunk(const std::shared_ptr<Table>& aggregate_result_table,
+                                                             ChunkID chunk_id,
+                                                             const std::vector<size_t>& occupied_group_ids,
+                                                             size_t start_index, size_t end_index) {
+  TRACE_EVENT("aggregate_operator", "_write_reference_chunk");
+  const auto groupby_column_count = _groupby_column_ids.size();
+  const auto aggregate_count = _aggregates.size();
+  const auto chunk_size = static_cast<ChunkOffset>(end_index - start_index);
+
+  auto segments = Segments{};
+  segments.reserve(groupby_column_count + aggregate_count);
+
+  for (auto groupby_column_index = size_t{0}; groupby_column_index < groupby_column_count; ++groupby_column_index) {
+    segments.emplace_back(_write_groupby_segment(groupby_column_index, occupied_group_ids, start_index, end_index));
+  }
+
+  const auto entire_chunk_pos_list = std::make_shared<EntireChunkPosList>(chunk_id, chunk_size);
+  for (auto aggregate_index = ColumnID{0}; aggregate_index < aggregate_count; ++aggregate_index) {
+    segments.emplace_back(
+        std::make_shared<ReferenceSegment>(aggregate_result_table, ColumnID{aggregate_index}, entire_chunk_pos_list));
+  }
+
+  return std::make_shared<Chunk>(segments);
+}
+
 std::shared_ptr<AbstractSegment> AggregateDYOD::_write_groupby_segment(size_t groupby_column_index,
                                                                        const std::vector<size_t>& occupied_group_ids,
                                                                        size_t start_index, size_t end_index) {
   TRACE_EVENT("aggregate_operator", "_write_groupby_segment");
   const auto input_table = left_input_table();
   const auto column_id = _groupby_column_ids[groupby_column_index];
-  const auto is_nullable = input_table->column_is_nullable(column_id);
   const auto chunk_size = end_index - start_index;
 
-  if (is_nullable) {
-    auto values = pmr_vector<ColumnDataType>(chunk_size);
-    auto null_values = pmr_vector<bool>(chunk_size);
+  auto referenced_table = input_table;
+  auto referenced_column_id = _groupby_column_ids[groupby_column_index];
 
-    std::visit(
-        [&](auto& state) {
-          for (auto index = start_index; index < end_index; ++index) {
-            const auto group_id = occupied_group_ids[index];
-            const auto chunk_offset = index - start_index;
-            const auto& group_key_entry = state.group_keys[group_id][groupby_column_index];
-            auto deserialized = deserialize_value<ColumnDataType, true>(group_key_entry);
-
-            if (deserialized.has_value()) {
-              values[chunk_offset] = std::move(deserialized.value());
-            } else {
-              null_values[chunk_offset] = true;
-            }
-          }
-        },
-        _state);
-
-    return std::make_shared<ValueSegment<ColumnDataType>>(std::move(values), std::move(null_values));
+  if (input_table->type() == TableType::References) {
+    // Unless we are processing an empty input, obtain the referenced table and column from the first chunk. We
+    // assume that segments of the same column do not reference different tables (checked in the Table constructor).
+    // When this assumption changes (e.g., due to a better support of Unions), this code needs to be revisited.
+    // This is the same assumption also made in AggregateHash.
+    const auto& first_reference_segment =
+        static_cast<const ReferenceSegment&>(*input_table->get_chunk(ChunkID{0})->get_segment(column_id));
+    referenced_table = first_reference_segment.referenced_table();
+    referenced_column_id = first_reference_segment.referenced_column_id();
   }
 
-  auto values = pmr_vector<ColumnDataType>(chunk_size);
+  auto row_ids = pmr_vector<RowID>(chunk_size);
 
   std::visit(
       [&](auto& state) {
         for (auto index = start_index; index < end_index; ++index) {
           const auto group_id = occupied_group_ids[index];
           const auto chunk_offset = index - start_index;
-          const auto& group_key_entry = state.group_keys[group_id][groupby_column_index];
-          values[chunk_offset] = deserialize_value<ColumnDataType, false>(group_key_entry);
+          row_ids[chunk_offset] = state.row_ids[group_id][groupby_column_index];
         }
       },
       _state);
 
-  return std::make_shared<ValueSegment<ColumnDataType>>(std::move(values));
+  const auto pos_list = std::make_shared<const RowIDPosList>(std::move(row_ids));
+  return std::make_shared<ReferenceSegment>(referenced_table, referenced_column_id, pos_list);
 }
 
 template <typename ColumnDataType, WindowFunction aggregate_function>
@@ -446,7 +495,8 @@ std::shared_ptr<AbstractSegment> AggregateDYOD::_write_aggregate_segment(
 }
 
 template <typename StateType>
-GroupID AggregateDYOD::_group_id(StateType& state, const GroupKey& group_key, WorkerState& worker_state) {
+GroupID AggregateDYOD::_group_id(StateType& state, std::vector<RowID>& row_ids, const GroupKey& group_key,
+                                 WorkerState& worker_state) {
   auto it = state.group_id_map.find(group_key);
   if (it != state.group_id_map.end()) {
     return it->second;
@@ -458,7 +508,7 @@ GroupID AggregateDYOD::_group_id(StateType& state, const GroupKey& group_key, Wo
   const auto group_id = insert_it->second;
 
   if (inserted) {
-    state.group_keys[group_id] = group_key;
+    state.row_ids[group_id] = std::move(row_ids);
     state.occupied_group_ids[group_id] = true;
   }
 
@@ -477,7 +527,7 @@ std::pair<GroupID, GroupID> AggregateDYOD::_get_new_group_id_range(SingleThreade
   state.next_group_id += FUZZY_STEP_SIZE;
   auto max_group_id = state.next_group_id + FUZZY_STEP_SIZE - 1;
 
-  state.group_keys.resize(max_group_id + 1);
+  state.row_ids.resize(max_group_id + 1);
   state.occupied_group_ids.resize(max_group_id + 1);
 
   return {state.next_group_id, max_group_id};
@@ -490,7 +540,7 @@ std::pair<GroupID, GroupID> AggregateDYOD::_get_new_group_id_range(MultiThreaded
   {
     // TODO(anyone): Figure out how to avoid this lock. Maybe use a single vector of pairs?
     std::lock_guard<std::mutex> lock(state.group_keys_mutex);
-    state.group_keys.grow_to_at_least(max_group_id + 1);
+    state.row_ids.grow_to_at_least(max_group_id + 1);
     state.occupied_group_ids.grow_to_at_least(max_group_id + 1);
   }
 
@@ -501,7 +551,7 @@ std::vector<size_t> AggregateDYOD::_get_occupied_group_ids() {
   return std::visit(
       [&](auto& state) {
         // clang-format off
-    auto view = std::views::iota(size_t{0}, state.group_keys.size())
+    auto view = std::views::iota(size_t{0}, state.occupied_group_ids.size())
       | std::views::filter([&](size_t index) { return state.occupied_group_ids[index]; });
         // clang-format on
 
@@ -556,12 +606,16 @@ std::pair<std::vector<GroupID>, GroupID> AggregateDYOD::_group_ids_for_chunk(Chu
   const auto groupby_column_count = _groupby_column_ids.size();
   const auto row_count = chunk.size();
 
+  // For input columns that are reference segments, store the dereferenced RowIDs.
+  auto column_row_ids = std::vector<std::optional<std::vector<RowID>>>(groupby_column_count);
+
   // Per grouping column, the serialized values of all rows in a chunk
   auto column_buffers = std::vector<std::vector<std::byte>>(groupby_column_count);
 
   // Per grouping column, the start position of each row into the respective column buffer
-  auto column_starts =
-      std::vector<std::vector<uint32_t>>(groupby_column_count, std::vector<uint32_t>(row_count + 1, uint32_t{0}));
+  using ColumnStart = uint32_t;
+  auto column_starts = std::vector<std::vector<ColumnStart>>(groupby_column_count,
+                                                             std::vector<ColumnStart>(row_count + 1, ColumnStart{0}));
 
   {
     TRACE_EVENT("aggregate_operator", "serialize group keys");
@@ -578,7 +632,8 @@ std::pair<std::vector<GroupID>, GroupID> AggregateDYOD::_group_ids_for_chunk(Chu
         const auto segment = chunk.get_segment(groupby_column_id);
 
         segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
-          starts[position.chunk_offset()] = static_cast<uint32_t>(column_buffer.size());
+          const auto chunk_offset = position.chunk_offset();
+          starts[chunk_offset] = static_cast<ColumnStart>(column_buffer.size());
 
           if (is_nullable) {
             serialize_value(column_buffer, position.value(), position.is_null());
@@ -587,11 +642,24 @@ std::pair<std::vector<GroupID>, GroupID> AggregateDYOD::_group_ids_for_chunk(Chu
           }
         });
 
-        Assert(column_buffer.size() <= std::numeric_limits<uint32_t>::max(),
-               "Column buffer is too large and buffer start positions may be invalid.");
+        const auto reference_segment = std::dynamic_pointer_cast<const ReferenceSegment>(segment);
+
+        DebugAssert(column_buffer.size() <= std::numeric_limits<ColumnStart>::max(), "Column buffer is too large.");
 
         // Store the end position of the last key.
-        starts[row_count] = static_cast<uint32_t>(column_buffer.size());
+        starts[row_count] = static_cast<ColumnStart>(column_buffer.size());
+
+        if (reference_segment) {
+          // If the segment is a ReferenceSegment, iterate through the position list and store the dereferenced RowIDs.
+          auto row_ids = std::vector<RowID>(row_count);
+          auto chunk_offset = ChunkOffset{0};
+
+          for (const auto row_id : *reference_segment->pos_list()) {
+            row_ids[chunk_offset++] = row_id;
+          }
+
+          column_row_ids[groupby_column_index] = std::optional{std::move(row_ids)};
+        }
       });
     }
   }
@@ -603,8 +671,10 @@ std::pair<std::vector<GroupID>, GroupID> AggregateDYOD::_group_ids_for_chunk(Chu
   // One buffer for all group keys in a chunk
   auto& chunk_buffer = _group_key_buffers[chunk_id];
 
+  using LengthPrefix = uint32_t;
+
   // Reserve capacity in the chunk buffer first so that spans referencing it are stable.
-  auto total_bytes = size_t{0};
+  auto total_bytes = groupby_column_count * row_count * sizeof(LengthPrefix);
 
   for (const auto& column_buffer : column_buffers) {
     total_bytes += column_buffer.size();
@@ -617,7 +687,7 @@ std::pair<std::vector<GroupID>, GroupID> AggregateDYOD::_group_ids_for_chunk(Chu
         TRACE_EVENT("aggregate_operator", "get group IDs");
 
         for (auto offset = ChunkOffset{0}; offset < row_count; ++offset) {
-          auto group_key = GroupKey(groupby_column_count);
+          const auto chunk_buffer_start = chunk_buffer.size();
 
           for (auto groupby_column_index = size_t{0}; groupby_column_index < groupby_column_count;
                ++groupby_column_index) {
@@ -627,23 +697,43 @@ std::pair<std::vector<GroupID>, GroupID> AggregateDYOD::_group_ids_for_chunk(Chu
             const auto column_buffer_start = column_buffer_starts[offset];
             const auto column_buffer_end = column_buffer_starts[offset + 1];
 
+            // TODO(anyone): 16-byte int might be enough for the key lenght prefix
+            DebugAssert(column_buffer_end - column_buffer_start <= std::numeric_limits<LengthPrefix>::max(),
+                        "Key entry is too long.");
+            const auto length = static_cast<LengthPrefix>(column_buffer_end - column_buffer_start);
+
             // Copy serialized group key entries from the local column buffers to the global chunk buffer
-            const auto chunk_buffer_start = chunk_buffer.size();
+            // and prefix them with their length to prevent collisions.
+            const auto length_bytes = std::bit_cast<std::array<std::byte, sizeof(LengthPrefix)>>(length);
+            chunk_buffer.insert(chunk_buffer.end(), length_bytes.begin(), length_bytes.end());
             chunk_buffer.insert(chunk_buffer.end(), column_buffer.begin() + column_buffer_start,
                                 column_buffer.begin() + column_buffer_end);
-            const auto chunk_buffer_end = chunk_buffer.size();
-            DebugAssert(chunk_buffer.size() <= total_bytes, "Chunk buffer was resized and may have invalidated spans.");
-
-            group_key[groupby_column_index] = std::span<const std::byte>(chunk_buffer)
-                                                  .subspan(chunk_buffer_start, chunk_buffer_end - chunk_buffer_start);
           }
 
-          const auto group_id = _group_id(state, group_key, worker_state);
+          const auto chunk_buffer_end = chunk_buffer.size();
+          const auto group_key = std::span<const std::byte>(chunk_buffer)
+                                     .subspan(chunk_buffer_start, chunk_buffer_end - chunk_buffer_start);
+
+          auto row_ids = std::vector<RowID>(groupby_column_count);
+
+          for (auto groupby_column_index = size_t{0}; groupby_column_index < groupby_column_count;
+               ++groupby_column_index) {
+            if (column_row_ids[groupby_column_index].has_value()) {
+              row_ids[groupby_column_index] = column_row_ids[groupby_column_index].value()[offset];
+            } else {
+              row_ids[groupby_column_index] = RowID{chunk_id, offset};
+            }
+          }
+
+          const auto group_id = _group_id(state, row_ids, group_key, worker_state);
           group_ids[offset] = group_id;
           max_group_id = std::max(max_group_id, group_id);
         }
       },
       _state);
+
+  Assert(chunk_buffer.size() <= total_bytes,
+         "Chunk buffer is larger than initially reserved capacity which may have invalidated group key spans.");
 
   return {group_ids, max_group_id};
 }
