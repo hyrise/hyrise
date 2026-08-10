@@ -79,8 +79,6 @@ class AggregateDYOD : public AbstractAggregateOperator {
   // TODO(anyone): Replace with proper estimate of group cardinality based on input table.
   static constexpr GroupID GROUP_ID_INITIAL_SIZE = 100'000;
 
-  std::vector<DataType> _aggregate_data_types;
-
   std::variant<SingleThreadedState, MultiThreadedState> _state;
 
   // One group key buffer per chunk. Group keys entries (i.e., the serialized groupby column values) for a
@@ -97,8 +95,6 @@ class AggregateDYOD : public AbstractAggregateOperator {
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
   void _on_cleanup() override;
-
-  void _prepare_aggregate_vectors();
 
   std::shared_ptr<Table> _write_output_table(WorkerState& worker_state);
 
