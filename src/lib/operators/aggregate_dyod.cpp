@@ -216,16 +216,31 @@ std::shared_ptr<Table> AggregateDYOD::_write_output_table(WorkerState& worker_st
 }
 
 TableColumnDefinitions AggregateDYOD::_output_column_definitions() {
-  const auto input_table = left_input_table();
-  const auto aggregate_count = _aggregates.size();
-  auto column_definitions = TableColumnDefinitions();
+  auto column_definitions = _groupby_column_definitions();
+  const auto aggregate_column_definitions = _aggregate_column_definitions();
+  column_definitions.insert(column_definitions.end(), aggregate_column_definitions.begin(),
+                            aggregate_column_definitions.end());
+  return column_definitions;
+}
 
+TableColumnDefinitions AggregateDYOD::_groupby_column_definitions() {
+  const auto input_table = left_input_table();
+  auto column_definitions = TableColumnDefinitions{};
+
+  column_definitions.reserve(_groupby_column_ids.size());
   for (const auto column_id : groupby_column_ids()) {
     column_definitions.emplace_back(input_table->column_name(column_id), input_table->column_data_type(column_id),
                                     input_table->column_is_nullable(column_id));
   }
 
-  for (auto aggregate_index = size_t{0}; aggregate_index < aggregate_count; ++aggregate_index) {
+  return column_definitions;
+}
+
+TableColumnDefinitions AggregateDYOD::_aggregate_column_definitions() {
+  auto column_definitions = TableColumnDefinitions{};
+  column_definitions.reserve(_aggregates.size());
+
+  for (auto aggregate_index = size_t{0}; aggregate_index < _aggregates.size(); ++aggregate_index) {
     const auto& aggregate = _aggregates[aggregate_index];
     resolve_data_type(_aggregate_column_data_type(aggregate_index), [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
