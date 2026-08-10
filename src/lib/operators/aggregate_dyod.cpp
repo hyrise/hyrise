@@ -121,8 +121,7 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
   std::visit(
       [&](auto& state) {
         {
-          TRACE_EVENT("aggregate_operator", "_group_keys.reserve");
-          state.group_keys.reserve(GROUP_ID_INITIAL_SIZE);
+          TRACE_EVENT("aggregate_operator", "_row_ids.reserve");
           state.row_ids.reserve(GROUP_ID_INITIAL_SIZE);
         }
         {
@@ -545,7 +544,6 @@ GroupID AggregateDYOD::_group_id(StateType& state, std::vector<RowID>& row_ids, 
   const auto group_id = insert_it->second;
 
   if (inserted) {
-    state.group_keys[group_id] = group_key;
     state.row_ids[group_id] = std::move(row_ids);
     state.occupied_group_ids[group_id] = true;
   }
@@ -565,7 +563,6 @@ std::pair<GroupID, GroupID> AggregateDYOD::_get_new_group_id_range(SingleThreade
   state.next_group_id += FUZZY_STEP_SIZE;
   auto max_group_id = state.next_group_id + FUZZY_STEP_SIZE - 1;
 
-  state.group_keys.resize(max_group_id + 1);
   state.row_ids.resize(max_group_id + 1);
   state.occupied_group_ids.resize(max_group_id + 1);
 
@@ -579,7 +576,6 @@ std::pair<GroupID, GroupID> AggregateDYOD::_get_new_group_id_range(MultiThreaded
   {
     // TODO(anyone): Figure out how to avoid this lock. Maybe use a single vector of pairs?
     std::lock_guard<std::mutex> lock(state.group_keys_mutex);
-    state.group_keys.grow_to_at_least(max_group_id + 1);
     state.row_ids.grow_to_at_least(max_group_id + 1);
     state.occupied_group_ids.grow_to_at_least(max_group_id + 1);
   }
@@ -591,7 +587,7 @@ std::vector<size_t> AggregateDYOD::_get_occupied_group_ids() {
   return std::visit(
       [&](auto& state) {
         // clang-format off
-    auto view = std::views::iota(size_t{0}, state.group_keys.size())
+    auto view = std::views::iota(size_t{0}, state.occupied_group_ids.size())
       | std::views::filter([&](size_t index) { return state.occupied_group_ids[index]; });
         // clang-format on
 

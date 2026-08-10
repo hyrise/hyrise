@@ -50,7 +50,6 @@ class WorkerState : public Noncopyable {
 struct SingleThreadedState {
   boost::unordered_flat_map<GroupKey, GroupID, GroupKeyHash, GroupKeyEqual> group_id_map;
   GroupID next_group_id{0};
-  std::vector<GroupKey> group_keys;
   std::vector<std::vector<RowID>> row_ids;
   std::vector<bool> occupied_group_ids;
 };
@@ -58,7 +57,6 @@ struct SingleThreadedState {
 struct MultiThreadedState {
   tbb::concurrent_unordered_map<GroupKey, GroupID, GroupKeyHash, GroupKeyEqual> group_id_map;
   std::atomic<GroupID> next_group_id{0};
-  tbb::concurrent_vector<GroupKey> group_keys;
   tbb::concurrent_vector<std::vector<RowID>> row_ids;
   std::mutex group_keys_mutex;
   tbb::concurrent_vector<bool> occupied_group_ids;
