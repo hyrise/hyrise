@@ -1754,9 +1754,10 @@ void AggregateDYOD::_write_output(ContextsPerColumn& contexts_per_column,
 
   // Write the output:
   // At this point, we collected the GROUP BY columns as reference segments, which are split using the default chunk
-  // size (minus gap rows, see comments on NULL_ID). Similarly, the aggregate values are split into chunks. Both are currently stored in
-  // intermediate_result. We write the materialized aggregate columns to the (global) aggregate_result_table, then store
-  // reference segments to those columns as well as the groupby keys to the output table.
+  // size (minus gap rows, see comments on NULL_ID). Similarly, the aggregate values are split into chunks.
+  // Both are currently stored in intermediate_result. We write the materialized aggregate columns to the (global)
+  // aggregate_result_table, then store reference segments to those columns as well as the groupby keys to the output
+  // table.
 
   auto reference_segment_indexes = std::vector<ColumnID>(_groupby_column_ids.size());
   auto entireposlist_indexes = std::vector<ColumnID>{};
