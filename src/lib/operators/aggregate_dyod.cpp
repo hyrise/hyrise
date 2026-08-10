@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
-#include <chrono>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -13,6 +12,7 @@
 #include <map>
 #include <memory>
 #include <memory_resource>
+#include <mutex>
 #include <numeric>
 #include <string>
 #include <type_traits>
@@ -25,15 +25,12 @@
 #include "all_type_variant.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
-#include "expression/expression_utils.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "expression/window_function_expression.hpp"
 #include "hyrise.hpp"
 #include "operators/abstract_aggregate_operator.hpp"
 #include "operators/abstract_operator.hpp"
 #include "operators/dyod_window_function_builder.hpp"
-#include "operators/operator_performance_data.hpp"
-#include "operators/print.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
@@ -47,12 +44,9 @@
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
 #include "storage/value_segment.hpp"
-#include "table_scan.hpp"
-#include "table_wrapper.hpp"
 #include "type_comparison.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
-#include "utils/timer.hpp"
 
 namespace {
 using namespace hyrise;
@@ -64,12 +58,12 @@ using namespace hyrise::expression_functional;
  * Based on: Steele, G. L., Lea, D., & Flood, C. H. (2014). Fast splittable pseudorandom number generators.
  * ACM SIGPLAN Notices, 49(10), 453–472. https://doi.org/10.1145/2714064.2660195
  */
-inline size_t hash_mix(size_t x) {
-  x += 0x9e3779b97f4a7c15ULL;
-  x = (x ^ (x >> 30)) * 0xbf58476d1ce4e5b9ULL;
-  x = (x ^ (x >> 27)) * 0x94d049bb133111ebULL;
-  x = x ^ (x >> 31);
-  return x;
+inline size_t hash_mix(size_t hash) {
+  hash += 0x9e3779b97f4a7c15ULL;
+  hash = (hash ^ (hash >> size_t{30})) * 0xbf58476d1ce4e5b9ULL;
+  hash = (hash ^ (hash >> size_t{27})) * 0x94d049bb133111ebULL;
+  hash = hash ^ (hash >> size_t{31});
+  return hash;
 }
 
 /**
@@ -785,7 +779,7 @@ void AggregateDYOD::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, 
                                         RowID{chunk_id, chunk_offset});
 
     using AggregateType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
-    constexpr auto aggregator =
+    constexpr auto AGGREGATOR =
         DYODWindowFunctionBuilder<ColumnDataType, AggregateType, aggregate_function>().get_aggregate_function();
     // If the value is NULL, the current aggregate value does not change.
     if (!position.is_null()) {
@@ -793,7 +787,7 @@ void AggregateDYOD::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, 
         // For the case of CountDistinct, insert the current value into the set to keep track of distinct values.
         result.accumulator.emplace(position.value());
       } else {
-        aggregator(ColumnDataType{position.value()}, result.has_aggregates, result.accumulator);
+        AGGREGATOR(ColumnDataType{position.value()}, result.has_aggregates, result.accumulator);
       }
 
       result.has_aggregates = true;
@@ -817,9 +811,9 @@ void AggregateDYOD::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, 
 
 template <typename CheckForSingleKey, typename AggregateKey>
   requires(std::is_same_v<AggregateKey, DYODEmptyAggregateKey>)
-KeysPerChunk<AggregateKey> AggregateDYOD::_create_hash_keys(const std::shared_ptr<const Table>& input_table,
-                                                            std::atomic_size_t& expected_result_size,
-                                                            bool& use_immediate_key_shortcut,
+KeysPerChunk<AggregateKey> AggregateDYOD::_create_hash_keys(const std::shared_ptr<const Table>& /*input_table*/,
+                                                            std::atomic_size_t& /*expected_result_size*/,
+                                                            bool& /*use_immediate_key_shortcut*/,
                                                             bool& guarantee_single_key) {
   if constexpr (std::is_same_v<CheckForSingleKey, std::true_type>) {
     guarantee_single_key = true;
@@ -1181,7 +1175,7 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_create_hash_keys(const std::shared_pt
 // to choose low cardinality splitting where appropriate.
 
 // 32 buckets
-constexpr auto RADIX_MASK = 0x1f;
+constexpr auto RADIX_MASK = size_t{0x1f};
 constexpr auto RADIX_SPLIT_MAX_BUCKETS = RADIX_MASK + 1;
 
 /**
@@ -1286,9 +1280,9 @@ std::shared_ptr<Table> AggregateDYOD::_execute_operator() {
       // approximately chunk_size / RADIX_SPLIT_MAX_BUCKETS
       // This is probably not accurate, but better than reserving nothing.
       std::array<std::shared_ptr<ReferenceList>, RADIX_SPLIT_MAX_BUCKETS> local_pos_lists;
-      for (auto i = 0; i < RADIX_SPLIT_MAX_BUCKETS; ++i) {
-        local_pos_lists[i] = pos_lists_per_job[i]->at(chunk_id);
-        local_pos_lists[i]->reserve(chunk_size / RADIX_SPLIT_MAX_BUCKETS);
+      for (auto bucket_id = size_t{0}; bucket_id < RADIX_SPLIT_MAX_BUCKETS; ++bucket_id) {
+        local_pos_lists[bucket_id] = pos_lists_per_job[bucket_id]->at(chunk_id);
+        local_pos_lists[bucket_id]->reserve(chunk_size / RADIX_SPLIT_MAX_BUCKETS);
       }
 
       for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
@@ -1307,9 +1301,8 @@ std::shared_ptr<Table> AggregateDYOD::_execute_operator() {
   // If there are no jobs, return an empty table. Otherwise, schedule the jobs.
   if (hashing_jobs.empty()) {
     return std::make_shared<Table>(input_table->column_definitions(), TableType::References);
-  } else {
-    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(hashing_jobs);
   }
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(hashing_jobs);
 
   // End First Split
   // After splitting into radix buckets, we can aggregate each bucket in parallel.
@@ -1353,42 +1346,41 @@ std::shared_ptr<Table> AggregateDYOD::_execute_operator() {
             // Shortcut - the entire input reference segment matches, so we can simply forward that chunk.
             local_input_table->append_chunk(chunk_in->segments());
             continue;
-          } else {
-            auto filtered_pos_lists = std::map<std::shared_ptr<const AbstractPosList>, std::shared_ptr<RowIDPosList>>{};
+          }
+          auto filtered_pos_lists = std::map<std::shared_ptr<const AbstractPosList>, std::shared_ptr<RowIDPosList>>{};
 
-            out_segments.resize(column_count);
-            for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
-              const auto segment_in = chunk_in->get_segment(column_id);
+          out_segments.resize(column_count);
+          for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+            const auto segment_in = chunk_in->get_segment(column_id);
 
-              const auto ref_segment_in = std::dynamic_pointer_cast<const ReferenceSegment>(segment_in);
-              DebugAssert(ref_segment_in, "All segments should be of type ReferenceSegment.");
+            const auto ref_segment_in = std::dynamic_pointer_cast<const ReferenceSegment>(segment_in);
+            DebugAssert(ref_segment_in, "All segments should be of type ReferenceSegment.");
 
-              const auto pos_list_in = ref_segment_in->pos_list();
+            const auto pos_list_in = ref_segment_in->pos_list();
 
-              auto& filtered_pos_list = filtered_pos_lists[pos_list_in];
+            auto& filtered_pos_list = filtered_pos_lists[pos_list_in];
 
-              // We only create a new RowIdPosList if we have not yet created one for the pos_list_in.
-              // This accounts for the same PosList being used for multiple columns.
-              if (!filtered_pos_list) {
-                filtered_pos_list = std::make_shared<RowIDPosList>(pos_list->size());
+            // We only create a new RowIdPosList if we have not yet created one for the pos_list_in.
+            // This accounts for the same PosList being used for multiple columns.
+            if (!filtered_pos_list) {
+              filtered_pos_list = std::make_shared<RowIDPosList>(pos_list->size());
 
-                if (pos_list_in->references_single_chunk()) {
-                  filtered_pos_list->guarantee_single_chunk();
-                }
-
-                auto offset = size_t{0};
-
-                for (const auto& match : *pos_list) {
-                  const auto row_id = (*pos_list_in)[match];
-                  (*filtered_pos_list)[offset] = row_id;
-                  ++offset;
-                }
+              if (pos_list_in->references_single_chunk()) {
+                filtered_pos_list->guarantee_single_chunk();
               }
 
-              const auto table_out = ref_segment_in->referenced_table();
-              const auto column_id_out = ref_segment_in->referenced_column_id();
-              out_segments[column_id] = std::make_shared<ReferenceSegment>(table_out, column_id_out, filtered_pos_list);
+              auto offset = size_t{0};
+
+              for (const auto& match : *pos_list) {
+                const auto row_id = (*pos_list_in)[match];
+                (*filtered_pos_list)[offset] = row_id;
+                ++offset;
+              }
             }
+
+            const auto table_out = ref_segment_in->referenced_table();
+            const auto column_id_out = ref_segment_in->referenced_column_id();
+            out_segments[column_id] = std::make_shared<ReferenceSegment>(table_out, column_id_out, filtered_pos_list);
           }
         }
         local_input_table->append_chunk(out_segments);

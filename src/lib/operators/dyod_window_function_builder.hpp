@@ -126,7 +126,7 @@ template <typename ColumnDataType, typename AggregateType>
 class DYODWindowFunctionBuilder<ColumnDataType, AggregateType, WindowFunction::Count> {
  public:
   constexpr auto get_aggregate_function() {
-    return [](const ColumnDataType&, const bool has_aggregates, AggregateType& accumulator) {
+    return [](const ColumnDataType&, const bool /*has_aggregates*/, AggregateType& accumulator) {
       ++accumulator;
     };
   }
@@ -136,7 +136,7 @@ template <typename ColumnDataType, typename AggregateType>
 class DYODWindowFunctionBuilder<ColumnDataType, AggregateType, WindowFunction::CountDistinct> {
  public:
   constexpr auto get_aggregate_function() {
-    return [](const ColumnDataType&, const bool has_aggregates, AggregateType& accumulator) {};
+    return [](const ColumnDataType&, const bool /*has_aggregates*/, AggregateType& accumulator) {};
   }
 };
 
