@@ -109,7 +109,6 @@ class AggregateDYOD : public AbstractAggregateOperator {
   std::shared_ptr<Chunk> _write_output_chunk(WorkerState& worker_state, const std::vector<size_t>& occupied_group_ids,
                                              size_t start_index, size_t end_index);
 
-  template <typename ColumnDataType>
   std::shared_ptr<AbstractSegment> _write_groupby_segment(size_t groupby_column_index,
                                                           const std::vector<size_t>& occupied_group_ids,
                                                           size_t start_index, size_t end_index);

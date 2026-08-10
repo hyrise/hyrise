@@ -34,6 +34,7 @@
 #include "operators/abstract_operator.hpp"
 #include "perfetto.h"
 #include "storage/abstract_segment.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
@@ -258,14 +259,7 @@ std::shared_ptr<Chunk> AggregateDYOD::_write_output_chunk(WorkerState& worker_st
 
   // Create one ValueSegment per grouping column
   for (auto groupby_column_index = size_t{0}; groupby_column_index < groupby_column_count; ++groupby_column_index) {
-    const auto column_id = _groupby_column_ids[groupby_column_index];
-    const auto data_type = input_table->column_data_type(column_id);
-
-    resolve_data_type(data_type, [&](auto type) {
-      using ColumnDataType = typename decltype(type)::type;
-      segments.emplace_back(
-          _write_groupby_segment<ColumnDataType>(groupby_column_index, occupied_group_ids, start_index, end_index));
-    });
+    segments.emplace_back(_write_groupby_segment(groupby_column_index, occupied_group_ids, start_index, end_index));
   }
 
   // Create one ValueSegment per aggregate
@@ -288,54 +282,42 @@ std::shared_ptr<Chunk> AggregateDYOD::_write_output_chunk(WorkerState& worker_st
   return std::make_shared<Chunk>(segments);
 }
 
-template <typename ColumnDataType>
 std::shared_ptr<AbstractSegment> AggregateDYOD::_write_groupby_segment(size_t groupby_column_index,
                                                                        const std::vector<size_t>& occupied_group_ids,
                                                                        size_t start_index, size_t end_index) {
   TRACE_EVENT("aggregate_operator", "_write_groupby_segment");
   const auto input_table = left_input_table();
   const auto column_id = _groupby_column_ids[groupby_column_index];
-  const auto is_nullable = input_table->column_is_nullable(column_id);
   const auto chunk_size = end_index - start_index;
 
-  if (is_nullable) {
-    auto values = pmr_vector<ColumnDataType>(chunk_size);
-    auto null_values = pmr_vector<bool>(chunk_size);
+  auto referenced_table = input_table;
+  auto referenced_column_id = _groupby_column_ids[groupby_column_index];
 
-    std::visit(
-        [&](auto& state) {
-          for (auto index = start_index; index < end_index; ++index) {
-            const auto group_id = occupied_group_ids[index];
-            const auto chunk_offset = index - start_index;
-            const auto& group_key_entry = state.group_keys[group_id][groupby_column_index];
-            auto deserialized = deserialize_value<ColumnDataType, true>(group_key_entry);
-
-            if (deserialized.has_value()) {
-              values[chunk_offset] = std::move(deserialized.value());
-            } else {
-              null_values[chunk_offset] = true;
-            }
-          }
-        },
-        _state);
-
-    return std::make_shared<ValueSegment<ColumnDataType>>(std::move(values), std::move(null_values));
+  if (input_table->type() == TableType::References) {
+    // Unless we are processing an empty input, obtain the referenced table and column from the first chunk. We
+    // assume that segments of the same column do not reference different tables (checked in the Table constructor).
+    // When this assumption changes (e.g., due to a better support of Unions), this code needs to be revisited.
+    // This is the same assumption also made in AggregateHash.
+    const auto& first_reference_segment =
+        static_cast<const ReferenceSegment&>(*input_table->get_chunk(ChunkID{0})->get_segment(column_id));
+    referenced_table = first_reference_segment.referenced_table();
+    referenced_column_id = first_reference_segment.referenced_column_id();
   }
 
-  auto values = pmr_vector<ColumnDataType>(chunk_size);
+  auto row_ids = pmr_vector<RowID>(chunk_size);
 
   std::visit(
       [&](auto& state) {
         for (auto index = start_index; index < end_index; ++index) {
           const auto group_id = occupied_group_ids[index];
           const auto chunk_offset = index - start_index;
-          const auto& group_key_entry = state.group_keys[group_id][groupby_column_index];
-          values[chunk_offset] = deserialize_value<ColumnDataType, false>(group_key_entry);
+          row_ids[chunk_offset] = state.row_ids[group_id][groupby_column_index];
         }
       },
       _state);
 
-  return std::make_shared<ValueSegment<ColumnDataType>>(std::move(values));
+  const auto pos_list = std::make_shared<const RowIDPosList>(std::move(row_ids));
+  return std::make_shared<ReferenceSegment>(referenced_table, referenced_column_id, pos_list);
 }
 
 template <typename ColumnDataType, WindowFunction aggregate_function>
