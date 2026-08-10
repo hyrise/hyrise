@@ -12,6 +12,7 @@
 
 namespace hyrise {
 
+// Holds the (intermediate) results for a single aggregate.
 class AbstractAggregateVector {
  public:
   virtual ~AbstractAggregateVector() = default;
@@ -31,6 +32,7 @@ class AbstractAggregateVector {
   }
 
  protected:
+  // Stores the number of rows that have been aggregated for each group.
   std::vector<size_t> _counts;
 };
 
@@ -64,6 +66,9 @@ struct TypedAggregateVector : AbstractAggregateVector {
   }
 
  protected:
+  // Stores intermediate aggregate results for each group. This may not be the actual result of the
+  // aggregation. For example, for AVG, the accumulators store the sum per group. The average is
+  // only computed when the output is written.
   std::vector<AccumulatorDataType> _accumulators;
 
   void _merge(TypedAggregateVector<ColumnDataType, aggregate_function>& other) {
@@ -73,6 +78,7 @@ struct TypedAggregateVector : AbstractAggregateVector {
     _counts.resize(new_size);
 
     if constexpr (aggregate_function == WindowFunction::CountDistinct) {
+      // For COUNT DISTINCT, the accumulators are sets of distinct values. Merge the other set into ours.
       auto& other_accumulators = other._accumulators;
       const auto other_size = other_accumulators.size();
 
