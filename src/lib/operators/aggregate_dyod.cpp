@@ -127,10 +127,6 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
       TRACE_EVENT("aggregate_operator", "_row_ids.reserve");
       state.row_ids.reserve(GROUP_ID_INITIAL_CARDINALITY);
     }
-    {
-      TRACE_EVENT("aggregate_operator", "_occupied_group_ids.reserve");
-      state.occupied_group_ids.reserve(GROUP_ID_INITIAL_CARDINALITY);
-    }
   }, _state);
   // clang-format on
 
@@ -519,8 +515,13 @@ GroupID AggregateDYOD::_group_id(StateType& state, RowIDs& row_ids, const GroupK
   const auto group_id = insert_it->second;
 
   if (inserted) {
+    // This is a little hacky. We use an empty `row_ids` vector as a sentinel for an unoccupied group ID.
+    // If `row_ids` is actually empty, that means there are no groupby column, so we can just add a dummy value.
+    // Because there are no groupby columns, `row_ids` is never used in the output anyway.
+    if (row_ids.empty()) {
+      row_ids.push_back(NULL_ROW_ID);
+    }
     state.row_ids[group_id] = std::move(row_ids);
-    state.occupied_group_ids[group_id] = true;
   }
 
   return group_id;
@@ -538,35 +539,23 @@ std::pair<GroupID, GroupID> AggregateDYOD::_reserve_new_group_id_range(SingleThr
   // TODO(anyone): In theory, the fuzzy ticketing is unnecessary when the aggregator is executed on a single-thread.
   state.next_group_id += FUZZY_STEP_SIZE;
   auto max_group_id = state.next_group_id + FUZZY_STEP_SIZE - 1;
-
   state.row_ids.resize(max_group_id + 1);
-  state.occupied_group_ids.resize(max_group_id + 1);
-
   return {state.next_group_id, max_group_id};
 }
 
 std::pair<GroupID, GroupID> AggregateDYOD::_reserve_new_group_id_range(MultiThreadedState& state) {
   auto next_group_id = state.next_group_id.fetch_add(FUZZY_STEP_SIZE, std::memory_order_relaxed);
   auto max_group_id = next_group_id + FUZZY_STEP_SIZE - 1;
-
-  {
-    // TODO(anyone): Figure out how to avoid this lock. The two parallel vectors need to be resized
-    // synchronously. Using a single vector where each element stores row IDs and and occupied flag
-    // has worse performance.
-    std::lock_guard<std::mutex> lock(state.lock);
-    state.row_ids.grow_to_at_least(max_group_id + 1);
-    state.occupied_group_ids.grow_to_at_least(max_group_id + 1);
-  }
-
+  state.row_ids.grow_to_at_least(max_group_id + 1);
   return {next_group_id, max_group_id};
 }
 
 std::vector<size_t> AggregateDYOD::_get_occupied_group_ids() {
+  TRACE_EVENT("aggregate_operator", "_get_occupied_group_ids");
   // clang-format off
   return std::visit([&](auto& state) {
-    auto view = std::views::iota(size_t{0}, state.occupied_group_ids.size())
-      | std::views::filter([&](size_t index) { return state.occupied_group_ids[index]; });
-
+    auto view = std::views::iota(size_t{0}, state.row_ids.size())
+      | std::views::filter([&](size_t index) { return !state.row_ids[index].empty(); });
     return std::vector<size_t>(view.begin(), view.end());
   }, _state);
   // clang-format on
