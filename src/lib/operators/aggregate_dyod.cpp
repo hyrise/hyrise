@@ -707,7 +707,7 @@ std::pair<std::vector<GroupID>, GroupID> AggregateDYOD::_group_ids_for_chunk(Chu
   auto& chunk_buffer = _group_key_buffers[chunk_id];
 
   // Reserve capacity in the chunk buffer first so that spans referencing it are stable.
-  auto total_bytes = size_t{0};
+  auto total_bytes = groupby_column_count * row_count * sizeof(uint32_t);
 
   for (const auto& column_buffer : column_buffers) {
     total_bytes += column_buffer.size();
@@ -720,7 +720,7 @@ std::pair<std::vector<GroupID>, GroupID> AggregateDYOD::_group_ids_for_chunk(Chu
         TRACE_EVENT("aggregate_operator", "get group IDs");
 
         for (auto offset = ChunkOffset{0}; offset < row_count; ++offset) {
-          auto group_key = GroupKey(groupby_column_count);
+          const auto chunk_buffer_start = chunk_buffer.size();
 
           for (auto groupby_column_index = size_t{0}; groupby_column_index < groupby_column_count;
                ++groupby_column_index) {
@@ -730,16 +730,22 @@ std::pair<std::vector<GroupID>, GroupID> AggregateDYOD::_group_ids_for_chunk(Chu
             const auto column_buffer_start = column_buffer_starts[offset];
             const auto column_buffer_end = column_buffer_starts[offset + 1];
 
+            // TODO(anyone): 16-byte int might be enough for the key lenght prefix
+            DebugAssert(column_buffer_end - column_buffer_start <= std::numeric_limits<uint32_t>::max(),
+                        "Key entry is too long.");
+            const auto length = static_cast<uint32_t>(column_buffer_end - column_buffer_start);
+
             // Copy serialized group key entries from the local column buffers to the global chunk buffer
-            const auto chunk_buffer_start = chunk_buffer.size();
+            // and prefix them with their length to prevent collisions.
+            const auto length_bytes = std::bit_cast<std::array<std::byte, sizeof(uint32_t)>>(length);
+            chunk_buffer.insert(chunk_buffer.end(), length_bytes.begin(), length_bytes.end());
             chunk_buffer.insert(chunk_buffer.end(), column_buffer.begin() + column_buffer_start,
                                 column_buffer.begin() + column_buffer_end);
-            const auto chunk_buffer_end = chunk_buffer.size();
-            DebugAssert(chunk_buffer.size() <= total_bytes, "Chunk buffer was resized and may have invalidated spans.");
-
-            group_key[groupby_column_index] = std::span<const std::byte>(chunk_buffer)
-                                                  .subspan(chunk_buffer_start, chunk_buffer_end - chunk_buffer_start);
           }
+
+          const auto chunk_buffer_end = chunk_buffer.size();
+          const auto group_key = std::span<const std::byte>(chunk_buffer)
+                                     .subspan(chunk_buffer_start, chunk_buffer_end - chunk_buffer_start);
 
           auto row_ids = std::vector<RowID>(groupby_column_count);
 
@@ -758,6 +764,9 @@ std::pair<std::vector<GroupID>, GroupID> AggregateDYOD::_group_ids_for_chunk(Chu
         }
       },
       _state);
+
+  Assert(chunk_buffer.size() <= total_bytes,
+         "Chunk buffer is larger than initially reserved capacity which may have invalidated group key spans.");
 
   return {group_ids, max_group_id};
 }
