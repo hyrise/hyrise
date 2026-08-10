@@ -168,7 +168,7 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
       [&](auto& state) {
         if (state.group_id_map.empty() && _groupby_column_ids.empty()) {
           // There are no groupby columns, so the row IDs and group keys are never needed anyway.
-          auto dummy_row_ids = std::vector<RowID>{};
+          auto dummy_row_ids = RowIDs(0);
           auto dummy_group_key = GroupKey{};
           const auto group_id = _group_id(state, dummy_row_ids, dummy_group_key, merged_worker_states);
 
@@ -495,7 +495,7 @@ std::shared_ptr<AbstractSegment> AggregateDYOD::_write_aggregate_segment(
 }
 
 template <typename StateType>
-GroupID AggregateDYOD::_group_id(StateType& state, std::vector<RowID>& row_ids, const GroupKey& group_key,
+GroupID AggregateDYOD::_group_id(StateType& state, RowIDs& row_ids, const GroupKey& group_key,
                                  WorkerState& worker_state) {
   auto it = state.group_id_map.find(group_key);
   if (it != state.group_id_map.end()) {
@@ -714,7 +714,7 @@ std::pair<std::vector<GroupID>, GroupID> AggregateDYOD::_group_ids_for_chunk(Chu
           const auto group_key = std::span<const std::byte>(chunk_buffer)
                                      .subspan(chunk_buffer_start, chunk_buffer_end - chunk_buffer_start);
 
-          auto row_ids = std::vector<RowID>(groupby_column_count);
+          auto row_ids = RowIDs(groupby_column_count);
 
           for (auto groupby_column_index = size_t{0}; groupby_column_index < groupby_column_count;
                ++groupby_column_index) {

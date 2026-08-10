@@ -5,9 +5,13 @@
 #include <span>
 #include <vector>
 
+#include <boost/container/small_vector.hpp>
 #include <boost/container_hash/hash.hpp>
 
 namespace hyrise {
+
+// TODO(anyone): Test what the optimal size parameter is
+using RowIDs = boost::container::small_vector<RowID, 4>;
 
 using GroupID = size_t;
 using GroupKey = std::span<const std::byte>;
