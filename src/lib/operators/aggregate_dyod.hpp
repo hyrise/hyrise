@@ -25,43 +25,80 @@
 
 namespace hyrise {
 
+// WorkerState holds thread-local state (e.g., the intermediate aggregation results of all chunks
+// a worker has processed and the reserved group ID range).
 class WorkerState : public Noncopyable {
  public:
   explicit WorkerState(const std::vector<std::shared_ptr<WindowFunctionExpression>>& aggregates,
                        std::function<std::pair<GroupID, GroupID>()> init_group_id_range);
+
+  // Merge another worker state into this instance.
   void merge(WorkerState& other);
 
+  // Return the next group ID. If the worker doesn’t have any reserved group IDs left, it
+  // transparently reserves a new range before returning.
   GroupID next_group_id();
 
   AbstractAggregateVector& aggregate_vector(size_t index);
   std::vector<std::unique_ptr<AbstractAggregateVector>>& aggregate_vectors();
 
  protected:
-  // This is the next local group ID that a worker can assign to a group key
+  // This is the next locally reserved group ID that a worker can assign to a group key.
   GroupID _next_group_id;
 
-  // This is the largest local group ID that a worker can assign to a group key
+  // This is the largest locally reserved group ID that a worker can assign to a group key.
   GroupID _max_group_id;
 
-  std::function<std::pair<GroupID, GroupID>()> _get_new_group_id_range;
+  // A function passed during initialization of the WorkerState. This is called when there
+  // are no remaining locally reserved group IDs left.
+  std::function<std::pair<GroupID, GroupID>()> _reserve_new_group_id_range;
+
+  // AggregateVectors holding the intermediate aggregation results of one worker.
   std::vector<std::unique_ptr<AbstractAggregateVector>> _vectors;
 };
 
+// Operator state for single-threaded execution. Uses (faster) non-concurrent data structures.
 struct SingleThreadedState {
   boost::unordered_flat_map<GroupKey, GroupID, GroupKeyHash, GroupKeyEqual> group_id_map;
   GroupID next_group_id{0};
+
+  // Two parallel vectors storing for each group ID the row IDs (used to construct ReferenceSegments
+  // for the groupby columns) and whether a group ID is occupied.
   std::vector<RowIDs> row_ids;
   std::vector<bool> occupied_group_ids;
 };
 
+// Operator state for multi-threaded execution. Uses concurrency-safe data structures.
 struct MultiThreadedState {
   tbb::concurrent_unordered_map<GroupKey, GroupID, GroupKeyHash, GroupKeyEqual> group_id_map;
   std::atomic<GroupID> next_group_id{0};
+
+  // Two parallel vectors storing for each group ID the row IDs (used to construct ReferenceSegments
+  // for the groupby columns) and whether a group ID is occupied.
   tbb::concurrent_vector<RowIDs> row_ids;
-  std::mutex group_keys_mutex;
   tbb::concurrent_vector<bool> occupied_group_ids;
+
+  // Used when resizing `row_ids` and `occupied_group_ids`
+  std::mutex lock;
 };
 
+
+/*
+ * Aggregate operator using a global hash table to aggregate concurrently. This is based on the approach described
+ * by Xue and Marcus in https://dl.acm.org/doi/10.14778/3750601.3750664.
+ *
+ * Every worker, when processing a row, retrieves an integer group ID based on the row’s group key. A global hash
+ * table stores a mapping from group keys to group IDs. The aggregation results are stored in a thread-local vector
+ * indexed by the group ID and merged once all rows have been processed. A global atomic counter is used to store
+ * the next available group ID. To construct the output, we also keep track of the RowIDs of the input table in a
+ * parallel vector. To reduce contention on the atomic counter, workers reserve tickets in batches of 256.
+ *
+ * This implementation currently uses an off-the-shelf concurrent map (tbb::concurrent_unordered_map) making it
+ * relatively simple. However, the global map is the main bottleneck and performance degrades significantly with
+ * the number of threads. Xue and Marcus suggest using a specialized map (a Folklore variant) that supports only
+ * the GET_OR_INSERT operation required for this use case, and this would be a natural next step in optimizing
+ * the implementation.
+ */
 class AggregateDYOD : public AbstractAggregateOperator {
  public:
   AggregateDYOD(const std::shared_ptr<AbstractOperator>& input_operator,
@@ -71,16 +108,16 @@ class AggregateDYOD : public AbstractAggregateOperator {
   const std::string& name() const override;
 
  protected:
-  // The paper uses a default step size of 256
+  // The paper uses a default step size of 256. Benchmarks for 128 and 512 didn’t improve runtime performance.
+  // A higher step sizes leads to sparser aggregate vectors (but the impact of that is negligible).
   // https://github.com/danielxue/global-hash-tables-strike-back/blob/main/common/src/fuzzy_counter.rs#L56
-  static constexpr GroupID FUZZY_STEP_SIZE = 512;
+  static constexpr GroupID FUZZY_STEP_SIZE = 256;
 
-  // Initial size of the group ID map and vectors
+  // Initial cardinality of the group ID map and vectors
   // TODO(anyone): Replace with proper estimate of group cardinality based on input table.
-  static constexpr GroupID GROUP_ID_INITIAL_SIZE = 100'000;
+  static constexpr GroupID GROUP_ID_INITIAL_CARDINALITY = 100'000;
 
-  std::vector<DataType> _aggregate_data_types;
-
+  // Set before execution depending on scheduler type.
   std::variant<SingleThreadedState, MultiThreadedState> _state;
 
   // One group key buffer per chunk. Group keys entries (i.e., the serialized groupby column values) for a
@@ -98,69 +135,86 @@ class AggregateDYOD : public AbstractAggregateOperator {
 
   void _on_cleanup() override;
 
-  void _prepare_aggregate_vectors();
-
   std::shared_ptr<Table> _write_output_table(WorkerState& worker_state);
 
+  // Return column definitions for the groupby and aggregate columns
   TableColumnDefinitions _output_column_definitions();
 
+  // Return column definitions of the groupby columns
   TableColumnDefinitions _groupby_column_definitions();
 
+  // Return column definitions of the aggregate columns
   TableColumnDefinitions _aggregate_column_definitions();
 
+  // Write a chunk for the temporary data table containing only ValueSegments for all aggregates
   std::shared_ptr<Chunk> _write_aggregate_output_chunk(WorkerState& worker_state,
                                                        const std::vector<size_t>& occupied_group_ids,
                                                        size_t start_index, size_t end_index);
 
-  std::shared_ptr<Chunk> _write_reference_chunk(const std::shared_ptr<Table>& aggregate_result_table, ChunkID chunk_id,
-                                                const std::vector<size_t>& occupied_group_ids, size_t start_index,
-                                                size_t end_index);
+  // Write a chunk for the output reference table containing ReferenceSegments for groupby and aggregate columns.
+  // The segments for groupby columns reference the input table while the segments for aggregate columns
+  // reference the temporary data table.
+  std::shared_ptr<Chunk> _write_reference_output_chunk(const std::shared_ptr<Table>& aggregates_table, ChunkID chunk_id,
+                                                       const std::vector<size_t>& occupied_group_ids,
+                                                       size_t start_index, size_t end_index);
 
+  // Write a ReferenceSegment for the given groupby column. The segment references the input table.
   std::shared_ptr<AbstractSegment> _write_groupby_segment(size_t groupby_column_index,
                                                           const std::vector<size_t>& occupied_group_ids,
                                                           size_t start_index, size_t end_index);
 
+  // Write a ValueSegment for the given aggregate. This overload is selected for AVG aggregates.
   template <typename ColumnDataType, WindowFunction aggregate_function>
     requires(aggregate_function == WindowFunction::Avg && std::is_arithmetic_v<ColumnDataType>)
   std::shared_ptr<AbstractSegment> _write_aggregate_segment(
       TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector, bool is_nullable,
       const std::vector<size_t>& occupied_group_ids, size_t start_index, size_t end_index);
 
+  // Write a ValueSegment for the given aggregate. This overload is selected for COUNT aggregates.
   template <typename ColumnDataType, WindowFunction aggregate_function>
     requires(aggregate_function == WindowFunction::Count)
   std::shared_ptr<AbstractSegment> _write_aggregate_segment(
       TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector, bool is_nullable,
       const std::vector<size_t>& occupied_group_ids, size_t start_index, size_t end_index);
 
+  // Write a ValueSegment for the given aggregate. This overload is selected for COUNT DISTINCT aggregates.
   template <typename ColumnDataType, WindowFunction aggregate_function>
     requires(aggregate_function == WindowFunction::CountDistinct)
   std::shared_ptr<AbstractSegment> _write_aggregate_segment(
       TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector, bool is_nullable,
       const std::vector<size_t>& occupied_group_ids, size_t start_index, size_t end_index);
 
+  // Write a ValueSegment for the given aggregate. This overload is selected for MIN, MAX, SUM, ANY aggregates.
   template <typename ColumnDataType, WindowFunction aggregate_function>
   std::shared_ptr<AbstractSegment> _write_aggregate_segment(
       TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector, bool is_nullable,
       const std::vector<size_t>& occupied_group_ids, size_t start_index, size_t end_index);
 
+  // This overload should never be reached at runtime.
   template <typename ColumnDataType, WindowFunction aggregate_function>
     requires(WindowFunctionTraits<ColumnDataType, aggregate_function>::RESULT_TYPE == DataType::Null)
   std::shared_ptr<AbstractSegment> _write_aggregate_segment(
       TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector, bool is_nullable,
       const std::vector<size_t>& occupied_group_ids, size_t start_index, size_t end_index);
 
+  // Insert the group key into the global group ID map and store the row IDs so we can access them when
+  // writing the output and return the corresponding group ID. If the group key already exists in the
+  // global group ID map, return the existing group ID.
   template <typename StateType>
   GroupID _group_id(StateType& state, RowIDs& row_ids, const GroupKey& group_key, WorkerState& worker_state);
 
+  // Serialize group keys for all rows in the chunk. Returns a vector of group IDs for all rows and the
+  // maximum group ID in the chunk.
   std::pair<std::vector<GroupID>, GroupID> _group_ids_for_chunk(ChunkID chunk_id, const Chunk& chunk,
                                                                 WorkerState& worker_state);
 
-  std::pair<GroupID, GroupID> _get_new_group_id_range();
+  // Reserve a new range of group IDs. Returns the inclusive start and inclusive end of the new range.
+  std::pair<GroupID, GroupID> _reserve_new_group_id_range();
+  std::pair<GroupID, GroupID> _reserve_new_group_id_range(SingleThreadedState& state);
+  std::pair<GroupID, GroupID> _reserve_new_group_id_range(MultiThreadedState& state);
 
-  std::pair<GroupID, GroupID> _get_new_group_id_range(SingleThreadedState& state);
-
-  std::pair<GroupID, GroupID> _get_new_group_id_range(MultiThreadedState& state);
-
+  // Due to fuzzy ticketing, some group IDs may have been reserved, but never used. Returns a vector
+  // of occupied (i.e., used) group IDs.
   std::vector<size_t> _get_occupied_group_ids();
 
   void _aggregate_chunk(WorkerState& state, ChunkID chunk_id, const Chunk& chunk);

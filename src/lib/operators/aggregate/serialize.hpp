@@ -7,6 +7,7 @@
 
 namespace hyrise {
 
+// Write the byte representation of the value into the byte buffer.
 template <typename T>
   requires std::is_trivially_copyable_v<T>
 void serialize_value(std::vector<std::byte>& buffer, const T& value) {
@@ -15,12 +16,15 @@ void serialize_value(std::vector<std::byte>& buffer, const T& value) {
   std::memcpy(buffer.data() + offset, &value, sizeof(T));
 }
 
+// Write the byte representation of the string into the byte buffer.
 void serialize_value(std::vector<std::byte>& buffer, const pmr_string& value) {
   const auto offset = buffer.size();
   buffer.resize(offset + value.size());
   std::memcpy(buffer.data() + offset, value.data(), value.size());
 }
 
+// If `is_null` is true, write a single 0x00 byte into the buffer. If `is_null` is false
+// write a single 0x01 byte into the buffer followed by the byte representation of the value.
 template <typename T>
   requires std::is_trivially_copyable_v<T>
 void serialize_value(std::vector<std::byte>& buffer, const T& value, bool is_null) {
@@ -34,6 +38,8 @@ void serialize_value(std::vector<std::byte>& buffer, const T& value, bool is_nul
   std::memcpy(buffer.data() + offset + 1, &value, sizeof(T));
 }
 
+// If `is_null` is true, write a single 0x00 byte into the buffer. If `is_null` is false
+// write a single 0x01 byte into the buffer followed by the byte representation of the string.
 void serialize_value(std::vector<std::byte>& buffer, const pmr_string& value, bool is_null) {
   if (is_null) {
     buffer.push_back(std::byte{0x01});
