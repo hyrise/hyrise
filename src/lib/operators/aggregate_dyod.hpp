@@ -108,9 +108,6 @@ class AggregateDYOD : public AbstractAggregateOperator {
 
   TableColumnDefinitions _aggregate_column_definitions();
 
-  std::shared_ptr<Chunk> _write_output_chunk(WorkerState& worker_state, const std::vector<size_t>& occupied_group_ids,
-                                             size_t start_index, size_t end_index);
-
   std::shared_ptr<Chunk> _write_aggregate_output_chunk(WorkerState& worker_state,
                                                        const std::vector<size_t>& occupied_group_ids,
                                                        size_t start_index, size_t end_index);

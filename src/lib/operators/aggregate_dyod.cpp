@@ -292,42 +292,6 @@ TableColumnDefinitions AggregateDYOD::_aggregate_column_definitions() {
   return column_definitions;
 }
 
-std::shared_ptr<Chunk> AggregateDYOD::_write_output_chunk(WorkerState& worker_state,
-                                                          const std::vector<size_t>& occupied_group_ids,
-                                                          size_t start_index, size_t end_index) {
-  TRACE_EVENT("aggregate_operator", "_write_output_chunk");
-  const auto input_table = left_input_table();
-  const auto aggregate_count = _aggregates.size();
-  const auto groupby_column_count = _groupby_column_ids.size();
-
-  auto segments = Segments{};
-  segments.reserve(groupby_column_count + aggregate_count);
-
-  // Create one ValueSegment per grouping column
-  for (auto groupby_column_index = size_t{0}; groupby_column_index < groupby_column_count; ++groupby_column_index) {
-    segments.emplace_back(_write_groupby_segment(groupby_column_index, occupied_group_ids, start_index, end_index));
-  }
-
-  // Create one ValueSegment per aggregate
-  for (auto aggregate_index = size_t{0}; aggregate_index < aggregate_count; ++aggregate_index) {
-    const auto& aggregate = _aggregates[aggregate_index];
-
-    resolve_data_type(_aggregate_column_data_type(aggregate_index), [&](auto type) {
-      using ColumnDataType = typename decltype(type)::type;
-
-      resolve_window_function(aggregate->window_function, [&](auto type) {
-        constexpr auto aggregate_function = decltype(type)::value;
-        auto& aggregate_vector = static_cast<TypedAggregateVector<ColumnDataType, aggregate_function>&>(
-            worker_state.aggregate_vector(aggregate_index));
-        segments.emplace_back(_write_aggregate_segment<ColumnDataType, aggregate_function>(
-            aggregate_vector, _aggregate_is_nullable(aggregate_index), occupied_group_ids, start_index, end_index));
-      });
-    });
-  }
-
-  return std::make_shared<Chunk>(segments);
-}
-
 std::shared_ptr<Chunk> AggregateDYOD::_write_aggregate_output_chunk(WorkerState& worker_state,
                                                                     const std::vector<size_t>& occupied_group_ids,
                                                                     size_t start_index, size_t end_index) {
