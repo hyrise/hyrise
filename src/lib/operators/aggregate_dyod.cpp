@@ -654,9 +654,11 @@ std::pair<std::vector<GroupID>, GroupID> AggregateDYOD::_group_ids_for_chunk(Chu
           auto row_ids = std::vector<RowID>(row_count);
           auto chunk_offset = ChunkOffset{0};
 
-          for (const auto row_id : *reference_segment->pos_list()) {
-            row_ids[chunk_offset++] = row_id;
-          }
+          resolve_pos_list_type(reference_segment->pos_list(), [&](auto pos_list) {
+            for (const auto row_id : *pos_list) {
+              row_ids[chunk_offset++] = row_id;
+            }
+          });
 
           column_row_ids[groupby_column_index] = std::optional{std::move(row_ids)};
         }
