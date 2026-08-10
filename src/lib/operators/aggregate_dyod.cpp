@@ -649,8 +649,9 @@ std::pair<std::vector<GroupID>, GroupID> AggregateDYOD::_group_ids_for_chunk(Chu
   auto column_buffers = std::vector<std::vector<std::byte>>(groupby_column_count);
 
   // Per grouping column, the start position of each row into the respective column buffer
-  auto column_starts =
-      std::vector<std::vector<uint32_t>>(groupby_column_count, std::vector<uint32_t>(row_count + 1, uint32_t{0}));
+  using ColumnStart = uint32_t;
+  auto column_starts = std::vector<std::vector<ColumnStart>>(groupby_column_count,
+                                                             std::vector<ColumnStart>(row_count + 1, ColumnStart{0}));
 
   {
     TRACE_EVENT("aggregate_operator", "serialize group keys");
@@ -668,7 +669,7 @@ std::pair<std::vector<GroupID>, GroupID> AggregateDYOD::_group_ids_for_chunk(Chu
 
         segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
           const auto chunk_offset = position.chunk_offset();
-          starts[chunk_offset] = static_cast<uint32_t>(column_buffer.size());
+          starts[chunk_offset] = static_cast<ColumnStart>(column_buffer.size());
 
           if (is_nullable) {
             serialize_value(column_buffer, position.value(), position.is_null());
@@ -679,10 +680,10 @@ std::pair<std::vector<GroupID>, GroupID> AggregateDYOD::_group_ids_for_chunk(Chu
 
         const auto reference_segment = std::dynamic_pointer_cast<const ReferenceSegment>(segment);
 
-        DebugAssert(column_buffer.size() <= std::numeric_limits<uint32_t>::max(), "Column buffer is too large.");
+        DebugAssert(column_buffer.size() <= std::numeric_limits<ColumnStart>::max(), "Column buffer is too large.");
 
         // Store the end position of the last key.
-        starts[row_count] = static_cast<uint32_t>(column_buffer.size());
+        starts[row_count] = static_cast<ColumnStart>(column_buffer.size());
 
         if (reference_segment) {
           // If the segment is a ReferenceSegment, iterate through the position list and store the dereferenced RowIDs.
@@ -706,8 +707,10 @@ std::pair<std::vector<GroupID>, GroupID> AggregateDYOD::_group_ids_for_chunk(Chu
   // One buffer for all group keys in a chunk
   auto& chunk_buffer = _group_key_buffers[chunk_id];
 
+  using LengthPrefix = uint32_t;
+
   // Reserve capacity in the chunk buffer first so that spans referencing it are stable.
-  auto total_bytes = groupby_column_count * row_count * sizeof(uint32_t);
+  auto total_bytes = groupby_column_count * row_count * sizeof(LengthPrefix);
 
   for (const auto& column_buffer : column_buffers) {
     total_bytes += column_buffer.size();
@@ -731,13 +734,13 @@ std::pair<std::vector<GroupID>, GroupID> AggregateDYOD::_group_ids_for_chunk(Chu
             const auto column_buffer_end = column_buffer_starts[offset + 1];
 
             // TODO(anyone): 16-byte int might be enough for the key lenght prefix
-            DebugAssert(column_buffer_end - column_buffer_start <= std::numeric_limits<uint32_t>::max(),
+            DebugAssert(column_buffer_end - column_buffer_start <= std::numeric_limits<LengthPrefix>::max(),
                         "Key entry is too long.");
-            const auto length = static_cast<uint32_t>(column_buffer_end - column_buffer_start);
+            const auto length = static_cast<LengthPrefix>(column_buffer_end - column_buffer_start);
 
             // Copy serialized group key entries from the local column buffers to the global chunk buffer
             // and prefix them with their length to prevent collisions.
-            const auto length_bytes = std::bit_cast<std::array<std::byte, sizeof(uint32_t)>>(length);
+            const auto length_bytes = std::bit_cast<std::array<std::byte, sizeof(LengthPrefix)>>(length);
             chunk_buffer.insert(chunk_buffer.end(), length_bytes.begin(), length_bytes.end());
             chunk_buffer.insert(chunk_buffer.end(), column_buffer.begin() + column_buffer_start,
                                 column_buffer.begin() + column_buffer_end);
