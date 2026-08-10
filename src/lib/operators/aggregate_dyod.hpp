@@ -176,13 +176,15 @@ class AggregateDYOD : public AbstractAggregateOperator {
     requires(std::is_same_v<AggregateKey, DYODEmptyAggregateKey>)
   KeysPerChunk<AggregateKey> _create_hash_keys(const std::shared_ptr<const Table>& input_table,
                                                std::atomic_size_t& expected_result_size,
-                                               bool& use_immediate_key_shortcut, bool& guarantee_single_key);
+                                               std::atomic<bool>& use_immediate_key_shortcut,
+                                               std::atomic<bool>& guarantee_single_key);
 
   template <typename CheckForSingleKey, typename AggregateKey>
     requires(!std::is_same_v<AggregateKey, DYODEmptyAggregateKey>)
   KeysPerChunk<AggregateKey> _create_hash_keys(const std::shared_ptr<const Table>& input_table,
                                                std::atomic_size_t& expected_result_size,
-                                               bool& use_immediate_key_shortcut, bool& guarantee_single_key);
+                                               std::atomic<bool>& use_immediate_key_shortcut,
+                                               std::atomic<bool>& guarantee_single_key);
 
   template <typename AggregateKey>
   void _aggregate(ContextsPerColumn& contexts_per_column, const std::shared_ptr<const Table>& input_table,
@@ -190,7 +192,7 @@ class AggregateDYOD : public AbstractAggregateOperator {
 
   template <typename AggregateKey>
   void _aggregate_partition(ContextsPerColumn& contexts_per_column, const std::shared_ptr<const Table>& input_table,
-                            std::atomic_size_t& expected_result_size, bool& use_immediate_key_shortcut,
+                            std::atomic_size_t& expected_result_size, std::atomic<bool>& use_immediate_key_shortcut,
                             KeysPerChunk<AggregateKey>& keys_per_chunk, ChunkID start, ChunkID end);
 
   template <typename ColumnDataType, WindowFunction aggregate_function, typename AggregateKey>

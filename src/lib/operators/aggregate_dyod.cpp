@@ -813,10 +813,10 @@ template <typename CheckForSingleKey, typename AggregateKey>
   requires(std::is_same_v<AggregateKey, DYODEmptyAggregateKey>)
 KeysPerChunk<AggregateKey> AggregateDYOD::_create_hash_keys(const std::shared_ptr<const Table>& /*input_table*/,
                                                             std::atomic_size_t& /*expected_result_size*/,
-                                                            bool& /*use_immediate_key_shortcut*/,
-                                                            bool& guarantee_single_key) {
+                                                            std::atomic<bool>& /*use_immediate_key_shortcut*/,
+                                                            std::atomic<bool>& guarantee_single_key) {
   if constexpr (std::is_same_v<CheckForSingleKey, std::true_type>) {
-    guarantee_single_key = true;
+    guarantee_single_key.store(true, std::memory_order_relaxed);
   }
   return KeysPerChunk<AggregateKey>{};
 }
@@ -827,10 +827,9 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_create_hash_keys(const std::shared_pt
  */
 template <typename CheckForSingleKey, typename AggregateKey>
   requires(!std::is_same_v<AggregateKey, DYODEmptyAggregateKey>)
-KeysPerChunk<AggregateKey> AggregateDYOD::_create_hash_keys(const std::shared_ptr<const Table>& input_table,
-                                                            std::atomic_size_t& expected_result_size,
-                                                            [[maybe_unused]] bool& use_immediate_key_shortcut,
-                                                            bool& guarantee_single_key) {
+KeysPerChunk<AggregateKey> AggregateDYOD::_create_hash_keys(
+    const std::shared_ptr<const Table>& input_table, std::atomic_size_t& expected_result_size,
+    [[maybe_unused]] std::atomic<bool>& use_immediate_key_shortcut, std::atomic<bool>& guarantee_single_key) {
   auto keys_per_chunk = KeysPerChunk<AggregateKey>{};
   const auto chunk_count = input_table->chunk_count();
 
@@ -877,7 +876,7 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_create_hash_keys(const std::shared_pt
   jobs.reserve(_groupby_column_ids.size());
 
   if constexpr (std::is_same_v<CheckForSingleKey, std::true_type>) {
-    guarantee_single_key = true;
+    guarantee_single_key.store(true, std::memory_order_relaxed);
   }
 
   const auto groupby_column_count = _groupby_column_ids.size();
@@ -956,10 +955,10 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_create_hash_keys(const std::shared_pt
 
           if (contains_nulls) {
             if (max_key != 0) {
-              guarantee_single_key = false;
+              guarantee_single_key.store(false, std::memory_order_relaxed);
             }
           } else if (min_key != max_key) {
-            guarantee_single_key = false;
+            guarantee_single_key.store(false, std::memory_order_relaxed);
           }
 
           if constexpr (std::is_same_v<AggregateKey, DYODAggregateKeyEntry>) {
@@ -979,7 +978,7 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_create_hash_keys(const std::shared_pt
               // Include space for min, max, and NULL
               const auto null_offset = contains_nulls ? 1 : 0;
               expected_result_size = static_cast<size_t>(max_key - min_key) + 1 + null_offset;
-              use_immediate_key_shortcut = true;
+              use_immediate_key_shortcut.store(true, std::memory_order_relaxed);
 
               // Rewrite the keys and (1) subtract min so that we can also handle consecutive keys that do not start
               // at 1* and (2) set the first bit which indicates that the key is an immediate index into the result
@@ -1137,10 +1136,10 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_create_hash_keys(const std::shared_pt
 
           if (contains_nulls) {
             if (!(id_map.size() == 0 && value_id_candidate == 0)) {
-              guarantee_single_key = false;
+              guarantee_single_key.store(false, std::memory_order_relaxed);
             }
           } else if (has_doubled_value_id) {
-            guarantee_single_key = false;
+            guarantee_single_key.store(false, std::memory_order_relaxed);
           }
 
           // We will see at least `id_map.size()` different groups. We can use this knowledge to preallocate memory
@@ -1411,8 +1410,8 @@ template <typename AggregateKey>
 void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std::shared_ptr<const Table>& input_table,
                                bool check_for_single_keys) {
   std::atomic_size_t expected_result_size;
-  bool use_immediate_key_shortcut = false;
-  bool guarantee_single_key = false;
+  auto use_immediate_key_shortcut = std::atomic<bool>{};
+  auto guarantee_single_key = std::atomic<bool>{};
   auto keys_per_chunk = check_for_single_keys
                             ? _create_hash_keys<std::true_type, AggregateKey>(
                                   input_table, expected_result_size, use_immediate_key_shortcut, guarantee_single_key)
@@ -1426,7 +1425,7 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std
   // TODO(anyone): Estimate ideal number of jobs/threads for this bucket.
   const auto chunk_count = input_table->chunk_count();
   const auto job_count_estimate = static_cast<const ChunkID>(input_table->row_count() / _max_job_size);
-  auto bucket_job_count = guarantee_single_key ? std::min(job_count_estimate, chunk_count) : ChunkID{1};
+  auto bucket_job_count = guarantee_single_key.load() ? std::min(job_count_estimate, chunk_count) : ChunkID{1};
 
   // We have an empty table or cannot enable single key optimization, so just skip the rest.
   if (bucket_job_count < 2) {
@@ -1517,7 +1516,8 @@ void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std
 template <typename AggregateKey>
 void AggregateDYOD::_aggregate_partition(ContextsPerColumn& contexts_per_column,
                                          const std::shared_ptr<const Table>& input_table,
-                                         std::atomic_size_t& expected_result_size, bool& use_immediate_key_shortcut,
+                                         std::atomic_size_t& expected_result_size,
+                                         std::atomic<bool>& use_immediate_key_shortcut,
                                          KeysPerChunk<AggregateKey>& keys_per_chunk, ChunkID start, ChunkID end) {
   if (!_has_aggregate_functions) {
     /*
@@ -1587,7 +1587,7 @@ void AggregateDYOD::_aggregate_partition(ContextsPerColumn& contexts_per_column,
 
       // Add value or combination of values is added to the list of distinct value(s). This is done by calling
       // visit_and_get_result, which adds the corresponding entry in the list of GROUP BY values.
-      if (use_immediate_key_shortcut) {
+      if (use_immediate_key_shortcut.load()) {
         for (auto chunk_offset = ChunkOffset{0}; chunk_offset < input_chunk_size; ++chunk_offset) {
           // We are able to use immediate keys, so pass true_type so that the combined caching/immediate key code path
           // is enabled in visit_and_get_result.
@@ -1643,7 +1643,7 @@ void AggregateDYOD::_aggregate_partition(ContextsPerColumn& contexts_per_column,
             } else {
               // Count occurrences for each group key -  If we have more than one aggregate function (and thus more than
               // one context), it makes sense to cache the results indexes, see visit_and_get_result for details.
-              if (contexts_per_column.size() > 1 || use_immediate_key_shortcut) {
+              if (contexts_per_column.size() > 1 || use_immediate_key_shortcut.load()) {
                 for (auto chunk_offset = ChunkOffset{0}; chunk_offset < input_chunk_size; ++chunk_offset) {
                   // Use CacheResultIds==true_type if we have more than one group by column or if the cached result ids
                   // have been written by the immediate key shortcut
@@ -1681,7 +1681,7 @@ void AggregateDYOD::_aggregate_partition(ContextsPerColumn& contexts_per_column,
             resolve_window_function_without_any(aggregate->window_function, [&]<WindowFunction aggregate_func>() {
               _aggregate_segment<ColumnDataType, aggregate_func, AggregateKey>(
                   chunk_id, aggregate_index, *abstract_segment, keys_per_chunk, contexts_per_column,
-                  use_immediate_key_shortcut);
+                  use_immediate_key_shortcut.load());
             });
           });
         };
