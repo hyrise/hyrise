@@ -34,6 +34,7 @@
 #include "operators/abstract_operator.hpp"
 #include "perfetto.h"
 #include "storage/abstract_segment.hpp"
+#include "storage/pos_lists/entire_chunk_pos_list.hpp"
 #include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/table.hpp"
@@ -185,6 +186,7 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
 std::shared_ptr<Table> AggregateDYOD::_write_output_table(WorkerState& worker_state) {
   TRACE_EVENT("aggregate_operator", "_write_output_table");
   const auto column_definitions = _output_column_definitions();
+  const auto aggregate_count = _aggregates.size();
 
   const auto total_group_count = std::visit(
       [&](auto& state) {
@@ -192,27 +194,57 @@ std::shared_ptr<Table> AggregateDYOD::_write_output_table(WorkerState& worker_st
       },
       _state);
   const auto chunk_count = (total_group_count + Chunk::DEFAULT_SIZE - 1) / Chunk::DEFAULT_SIZE;
-  auto chunks = std::vector<std::shared_ptr<Chunk>>(chunk_count);
+  const auto occupied_group_ids = _get_occupied_group_ids();
 
-  if (total_group_count > 0) {
-    auto jobs = std::vector<std::shared_ptr<AbstractTask>>(chunk_count);
-    const auto occupied_group_ids = _get_occupied_group_ids();
+  // Chunks for the temporary data table containing aggregate columns
+  auto aggregate_chunks = std::vector<std::shared_ptr<Chunk>>(chunk_count);
 
-    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-      jobs[chunk_id] = std::make_shared<JobTask>([&, chunk_id]() {
-        const auto start_index = size_t{chunk_id} * Chunk::DEFAULT_SIZE;
-        const auto end_index = std::min(start_index + Chunk::DEFAULT_SIZE, total_group_count);
-        chunks[chunk_id] = _write_output_chunk(worker_state, occupied_group_ids, start_index, end_index);
-      });
-    }
+  {
+    TRACE_EVENT("aggregate_operator", "write temporary aggregate chunks");
 
-    {
-      TRACE_EVENT("aggregate_operator", "schedule_and_wait_for_tasks");
+    if (total_group_count > 0 && aggregate_count > 0) {
+      auto jobs = std::vector<std::shared_ptr<AbstractTask>>(chunk_count);
+
+      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+        jobs[chunk_id] = std::make_shared<JobTask>([&, chunk_id]() {
+          const auto start_index = size_t{chunk_id} * Chunk::DEFAULT_SIZE;
+          const auto end_index = std::min(start_index + Chunk::DEFAULT_SIZE, total_group_count);
+          aggregate_chunks[chunk_id] =
+              _write_aggregate_output_chunk(worker_state, occupied_group_ids, start_index, end_index);
+        });
+      }
+
       Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
     }
   }
 
-  return std::make_shared<Table>(column_definitions, TableType::Data, chunks);
+  auto aggregates_table =
+      std::make_shared<Table>(_aggregate_column_definitions(), TableType::Data, std::move(aggregate_chunks));
+
+  // Chunks for the actual output reference table. The chunks consist only of ReferenceSegments referencing the
+  // input table (for groupby columns) or the temporaray table created above (for aggregate columns).
+  auto reference_chunks = std::vector<std::shared_ptr<Chunk>>(chunk_count);
+
+  {
+    TRACE_EVENT("aggregate_operator", "write reference chunks");
+
+    if (total_group_count > 0) {
+      auto jobs = std::vector<std::shared_ptr<AbstractTask>>(chunk_count);
+
+      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+        jobs[chunk_id] = std::make_shared<JobTask>([&, chunk_id]() {
+          const auto start_index = size_t{chunk_id} * Chunk::DEFAULT_SIZE;
+          const auto end_index = std::min(start_index + Chunk::DEFAULT_SIZE, total_group_count);
+          reference_chunks[chunk_id] =
+              _write_reference_chunk(aggregates_table, chunk_id, occupied_group_ids, start_index, end_index);
+        });
+      }
+
+      Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+    }
+  }
+
+  return std::make_shared<Table>(column_definitions, TableType::References, std::move(reference_chunks));
 }
 
 TableColumnDefinitions AggregateDYOD::_output_column_definitions() {
@@ -292,6 +324,59 @@ std::shared_ptr<Chunk> AggregateDYOD::_write_output_chunk(WorkerState& worker_st
             aggregate_vector, _aggregate_is_nullable(aggregate_index), occupied_group_ids, start_index, end_index));
       });
     });
+  }
+
+  return std::make_shared<Chunk>(segments);
+}
+
+std::shared_ptr<Chunk> AggregateDYOD::_write_aggregate_output_chunk(WorkerState& worker_state,
+                                                                    const std::vector<size_t>& occupied_group_ids,
+                                                                    size_t start_index, size_t end_index) {
+  TRACE_EVENT("aggregate_operator", "_write_aggregate_output_chunk");
+  const auto aggregate_count = _aggregates.size();
+
+  auto segments = Segments{};
+  segments.reserve(aggregate_count);
+
+  for (auto aggregate_index = size_t{0}; aggregate_index < aggregate_count; ++aggregate_index) {
+    const auto& aggregate = _aggregates[aggregate_index];
+
+    resolve_data_type(_aggregate_column_data_type(aggregate_index), [&](auto type) {
+      using ColumnDataType = typename decltype(type)::type;
+
+      resolve_window_function(aggregate->window_function, [&](auto type) {
+        constexpr auto aggregate_function = decltype(type)::value;
+        auto& aggregate_vector = static_cast<TypedAggregateVector<ColumnDataType, aggregate_function>&>(
+            worker_state.aggregate_vector(aggregate_index));
+        segments.emplace_back(_write_aggregate_segment<ColumnDataType, aggregate_function>(
+            aggregate_vector, _aggregate_is_nullable(aggregate_index), occupied_group_ids, start_index, end_index));
+      });
+    });
+  }
+
+  return std::make_shared<Chunk>(segments);
+}
+
+std::shared_ptr<Chunk> AggregateDYOD::_write_reference_chunk(const std::shared_ptr<Table>& aggregate_result_table,
+                                                             ChunkID chunk_id,
+                                                             const std::vector<size_t>& occupied_group_ids,
+                                                             size_t start_index, size_t end_index) {
+  TRACE_EVENT("aggregate_operator", "_write_reference_chunk");
+  const auto groupby_column_count = _groupby_column_ids.size();
+  const auto aggregate_count = _aggregates.size();
+  const auto chunk_size = static_cast<ChunkOffset>(end_index - start_index);
+
+  auto segments = Segments{};
+  segments.reserve(groupby_column_count + aggregate_count);
+
+  for (auto groupby_column_index = size_t{0}; groupby_column_index < groupby_column_count; ++groupby_column_index) {
+    segments.emplace_back(_write_groupby_segment(groupby_column_index, occupied_group_ids, start_index, end_index));
+  }
+
+  const auto entire_chunk_pos_list = std::make_shared<EntireChunkPosList>(chunk_id, chunk_size);
+  for (auto aggregate_index = ColumnID{0}; aggregate_index < aggregate_count; ++aggregate_index) {
+    segments.emplace_back(
+        std::make_shared<ReferenceSegment>(aggregate_result_table, ColumnID{aggregate_index}, entire_chunk_pos_list));
   }
 
   return std::make_shared<Chunk>(segments);
