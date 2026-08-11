@@ -92,4 +92,28 @@ class WindowFunctionExpression : public AbstractExpression {
   bool _has_window{false};
 };
 
+template <typename Functor>
+inline void resolve_window_function(const WindowFunction window_func, const Functor& functor) {
+  switch (window_func) {
+    case WindowFunction::Min:
+      return functor(std::integral_constant<WindowFunction, WindowFunction::Min>{});
+    case WindowFunction::Max:
+      return functor(std::integral_constant<WindowFunction, WindowFunction::Max>{});
+    case WindowFunction::Sum:
+      return functor(std::integral_constant<WindowFunction, WindowFunction::Sum>{});
+    case WindowFunction::Avg:
+      return functor(std::integral_constant<WindowFunction, WindowFunction::Avg>{});
+    case WindowFunction::Count:
+      return functor(std::integral_constant<WindowFunction, WindowFunction::Count>{});
+    case WindowFunction::CountDistinct:
+      return functor(std::integral_constant<WindowFunction, WindowFunction::CountDistinct>{});
+    case WindowFunction::StandardDeviationSample:
+      return functor(std::integral_constant<WindowFunction, WindowFunction::StandardDeviationSample>{});
+    case WindowFunction::Any:
+      return functor(std::integral_constant<WindowFunction, WindowFunction::Any>{});
+    default:
+      Fail("Unsupported window function.");
+  }
+}
+
 }  // namespace hyrise
