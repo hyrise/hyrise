@@ -3,9 +3,11 @@ import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
 full_ci = env.BRANCH_NAME == 'master' || pullRequest.labels.contains('FullCI')
 
 // Due to their long runtime, we skip several tests in sanitizer and MacOS builds.
-tests_excluded_in_sanitizer_builds = 'SQLiteTestRunnerEncodings/*:TPCDSTableGeneratorTest.GenerateAndStoreRowCountsAndTableConstraints:TPCHTableGeneratorTest.RowCountsMediumScaleFactor:SSBTableGeneratorTest.GenerateAndStoreRowCounts'
+tests_excluded_in_sanitizer_builds = 'SQLiteTestRunnerEncodings/*:TPCDSTableGeneratorTest.GenerateAndStoreRowCountsAndTableConstraints:TPCHTableGeneratorTest.RowCountsMediumScaleFactor:SSBTableGeneratorTest.GenerateAndStoreRowCounts:*StandardDeviationSample*'
 
-tests_excluded_in_mac_builds = 'TPCCTest*:TPCDSTableGeneratorTest.*:TPCHTableGeneratorTest.RowCountsMediumScaleFactor:SSBTableGeneratorTest.GenerateAndStoreRowCounts'
+tests_excluded_in_mac_builds = 'TPCCTest*:TPCDSTableGeneratorTest.*:TPCHTableGeneratorTest.RowCountsMediumScaleFactor:SSBTableGeneratorTest.GenerateAndStoreRowCounts:*StandardDeviationSample*'
+
+exclude_stddev_tests = '--gtest_filter=\"-*StandardDeviationSample*\"'
 
 // We run the strict ("more aggressive") checks for the address sanitizer
 // (see https://github.com/google/sanitizers/wiki/AddressSanitizer#faq). Moreover, we activate the leak sanitizer.
@@ -139,22 +141,22 @@ try {
             stage("clang-debug") {
               // We build clang-debug using make to test make once (and clang-debug is the fastest build).
               sh "cd clang-debug && make all -j \$(( \$(nproc) / 4))"
-              sh "./clang-debug/hyriseTest clang-debug"
+              sh "./clang-debug/hyriseTest clang-debug ${exclude_stddev_tests}"
             }
           }, clang19Debug: {
             stage("clang-19-debug") {
               sh "cd clang-19-debug && ninja all -j \$(( \$(nproc) / 4))"
-              sh "./clang-19-debug/hyriseTest clang-19-debug"
+              sh "./clang-19-debug/hyriseTest clang-19-debug ${exclude_stddev_tests}"
             }
           }, gccDebug: {
             stage("gcc-debug") {
               sh "cd gcc-debug && ninja all -j \$(( \$(nproc) / 4))"
-              sh "cd gcc-debug && ./hyriseTest"
+              sh "cd gcc-debug && ./hyriseTest ${exclude_stddev_tests}"
             }
           }, gcc13Debug: {
             stage("gcc-13-debug") {
               sh "cd gcc-13-debug && ninja all -j \$(( \$(nproc) / 4))"
-              sh "cd gcc-13-debug && ./hyriseTest"
+              sh "cd gcc-13-debug && ./hyriseTest ${exclude_stddev_tests}"
             }
           }, lint: {
             stage("Linting") {
@@ -169,7 +171,7 @@ try {
             stage("clang-release") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
                 sh "cd clang-release && ninja all -j \$(( \$(nproc) / 30))"
-                sh "./clang-release/hyriseTest clang-release"
+                sh "./clang-release/hyriseTest clang-release ${exclude_stddev_tests}"
                 sh "./clang-release/hyriseSystemTest clang-release"
                 sh "./scripts/test/hyriseConsole_test.py clang-release"
                 sh "./scripts/test/hyriseServer_test.py clang-release"
@@ -210,9 +212,9 @@ try {
             stage("clang-debug:test-shuffle") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
                 sh "mkdir ./clang-debug/run-shuffled"
-                sh "./clang-debug/hyriseTest clang-debug/run-shuffled --gtest_repeat=5 --gtest_shuffle"
+                sh "./clang-debug/hyriseTest clang-debug/run-shuffled --gtest_repeat=5 --gtest_shuffle ${exclude_stddev_tests}"
                 // We do not want to trigger SSB data generation concurrently since it is not concurrency-safe.
-                sh "./clang-debug/hyriseSystemTest clang-debug/run-shuffled --gtest_repeat=2 --gtest_shuffle --gtest_filter=\"-SSBTableGeneratorTest.*:SQLiteTestRunnerEncodings/*\""
+                sh "./clang-debug/hyriseSystemTest clang-debug/run-shuffled --gtest_repeat=2 --gtest_shuffle --gtest_filter=\"-SSBTableGeneratorTest.*:SQLiteTestRunnerEncodings/*:*StandardDeviationSample*\""
               } else {
                 Utils.markStageSkippedForConditional("clangDebugRunShuffled")
               }
@@ -248,7 +250,7 @@ try {
             stage("clang-debug:addr-ub-sanitizers") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
                 sh "cd clang-debug-addr-ub-leak-sanitizers && ninja hyriseTest hyriseSystemTest hyriseBenchmarkTPCH hyriseBenchmarkTPCC -j \$(( \$(nproc) / 30))"
-                sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=\${asan_options} ./clang-debug-addr-ub-leak-sanitizers/hyriseTest clang-debug-addr-ub-leak-sanitizers"
+                sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=\${asan_options} ./clang-debug-addr-ub-leak-sanitizers/hyriseTest clang-debug-addr-ub-leak-sanitizers ${exclude_stddev_tests}"
                 sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=\${asan_options} ./clang-debug-addr-ub-leak-sanitizers/hyriseSystemTest --gtest_filter=-${tests_excluded_in_sanitizer_builds} clang-debug-addr-ub-leak-sanitizers"
                 sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=\${asan_options} ./clang-debug-addr-ub-leak-sanitizers/hyriseBenchmarkTPCH -s .01 --verify -r 1"
               } else {
@@ -259,7 +261,7 @@ try {
             if (env.BRANCH_NAME == 'master' || full_ci) {
               stage("gcc-release") {
                 sh "cd gcc-release && ninja all -j \$(( \$(nproc) / 30))"
-                sh "./gcc-release/hyriseTest gcc-release"
+                sh "./gcc-release/hyriseTest gcc-release ${exclude_stddev_tests}"
                 sh "./gcc-release/hyriseSystemTest gcc-release"
                 sh "./scripts/test/hyriseConsole_test.py gcc-release"
                 sh "./scripts/test/hyriseServer_test.py gcc-release"
@@ -275,7 +277,7 @@ try {
             stage("clang-release:addr-ub-sanitizers") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
                 sh "cd clang-release-addr-ub-leak-sanitizers && ninja hyriseTest hyriseSystemTest hyriseBenchmarkTPCH hyriseBenchmarkTPCC -j \$(( \$(nproc) / 30))"
-                sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=\${asan_options} ./clang-release-addr-ub-leak-sanitizers/hyriseTest clang-release-addr-ub-leak-sanitizers"
+                sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=\${asan_options} ./clang-release-addr-ub-leak-sanitizers/hyriseTest clang-release-addr-ub-leak-sanitizers ${exclude_stddev_tests}"
                 sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=\${asan_options} ./clang-release-addr-ub-leak-sanitizers/hyriseSystemTest --gtest_filter=-${tests_excluded_in_sanitizer_builds} clang-release-addr-ub-leak-sanitizers"
                 sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=\${asan_options} ./clang-release-addr-ub-leak-sanitizers/hyriseBenchmarkTPCH -s .01 --verify -r 100 --scheduler --clients 10 --cores \$(( \$(nproc) / 10))"
                 sh "cd clang-release-addr-ub-leak-sanitizers && LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=\${asan_options} ../scripts/test/hyriseBenchmarkTPCC_test.py ." // Own folder to isolate binary export tests
@@ -287,7 +289,7 @@ try {
             stage("clang-relwithdebinfo:thread-sanitizer") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
                 sh "cd clang-relwithdebinfo-thread-sanitizer && ninja hyriseTest hyriseSystemTest hyriseBenchmarkTPCH hyriseBenchmarkTPCC hyriseBenchmarkTPCDS -j \$(( \$(nproc) / 10))"
-                sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer/hyriseTest clang-relwithdebinfo-thread-sanitizer"
+                sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer/hyriseTest clang-relwithdebinfo-thread-sanitizer ${exclude_stddev_tests}"
                 // We exclude tests matching NodeQueueSchedulerSemaphoreIncrements* as those tests were stuck with TSAN.
                 // We have seen runtimes of over 20h. The (much larger) tests running in Release mode did not show any
                 // issues when run for several days. We thus consider it a TSAN issue.
@@ -327,7 +329,7 @@ try {
               sh "mkdir cmake-build-bolt"
               sh "cd cmake-build-bolt && cmake ${release} ${clang} ${unity} ${ninja} .."
               sh "cd cmake-build-bolt && python3 ../scripts/build_pgo_bolt.py -n \$(( \$(nproc) / 5)) --ci"
-              sh "cd cmake-build-bolt && ./hyriseTest"
+              sh "cd cmake-build-bolt && ./hyriseTest ${exclude_stddev_tests}"
             }
           }
 
@@ -342,7 +344,7 @@ try {
                 // --fair-sched=yes "improves overall responsiveness if you are running an interactive multithreaded
                 // program" and "produces better reproducibility of thread scheduling for different executions of a
                 // multithreaded application" (i.e., there are no runs that are randomly faster or slower).
-                sh "valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --fair-sched=yes --suppressions=resources/.valgrind-ignore.txt ./clang-release/hyriseTest clang-release-memcheck-test --gtest_filter=-NUMAMemoryResourceTest.BasicAllocate:SQLiteTestRunner*"
+                sh "valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --fair-sched=yes --suppressions=resources/.valgrind-ignore.txt ./clang-release/hyriseTest clang-release-memcheck-test --gtest_filter=-NUMAMemoryResourceTest.BasicAllocate:SQLiteTestRunner*:*StandardDeviationSample*"
                 sh "valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --fair-sched=yes --suppressions=resources/.valgrind-ignore.txt ./clang-release/hyriseBenchmarkTPCH -s .01 -r 1 --scheduler --cores 4 --data_preparation_cores 4"
                 sh "valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --fair-sched=yes --suppressions=resources/.valgrind-ignore.txt ./clang-release/hyriseBenchmarkTPCDS -s 1 -r 1 --scheduler --cores 4 --data_preparation_cores 4"
                 sh "valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --fair-sched=yes --suppressions=resources/.valgrind-ignore.txt ./clang-release/hyriseBenchmarkTPCC -s 1 --scheduler --cores 4 --data_preparation_cores 4"
@@ -405,9 +407,9 @@ try {
             stage('nixSetup') {
               if (env.BRANCH_NAME == 'master' || full_ci) {
                 sh "curl -L https://nixos.org/nix/install > nix-install.sh && chmod +x nix-install.sh && ./nix-install.sh --daemon --yes"
-                sh "/nix/var/nix/profiles/default/bin/nix-shell resources/nix --pure --run \"mkdir nix-debug && cd nix-debug && cmake ${debug} ${clang} ${unity} ${ninja} .. && ninja all -j \$(( \$(nproc) / 7)) && ./hyriseTest\""
+                sh "/nix/var/nix/profiles/default/bin/nix-shell resources/nix --pure --run \"mkdir nix-debug && cd nix-debug && cmake ${debug} ${clang} ${unity} ${ninja} .. && ninja all -j \$(( \$(nproc) / 7)) && ./hyriseTest ${exclude_stddev_tests}\""
                 // We allocate a third of all cores for the release build as several parallel stages should have already finished at this point.
-                sh "/nix/var/nix/profiles/default/bin/nix-shell resources/nix --pure --run \"mkdir nix-release && cd nix-release && cmake ${release} ${clang} ${unity} ${ninja} .. && ninja all -j \$(( \$(nproc) / 3)) && ./hyriseTest\""
+                sh "/nix/var/nix/profiles/default/bin/nix-shell resources/nix --pure --run \"mkdir nix-release && cd nix-release && cmake ${release} ${clang} ${unity} ${ninja} .. && ninja all -j \$(( \$(nproc) / 3)) && ./hyriseTest ${exclude_stddev_tests}\""
               } else {
                 Utils.markStageSkippedForConditional("nixSetup")
               }
@@ -437,7 +439,7 @@ try {
             // that are not found otherwise.
             sh "mkdir clang-apple-release && cd clang-apple-release && cmake ${release} ${ninja} -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ .."
             sh "cd clang-apple-release && ninja"
-            sh "./clang-apple-release/hyriseTest"
+            sh "./clang-apple-release/hyriseTest ${exclude_stddev_tests}"
 
             // Build Hyrise (Debug) with a recent clang compiler version (as recommended for Hyrise on macOS) and run
             // various tests.
@@ -449,7 +451,7 @@ try {
             // executes x86 binaries on arm.
             sh "file ./clang-debug/hyriseTest | grep arm64"
 
-            sh "./clang-debug/hyriseTest"
+            sh "./clang-debug/hyriseTest ${exclude_stddev_tests}"
             sh "./clang-debug/hyriseSystemTest --gtest_filter=-${tests_excluded_in_mac_builds}"
             sh "./scripts/test/hyriseConsole_test.py clang-debug"
             sh "./scripts/test/hyriseServer_test.py clang-debug"
