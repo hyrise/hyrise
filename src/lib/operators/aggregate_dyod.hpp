@@ -69,6 +69,12 @@ Optionally, the result may also contain:
 - a set of DISTINCT values OR
 - secondary aggregates, which are currently only used by STDDEV_SAMP
 */
+
+template <typename AccumulatorType>
+using DYODAvgData = std::pair<AccumulatorType, size_t>;
+
+using DYODStandardDeviationSampleData = std::array<double, 4>;
+
 template <typename ColumnDataType, WindowFunction aggregate_function>
 struct DYODAggregateResult {
   using AggregateType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;

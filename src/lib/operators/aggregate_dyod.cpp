@@ -758,6 +758,10 @@ void AggregateDYOD::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, 
   auto& result_ids = *context.result_ids;
   auto& results = context.results;
 
+  using AccumulatorType = DYODAggregateResult<ColumnDataType, aggregate_function>::AccumulatorType;
+  constexpr auto AGGREGATOR =
+      DYODWindowFunctionBuilder<ColumnDataType, AccumulatorType, aggregate_function>().get_aggregate_function();
+
   // CacheResultIds is a boolean type parameter that is forwarded to visit_and_get_result, see the documentation over
   // there for details.
   const auto process_position = [&](const auto cache_result_ids, const auto& position) {
@@ -766,17 +770,9 @@ void AggregateDYOD::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, 
                                         dyod_get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
                                         RowID{chunk_id, chunk_offset});
 
-    using AggregateType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
-    constexpr auto AGGREGATOR =
-        DYODWindowFunctionBuilder<ColumnDataType, AggregateType, aggregate_function>().get_aggregate_function();
     // If the value is NULL, the current aggregate value does not change.
     if (!position.is_null()) {
-      if constexpr (aggregate_function == WindowFunction::CountDistinct) {
-        // For the case of CountDistinct, insert the current value into the set to keep track of distinct values.
-        result.accumulator.emplace(position.value());
-      } else {
-        AGGREGATOR(ColumnDataType{position.value()}, result.has_aggregates, result.accumulator);
-      }
+      AGGREGATOR(position.value(), result.has_aggregates, result.accumulator);
 
       result.has_aggregates = true;
     }
