@@ -1043,7 +1043,7 @@ KeysPerChunk<AggregateKey> AggregateDYOD::_create_hash_keys(
                                   "Calculation only valid for uint64_t");
 
                     const auto char_to_uint = [](const char char_in, const uint32_t bits) {
-                      // chars may be signed or unsigned. For the calculation as described below, we need signed
+                      // chars may be signed or unsigned. For the calculation as described below, we need unsigned
                       // chars.
                       return static_cast<uint64_t>(*reinterpret_cast<const uint8_t*>(&char_in)) << bits;
                     };
