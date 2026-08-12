@@ -1393,7 +1393,7 @@ std::shared_ptr<Table> AggregateDYOD::_execute_operator() {
 template <typename AggregateKey>
 void AggregateDYOD::_aggregate(ContextsPerColumn& contexts_per_column, const std::shared_ptr<const Table>& input_table,
                                bool check_for_single_keys) {
-  std::atomic_size_t expected_result_size;
+  auto expected_result_size = std::atomic_size_t{0};
   auto use_immediate_key_shortcut = std::atomic<bool>{};
   auto guarantee_single_key = std::atomic<bool>{};
   auto keys_per_chunk = check_for_single_keys
