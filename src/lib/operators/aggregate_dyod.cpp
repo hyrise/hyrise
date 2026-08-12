@@ -323,7 +323,7 @@ void dyod_prepare_output(std::vector<Segments>& output, const size_t chunk_count
 }
 
 template <typename Functor>
-void resolve_window_function_without_any(WindowFunction window_function, const Functor& functor) {
+void resolve_window_function(WindowFunction window_function, const Functor& functor) {
   switch (window_function) {
     case WindowFunction::Min:
       functor.template operator()<WindowFunction::Min>();
@@ -347,22 +347,10 @@ void resolve_window_function_without_any(WindowFunction window_function, const F
       functor.template operator()<WindowFunction::StandardDeviationSample>();
       break;
     case WindowFunction::Any:
+      functor.template operator()<WindowFunction::Any>();
       break;
-    case WindowFunction::CumeDist:
-    case WindowFunction::DenseRank:
-    case WindowFunction::PercentRank:
-    case WindowFunction::Rank:
-    case WindowFunction::RowNumber:
+    default:
       Fail(std::format("Unsupported aggregate function '{}'.", window_function_to_string.left.at(window_function)));
-  }
-}
-
-template <typename Functor>
-void resolve_window_function(WindowFunction window_function, const Functor& functor) {
-  if (window_function == WindowFunction::Any) {
-    functor.template operator()<WindowFunction::Any>();
-  } else {
-    resolve_window_function_without_any(window_function, functor);
   }
 }
 
@@ -1677,11 +1665,13 @@ void AggregateDYOD::_aggregate_partition(ContextsPerColumn& contexts_per_column,
           resolve_data_type(data_type, [&, aggregate](auto type) {
             using ColumnDataType = typename decltype(type)::type;
 
-            // ANY is a pseudo-function and is handled by `dyod_get_aggregate_key`.
-            resolve_window_function_without_any(aggregate->window_function, [&]<WindowFunction aggregate_func>() {
-              _aggregate_segment<ColumnDataType, aggregate_func, AggregateKey>(
-                  chunk_id, aggregate_index, *abstract_segment, keys_per_chunk, contexts_per_column,
-                  use_immediate_key_shortcut.load());
+            resolve_window_function(aggregate->window_function, [&]<WindowFunction aggregate_func>() {
+              if constexpr (aggregate_func != WindowFunction::Any) {
+                // ANY is a pseudo-function and is handled by `dyod_get_aggregate_key`.
+                _aggregate_segment<ColumnDataType, aggregate_func, AggregateKey>(
+                    chunk_id, aggregate_index, *abstract_segment, keys_per_chunk, contexts_per_column,
+                    use_immediate_key_shortcut.load());
+              }
             });
           });
         };
@@ -1734,10 +1724,12 @@ void AggregateDYOD::_write_output(ContextsPerColumn& contexts_per_column,
     resolve_data_type(data_type, [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
 
-      // Pseudo-aggregates are written by dyod_write_output_group_columns.
-      resolve_window_function_without_any(aggregate->window_function, [&]<WindowFunction aggregate_func>() {
-        _write_aggregate_output<ColumnDataType, aggregate_func>(
-            aggregate_index, contexts_per_column, intermediate_result, input_table, output_column_definitions);
+      resolve_window_function(aggregate->window_function, [&]<WindowFunction aggregate_func>() {
+        // Pseudo-aggregates are written by dyod_write_output_group_columns.
+        if constexpr (aggregate_func != WindowFunction::Any) {
+          _write_aggregate_output<ColumnDataType, aggregate_func>(
+              aggregate_index, contexts_per_column, intermediate_result, input_table, output_column_definitions);
+        }
       });
     });
 
