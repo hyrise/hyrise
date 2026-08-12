@@ -24,15 +24,10 @@
 #include "dyod_window_function_builder.hpp"
 #include "expression/window_function_expression.hpp"
 #include "resolve_type.hpp"
-#include "storage/reference_segment.hpp"
-#include "storage/value_segment.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
-
-template <typename AggregateKey>
-struct GroupByContext;
 
 /*
 Variant of the AggregateHash operator that uses parallel execution to speed up the aggregation.
@@ -219,8 +214,6 @@ class AggregateDYOD : public AbstractAggregateOperator {
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
   void _on_cleanup() override;
-
-  void _write_groupby_output(RowIDPosList& pos_list);
 
   template <typename ColumnDataType, WindowFunction aggregate_function>
   void _write_aggregate_output(ColumnID aggregate_index, ContextsPerColumn& contexts_per_column,
