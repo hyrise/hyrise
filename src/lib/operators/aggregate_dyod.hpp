@@ -78,18 +78,20 @@ namespace hyrise {
  *          output table is only moving the pieces into value segments of the output chunks without a copy.
  *
  * PROs and CONs of this design:
- *  - PRO: In hot-loops the only synchronizations are the atomics in the ticketing hash table and the per-group ones
+ *   PRO:
+ *       - In hot-loops the only synchronizations are the atomics in the ticketing hash table and the per-group ones
  *         for the intermediate states. 
- *  - PRO: The ticket is only fought over once per group, and the intermediate state is only fought over when the 
+ *       - The ticket is only fought over once per group, and the intermediate state is only fought over when the 
  *         local hash table spills. For low-cardinality we have very few groups so the ticketing is cheap and the 
  *         local-hash table reduces the amount of contention. For high cardinality we almost never have collisions for
  *         tickets and states.
- *  - PRO: As a result the algorithm scales very well especially for large inputs and high thread counts.
- *  - CON: We pass the data three times: Once for HyperLogLog (cardinality estimation), once for ticketing, and once
+ *       - As a result the algorithm scales very well especially for large inputs and high thread counts.
+ *   CON: 
+ *       - We pass the data three times: Once for HyperLogLog (cardinality estimation), once for ticketing, and once
  *         for aggregation (+ finalization). When few threads are used the overhead for parallelization is unjustified.
- *  - CON: For high cardinalities we have to allocate a large ticketing hash table, a large intermediate result and the
+ *       - For high cardinalities we have to allocate a large ticketing hash table, a large intermediate result and the
  *         result.
- *  - CON: The hash table for ticketing has an inherently random access pattern, so it is not cache-friendly.
+ *       - The hash table for ticketing has an inherently random access pattern, so it is not cache-friendly.
  */
 class AggregateDYOD : public AbstractAggregateOperator {
  public:
