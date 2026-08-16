@@ -58,7 +58,7 @@ TEST_F(TicketingTest, RowFormatWithoutNullableColumns) {
   column_definitions.emplace_back("b", DataType::Long, false);
 
   // Columns are laid out in group-by order, not in table order.
-  const auto format = _create_row_format(column_definitions, {ColumnID{1}, ColumnID{0}});
+  const auto format = create_row_format(column_definitions, {ColumnID{1}, ColumnID{0}});
 
   // Without a nullable column there is no null bitmap, so the data starts right at the beginning of the row.
   EXPECT_FALSE(format.stores_nulls);
@@ -69,7 +69,7 @@ TEST_F(TicketingTest, RowFormatWithoutNullableColumns) {
 }
 
 TEST_F(TicketingTest, RowFormatWithNullsAndStrings) {
-  const auto format = _create_row_format(int_string_definitions(true), {ColumnID{0}, ColumnID{1}});
+  const auto format = create_row_format(int_string_definitions(true), {ColumnID{0}, ColumnID{1}});
 
   // A single nullable column is enough to prepend the null bitmap to every row. The string column occupies
   // [length, prefix] inline plus one pointer in the trailing string-pointer area, which is not part of the key.
@@ -91,11 +91,11 @@ TEST_F(TicketingTest, MaterializeRows) {
   table->append({int32_t{2}, NullValue{}});
 
   const auto groupby_column_ids = std::vector<ColumnID>{ColumnID{0}, ColumnID{1}};
-  const auto format = _create_row_format(table->column_definitions(), groupby_column_ids);
+  const auto format = create_row_format(table->column_definitions(), groupby_column_ids);
 
   auto materialized = MaterializedRows{};
   materialized.rows = std::make_unique<uint8_t[]>(3 * format.row_size);
-  _materialize_rows(format, table->get_chunk(ChunkID{0}), groupby_column_ids, materialized);
+  materialize_rows(format, table->get_chunk(ChunkID{0}), groupby_column_ids, materialized);
 
   ASSERT_EQ(materialized.row_count, 3);
   // The strings come from a value segment, which owns them, so they are pointed at rather than copied.
@@ -128,8 +128,8 @@ TEST_F(TicketingTest, ComputeGroupsEmptyTable) {
   const auto table = std::make_shared<Table>(int_string_definitions(false), TableType::Data, ChunkOffset{10});
   ASSERT_EQ(table->chunk_count(), 0);
 
-  EXPECT_EQ(_compute_groups({ColumnID{0}}, table)->group_count, 0);
-  EXPECT_EQ(_compute_groups({ColumnID{0}, ColumnID{1}}, table)->group_count, 0);
+  EXPECT_EQ(compute_groups({ColumnID{0}}, table)->group_count, 0);
+  EXPECT_EQ(compute_groups({ColumnID{0}, ColumnID{1}}, table)->group_count, 0);
 }
 
 TEST_F(TicketingTest, ComputeGroupsSingleColumn) {
@@ -142,7 +142,7 @@ TEST_F(TicketingTest, ComputeGroupsSingleColumn) {
   table->append({NullValue{}});
   table->append({int32_t{2}});
 
-  const auto groups = _compute_groups({ColumnID{0}}, table);
+  const auto groups = compute_groups({ColumnID{0}}, table);
 
   // NULL forms a group of its own. The fast path builds no hash table.
   EXPECT_FALSE(groups->has_hash_table);
@@ -160,7 +160,7 @@ TEST_F(TicketingTest, ComputeGroupsMultiColumn) {
   table->append({int32_t{1}, NullValue{}});
   table->append({NullValue{}, pmr_string{"x"}});
 
-  const auto groups = _compute_groups({ColumnID{0}, ColumnID{1}}, table);
+  const auto groups = compute_groups({ColumnID{0}, ColumnID{1}}, table);
 
   // NULLs live in the row's null bitmap here, so they group like any other value combination.
   EXPECT_TRUE(groups->has_hash_table);
@@ -186,11 +186,11 @@ TEST_F(TicketingTest, ComputeGroupsManyChunksParallel) {
     expected_single_column.emplace_back(group);
   }
 
-  const auto multi_column_groups = _compute_groups({ColumnID{0}, ColumnID{1}}, table);
+  const auto multi_column_groups = compute_groups({ColumnID{0}, ColumnID{1}}, table);
   verify_tickets(*multi_column_groups, expected);
   EXPECT_EQ(multi_column_groups->group_count, GROUP_COUNT);
 
-  const auto single_column_groups = _compute_groups({ColumnID{0}}, table);
+  const auto single_column_groups = compute_groups({ColumnID{0}}, table);
   verify_tickets(*single_column_groups, expected_single_column);
   EXPECT_EQ(single_column_groups->group_count, GROUP_COUNT);
 }

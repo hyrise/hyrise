@@ -25,7 +25,7 @@ namespace hyrise {
  * The group-by path (`groupby_aggregate`) runs in the following phases (see aggregate_dyod_utils/ticketing.hpp for
  * phase 1, aggregate_dyod.cpp for the rest):
  *
- *  1. Ticketing (`_compute_groups`): Assigns each distinct combination of group-by values a dense id or offset into 
+ *  1. Ticketing (`compute_groups`): Assigns each distinct combination of group-by values a dense id or offset into 
  *     the result, its "ticket".
  *     The result is one ticket per input row plus the group count. All later phases address per-group data by ticket
  *     instead of re-hashing group-by values. Ticketing itself runs in three steps:
@@ -37,7 +37,7 @@ namespace hyrise {
  *         estimate is off).
  *
  *.     PER-CHUNK PARALLEL:
- *      b. Materialization (`_materialize_rows`, not necessary for non-string single-column GROUPBY's): Each chunk's 
+ *      b. Materialization (`materialize_rows`, not necessary for non-string single-column GROUPBY's): Each chunk's 
  *.        group-by values are packed into fixed-format key rows (aggregate_dyod_utils/ticketing.hpp):
  *.        An optional NULL bitmap followed by the inline values, so that hashing and equality are a simple pass over
  *         contiguous bytes. 

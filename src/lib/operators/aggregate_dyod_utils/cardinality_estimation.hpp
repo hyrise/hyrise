@@ -24,16 +24,18 @@ namespace hyrise {
 // We use a precision of 10 giving 1 KiB of registers per sketch.
 // The entire implementation here is stolen from "HyperLogLog: the analysis of a near-optimal cardinality estimation
 // algorithm" by Philippe Flajolet, Éric Fusy, Olivier Gandouet, and Frédéric Meunier (2007).
-template <uint8_t Precision = 10>
+template <uint8_t precision = 10>
 class HyperLogLog : public Noncopyable {
  public:
-  static constexpr auto REGISTER_COUNT = size_t{1} << Precision;
+  static constexpr auto PRECISION_BITS = uint64_t{precision};
+  static constexpr auto HASH_BIT_COUNT = uint64_t{64};
+  static constexpr auto REGISTER_COUNT = size_t{1} << PRECISION_BITS;
 
   void add(const uint64_t hash) {
-    const auto j = static_cast<size_t>(hash >> (64 - Precision));
-    const auto w = (hash << Precision) | (uint64_t{1} << (Precision - 1));
-    const auto rho_w = static_cast<uint8_t>(std::countl_zero(w) + 1);
-    _registers[j] = std::max(_registers[j], rho_w);
+    const auto register_index = static_cast<size_t>(hash >> (HASH_BIT_COUNT - PRECISION_BITS));
+    const auto remaining_bits = (hash << PRECISION_BITS) | (uint64_t{1} << (PRECISION_BITS - 1));
+    const auto rho_w = static_cast<uint8_t>(std::countl_zero(remaining_bits) + 1);
+    _registers[register_index] = std::max(_registers[register_index], rho_w);
   }
 
   void merge(const HyperLogLog& other) {
@@ -44,7 +46,7 @@ class HyperLogLog : public Noncopyable {
 
   size_t estimate() const {
     constexpr auto REGISTERS = static_cast<double>(REGISTER_COUNT);
-    constexpr auto ALPHA = 0.7213 / (1.0 + 1.079 / REGISTERS);
+    constexpr auto ALPHA = 0.7213 / (1.0 + (1.079 / REGISTERS));
 
     auto inverse_sum = 0.0;
     auto empty_registers = size_t{0};
@@ -65,7 +67,7 @@ class HyperLogLog : public Noncopyable {
 
   // We need an upper bound. Therefore we use the standard error with default 3 sigmas (99.7% confidence interval).
   size_t estimate_upper_bound(const double sigmas = 3.0) const {
-    return static_cast<size_t>(static_cast<double>(estimate()) * (1.0 + sigmas * _standard_error)) + 1;
+    return static_cast<size_t>(static_cast<double>(estimate()) * (1.0 + (sigmas * _standard_error))) + 1;
   }
 
  private:
@@ -101,15 +103,16 @@ inline size_t estimate_group_count_multi_column(const RowFormat& format,
 
     // The first time this worker is called it needs to allocate the 'materialized' buffer.
     if (!materialized.rows) {
+      // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
       materialized.rows = std::make_unique<uint8_t[]>(max_chunk_size * format.row_size);
     }
 
     const auto& chunk = input_table->get_chunk(chunk_id);
-    _materialize_rows(format, chunk, groupby_column_ids, materialized);
+    materialize_rows(format, chunk, groupby_column_ids, materialized);
 
     auto* row_ptr = materialized.rows.get();
     for (auto chunk_offset = uint64_t{0}; chunk_offset < materialized.row_count; ++chunk_offset) {
-      const auto row_view = RowView{row_ptr, format};
+      const auto row_view = RowView{.base = row_ptr, .format = format};
       // NOTE: We only compute the hash of the key bytes here. For strings this can amounts to only hashing the
       // inline prefix!
       worker_state.sketch.add(fmix64(compute_hash(row_view.key_bytes(), format.key_length)));

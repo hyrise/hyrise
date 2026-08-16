@@ -27,10 +27,12 @@ namespace hyrise {
 // Target number of groups per output chunk. The grouped output columns are split into chunks of this size.
 constexpr auto TARGET_CHUNK_SIZE = Chunk::DEFAULT_SIZE;
 
+namespace detail {
+
 // The callbacks below have the signature `void(const pmr_string& value, const bool is_null, NeedsCopy needs_copy)`.
 // `NeedsCopy` is `std::true_type` if the string value is transient and `std::false_type` if not.
 template <typename ColumnDataType, typename Functor>
-bool _with_string_segment_iterate_generic(const std::shared_ptr<AbstractSegment>& segment, const Functor& callback) {
+bool with_string_segment_iterate_generic(const std::shared_ptr<AbstractSegment>& segment, const Functor& callback) {
   segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
     callback(position.value(), position.is_null(), std::true_type{});
   });
@@ -39,7 +41,7 @@ bool _with_string_segment_iterate_generic(const std::shared_ptr<AbstractSegment>
 }
 
 template <typename Functor>
-bool _with_string_segment_iterate(const std::shared_ptr<ValueSegment<pmr_string>>& segment, const Functor& callback) {
+bool with_string_segment_iterate(const std::shared_ptr<ValueSegment<pmr_string>>& segment, const Functor& callback) {
   const auto& values = segment->values();
   const auto value_count = values.size();
 
@@ -58,8 +60,8 @@ bool _with_string_segment_iterate(const std::shared_ptr<ValueSegment<pmr_string>
 }
 
 template <typename Functor>
-bool _with_string_segment_iterate(const std::shared_ptr<DictionarySegment<pmr_string>>& segment,
-                                  const Functor& callback) {
+bool with_string_segment_iterate(const std::shared_ptr<DictionarySegment<pmr_string>>& segment,
+                                 const Functor& callback) {
   const auto& dictionary = *segment->dictionary();
   const auto null_value_id = segment->null_value_id();
   const auto placeholder_string = pmr_string{};
@@ -83,7 +85,7 @@ bool _with_string_segment_iterate(const std::shared_ptr<DictionarySegment<pmr_st
 }
 
 template <typename Functor>
-bool _with_string_segment_iterate(const std::shared_ptr<ReferenceSegment>& segment, const Functor& callback) {
+bool with_string_segment_iterate(const std::shared_ptr<ReferenceSegment>& segment, const Functor& callback) {
   const auto& pos_list = segment->pos_list();
 
   if (pos_list->empty()) {
@@ -91,7 +93,7 @@ bool _with_string_segment_iterate(const std::shared_ptr<ReferenceSegment>& segme
   }
 
   if (!pos_list->references_single_chunk()) {
-    return _with_string_segment_iterate_generic<pmr_string>(segment, callback);
+    return with_string_segment_iterate_generic<pmr_string>(segment, callback);
   }
 
   const auto& referenced_table = segment->referenced_table();
@@ -142,8 +144,10 @@ bool _with_string_segment_iterate(const std::shared_ptr<ReferenceSegment>& segme
   }
 
   // Fallback to the generic iterator for other referenced segment types.
-  return _with_string_segment_iterate_generic<pmr_string>(segment, callback);
+  return with_string_segment_iterate_generic<pmr_string>(segment, callback);
 }
+
+}  // namespace detail
 
 // TODO(@Rob2U): We should write a specialization for FixedStringDictionarySegment. Its dictionary hands out temporaries
 // rather than stable `pmr_string`s, so it would need a path of its own instead of the generic fallback.
@@ -151,21 +155,21 @@ bool _with_string_segment_iterate(const std::shared_ptr<ReferenceSegment>& segme
 template <typename ColumnDataType, typename Functor>
 bool with_string_segment_iterate(const std::shared_ptr<AbstractSegment>& segment, const Functor& callback) {
   if constexpr (!std::is_same_v<ColumnDataType, pmr_string>) {
-    return _with_string_segment_iterate_generic<ColumnDataType>(segment, callback);
+    return detail::with_string_segment_iterate_generic<ColumnDataType>(segment, callback);
   } else {
     if (const auto value_segment = std::dynamic_pointer_cast<ValueSegment<pmr_string>>(segment)) {
-      return _with_string_segment_iterate(value_segment, callback);
+      return detail::with_string_segment_iterate(value_segment, callback);
     }
 
     if (const auto dictionary_segment = std::dynamic_pointer_cast<DictionarySegment<pmr_string>>(segment)) {
-      return _with_string_segment_iterate(dictionary_segment, callback);
+      return detail::with_string_segment_iterate(dictionary_segment, callback);
     }
 
     if (const auto reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(segment)) {
-      return _with_string_segment_iterate(reference_segment, callback);
+      return detail::with_string_segment_iterate(reference_segment, callback);
     }
 
-    return _with_string_segment_iterate_generic<pmr_string>(segment, callback);
+    return detail::with_string_segment_iterate_generic<pmr_string>(segment, callback);
   }
 }
 
@@ -189,8 +193,8 @@ struct RowFormat {
   std::vector<uint8_t> column_is_nullable;
 };
 
-RowFormat _create_row_format(const TableColumnDefinitions& column_definitions,
-                             const std::vector<ColumnID>& groupby_column_ids);
+RowFormat create_row_format(const TableColumnDefinitions& column_definitions,
+                            const std::vector<ColumnID>& groupby_column_ids);
 
 struct RowView {
   uint8_t* base;
@@ -233,12 +237,12 @@ struct RowView {
   }
 
   // Heap pointer to the full value of the `string_col_index`-th string column (nullptr for short strings).
-  char* string_ptr(const size_t string_col_index) const {
-    return *reinterpret_cast<char**>(base + format.string_ptr_offset + string_col_index * sizeof(char*));
+  const char* string_ptr(const size_t string_col_index) const {
+    return *reinterpret_cast<const char**>(base + format.string_ptr_offset + (string_col_index * sizeof(char*)));
   }
 
-  void set_string_ptr(const size_t string_col_index, char* const value) const {
-    *reinterpret_cast<char**>(base + format.string_ptr_offset + string_col_index * sizeof(char*)) = value;
+  void set_string_ptr(const size_t string_col_index, const char* const value) const {
+    *reinterpret_cast<const char**>(base + format.string_ptr_offset + (string_col_index * sizeof(char*))) = value;
   }
 
   // The bytes that participate in hashing and equality: the null bitmap plus the inline key data (length + prefix
@@ -255,14 +259,16 @@ struct RowView {
 // All materialized rows of a single chunk, packed in `rows`.
 struct MaterializedRows {
   uint64_t row_count = 0;
+  // A byte buffer of `row_count` packed rows.
+  // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
   std::unique_ptr<uint8_t[]> rows;
   std::pmr::monotonic_buffer_resource string_arena;
   // Per string group-by column (indexed by string-column order).
   std::vector<bool> string_pointer_needs_copy;
 };
 
-void _materialize_rows(const RowFormat& format, const std::shared_ptr<const Chunk>& chunk,
-                       const std::vector<ColumnID>& groupby_column_ids, MaterializedRows& materialized);
+void materialize_rows(const RowFormat& format, const std::shared_ptr<const Chunk>& chunk,
+                      const std::vector<ColumnID>& groupby_column_ids, MaterializedRows& materialized);
 
 // Key into the global hash table. `row` points into the arena owned by `GroupKeyData`. `hash` is the precomputed row
 // hash, reused on every probe instead of recomputing it.
@@ -285,11 +291,11 @@ struct GroupKeyEqual {
       return false;
     }
 
-    const auto lhs_view = RowView{lhs.row, *format};
-    const auto rhs_view = RowView{rhs.row, *format};
+    const auto lhs_view = RowView{.base = lhs.row, .format = *format};
+    const auto rhs_view = RowView{.base = rhs.row, .format = *format};
 
     // Compare the null bitmap and inline key data in one shot.
-    if (std::memcmp(lhs_view.key_bytes(), rhs_view.key_bytes(), format->key_length)) {
+    if (std::memcmp(lhs_view.key_bytes(), rhs_view.key_bytes(), format->key_length) != 0) {
       return false;
     }
 
@@ -319,25 +325,26 @@ struct GroupKeyDataBase {
   std::vector<std::unique_ptr<std::pmr::monotonic_buffer_resource>> key_arenas;
 
   // PER ROW: the group index (ticket) of that input row.
+  // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
   std::unique_ptr<uint64_t[]> tickets;
   size_t group_count = 0;
 
   // Whether `global_hash_table` is populated and can be read to recover each group's group-by values from its key row.
   bool has_hash_table = false;
 
-  explicit GroupKeyDataBase(const RowFormat& _row_format) : row_format(_row_format) {}
+  explicit GroupKeyDataBase(const RowFormat& init_row_format) : row_format(init_row_format) {}
 };
 
 struct GroupKeyData : GroupKeyDataBase {
   ConcurrentTicketMap<GroupKey, GroupKeyHash, GroupKeyEqual> global_hash_table;
 
-  explicit GroupKeyData(const RowFormat& _row_format, size_t estimated_groups) : GroupKeyDataBase(_row_format) {
+  explicit GroupKeyData(const RowFormat& init_row_format, size_t estimated_groups) : GroupKeyDataBase(init_row_format) {
     global_hash_table.initialize(estimated_groups, GroupKeyHash{}, GroupKeyEqual{&this->row_format});
   }
 };
 
 // Determines the distinct groups. The returned hash table and key-row arena outlive this call.
-std::shared_ptr<GroupKeyData> _compute_groups(const std::vector<ColumnID>& groupby_column_ids,
-                                              const std::shared_ptr<const Table>& input_table);
+std::shared_ptr<GroupKeyData> compute_groups(const std::vector<ColumnID>& groupby_column_ids,
+                                             const std::shared_ptr<const Table>& input_table);
 
 }  // namespace hyrise

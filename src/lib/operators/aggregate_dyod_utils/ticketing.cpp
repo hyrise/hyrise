@@ -9,20 +9,25 @@
 #include <utility>
 #include <vector>
 
+#include "all_type_variant.hpp"
 #include "cardinality_estimation.hpp"
 #include "hyrise.hpp"
 #include "operators/aggregate_dyod_utils/concurrent_ticket_map.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
+#include "storage/abstract_segment.hpp"
+#include "storage/chunk.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/table.hpp"
+#include "storage/table_column_definition.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
 
-RowFormat _create_row_format(const TableColumnDefinitions& column_definitions,
-                             const std::vector<ColumnID>& groupby_column_ids) {
+RowFormat create_row_format(const TableColumnDefinitions& column_definitions,
+                            const std::vector<ColumnID>& groupby_column_ids) {
   const auto group_by_column_count = groupby_column_ids.size();
   auto col_offsets = std::vector<uint64_t>(group_by_column_count);
   auto column_is_nullable = std::vector<uint8_t>(group_by_column_count);
@@ -39,7 +44,7 @@ RowFormat _create_row_format(const TableColumnDefinitions& column_definitions,
 
     col_offsets[group_index] = curr_offset;
     if (column_definition.data_type == DataType::String) {
-      curr_offset += sizeof(char) * PREFIX_LENGTH + sizeof(size_t);  // prefix + length
+      curr_offset += (sizeof(char) * PREFIX_LENGTH) + sizeof(size_t);  // prefix + length
       string_column_count++;
     } else {
       resolve_data_type(column_definition.data_type, [&](auto type) {
@@ -54,7 +59,7 @@ RowFormat _create_row_format(const TableColumnDefinitions& column_definitions,
   const auto data_offset = null_bitmap_size;  // null bitmap (if present)
   const auto null_bitmap_offset = uint64_t{0};
   const auto string_ptr_offset = data_offset + curr_offset;
-  const auto row_size = string_ptr_offset + string_column_count * sizeof(char*);
+  const auto row_size = string_ptr_offset + (string_column_count * sizeof(char*));
 
   return RowFormat{.row_size = row_size,
                    .null_bitmap_offset = null_bitmap_offset,
@@ -71,14 +76,14 @@ RowFormat _create_row_format(const TableColumnDefinitions& column_definitions,
 // at the segment's own string storage instead of copying. Other kinds fall back to the generic copying iterator.
 // materialized.string_pointer_needs_copy` records, per string column, whether its long-string pointers reference the
 // transient per-chunk arena (and so must be promoted on insert) or stable source memory.
-void _materialize_string_column(const RowFormat& format, const std::shared_ptr<AbstractSegment>& segment,
-                                const size_t group_by_column_index, const size_t string_col_index,
-                                const uint64_t null_mask_bit, MaterializedRows& materialized) {
+static void materialize_string_column(const RowFormat& format, const std::shared_ptr<AbstractSegment>& segment,
+                                      const size_t group_by_column_index, const size_t string_col_index,
+                                      const uint64_t null_mask_bit, MaterializedRows& materialized) {
   auto* const rows = materialized.rows.get();
   auto& string_arena = materialized.string_arena;
 
   const auto row_at = [&](const size_t offset) {
-    return RowView{rows + offset * format.row_size, format};
+    return RowView{.base = rows + (offset * format.row_size), .format = format};
   };
 
   // Writes the inline part of a string value ([length, prefix]) into `row`'s slot for this column. Returns whether the
@@ -95,7 +100,7 @@ void _materialize_string_column(const RowFormat& format, const std::shared_ptr<A
   // referenced table).
   const auto write_stable_string = [&](const RowView& row, const pmr_string& value) {
     if (write_inline(row, value.c_str(), value.size())) {
-      row.set_string_ptr(string_col_index, const_cast<char*>(value.c_str()));
+      row.set_string_ptr(string_col_index, value.c_str());
     }
   };
 
@@ -135,8 +140,8 @@ void _materialize_string_column(const RowFormat& format, const std::shared_ptr<A
 }
 
 // TODO(@anyone): think about alignment and padding, also sort string_columns to be last in groupby columns?
-void _materialize_rows(const RowFormat& format, const std::shared_ptr<const Chunk>& chunk,
-                       const std::vector<ColumnID>& groupby_column_ids, MaterializedRows& materialized) {
+void materialize_rows(const RowFormat& format, const std::shared_ptr<const Chunk>& chunk,
+                      const std::vector<ColumnID>& groupby_column_ids, MaterializedRows& materialized) {
   const auto chunk_size = chunk->size();
 
   // The row buffer and string arena are owned by the caller and reused across chunks.
@@ -158,13 +163,13 @@ void _materialize_rows(const RowFormat& format, const std::shared_ptr<const Chun
       using ColumnDataType = typename decltype(type)::type;
 
       if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
-        _materialize_string_column(format, segment, group_by_column_index, string_col_index, null_mask_bit,
-                                   materialized);
+        materialize_string_column(format, segment, group_by_column_index, string_col_index, null_mask_bit,
+                                  materialized);
         ++string_col_index;
       } else {
         auto chunk_offset = size_t{0};
         segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
-          const auto row = RowView{rows + chunk_offset * format.row_size, format};
+          const auto row = RowView{.base = rows + (chunk_offset * format.row_size), .format = format};
           ++chunk_offset;
           if (position.is_null()) {
             row.set_null_bitmap(row.null_bitmap() | null_mask_bit);
@@ -177,25 +182,23 @@ void _materialize_rows(const RowFormat& format, const std::shared_ptr<const Chun
   }
 }
 
-const auto THREAD_COUNT = Hyrise::get().topology.num_cpus();
-
-constexpr auto TICKET_RANGE_LENGTH = uint64_t{1} << 10;  // 1024 tickets per thread
+constexpr auto TICKET_RANGE_LENGTH = uint64_t{1} << 10U;  // 1024 tickets per thread
 
 // Copies a materialized key row into `arena` so it outlives the transient materialize buffer. Long strings that still
 // live in the per-chunk arena are copied alongside it. Strings that already point at stable source memory (value,
 // dictionary segments or referenced ones) are left as is.
-GroupKey _promote_key_row(const RowFormat& format, const uint8_t* const row_ptr, const uint64_t row_hash,
-                          const MaterializedRows& materialized, std::pmr::monotonic_buffer_resource& arena) {
+static GroupKey promote_key_row(const RowFormat& format, const uint8_t* const row_ptr, const uint64_t row_hash,
+                                const MaterializedRows& materialized, std::pmr::monotonic_buffer_resource& arena) {
   auto* const row_copy = static_cast<uint8_t*>(arena.allocate(format.row_size, alignof(uint64_t)));
   std::memcpy(row_copy, row_ptr, format.row_size);
 
-  const auto copy_view = RowView{row_copy, format};
+  const auto copy_view = RowView{.base = row_copy, .format = format};
   const auto string_col_count = copy_view.string_col_count();
   for (auto string_col_index = size_t{0}; string_col_index < string_col_count; ++string_col_index) {
     if (!materialized.string_pointer_needs_copy[string_col_index]) {
       continue;
     }
-    auto* const str_ptr = copy_view.string_ptr(string_col_index);
+    const auto* const str_ptr = copy_view.string_ptr(string_col_index);
     if (str_ptr != nullptr) {
       const auto length = std::strlen(str_ptr) + 1;
       auto* const arena_str = static_cast<char*>(arena.allocate(length));
@@ -208,13 +211,14 @@ GroupKey _promote_key_row(const RowFormat& format, const uint8_t* const row_ptr,
 
 // Returns the number of unused tickets, after removing all trailing gaps from the fuzzy ticketing.
 template <typename HashTable>
-uint64_t remove_fuzzy_ticketing_gaps(std::vector<std::pair<uint64_t, uint64_t>>& ticket_gaps,
-                                     std::unique_ptr<uint64_t[]>& tickets, const uint64_t row_count,
-                                     HashTable& global_hash_table, bool ignore_hash_map = false) {
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays): see `GroupKeyDataBase`
+static uint64_t remove_fuzzy_ticketing_gaps(std::vector<std::pair<uint64_t, uint64_t>>& ticket_gaps,
+                                            std::unique_ptr<uint64_t[]>& tickets, const uint64_t row_count,
+                                            HashTable& global_hash_table, bool ignore_hash_map = false) {
   const auto job_count = ticket_gaps.size();
 
   // Sort gaps to prefix-sum the unused ticket counts.
-  std::sort(ticket_gaps.begin(), ticket_gaps.end());
+  std::ranges::sort(ticket_gaps);
   auto sorted_gap_starts = std::vector<uint64_t>(job_count);
   // `unused_before_gap[i]` is the total number of unused tickets in all gaps ordered before gap `i`.
   auto unused_before_gap = std::vector<uint64_t>(job_count + 1, 0);
@@ -226,8 +230,8 @@ uint64_t remove_fuzzy_ticketing_gaps(std::vector<std::pair<uint64_t, uint64_t>>&
 
   // A used ticket must be shifted down by the total size of all gaps preceeding it.
   const auto compact = [&](const uint64_t ticket) {
-    const auto gaps_below = static_cast<size_t>(
-        std::lower_bound(sorted_gap_starts.begin(), sorted_gap_starts.end(), ticket) - sorted_gap_starts.begin());
+    const auto gaps_below =
+        static_cast<size_t>(std::ranges::lower_bound(sorted_gap_starts, ticket) - sorted_gap_starts.begin());
     return ticket - unused_before_gap[gaps_below];
   };
 
@@ -261,14 +265,15 @@ uint64_t remove_fuzzy_ticketing_gaps(std::vector<std::pair<uint64_t, uint64_t>>&
 // range 'cursor' is fought over once per range rather than once per group (= fuzzy ticketing). The trailing unused
 // tickets of each thread's last range are compacted afterwards so the final tickets form a dense [0, group_count)
 // range.
-std::shared_ptr<GroupKeyData> _compute_groups_multi_column(const std::vector<ColumnID>& groupby_column_ids,
-                                                           const std::shared_ptr<const Table>& input_table) {
-  const auto row_format = _create_row_format(input_table->column_definitions(), groupby_column_ids);
+static std::shared_ptr<GroupKeyData> compute_groups_multi_column(const std::vector<ColumnID>& groupby_column_ids,
+                                                                 const std::shared_ptr<const Table>& input_table) {
+  const auto row_format = create_row_format(input_table->column_definitions(), groupby_column_ids);
   const auto chunk_count = input_table->chunk_count();
 
   // Guard the offset computation below, which would underflow `chunk_count - 1` on an empty table.
   if (chunk_count == 0) {
     auto group_key_data = std::make_shared<GroupKeyData>(row_format, 0);
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
     group_key_data->tickets = std::make_unique_for_overwrite<uint64_t[]>(0);
     group_key_data->group_count = 0;
     group_key_data->has_hash_table = true;
@@ -293,6 +298,7 @@ std::shared_ptr<GroupKeyData> _compute_groups_multi_column(const std::vector<Col
       estimate_group_count_multi_column(row_format, groupby_column_ids, input_table, max_chunk_size);
 
   auto group_key_data = std::make_shared<GroupKeyData>(row_format, estimated_groups);
+  // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
   group_key_data->tickets = std::make_unique_for_overwrite<uint64_t[]>(row_count);
   auto& global_hash_table = group_key_data->global_hash_table;
 
@@ -304,21 +310,21 @@ std::shared_ptr<GroupKeyData> _compute_groups_multi_column(const std::vector<Col
                                  std::pmr::monotonic_buffer_resource& arena, uint64_t& next_ticket,
                                  uint64_t& ticket_range_end) {
     const auto& chunk = input_table->get_chunk(chunk_id);
-    _materialize_rows(row_format, chunk, groupby_column_ids, materialized);
+    materialize_rows(row_format, chunk, groupby_column_ids, materialized);
 
     const auto promote_key = [&](const GroupKey& key) {
-      return _promote_key_row(row_format, key.row, key.hash, materialized, arena);
+      return promote_key_row(row_format, key.row, key.hash, materialized, arena);
     };
 
     global_hash_table.register_prober();
     auto* row_ptr = materialized.rows.get();
     const auto chunk_start = ticket_offsets[chunk_id];
     for (auto chunk_offset = size_t{0}; chunk_offset < materialized.row_count; ++chunk_offset) {
-      const auto row_view = RowView{row_ptr, row_format};
+      const auto row_view = RowView{.base = row_ptr, .format = row_format};
       const auto row_hash = compute_hash(row_view.key_bytes(), row_format.key_length);
 
-      const auto ticket =
-          global_hash_table.try_emplace(GroupKey{row_view.key_bytes(), row_hash}, next_ticket, promote_key);
+      const auto ticket = global_hash_table.try_emplace(GroupKey{.row = row_view.key_bytes(), .hash = row_hash},
+                                                        next_ticket, promote_key);
 
       // If the ticket was inserted, then increment the ticket. If our range is exhausted, claim a new one.
       if (ticket == next_ticket) {
@@ -338,7 +344,7 @@ std::shared_ptr<GroupKeyData> _compute_groups_multi_column(const std::vector<Col
 
   // One arena per grouping thread. Because each thread only ever allocates from its own arena, copying newly
   // seen group keys needs no locking.
-  const auto job_count = std::min<size_t>(THREAD_COUNT, chunk_count);
+  const auto job_count = std::min<size_t>(Hyrise::get().topology.num_cpus(), chunk_count);
   auto& arenas = group_key_data->key_arenas;
   arenas.reserve(job_count);
   for (auto arena_id = size_t{0}; arena_id < job_count; ++arena_id) {
@@ -356,6 +362,7 @@ std::shared_ptr<GroupKeyData> _compute_groups_multi_column(const std::vector<Col
     jobs.emplace_back(std::make_shared<JobTask>([&process_chunk, &row_format, &arenas, &next_ticket_range_start,
                                                  &ticket_gaps, max_chunk_size, chunk_count, &next_chunk_id, job_id]() {
       auto materialized = MaterializedRows{};
+      // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
       materialized.rows = std::make_unique<uint8_t[]>(max_chunk_size * row_format.row_size);
       auto& arena = *arenas[job_id];
 
@@ -384,8 +391,8 @@ std::shared_ptr<GroupKeyData> _compute_groups_multi_column(const std::vector<Col
 }
 
 // Fast path for a single non-string group-by column. Here the value is the key, so we do not need to materialize rows.
-std::shared_ptr<GroupKeyData> _compute_groups_single_column(const ColumnID groupby_column_id,
-                                                            const std::shared_ptr<const Table>& input_table) {
+static std::shared_ptr<GroupKeyData> compute_groups_single_column(const ColumnID groupby_column_id,
+                                                                  const std::shared_ptr<const Table>& input_table) {
   const auto data_type = input_table->column_data_type(groupby_column_id);
   const auto chunk_count = input_table->chunk_count();
 
@@ -403,7 +410,7 @@ std::shared_ptr<GroupKeyData> _compute_groups_single_column(const ColumnID group
       // without coordination. If no NULL shows up, the reserved ticket is compacted away like any other unused ticket
       // (see the gap we register below).
       const auto reserves_null_ticket = input_table->column_is_nullable(groupby_column_id);
-      constexpr auto null_ticket = uint64_t{0};
+      constexpr auto NULL_TICKET = uint64_t{0};
       auto has_null = std::atomic<bool>{false};
 
       // Row index of each chunk's first row, so `(chunk_id, chunk_offset)` maps into the flat `tickets` vector.
@@ -421,6 +428,7 @@ std::shared_ptr<GroupKeyData> _compute_groups_single_column(const ColumnID group
       // `estimated_groups`.
       auto group_key_data = std::make_shared<GroupKeyData>(RowFormat{}, 0);
       auto& tickets = group_key_data->tickets;
+      // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
       tickets = std::make_unique_for_overwrite<uint64_t[]>(input_table->row_count());
 
       if (chunk_count == 0) {
@@ -441,7 +449,7 @@ std::shared_ptr<GroupKeyData> _compute_groups_single_column(const ColumnID group
         value_to_ticket.register_prober();
 
         segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
-          auto current_ticket = null_ticket;
+          auto current_ticket = NULL_TICKET;
           if (position.is_null()) {
             DebugAssert(reserves_null_ticket, "Found a NULL in a column that the table declares as non-nullable.");
             has_null.store(true, std::memory_order_relaxed);
@@ -462,7 +470,7 @@ std::shared_ptr<GroupKeyData> _compute_groups_single_column(const ColumnID group
         value_to_ticket.unregister_prober();
       };
 
-      const auto job_count = std::min<size_t>(THREAD_COUNT, chunk_count);
+      const auto job_count = std::min<size_t>(Hyrise::get().topology.num_cpus(), chunk_count);
 
       // Threads steal chunks from a shared cursor and hand out tickets from their own ranges. When a thread stops it
       // usually leaves a trailing gap [next_ticket, ticket_range_end) of unused tickets at the end of its last claimed
@@ -491,7 +499,7 @@ std::shared_ptr<GroupKeyData> _compute_groups_single_column(const ColumnID group
       if (reserves_null_ticket && !has_null.load(std::memory_order_relaxed)) {
         // The column is nullable, but holds no NULL: hand the reserved ticket to the compaction as an unused range so
         // that it neither ends up in `group_count` nor leaves a hole in the [0, group_count) ticket range.
-        ticket_gaps.emplace_back(null_ticket, null_ticket + 1);
+        ticket_gaps.emplace_back(NULL_TICKET, NULL_TICKET + 1);
       }
 
       group_key_data->group_count =
@@ -504,16 +512,16 @@ std::shared_ptr<GroupKeyData> _compute_groups_single_column(const ColumnID group
   return return_group_key_data;
 }
 
-std::shared_ptr<GroupKeyData> _compute_groups(const std::vector<ColumnID>& groupby_column_ids,
-                                              const std::shared_ptr<const Table>& input_table) {
+std::shared_ptr<GroupKeyData> compute_groups(const std::vector<ColumnID>& groupby_column_ids,
+                                             const std::shared_ptr<const Table>& input_table) {
   // We do not support non-trivial types in the concurrent HashMap, so. we fall back to the multi-column path for
   // single-column group-bys on strings.
   if (groupby_column_ids.size() == 1 && input_table->column_data_type(groupby_column_ids[0]) != DataType::String) {
     // For a single column, we can use the concurrent ticketing path, which is faster than the multi-column path.
     const auto column_id = groupby_column_ids[0];
-    return _compute_groups_single_column(column_id, input_table);
+    return compute_groups_single_column(column_id, input_table);
   }
-  return _compute_groups_multi_column(groupby_column_ids, input_table);
+  return compute_groups_multi_column(groupby_column_ids, input_table);
 }
 
 }  // namespace hyrise

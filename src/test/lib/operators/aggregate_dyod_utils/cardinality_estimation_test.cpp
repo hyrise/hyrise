@@ -82,7 +82,7 @@ TEST_F(CardinalityEstimationTest, EmptyTableEstimatesSingleGroup) {
   const auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{1'000});
 
   const auto groupby_column_ids = std::vector<ColumnID>{ColumnID{0}, ColumnID{1}};
-  const auto row_format = _create_row_format(table->column_definitions(), groupby_column_ids);
+  const auto row_format = create_row_format(table->column_definitions(), groupby_column_ids);
 
   EXPECT_EQ(estimate_group_count_multi_column(row_format, groupby_column_ids, table, 1'000), 1);
   EXPECT_EQ(estimate_group_count_single_column<int32_t>(ColumnID{0}, table), 1);
@@ -91,7 +91,7 @@ TEST_F(CardinalityEstimationTest, EmptyTableEstimatesSingleGroup) {
 TEST_F(CardinalityEstimationTest, MultiColumnEstimateIsCloseToGroupCount) {
   const auto table = create_two_column_table(DISTINCT_GROUP_COUNT);
   const auto groupby_column_ids = std::vector<ColumnID>{ColumnID{0}, ColumnID{1}};
-  const auto row_format = _create_row_format(table->column_definitions(), groupby_column_ids);
+  const auto row_format = create_row_format(table->column_definitions(), groupby_column_ids);
 
   const auto estimate = estimate_group_count_multi_column(row_format, groupby_column_ids, table, 1'000);
 

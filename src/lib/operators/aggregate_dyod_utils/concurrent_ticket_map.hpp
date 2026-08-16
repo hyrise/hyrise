@@ -10,64 +10,63 @@
 #include <functional>
 #include <limits>
 #include <memory>
-#include <utility>
 #include <vector>
 
 #include "hyrise.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 
-inline std::uint64_t rotl(std::uint64_t x, int r) {
-  return (x << r) | (x >> (64 - r));
+inline std::uint64_t rotl(const std::uint64_t value, const std::uint64_t rotation) {
+  return (value << rotation) | (value >> (64U - rotation));
 }
 
-inline std::uint64_t read64(const unsigned char* p) {
-  std::uint64_t v;
-  std::memcpy(&v, p, sizeof v);
-  return v;
+inline std::uint64_t read64(const unsigned char* const bytes) {
+  auto value = std::uint64_t{0};
+  std::memcpy(&value, bytes, sizeof(value));
+  return value;
 }
 
-inline std::uint64_t fmix64(std::uint64_t k) {
-  k ^= k >> 33;
-  k *= 0xff51afd7ed558ccdULL;
-  k ^= k >> 33;
-  k *= 0xc4ceb9fe1a85ec53ULL;
-  k ^= k >> 33;
-  return k;
+inline std::uint64_t fmix64(std::uint64_t value) {
+  value ^= value >> 33U;
+  value *= 0xff51afd7ed558ccdULL;
+  value ^= value >> 33U;
+  value *= 0xc4ceb9fe1a85ec53ULL;
+  value ^= value >> 33U;
+  return value;
 }
 
 inline std::uint64_t compute_hash(const void* key, std::size_t len, std::uint64_t seed = 0) {
-  const unsigned char* p = static_cast<const unsigned char*>(key);
-  const std::size_t nblocks = len / 8;
+  const auto* bytes = static_cast<const unsigned char*>(key);
+  const auto block_count = len / 8;
 
-  constexpr std::uint64_t c1 = 0x87c37b91114253d5ULL;
-  constexpr std::uint64_t c2 = 0x4cf5ad432745937fULL;
+  constexpr auto MURMUR_C1 = std::uint64_t{0x87c37b91114253d5ULL};
+  constexpr auto MURMUR_C2 = std::uint64_t{0x4cf5ad432745937fULL};
 
-  std::uint64_t h = seed;
+  auto hash = seed;
 
-  for (std::size_t i = 0; i < nblocks; ++i) {
-    std::uint64_t k = read64(p + i * 8);
-    k *= c1;
-    k = rotl(k, 31);
-    k *= c2;
-    h ^= k;
-    h = rotl(h, 27);
-    h = h * 5 + 0x52dce729ULL;
+  for (auto block_index = std::size_t{0}; block_index < block_count; ++block_index) {
+    auto block = read64(bytes + (block_index * 8));
+    block *= MURMUR_C1;
+    block = rotl(block, 31);
+    block *= MURMUR_C2;
+    hash ^= block;
+    hash = rotl(hash, 27);
+    hash = (hash * 5) + 0x52dce729ULL;
   }
 
-  if (len & 4) {
-    std::uint32_t t;
-    std::memcpy(&t, p + nblocks * 8, 4);  // single 32-bit load, no UB
-    std::uint64_t k = t;
-    k *= c1;
-    k = rotl(k, 31);
-    k *= c2;
-    h ^= k;
-    // no h = rotl/h*5+const here, matching MurmurHash3's tail
+  if ((len & 4U) != 0U) {
+    auto tail = std::uint32_t{0};
+    std::memcpy(&tail, bytes + (block_count * 8), 4);  // single 32-bit load, no UB
+    auto block = std::uint64_t{tail};
+    block *= MURMUR_C1;
+    block = rotl(block, 31);
+    block *= MURMUR_C2;
+    hash ^= block;
+    // no hash = rotl/hash*5+const here, matching MurmurHash3's tail
   }
 
   // We do not avalanche (using `fmix64`) here, because this is done inside `ConcurrentTicketMap::try_emplace`.
-  return h;
+  return hash;
 }
 
 namespace hyrise {
@@ -94,12 +93,14 @@ class ConcurrentTicketMap {
 
     auto capacity = MIN_CAPACITY;
     while (static_cast<double>(capacity) * MAX_LOAD_FACTOR < static_cast<double>(max_groups + 1)) {
-      capacity <<= 1;
+      capacity <<= 1U;
     }
     _capacity = capacity;
     _mask = capacity - 1;
     _probe_limit = _max_probe_count(capacity);
 
+    // `calloc` is deliberate here, because it hands out lazily zeroed pages.
+    // NOLINTNEXTLINE(cppcoreguidelines-no-malloc,cppcoreguidelines-owning-memory,hicpp-no-malloc)
     auto* new_slots_ptr = static_cast<Slot*>(std::calloc(_capacity, sizeof(Slot)));
     Assert(new_slots_ptr, "Failed to allocate memory for ConcurrentTicketMap.");
     _slots = SlotArray{new_slots_ptr};
@@ -107,13 +108,13 @@ class ConcurrentTicketMap {
   }
 
   uint64_t try_emplace(const Key& key, const uint64_t ticket) {
-    return try_emplace(key, ticket, [](const Key& probe_key) -> const Key& {
+    return try_emplace(key, ticket, [](const Key& probe_key) {
       return probe_key;
     });
   }
 
   template <typename Fn>
-  uint64_t try_emplace(const Key& key, const uint64_t ticket, Fn&& promote_key) {
+  uint64_t try_emplace(const Key& key, const uint64_t ticket, const Fn& promote_key) {
     const auto hash = fmix64(static_cast<uint64_t>(_hash(key)));
 
     while (true) {
@@ -168,9 +169,10 @@ class ConcurrentTicketMap {
 
     auto new_capacity = MIN_CAPACITY;
     while (static_cast<double>(new_capacity) * MAX_LOAD_FACTOR < static_cast<double>(new_max_groups + 1)) {
-      new_capacity <<= 1;
+      new_capacity <<= 1U;
     }
 
+    // NOLINTNEXTLINE(cppcoreguidelines-no-malloc,cppcoreguidelines-owning-memory,hicpp-no-malloc)
     auto* new_slots_ptr = static_cast<Slot*>(std::calloc(new_capacity, sizeof(Slot)));
     Assert(new_slots_ptr, "Failed to allocate memory for ConcurrentTicketMap.");
     SlotArray new_slots{new_slots_ptr};
@@ -205,12 +207,12 @@ class ConcurrentTicketMap {
   }
 
   template <typename Fn>
-  void remap_tickets(Fn&& fn) {
-    _parallel_for_slot_ranges([this, &fn](const size_t begin, const size_t end) {
+  void remap_tickets(const Fn& callback) {
+    _parallel_for_slot_ranges([this, &callback](const size_t begin, const size_t end) {
       for (auto index = begin; index < end; ++index) {
         const auto state = _slots[index].state.load(std::memory_order_relaxed);
         if (state >= TICKET_BIAS) {
-          _slots[index].state.store(fn(state - TICKET_BIAS) + TICKET_BIAS, std::memory_order_relaxed);
+          _slots[index].state.store(callback(state - TICKET_BIAS) + TICKET_BIAS, std::memory_order_relaxed);
         }
       }
     });
@@ -221,18 +223,18 @@ class ConcurrentTicketMap {
   }
 
   template <typename Fn>
-  void for_each_slot_range(const size_t first_slot, const size_t end_slot, Fn&& fn) const {
+  void for_each_slot_range(const size_t first_slot, const size_t end_slot, const Fn& callback) const {
     for (auto index = first_slot; index < end_slot; ++index) {
       const auto state = _slots[index].state.load();
       if (state >= TICKET_BIAS) {
-        fn(_slots[index].key, state - TICKET_BIAS);
+        callback(_slots[index].key, state - TICKET_BIAS);
       }
     }
   }
 
   template <typename Fn>
-  void for_each(Fn&& fn) const {
-    for_each_slot_range(0, _capacity, std::forward<Fn>(fn));
+  void for_each(const Fn& callback) const {
+    for_each_slot_range(0, _capacity, callback);
   }
 
   void register_prober() {
@@ -261,10 +263,12 @@ class ConcurrentTicketMap {
 
   struct SlotArrayDeleter {
     void operator()(Slot* slots) const noexcept {
+      // NOLINTNEXTLINE(cppcoreguidelines-no-malloc,cppcoreguidelines-owning-memory,hicpp-no-malloc)
       std::free(static_cast<void*>(slots));
     }
   };
 
+  // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
   using SlotArray = std::unique_ptr<Slot[], SlotArrayDeleter>;
 
   static constexpr auto EMPTY = uint64_t{0};
@@ -273,13 +277,13 @@ class ConcurrentTicketMap {
   static constexpr auto PLACE_HOLDER = std::numeric_limits<uint64_t>::max() - TICKET_BIAS;
   static constexpr auto MIN_CAPACITY = size_t{16};
   static constexpr auto MAX_LOAD_FACTOR = 0.7;
-  static constexpr auto PARALLEL_INIT_SLOTS = size_t{1} << 18;
+  static constexpr auto PARALLEL_INIT_SLOTS = size_t{1} << 18U;
   static constexpr auto MIN_PROBE_COUNT = size_t{8};
 
   // From Knuth's hashing result for the expected number of probes in an unsuccessful search. (The maximum probe count
   // then grows logarithmically with table size).
   static constexpr size_t _max_probe_count(const size_t capacity, const double load_factor = MAX_LOAD_FACTOR) {
-    const auto average_probes = 0.5 * (1.0 + 1.0 / ((1.0 - load_factor) * (1.0 - load_factor)));
+    const auto average_probes = 0.5 * (1.0 + (1.0 / ((1.0 - load_factor) * (1.0 - load_factor))));
     // `capacity` is a power of two, so `bit_width - 1` is an exact log2.
     const auto log2_capacity = static_cast<double>(std::bit_width(capacity) - 1);
     const auto probe_count = static_cast<size_t>(average_probes * log2_capacity);
@@ -288,9 +292,9 @@ class ConcurrentTicketMap {
 
   // Splits capacity into ranges and for each range runs `fn(begin, end)`.
   template <typename Fn>
-  void _parallel_for_slot_ranges(Fn&& fn) {
+  void _parallel_for_slot_ranges(const Fn& callback) {
     if (_capacity <= PARALLEL_INIT_SLOTS) {
-      fn(size_t{0}, _capacity);
+      callback(size_t{0}, _capacity);
       return;
     }
 
@@ -303,8 +307,8 @@ class ConcurrentTicketMap {
     for (auto job_id = size_t{0}; job_id < job_count; ++job_id) {
       const auto begin = job_id * slots_per_job;
       const auto end = job_id + 1 == job_count ? _capacity : begin + slots_per_job;
-      jobs.emplace_back(std::make_shared<JobTask>([&fn, begin, end] {
-        fn(begin, end);
+      jobs.emplace_back(std::make_shared<JobTask>([&callback, begin, end] {
+        callback(begin, end);
       }));
     }
     Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);

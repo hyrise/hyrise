@@ -761,7 +761,7 @@ std::shared_ptr<const Table> AggregateDYOD::groupby_aggregate() {
   const auto groupby_column_count = _groupby_column_ids.size();
   const auto thread_count = Hyrise::get().topology.num_cpus();
 
-  auto groups = _compute_groups(_groupby_column_ids, input_table);
+  auto groups = compute_groups(_groupby_column_ids, input_table);
   const auto group_count = groups->group_count;
   const auto* const tickets = groups->tickets.get();
 
