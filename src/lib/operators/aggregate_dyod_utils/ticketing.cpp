@@ -219,7 +219,7 @@ static GroupKey promote_key_row(const RowFormat& format, const uint8_t* const ro
 
 // Returns the number of unused tickets, after removing all trailing gaps from the fuzzy ticketing.
 template <typename HashTable>
-// NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays): see `GroupKeyDataBase`
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays): (`GroupKeyDataBase`)
 static uint64_t remove_fuzzy_ticketing_gaps(std::vector<std::pair<uint64_t, uint64_t>>& ticket_gaps,
                                             std::unique_ptr<uint64_t[]>& tickets, const uint64_t row_count,
                                             HashTable& global_hash_table, bool ignore_hash_map = false) {
