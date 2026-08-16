@@ -26,55 +26,10 @@
 
 namespace hyrise {
 
-static constexpr uint64_t align(const uint64_t offset, const uint64_t alignment) {
+namespace {
+
+constexpr uint64_t align(const uint64_t offset, const uint64_t alignment) {
   return (offset % alignment == 0) ? offset : (offset + (alignment - (offset % alignment)));
-}
-
-RowFormat create_row_format(const TableColumnDefinitions& column_definitions,
-                            const std::vector<ColumnID>& groupby_column_ids) {
-  const auto group_by_column_count = groupby_column_ids.size();
-  auto col_offsets = std::vector<uint64_t>(group_by_column_count);
-  auto column_is_nullable = std::vector<uint8_t>(group_by_column_count);
-  auto string_column_count = uint64_t{0};
-  auto stores_nulls = false;
-
-  auto curr_offset = uint64_t{0};
-  for (auto group_index = size_t{0}; group_index < group_by_column_count; ++group_index) {
-    const auto column_id = groupby_column_ids[group_index];
-    const auto& column_definition = column_definitions[column_id];
-
-    column_is_nullable[group_index] = column_definition.nullable ? 1 : 0;
-    stores_nulls |= column_definition.nullable;
-
-    col_offsets[group_index] = curr_offset;
-    if (column_definition.data_type == DataType::String) {
-      curr_offset += (sizeof(char) * PREFIX_LENGTH) + sizeof(size_t);  // prefix + length
-      string_column_count++;
-    } else {
-      resolve_data_type(column_definition.data_type, [&](auto type) {
-        using ColumnDataType = typename decltype(type)::type;
-        curr_offset += sizeof(ColumnDataType);
-      });
-    }
-  }
-
-  // The null bitmap is only present when at least one group-by column is nullable.
-  const auto null_bitmap_size = stores_nulls ? sizeof(uint64_t) : uint64_t{0};
-  const auto data_offset = null_bitmap_size;  // null bitmap (if present)
-  const auto null_bitmap_offset = uint64_t{0};
-  const auto key_length = (data_offset + curr_offset) - null_bitmap_offset;
-  const auto string_ptr_offset = align(data_offset + curr_offset, alignof(char*));
-  const auto row_size = align(string_ptr_offset + (string_column_count * sizeof(char*)), ROW_ALIGNMENT);
-
-  return RowFormat{.row_size = row_size,
-                   .null_bitmap_offset = null_bitmap_offset,
-                   .data_offset = data_offset,
-                   .string_ptr_offset = string_ptr_offset,
-                   .key_length = key_length,
-                   .string_column_count = string_column_count,
-                   .stores_nulls = stores_nulls,
-                   .col_offsets = std::move(col_offsets),
-                   .column_is_nullable = std::move(column_is_nullable)};
 }
 
 // Materializes one string group-by column of a chunk into the packed rows. Dispatches on the
@@ -82,9 +37,9 @@ RowFormat create_row_format(const TableColumnDefinitions& column_definitions,
 // at the segment's own string storage instead of copying. Other kinds fall back to the generic copying iterator.
 // materialized.string_pointer_needs_copy` records, per string column, whether its long-string pointers reference the
 // transient per-chunk arena (and so must be promoted on insert) or stable source memory.
-static void materialize_string_column(const RowFormat& format, const std::shared_ptr<AbstractSegment>& segment,
-                                      const size_t group_by_column_index, const size_t string_col_index,
-                                      const uint64_t null_mask_bit, MaterializedRows& materialized) {
+void materialize_string_column(const RowFormat& format, const std::shared_ptr<AbstractSegment>& segment,
+                               const size_t group_by_column_index, const size_t string_col_index,
+                               const uint64_t null_mask_bit, MaterializedRows& materialized) {
   auto* const rows = materialized.rows.get();
   auto& string_arena = materialized.string_arena;
 
@@ -145,58 +100,13 @@ static void materialize_string_column(const RowFormat& format, const std::shared
   materialized.string_pointer_needs_copy.push_back(needs_copy);
 }
 
-// TODO(@anyone): sort string_columns to be last in groupby columns?
-void materialize_rows(const RowFormat& format, const std::shared_ptr<const Chunk>& chunk,
-                      const std::vector<ColumnID>& groupby_column_ids, MaterializedRows& materialized) {
-  const auto chunk_size = chunk->size();
-
-  // The row buffer and string arena are owned by the caller and reused across chunks.
-  materialized.row_count = chunk_size;
-  materialized.string_pointer_needs_copy.clear();
-  materialized.string_arena.release();
-  auto* const rows = materialized.rows.get();
-  // `row_size` is a multiple of `ROW_ALIGNMENT`, so an aligned buffer start makes every row aligned.
-  DebugAssert(reinterpret_cast<uintptr_t>(rows) % ROW_ALIGNMENT == 0, "Row buffer is not sufficiently aligned.");
-  std::memset(rows, 0, static_cast<size_t>(chunk_size) * format.row_size);
-
-  // Index of the current string column among the group-by columns. Selects which string-pointer slot to write.
-  auto string_col_index = size_t{0};
-  for (auto group_by_column_index = size_t{0}; group_by_column_index < groupby_column_ids.size();
-       ++group_by_column_index) {
-    const auto column_id = groupby_column_ids[group_by_column_index];
-    const auto& segment = chunk->get_segment(column_id);
-    const auto null_mask_bit = uint64_t{1} << group_by_column_index;
-
-    resolve_data_type(segment->data_type(), [&](auto type) {
-      using ColumnDataType = typename decltype(type)::type;
-
-      if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
-        materialize_string_column(format, segment, group_by_column_index, string_col_index, null_mask_bit,
-                                  materialized);
-        ++string_col_index;
-      } else {
-        auto chunk_offset = size_t{0};
-        segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
-          const auto row = RowView{.base = rows + (chunk_offset * format.row_size), .format = format};
-          ++chunk_offset;
-          if (position.is_null()) {
-            row.set_null_bitmap(row.null_bitmap() | null_mask_bit);
-            return;
-          }
-          row.write_value(group_by_column_index, position.value());
-        });
-      }
-    });
-  }
-}
-
 constexpr auto TICKET_RANGE_LENGTH = uint64_t{1} << 10U;  // 1024 tickets per thread
 
 // Copies a materialized key row into `arena` so it outlives the transient materialize buffer. Long strings that still
 // live in the per-chunk arena are copied alongside it. Strings that already point at stable source memory (value,
 // dictionary segments or referenced ones) are left as is.
-static GroupKey promote_key_row(const RowFormat& format, const uint8_t* const row_ptr, const uint64_t row_hash,
-                                const MaterializedRows& materialized, std::pmr::monotonic_buffer_resource& arena) {
+GroupKey promote_key_row(const RowFormat& format, const uint8_t* const row_ptr, const uint64_t row_hash,
+                         const MaterializedRows& materialized, std::pmr::monotonic_buffer_resource& arena) {
   auto* const row_copy = static_cast<uint8_t*>(arena.allocate(format.row_size, ROW_ALIGNMENT));
   std::memcpy(row_copy, row_ptr, format.row_size);
 
@@ -218,11 +128,12 @@ static GroupKey promote_key_row(const RowFormat& format, const uint8_t* const ro
 }
 
 // Returns the number of unused tickets, after removing all trailing gaps from the fuzzy ticketing.
+// The C-style array type mirrors the `tickets` member of `GroupKeyDataBase`.
+// NOLINTBEGIN(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
 template <typename HashTable>
-// NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays): (`GroupKeyDataBase`)
-static uint64_t remove_fuzzy_ticketing_gaps(std::vector<std::pair<uint64_t, uint64_t>>& ticket_gaps,
-                                            std::unique_ptr<uint64_t[]>& tickets, const uint64_t row_count,
-                                            HashTable& global_hash_table, bool ignore_hash_map = false) {
+uint64_t remove_fuzzy_ticketing_gaps(std::vector<std::pair<uint64_t, uint64_t>>& ticket_gaps,
+                                     std::unique_ptr<uint64_t[]>& tickets, const uint64_t row_count,
+                                     HashTable& global_hash_table, bool ignore_hash_map = false) {
   const auto job_count = ticket_gaps.size();
 
   // Sort gaps to prefix-sum the unused ticket counts.
@@ -268,13 +179,15 @@ static uint64_t remove_fuzzy_ticketing_gaps(std::vector<std::pair<uint64_t, uint
   return unused_before_gap[job_count];
 }
 
+// NOLINTEND(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
+
 // Multi-column path that materialize each row's group-by key into a packed row format, hashes it and probes
 // a shared, lock-free `ConcurrentTicketMap`. Each thread hands out tickets from its own claimed range, so the shared
 // range 'cursor' is fought over once per range rather than once per group (= fuzzy ticketing). The trailing unused
 // tickets of each thread's last range are compacted afterwards so the final tickets form a dense [0, group_count)
 // range.
-static std::shared_ptr<GroupKeyData> compute_groups_multi_column(const std::vector<ColumnID>& groupby_column_ids,
-                                                                 const std::shared_ptr<const Table>& input_table) {
+std::shared_ptr<GroupKeyData> compute_groups_multi_column(const std::vector<ColumnID>& groupby_column_ids,
+                                                          const std::shared_ptr<const Table>& input_table) {
   const auto row_format = create_row_format(input_table->column_definitions(), groupby_column_ids);
   const auto chunk_count = input_table->chunk_count();
 
@@ -399,8 +312,8 @@ static std::shared_ptr<GroupKeyData> compute_groups_multi_column(const std::vect
 }
 
 // Fast path for a single non-string group-by column. Here the value is the key, so we do not need to materialize rows.
-static std::shared_ptr<GroupKeyData> compute_groups_single_column(const ColumnID groupby_column_id,
-                                                                  const std::shared_ptr<const Table>& input_table) {
+std::shared_ptr<GroupKeyData> compute_groups_single_column(const ColumnID groupby_column_id,
+                                                           const std::shared_ptr<const Table>& input_table) {
   const auto data_type = input_table->column_data_type(groupby_column_id);
   const auto chunk_count = input_table->chunk_count();
 
@@ -518,6 +431,100 @@ static std::shared_ptr<GroupKeyData> compute_groups_single_column(const ColumnID
   });
 
   return return_group_key_data;
+}
+
+}  // namespace
+
+RowFormat create_row_format(const TableColumnDefinitions& column_definitions,
+                            const std::vector<ColumnID>& groupby_column_ids) {
+  const auto group_by_column_count = groupby_column_ids.size();
+  auto col_offsets = std::vector<uint64_t>(group_by_column_count);
+  auto column_is_nullable = std::vector<uint8_t>(group_by_column_count);
+  auto string_column_count = uint64_t{0};
+  auto stores_nulls = false;
+
+  auto curr_offset = uint64_t{0};
+  for (auto group_index = size_t{0}; group_index < group_by_column_count; ++group_index) {
+    const auto column_id = groupby_column_ids[group_index];
+    const auto& column_definition = column_definitions[column_id];
+
+    column_is_nullable[group_index] = column_definition.nullable ? 1 : 0;
+    stores_nulls |= column_definition.nullable;
+
+    col_offsets[group_index] = curr_offset;
+    if (column_definition.data_type == DataType::String) {
+      curr_offset += (sizeof(char) * PREFIX_LENGTH) + sizeof(size_t);  // prefix + length
+      string_column_count++;
+    } else {
+      resolve_data_type(column_definition.data_type, [&](auto type) {
+        using ColumnDataType = typename decltype(type)::type;
+        curr_offset += sizeof(ColumnDataType);
+      });
+    }
+  }
+
+  // The null bitmap is only present when at least one group-by column is nullable.
+  const auto null_bitmap_size = stores_nulls ? sizeof(uint64_t) : uint64_t{0};
+  const auto data_offset = null_bitmap_size;  // null bitmap (if present)
+  const auto null_bitmap_offset = uint64_t{0};
+  const auto key_length = (data_offset + curr_offset) - null_bitmap_offset;
+  const auto string_ptr_offset = align(data_offset + curr_offset, alignof(char*));
+  const auto row_size = align(string_ptr_offset + (string_column_count * sizeof(char*)), ROW_ALIGNMENT);
+
+  return RowFormat{.row_size = row_size,
+                   .null_bitmap_offset = null_bitmap_offset,
+                   .data_offset = data_offset,
+                   .string_ptr_offset = string_ptr_offset,
+                   .key_length = key_length,
+                   .string_column_count = string_column_count,
+                   .stores_nulls = stores_nulls,
+                   .col_offsets = std::move(col_offsets),
+                   .column_is_nullable = std::move(column_is_nullable)};
+}
+
+// TODO(@anyone): sort string_columns to be last in groupby columns?
+void materialize_rows(const RowFormat& format, const std::shared_ptr<const Chunk>& chunk,
+                      const std::vector<ColumnID>& groupby_column_ids, MaterializedRows& materialized) {
+  const auto chunk_size = chunk->size();
+
+  // The row buffer and string arena are owned by the caller and reused across chunks.
+  materialized.row_count = chunk_size;
+  materialized.string_pointer_needs_copy.clear();
+  materialized.string_arena.release();
+  auto* const rows = materialized.rows.get();
+  // `row_size` is a multiple of `ROW_ALIGNMENT`, so an aligned buffer start makes every row aligned.
+  DebugAssert(reinterpret_cast<uintptr_t>(rows) % ROW_ALIGNMENT == 0, "Row buffer is not sufficiently aligned.");
+  std::memset(rows, 0, static_cast<size_t>(chunk_size) * format.row_size);
+
+  // Index of the current string column among the group-by columns. Selects which string-pointer slot to write.
+  auto string_col_index = size_t{0};
+  for (auto group_by_column_index = size_t{0}; group_by_column_index < groupby_column_ids.size();
+       ++group_by_column_index) {
+    const auto column_id = groupby_column_ids[group_by_column_index];
+    const auto& segment = chunk->get_segment(column_id);
+    const auto null_mask_bit = uint64_t{1} << group_by_column_index;
+
+    resolve_data_type(segment->data_type(), [&](auto type) {
+      using ColumnDataType = typename decltype(type)::type;
+
+      if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
+        materialize_string_column(format, segment, group_by_column_index, string_col_index, null_mask_bit,
+                                  materialized);
+        ++string_col_index;
+      } else {
+        auto chunk_offset = size_t{0};
+        segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
+          const auto row = RowView{.base = rows + (chunk_offset * format.row_size), .format = format};
+          ++chunk_offset;
+          if (position.is_null()) {
+            row.set_null_bitmap(row.null_bitmap() | null_mask_bit);
+            return;
+          }
+          row.write_value(group_by_column_index, position.value());
+        });
+      }
+    });
+  }
 }
 
 std::shared_ptr<GroupKeyData> compute_groups(const std::vector<ColumnID>& groupby_column_ids,
