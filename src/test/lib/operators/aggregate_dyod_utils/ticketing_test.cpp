@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "hyrise.hpp"
 #include "operators/aggregate_dyod_utils/ticketing.hpp"
@@ -64,8 +65,10 @@ TEST_F(TicketingTest, RowFormatWithoutNullableColumns) {
   EXPECT_FALSE(format.stores_nulls);
   EXPECT_EQ(format.data_offset, 0);
   EXPECT_EQ(format.col_offsets, std::vector<uint64_t>({0, sizeof(int64_t)}));
-  EXPECT_EQ(format.row_size, sizeof(int64_t) + sizeof(int32_t));
-  EXPECT_EQ(format.key_length, format.row_size);
+  EXPECT_EQ(format.string_column_count, 0);
+  // The key covers the column data only. The row itself is padded to `ROW_ALIGNMENT` (so 16 bytes here).
+  EXPECT_EQ(format.key_length, sizeof(int64_t) + sizeof(int32_t));
+  EXPECT_EQ(format.row_size, 16);
 }
 
 TEST_F(TicketingTest, RowFormatWithNullsAndStrings) {
@@ -77,9 +80,11 @@ TEST_F(TicketingTest, RowFormatWithNullsAndStrings) {
   EXPECT_EQ(format.null_bitmap_offset, 0);
   EXPECT_EQ(format.data_offset, sizeof(uint64_t));
   EXPECT_EQ(format.col_offsets, std::vector<uint64_t>({0, sizeof(int32_t)}));
-  EXPECT_EQ(format.string_ptr_offset, sizeof(uint64_t) + sizeof(int32_t) + STRING_INLINE_SIZE);
+  EXPECT_EQ(format.key_length, sizeof(uint64_t) + sizeof(int32_t) + STRING_INLINE_SIZE);
+  // The key ends after 28 bytes, so the string-pointer area is padded to 32 for alignment.
+  EXPECT_EQ(format.string_ptr_offset, 32);
   EXPECT_EQ(format.row_size, format.string_ptr_offset + sizeof(char*));
-  EXPECT_EQ(format.key_length, format.string_ptr_offset);
+  EXPECT_EQ(format.string_column_count, 1);
   EXPECT_EQ(RowView({nullptr, format}).string_col_count(), 1);
 }
 

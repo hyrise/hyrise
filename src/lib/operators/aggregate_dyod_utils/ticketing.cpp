@@ -26,6 +26,10 @@
 
 namespace hyrise {
 
+static constexpr uint64_t align(const uint64_t offset, const uint64_t alignment) {
+  return (offset % alignment == 0) ? offset : (offset + (alignment - (offset % alignment)));
+}
+
 RowFormat create_row_format(const TableColumnDefinitions& column_definitions,
                             const std::vector<ColumnID>& groupby_column_ids) {
   const auto group_by_column_count = groupby_column_ids.size();
@@ -58,14 +62,16 @@ RowFormat create_row_format(const TableColumnDefinitions& column_definitions,
   const auto null_bitmap_size = stores_nulls ? sizeof(uint64_t) : uint64_t{0};
   const auto data_offset = null_bitmap_size;  // null bitmap (if present)
   const auto null_bitmap_offset = uint64_t{0};
-  const auto string_ptr_offset = data_offset + curr_offset;
-  const auto row_size = string_ptr_offset + (string_column_count * sizeof(char*));
+  const auto key_length = (data_offset + curr_offset) - null_bitmap_offset;
+  const auto string_ptr_offset = align(data_offset + curr_offset, alignof(char*));
+  const auto row_size = align(string_ptr_offset + (string_column_count * sizeof(char*)), ROW_ALIGNMENT);
 
   return RowFormat{.row_size = row_size,
                    .null_bitmap_offset = null_bitmap_offset,
                    .data_offset = data_offset,
                    .string_ptr_offset = string_ptr_offset,
-                   .key_length = string_ptr_offset - null_bitmap_offset,
+                   .key_length = key_length,
+                   .string_column_count = string_column_count,
                    .stores_nulls = stores_nulls,
                    .col_offsets = std::move(col_offsets),
                    .column_is_nullable = std::move(column_is_nullable)};
@@ -139,7 +145,7 @@ static void materialize_string_column(const RowFormat& format, const std::shared
   materialized.string_pointer_needs_copy.push_back(needs_copy);
 }
 
-// TODO(@anyone): think about alignment and padding, also sort string_columns to be last in groupby columns?
+// TODO(@anyone): sort string_columns to be last in groupby columns?
 void materialize_rows(const RowFormat& format, const std::shared_ptr<const Chunk>& chunk,
                       const std::vector<ColumnID>& groupby_column_ids, MaterializedRows& materialized) {
   const auto chunk_size = chunk->size();
@@ -149,6 +155,8 @@ void materialize_rows(const RowFormat& format, const std::shared_ptr<const Chunk
   materialized.string_pointer_needs_copy.clear();
   materialized.string_arena.release();
   auto* const rows = materialized.rows.get();
+  // `row_size` is a multiple of `ROW_ALIGNMENT`, so an aligned buffer start makes every row aligned.
+  DebugAssert(reinterpret_cast<uintptr_t>(rows) % ROW_ALIGNMENT == 0, "Row buffer is not sufficiently aligned.");
   std::memset(rows, 0, static_cast<size_t>(chunk_size) * format.row_size);
 
   // Index of the current string column among the group-by columns. Selects which string-pointer slot to write.
@@ -189,7 +197,7 @@ constexpr auto TICKET_RANGE_LENGTH = uint64_t{1} << 10U;  // 1024 tickets per th
 // dictionary segments or referenced ones) are left as is.
 static GroupKey promote_key_row(const RowFormat& format, const uint8_t* const row_ptr, const uint64_t row_hash,
                                 const MaterializedRows& materialized, std::pmr::monotonic_buffer_resource& arena) {
-  auto* const row_copy = static_cast<uint8_t*>(arena.allocate(format.row_size, alignof(uint64_t)));
+  auto* const row_copy = static_cast<uint8_t*>(arena.allocate(format.row_size, ROW_ALIGNMENT));
   std::memcpy(row_copy, row_ptr, format.row_size);
 
   const auto copy_view = RowView{.base = row_copy, .format = format};

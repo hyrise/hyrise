@@ -155,29 +155,32 @@ bool with_string_segment_iterate(const std::shared_ptr<ReferenceSegment>& segmen
 template <typename ColumnDataType, typename Functor>
 bool with_string_segment_iterate(const std::shared_ptr<AbstractSegment>& segment, const Functor& callback) {
   if constexpr (!std::is_same_v<ColumnDataType, pmr_string>) {
-    return detail::with_string_segment_iterate_generic<ColumnDataType>(segment, callback);
+    return hyrise::detail::with_string_segment_iterate_generic<ColumnDataType>(segment, callback);
   } else {
     if (const auto value_segment = std::dynamic_pointer_cast<ValueSegment<pmr_string>>(segment)) {
-      return detail::with_string_segment_iterate(value_segment, callback);
+      return hyrise::detail::with_string_segment_iterate(value_segment, callback);
     }
 
     if (const auto dictionary_segment = std::dynamic_pointer_cast<DictionarySegment<pmr_string>>(segment)) {
-      return detail::with_string_segment_iterate(dictionary_segment, callback);
+      return hyrise::detail::with_string_segment_iterate(dictionary_segment, callback);
     }
 
     if (const auto reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(segment)) {
-      return detail::with_string_segment_iterate(reference_segment, callback);
+      return hyrise::detail::with_string_segment_iterate(reference_segment, callback);
     }
 
-    return detail::with_string_segment_iterate_generic<pmr_string>(segment, callback);
+    return hyrise::detail::with_string_segment_iterate_generic<pmr_string>(segment, callback);
   }
 }
 
 // Number of leading string bytes stored inline in a row.
 constexpr uint64_t PREFIX_LENGTH = 8;
 
+// Alignment of a materialized row.
+constexpr uint64_t ROW_ALIGNMENT = alignof(uint64_t);
+
 // Byte layout of a single materialized group-by row:
-//   [null bitmap? | inline column data ... | string pointers ...]
+//   [null bitmap? | inline column data ... | padding? | string pointers ... | padding?]
 // `col_offsets` are relative to `data_offset`. String columns store `[length, prefix]` inline. Longer strings
 // additionally store a heap pointer in the string-pointer area at the end of the row. The null bitmap is only present
 // when at least one group-by column is nullable (`stores_nulls`). Otherwise it is omitted and the rows are 8 bytes
@@ -188,6 +191,7 @@ struct RowFormat {
   uint64_t data_offset = null_bitmap_offset + sizeof(uint64_t);
   uint64_t string_ptr_offset = data_offset;
   uint64_t key_length = string_ptr_offset - null_bitmap_offset;
+  uint64_t string_column_count = 0;
   bool stores_nulls = true;
   std::vector<uint64_t> col_offsets;
   std::vector<uint8_t> column_is_nullable;
@@ -252,7 +256,7 @@ struct RowView {
   }
 
   size_t string_col_count() const {
-    return (format.row_size - format.string_ptr_offset) / sizeof(char*);
+    return format.string_column_count;
   }
 };
 
