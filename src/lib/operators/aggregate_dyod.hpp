@@ -18,11 +18,11 @@ namespace hyrise {
  * [group-by columns..., aggregate columns...]. Like the other aggregate operators, it makes no guarantees about the
  * order of the output rows.
  *
- * Two execution paths exist. Without group-by columns (`no_groupby_aggregate`), each worker aggregates the chunks it
+ * Two execution paths exist. Without group-by columns (`_no_groupby_aggregate`), each worker aggregates the chunks it
  * pulls from a shared counter into its own set of aggregate states. Then the per-worker states are merged and
  * finalized into the single output row using the `OperatorSharedState` helper.
  *
- * The group-by path (`groupby_aggregate`) runs in the following phases (see aggregate_dyod_utils/ticketing.hpp for
+ * The group-by path (`_groupby_aggregate`) runs in the following phases (see aggregate_dyod_utils/ticketing.hpp for
  * phase 1, aggregate_dyod.cpp for the rest):
  *
  *  1. Ticketing (`compute_groups`): Assigns each distinct combination of group-by values a dense id or offset into 
@@ -55,7 +55,7 @@ namespace hyrise {
  *     A single non-string group-by column takes a fast path that skips step (b). The value itself is the key of the
  *     `ConcurrentTicketMap`, no rows are materialized, and no key-row hash table is kept for phase 3.
  *
- *  2. Accumulation (`_delegate_accumulate`): We spawn a job per worker/thread. This job selects an aggregate and pulls
+ *  2. Accumulation (`delegate_accumulate`): We spawn a job per worker/thread. This job selects an aggregate and pulls
  *     chunks from a per-aggregate counter. Each job accumulates rows into a bounded thread-local hash table keyed by
  *     ticket, which is spilled into the shared per-group intermediate states whenever it grows too large (the merge
  *     of a group's state is guarded by one atomic flag per group). A regular spill probes each group's flag exactly
@@ -64,16 +64,16 @@ namespace hyrise {
  *     a job) spins on contended flags. When an aggregate's chunks are exhausted, the job continues with the next one.
  *
  *  3. Building the actual materialized result table happens in three steps:
- *     1. Group-by column output (`_build_groupby_output_columns`): 
+ *     1. Group-by column output (`build_groupby_output_columns`): 
  *          Each group's group-by column values are recovered. For low-cardinality group-bys by reading the key rows
  *          straight from the ticketing hash table, otherwise by re-scanning the source columns, where the first row
  *          of each group claims the value.
  *
- *     2. Finalization (`_finalize_grouped_aggregates`): 
+ *     2. Finalization (`finalize_grouped_aggregates`): 
  *          Batched jobs turn the intermediate states into the final per-group values and NULL information (e.g., 
  *          dividing sum by count for AVG).
  *
- *     3. Emission (`_emit_aggregate_columns`): 
+ *     3. Emission (`emit_aggregate_columns`): 
  *          All phases write their results directly as chunk-sized pieces (using `ChunkedVector`), so assembling the 
  *          output table is only moving the pieces into value segments of the output chunks without a copy.
  *
@@ -109,8 +109,8 @@ class AggregateDYOD : public AbstractAggregateOperator {
       const std::shared_ptr<AbstractOperator>& copied_right_input,
       std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const override;
 
-  std::shared_ptr<const Table> no_groupby_aggregate();
-  std::shared_ptr<const Table> groupby_aggregate();
+  std::shared_ptr<const Table> _no_groupby_aggregate();
+  std::shared_ptr<const Table> _groupby_aggregate();
 
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 

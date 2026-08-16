@@ -16,6 +16,7 @@
 #include "all_type_variant.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
+#include "expression/window_function_expression.hpp"
 #include "hyrise.hpp"
 #include "operators/abstract_aggregate_operator.hpp"
 #include "operators/abstract_operator.hpp"
@@ -23,9 +24,11 @@
 #include "operators/operator_state.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_scheduler.hpp"
+#include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/chunk.hpp"
 #include "storage/table.hpp"
+#include "storage/table_column_definition.hpp"
 #include "types.hpp"
 
 namespace hyrise {
@@ -35,12 +38,14 @@ namespace hyrise {
 constexpr auto GROUPBY_HASH_TABLE_MIN_ROWS_PER_GROUP = size_t{4};
 
 // Slots of the grouping hash table that one job reads when a group-by output column is built from it.
-constexpr auto GROUPBY_HASH_TABLE_SLOTS_PER_JOB = size_t{1} << 16;
+constexpr auto GROUPBY_HASH_TABLE_SLOTS_PER_JOB = size_t{1} << size_t{16};
 
-constexpr auto AGG_MAX_LOCAL_HASH_TABLE_SIZE = size_t{1 << 12};  // 4096 entries
+constexpr auto AGG_MAX_LOCAL_HASH_TABLE_SIZE = size_t{1} << size_t{12};  // 4096 entries
 
 // Rows of the per-group intermediate results that one job finalizes.
-constexpr auto FINALIZE_ROWS_BATCH_SIZE = size_t{1} << 16;
+constexpr auto FINALIZE_ROWS_BATCH_SIZE = size_t{1} << size_t{16};
+
+namespace {
 
 // State of one worker for the no-group-by aggregation.
 struct NoGroupByWorkerState : public Noncopyable {
@@ -78,7 +83,7 @@ struct NoGroupByWorkerState : public Noncopyable {
 };
 
 // Resolves the per-aggregate information that both paths need from the aggregate expressions and the input schema.
-std::vector<AggregateInfo> _build_aggregate_infos(
+std::vector<AggregateInfo> build_aggregate_infos(
     const std::vector<std::shared_ptr<WindowFunctionExpression>>& aggregates,
     const std::shared_ptr<const Table>& input_table) {
   const auto aggregate_count = aggregates.size();
@@ -103,7 +108,7 @@ std::vector<AggregateInfo> _build_aggregate_infos(
 
 // Output schema of both paths: [group-by columns..., aggregate columns...] (no group-by columns for the no-group-by
 // path).
-TableColumnDefinitions _build_output_column_definitions(
+TableColumnDefinitions build_output_column_definitions(
     const Table& input_table, const std::vector<ColumnID>& groupby_column_ids,
     const std::vector<std::shared_ptr<WindowFunctionExpression>>& aggregates,
     const std::vector<AggregateInfo>& aggregate_infos) {
@@ -142,9 +147,9 @@ TableColumnDefinitions _build_output_column_definitions(
 
 // Aggregates every chunk of the input into per-worker states: one job per chunk, with the jobs pulling chunks from a
 // shared counter/cursor. Every worker accumulates into its own state, so the jobs never share an accumulator.
-void _accumulate_no_groupby_states(const std::shared_ptr<const Table>& input_table,
-                                   const std::vector<AggregateInfo>& aggregate_infos,
-                                   OperatorSharedState<NoGroupByWorkerState>& operator_state) {
+void accumulate_no_groupby_states(const std::shared_ptr<const Table>& input_table,
+                                  const std::vector<AggregateInfo>& aggregate_infos,
+                                  OperatorSharedState<NoGroupByWorkerState>& operator_state) {
   const auto aggregate_count = aggregate_infos.size();
 
   // Returns the calling worker's state, creating its per-aggregate aggregation states on first use.
@@ -163,7 +168,7 @@ void _accumulate_no_groupby_states(const std::shared_ptr<const Table>& input_tab
         continue;
       }
       worker_state.aggregate_states[aggregate_id] =
-          _make_no_groupby_aggregate_state(info.data_type, info.window_function);
+          make_no_groupby_aggregate_state(info.data_type, info.window_function);
     }
     return worker_state;
   };
@@ -213,9 +218,9 @@ void _accumulate_no_groupby_states(const std::shared_ptr<const Table>& input_tab
 }
 
 // Produces the single output row by finalizing the merged aggregate states.
-std::vector<AllTypeVariant> _no_groupby_result_row(const std::shared_ptr<const Table>& input_table,
-                                                   const std::vector<AggregateInfo>& aggregate_infos,
-                                                   const std::vector<std::shared_ptr<void>>& aggregate_states) {
+std::vector<AllTypeVariant> no_groupby_result_row(const std::shared_ptr<const Table>& input_table,
+                                                  const std::vector<AggregateInfo>& aggregate_infos,
+                                                  const std::vector<std::shared_ptr<void>>& aggregate_states) {
   const auto aggregate_count = aggregate_infos.size();
   auto result_values = std::vector<AllTypeVariant>{};
   result_values.reserve(aggregate_count);
@@ -240,29 +245,33 @@ std::vector<AllTypeVariant> _no_groupby_result_row(const std::shared_ptr<const T
   return result_values;
 }
 
-std::shared_ptr<const Table> AggregateDYOD::no_groupby_aggregate() {
+}  // namespace
+
+std::shared_ptr<const Table> AggregateDYOD::_no_groupby_aggregate() {
   const auto input_table = left_input_table();
-  const auto aggregate_infos = _build_aggregate_infos(_aggregates, input_table);
+  const auto aggregate_infos = build_aggregate_infos(_aggregates, input_table);
 
   // Every worker aggregates the chunks it processes into its own state. Then, the states are combined into the single
   // result row once all chunks have been processed (at most one state per worker, regardless of the number of chunks).
   auto operator_state = OperatorSharedState<NoGroupByWorkerState>{};
-  _accumulate_no_groupby_states(input_table, aggregate_infos, operator_state);
+  accumulate_no_groupby_states(input_table, aggregate_infos, operator_state);
   const auto& aggregate_states = operator_state.merge_worker_states().aggregate_states;
 
   auto result_table = std::make_shared<Table>(
-      _build_output_column_definitions(*input_table, {}, _aggregates, aggregate_infos), TableType::Data);
-  result_table->append(_no_groupby_result_row(input_table, aggregate_infos, aggregate_states));
+      build_output_column_definitions(*input_table, {}, _aggregates, aggregate_infos), TableType::Data);
+  result_table->append(no_groupby_result_row(input_table, aggregate_infos, aggregate_states));
   return result_table;
 }
 
 // ------------------------------------------------ Group-by path ------------------------------------------------
 
+namespace {
+
 // Emits one job per chunk of `vector`, each value-initializing its chunk's storage. This spreads the zeroing and the
 // first-touch page faults of the large per-group containers over all cores instead of a single allocating thread.
 template <typename T>
-void _emplace_chunk_allocation_jobs(const std::shared_ptr<ChunkedVector<T>>& vector, const size_t size,
-                                    std::vector<std::shared_ptr<AbstractTask>>& jobs) {
+void emplace_chunk_allocation_jobs(const std::shared_ptr<ChunkedVector<T>>& vector, const size_t size,
+                                   std::vector<std::shared_ptr<AbstractTask>>& jobs) {
   constexpr auto CHUNK_SIZE = ChunkedVector<T>::CHUNK_SIZE;
   vector->chunks.resize((size + CHUNK_SIZE - 1) / CHUNK_SIZE);
   const auto chunk_count = vector->chunks.size();
@@ -273,8 +282,8 @@ void _emplace_chunk_allocation_jobs(const std::shared_ptr<ChunkedVector<T>>& vec
   }
 }
 
-std::vector<std::shared_ptr<void>> _allocate_intermediate_results(const std::vector<AggregateInfo>& aggregate_infos,
-                                                                  const size_t group_count) {
+std::vector<std::shared_ptr<void>> allocate_intermediate_results(const std::vector<AggregateInfo>& aggregate_infos,
+                                                                 const size_t group_count) {
   auto intermediate_results = std::vector<std::shared_ptr<void>>{};
   intermediate_results.reserve(aggregate_infos.size());
   for (const auto& info : aggregate_infos) {
@@ -293,8 +302,8 @@ std::vector<std::shared_ptr<void>> _allocate_intermediate_results(const std::vec
 // The returned vectors' chunks are only allocated once the emitted `allocation_jobs` have run. This allows the caller
 // to schedule them so that they overlap with the accumulate phase.
 std::pair<std::vector<std::shared_ptr<BaseChunkedVector>>, std::vector<std::shared_ptr<ChunkedVector<bool>>>>
-_allocate_final_results(const TableColumnDefinitions& column_definitions, const size_t group_count,
-                        std::vector<std::shared_ptr<AbstractTask>>& allocation_jobs) {
+allocate_final_results(const TableColumnDefinitions& column_definitions, const size_t group_count,
+                       std::vector<std::shared_ptr<AbstractTask>>& allocation_jobs) {
   const auto result_column_count = column_definitions.size();
   auto final_results = std::vector<std::shared_ptr<BaseChunkedVector>>(result_column_count);
   auto final_result_nulls = std::vector<std::shared_ptr<ChunkedVector<bool>>>(result_column_count);
@@ -306,14 +315,14 @@ _allocate_final_results(const TableColumnDefinitions& column_definitions, const 
       using ColumnDataType = typename decltype(data_type_t)::type;
 
       const auto values = std::make_shared<ChunkedVector<ColumnDataType>>();
-      _emplace_chunk_allocation_jobs(values, group_count, allocation_jobs);
+      emplace_chunk_allocation_jobs(values, group_count, allocation_jobs);
       final_results[output_column_id] = values;
 
       // Non-nullable output columns (COUNT, non-nullable group-by keys) never read their nulls vector
-      // (see `_emit_output_column`), so it stays unallocated (nullptr).
+      // (see `emit_output_column`), so it stays unallocated (nullptr).
       if (column_definition.nullable) {
         const auto nulls = std::make_shared<ChunkedVector<bool>>();
-        _emplace_chunk_allocation_jobs(nulls, group_count, allocation_jobs);
+        emplace_chunk_allocation_jobs(nulls, group_count, allocation_jobs);
         final_result_nulls[output_column_id] = nulls;
       }
     });
@@ -354,10 +363,10 @@ void spill_local_hash_table_to_global_aggregate_result(
 // COUNT(*) does not reference an input column. It counts all rows per group (NULLs included), so every row of the
 // chunk contributes to its group's count.
 template <typename ColumnDataType, typename AggregateType, WindowFunction window_function, typename AggregateState>
-void _accumulate_count_star(const uint64_t* const tickets, const size_t row_index, const size_t chunk_size,
-                            boost::unordered_flat_map<uint64_t, AggregateState>& local_hash_table,
-                            const std::shared_ptr<std::vector<AggregateState>>& global_aggregate_result,
-                            std::vector<std::atomic_flag>& intermediate_result_atomics) {
+void accumulate_count_star(const uint64_t* const tickets, const size_t row_index, const size_t chunk_size,
+                           boost::unordered_flat_map<uint64_t, AggregateState>& local_hash_table,
+                           const std::shared_ptr<std::vector<AggregateState>>& global_aggregate_result,
+                           std::vector<std::atomic_flag>& intermediate_result_atomics) {
   for (auto chunk_offset = size_t{0}; chunk_offset < chunk_size; ++chunk_offset) {
     ++local_hash_table[tickets[row_index + chunk_offset]].value_count;
 
@@ -370,16 +379,16 @@ void _accumulate_count_star(const uint64_t* const tickets, const size_t row_inde
 
 // Aggregate a single chunk of a single aggregate.
 template <typename ColumnDataType, typename AggregateType, WindowFunction window_function, typename AggregateState>
-void _accumulate_job(const uint64_t* const tickets, uint32_t row_index,
-                     const std::shared_ptr<AbstractSegment>& aggregate_segment,
-                     boost::unordered_flat_map<uint64_t, AggregateState>& local_hash_table,
-                     const std::shared_ptr<std::vector<AggregateState>>& global_aggregate_result,
-                     std::vector<std::atomic_flag>& intermediate_result_atomics) {
+void accumulate_job(const uint64_t* const tickets, uint32_t row_index,
+                    const std::shared_ptr<AbstractSegment>& aggregate_segment,
+                    boost::unordered_flat_map<uint64_t, AggregateState>& local_hash_table,
+                    const std::shared_ptr<std::vector<AggregateState>>& global_aggregate_result,
+                    std::vector<std::atomic_flag>& intermediate_result_atomics) {
   auto hash_table_size = local_hash_table.size();
   const auto aggregate_function =
       WindowFunctionBuilder<ColumnDataType, AggregateType, window_function>().get_aggregate_function();
   with_string_segment_iterate<ColumnDataType>(
-      aggregate_segment, [&](auto& value, const bool is_null, const auto needs_copy) {
+      aggregate_segment, [&](auto& value, const bool is_null, const auto /*needs_copy*/) {
         if (is_null) {
           ++row_index;
           return;
@@ -413,11 +422,11 @@ void _accumulate_job(const uint64_t* const tickets, uint32_t row_index,
 // Accumulates all chunks of all aggregates into the shared per-group intermediate results. Each of the `thread_count`
 // jobs round-robins over the aggregates and pulls chunks from a per-aggregate counter, accumulating into a fixed-size
 // thread-local hash table that is spilled into the shared states (guarded by one atomic flag per group).
-void _delegate_accumulate(const std::shared_ptr<const Table>& input_table,
-                          const std::vector<AggregateInfo>& aggregate_infos, const uint64_t* const tickets,
-                          const std::vector<size_t>& chunk_offsets,
-                          const std::vector<std::shared_ptr<void>>& intermediate_results, const size_t group_count,
-                          const size_t thread_count) {
+void delegate_accumulate(const std::shared_ptr<const Table>& input_table,
+                         const std::vector<AggregateInfo>& aggregate_infos, const uint64_t* const tickets,
+                         const std::vector<size_t>& chunk_offsets,
+                         const std::vector<std::shared_ptr<void>>& intermediate_results, const size_t group_count,
+                         const size_t thread_count) {
   const auto aggregate_count = aggregate_infos.size();
   // A pure DISTINCT (group-by without any aggregate) has nothing to accumulate. `job_main` below also assumes at
   // least one aggregate, as it round-robins over them modulo `aggregate_count`.
@@ -435,8 +444,8 @@ void _delegate_accumulate(const std::shared_ptr<const Table>& input_table,
   const auto job_main = [&](const uint32_t job_id) {
     const auto chunk_count = input_table->chunk_count();
     const auto initial_aggregate_id = job_id % aggregate_count;
-    auto current_aggregate_id = initial_aggregate_id;
-    do {
+    for (auto visited_count = size_t{0}; visited_count < aggregate_count; ++visited_count) {
+      const auto current_aggregate_id = (initial_aggregate_id + visited_count) % aggregate_count;
       const auto& info = aggregate_infos[current_aggregate_id];
       auto& this_column_intermediate_result_atomics = intermediate_result_atomics[current_aggregate_id];
 
@@ -465,14 +474,14 @@ void _delegate_accumulate(const std::shared_ptr<const Table>& input_table,
             if constexpr (window_function == WindowFunction::Count) {
               // COUNT(*) references no input column, so there is no segment to iterate.
               if (info.is_count_star) {
-                _accumulate_count_star<ColumnDataType, AggregateType, window_function, AggregateState>(
+                accumulate_count_star<ColumnDataType, AggregateType, window_function, AggregateState>(
                     tickets, row_index, chunk->size(), local_hash_table, this_column_intermediate_results,
                     this_column_intermediate_result_atomics);
                 continue;
               }
             }
 
-            _accumulate_job<ColumnDataType, AggregateType, window_function, AggregateState>(
+            accumulate_job<ColumnDataType, AggregateType, window_function, AggregateState>(
                 tickets, row_index, chunk->get_segment(info.input_column_id), local_hash_table,
                 this_column_intermediate_results, this_column_intermediate_result_atomics);
           }
@@ -483,9 +492,7 @@ void _delegate_accumulate(const std::shared_ptr<const Table>& input_table,
               local_hash_table, this_column_intermediate_results, this_column_intermediate_result_atomics);
         });
       });
-
-      current_aggregate_id = (current_aggregate_id + 1) % aggregate_count;
-    } while (current_aggregate_id != initial_aggregate_id);
+    }
   };
 
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
@@ -502,15 +509,15 @@ void _delegate_accumulate(const std::shared_ptr<const Table>& input_table,
 
 // Performs ANY(column) on a single chunk. Now it is only used for group-by columns with high cardinality.
 template <typename ColumnDataType>
-void _any_grouped_chunk(const uint64_t* const tickets, const std::shared_ptr<const Table>& input_table,
-                        const ColumnID input_column_id, const ChunkID chunk_id, const size_t first_row_index,
-                        std::vector<std::atomic_flag>& seen, ChunkedVector<ColumnDataType>& values,
-                        std::vector<uint8_t>& nulls) {
+void any_grouped_chunk(const uint64_t* const tickets, const std::shared_ptr<const Table>& input_table,
+                       const ColumnID input_column_id, const ChunkID chunk_id, const size_t first_row_index,
+                       std::vector<std::atomic_flag>& seen, ChunkedVector<ColumnDataType>& values,
+                       std::vector<uint8_t>& nulls) {
   auto row_index = first_row_index;  // global row index, used to look up the group ticket in `tickets`
   const auto& groupby_segment = input_table->get_chunk(chunk_id)->get_segment(input_column_id);
 
   with_string_segment_iterate<ColumnDataType>(
-      groupby_segment, [&](const auto& value, const bool is_null, const auto needs_copy) {
+      groupby_segment, [&](const auto& value, const bool is_null, const auto /*needs_copy*/) {
         const auto ticket = tickets[row_index++];
         // The claim only needs to be atomic; the written values are published by the jobs joining.
         if (seen[ticket].test(std::memory_order_relaxed) || seen[ticket].test_and_set(std::memory_order_relaxed)) {
@@ -525,10 +532,10 @@ void _any_grouped_chunk(const uint64_t* const tickets, const std::shared_ptr<con
 }
 
 template <typename ColumnDataType, typename NullContainer>
-void _write_groupby_value_from_key_row(const GroupKey& key, const uint64_t ticket, const RowFormat& format,
-                                       const size_t groupby_index, const size_t string_col_index,
-                                       ChunkedVector<ColumnDataType>& values, NullContainer& nulls) {
-  const auto row_view = RowView{key.row, format};
+void write_groupby_value_from_key_row(const GroupKey& key, const uint64_t ticket, const RowFormat& format,
+                                      const size_t groupby_index, const size_t string_col_index,
+                                      ChunkedVector<ColumnDataType>& values, NullContainer& nulls) {
+  const auto row_view = RowView{.base = key.row, .format = format};
   const auto null_mask_bit = uint64_t{1} << groupby_index;
 
   // `stores_nulls` is only false when no group-by column is nullable, so `null_bitmap()` is only read when present.
@@ -552,12 +559,12 @@ void _write_groupby_value_from_key_row(const GroupKey& key, const uint64_t ticke
 }
 
 // Builds the group-by output columns and emits them into `output_chunks`.
-void _build_groupby_output_columns(const std::shared_ptr<const Table>& input_table,
-                                   const std::vector<ColumnID>& groupby_column_ids, const GroupKeyData& groups,
-                                   const uint64_t* const tickets, const std::vector<size_t>& chunk_offsets,
-                                   const std::vector<std::shared_ptr<BaseChunkedVector>>& final_results,
-                                   const std::vector<std::shared_ptr<ChunkedVector<bool>>>& final_result_nulls,
-                                   std::vector<Segments>& output_chunks) {
+void build_groupby_output_columns(const std::shared_ptr<const Table>& input_table,
+                                  const std::vector<ColumnID>& groupby_column_ids, const GroupKeyData& groups,
+                                  const uint64_t* const tickets, const std::vector<size_t>& chunk_offsets,
+                                  const std::vector<std::shared_ptr<BaseChunkedVector>>& final_results,
+                                  const std::vector<std::shared_ptr<ChunkedVector<bool>>>& final_result_nulls,
+                                  std::vector<Segments>& output_chunks) {
   const auto groupby_column_count = groupby_column_ids.size();
   const auto group_count = groups.group_count;
 
@@ -607,16 +614,16 @@ void _build_groupby_output_columns(const std::shared_ptr<const Table>& input_tab
         // Low cardinality: read each group's value straight from its hash-table key row.
         groups.global_hash_table.for_each_slot_range(
             first_part_index, end_part_index, [&](const GroupKey& key, const uint64_t ticket) {
-              _write_groupby_value_from_key_row(key, ticket, groups.row_format, groupby_index,
-                                                string_col_index_per_groupby_column[groupby_index], values, nulls);
+              write_groupby_value_from_key_row(key, ticket, groups.row_format, groupby_index,
+                                               string_col_index_per_groupby_column[groupby_index], values, nulls);
             });
 
         return;
       }
       // High cardinality: a sequential scan of the source column beats chasing the scattered key rows.
       const auto chunk_id = ChunkID{static_cast<ChunkID::base_type>(first_part_index)};
-      _any_grouped_chunk<ColumnDataType>(tickets, input_table, groupby_column_id, chunk_id, chunk_offsets[chunk_id],
-                                         groupby_seen[groupby_index], values, nulls);
+      any_grouped_chunk<ColumnDataType>(tickets, input_table, groupby_column_id, chunk_id, chunk_offsets[chunk_id],
+                                        groupby_seen[groupby_index], values, nulls);
     });
   };
 
@@ -659,8 +666,8 @@ void _build_groupby_output_columns(const std::shared_ptr<const Table>& input_tab
       auto& values = *std::static_pointer_cast<ChunkedVector<ColumnDataType>>(final_results[groupby_index]);
 
       if (!column_is_nullable) {
-        // Non-nullable columns have no nulls vector (see `_allocate_final_results`).
-        _emit_output_column(std::move(values), ChunkedVector<bool>{}, false, output_chunks, groupby_index);
+        // Non-nullable columns have no nulls vector (see `allocate_final_results`).
+        emit_output_column(std::move(values), ChunkedVector<bool>{}, false, output_chunks, groupby_index);
         return;
       }
 
@@ -670,18 +677,18 @@ void _build_groupby_output_columns(const std::shared_ptr<const Table>& input_tab
         nulls[group_id] = null_bytes[group_id] != 0;
       }
 
-      _emit_output_column(std::move(values), std::move(nulls), true, output_chunks, groupby_index);
+      emit_output_column(std::move(values), std::move(nulls), true, output_chunks, groupby_index);
     });
   }
 }
 
 // Finalize intermediate state into the final result (and NULL vectors).
-void _finalize_grouped_aggregates(const std::vector<AggregateInfo>& aggregate_infos, const size_t group_count,
-                                  const size_t groupby_column_count,
-                                  const std::vector<std::shared_ptr<void>>& intermediate_results,
-                                  const std::vector<std::shared_ptr<BaseChunkedVector>>& final_results,
-                                  const std::vector<std::shared_ptr<ChunkedVector<bool>>>& final_result_nulls) {
-  const auto jobs_per_aggregate = group_count / FINALIZE_ROWS_BATCH_SIZE + 1;
+void finalize_grouped_aggregates(const std::vector<AggregateInfo>& aggregate_infos, const size_t group_count,
+                                 const size_t groupby_column_count,
+                                 const std::vector<std::shared_ptr<void>>& intermediate_results,
+                                 const std::vector<std::shared_ptr<BaseChunkedVector>>& final_results,
+                                 const std::vector<std::shared_ptr<ChunkedVector<bool>>>& final_result_nulls) {
+  const auto jobs_per_aggregate = (group_count / FINALIZE_ROWS_BATCH_SIZE) + 1;
   const auto finalize_job_count = aggregate_infos.size() * jobs_per_aggregate;
 
   const auto finalize_job_main = [&](const uint32_t job_id) {
@@ -728,11 +735,11 @@ void _finalize_grouped_aggregates(const std::vector<AggregateInfo>& aggregate_in
 }
 
 // Transform the ChunkedVector into segments of the output chunks.
-void _emit_aggregate_columns(const std::vector<AggregateInfo>& aggregate_infos,
-                             const TableColumnDefinitions& column_definitions, const size_t groupby_column_count,
-                             const std::vector<std::shared_ptr<BaseChunkedVector>>& final_results,
-                             const std::vector<std::shared_ptr<ChunkedVector<bool>>>& final_result_nulls,
-                             std::vector<Segments>& output_chunks) {
+void emit_aggregate_columns(const std::vector<AggregateInfo>& aggregate_infos,
+                            const TableColumnDefinitions& column_definitions, const size_t groupby_column_count,
+                            const std::vector<std::shared_ptr<BaseChunkedVector>>& final_results,
+                            const std::vector<std::shared_ptr<ChunkedVector<bool>>>& final_result_nulls,
+                            std::vector<Segments>& output_chunks) {
   const auto aggregate_count = aggregate_infos.size();
   for (auto aggregate_id = size_t{0}; aggregate_id < aggregate_count; ++aggregate_id) {
     const auto output_column_id = groupby_column_count + aggregate_id;
@@ -747,15 +754,17 @@ void _emit_aggregate_columns(const std::vector<AggregateInfo>& aggregate_infos,
             std::static_pointer_cast<ChunkedVector<AggregateType>>(final_results[output_column_id]);
         const auto& final_result_nulls_vector = final_result_nulls[output_column_id];
 
-        _emit_output_column(std::move(*final_result_vector),
-                            final_result_nulls_vector ? std::move(*final_result_nulls_vector) : ChunkedVector<bool>{},
-                            column_definitions[output_column_id].nullable, output_chunks, output_column_id);
+        emit_output_column(std::move(*final_result_vector),
+                           final_result_nulls_vector ? std::move(*final_result_nulls_vector) : ChunkedVector<bool>{},
+                           column_definitions[output_column_id].nullable, output_chunks, output_column_id);
       });
     });
   }
 }
 
-std::shared_ptr<const Table> AggregateDYOD::groupby_aggregate() {
+}  // namespace
+
+std::shared_ptr<const Table> AggregateDYOD::_groupby_aggregate() {
   const auto input_table = left_input_table();
   const auto aggregate_count = _aggregates.size();
   const auto groupby_column_count = _groupby_column_ids.size();
@@ -765,29 +774,29 @@ std::shared_ptr<const Table> AggregateDYOD::groupby_aggregate() {
   const auto group_count = groups->group_count;
   const auto* const tickets = groups->tickets.get();
 
-  const auto aggregate_infos = _build_aggregate_infos(_aggregates, input_table);
+  const auto aggregate_infos = build_aggregate_infos(_aggregates, input_table);
 
   // The output schema is [group-by columns..., aggregate columns...]. Here we only define the columns. the group-by
   // output segments and the aggregate segments are each filled by their own jobs.
   const auto column_definitions =
-      _build_output_column_definitions(*input_table, _groupby_column_ids, _aggregates, aggregate_infos);
+      build_output_column_definitions(*input_table, _groupby_column_ids, _aggregates, aggregate_infos);
 
   // Output layout: `output_chunks[chunk][column]`, where the group-by columns occupy the first `groupby_column_count`
   // column slots, followed by one slot per aggregate. Every job produces its column directly as chunk-sized pieces
-  // (`ChunkedVector`) and emits them into its fixed column slot of every chunk (`_emit_output_column`), so none of
+  // (`ChunkedVector`) and emits them into its fixed column slot of every chunk (`emit_output_column`), so none of
   // them touch a shared, growing container and the final table assembly is move-only.
   const auto result_column_count = groupby_column_count + aggregate_count;
   const auto output_chunk_count = (group_count + TARGET_CHUNK_SIZE - 1) / TARGET_CHUNK_SIZE;
   auto output_chunks = std::vector<Segments>(output_chunk_count, Segments(result_column_count));
 
-  const auto intermediate_results = _allocate_intermediate_results(aggregate_infos, group_count);
+  const auto intermediate_results = allocate_intermediate_results(aggregate_infos, group_count);
 
-  // The final result columns are first read after the accumulate phase (by `_build_groupby_output_columns` and
-  // `_finalize_grouped_aggregates`), so their allocation jobs run concurrently with it and stay off the critical path.
+  // The final result columns are first read after the accumulate phase (by `build_groupby_output_columns` and
+  // `finalize_grouped_aggregates`), so their allocation jobs run concurrently with it and stay off the critical path.
   // We do this because the final results use `pmr_vector` which does not rely on trivial default construction.
   auto final_result_allocation_jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   const auto [final_results, final_result_nulls] =
-      _allocate_final_results(column_definitions, group_count, final_result_allocation_jobs);
+      allocate_final_results(column_definitions, group_count, final_result_allocation_jobs);
   for (const auto& job : final_result_allocation_jobs) {
     job->schedule();
   }
@@ -800,23 +809,23 @@ std::shared_ptr<const Table> AggregateDYOD::groupby_aggregate() {
     row_offset += input_table->get_chunk(chunk_id)->size();
   }
 
-  _delegate_accumulate(input_table, aggregate_infos, tickets, chunk_offsets, intermediate_results, group_count,
-                       thread_count);
+  delegate_accumulate(input_table, aggregate_infos, tickets, chunk_offsets, intermediate_results, group_count,
+                      thread_count);
 
   AbstractScheduler::wait_for_tasks(final_result_allocation_jobs);
 
-  _build_groupby_output_columns(input_table, _groupby_column_ids, *groups, tickets, chunk_offsets, final_results,
-                                final_result_nulls, output_chunks);
+  build_groupby_output_columns(input_table, _groupby_column_ids, *groups, tickets, chunk_offsets, final_results,
+                               final_result_nulls, output_chunks);
 
-  _finalize_grouped_aggregates(aggregate_infos, group_count, groupby_column_count, intermediate_results, final_results,
-                               final_result_nulls);
+  finalize_grouped_aggregates(aggregate_infos, group_count, groupby_column_count, intermediate_results, final_results,
+                              final_result_nulls);
 
-  _emit_aggregate_columns(aggregate_infos, column_definitions, groupby_column_count, final_results, final_result_nulls,
-                          output_chunks);
+  emit_aggregate_columns(aggregate_infos, column_definitions, groupby_column_count, final_results, final_result_nulls,
+                         output_chunks);
 
   auto result_table = std::make_shared<Table>(column_definitions, TableType::Data);
-  for (auto& chunk_segments : output_chunks) {
-    result_table->append_chunk(std::move(chunk_segments));
+  for (const auto& chunk_segments : output_chunks) {
+    result_table->append_chunk(chunk_segments);
   }
   return result_table;
 }
@@ -844,9 +853,9 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
   _validate_aggregates();
 
   if (_groupby_column_ids.empty()) {
-    return no_groupby_aggregate();
+    return _no_groupby_aggregate();
   }
-  return groupby_aggregate();
+  return _groupby_aggregate();
 }
 
 void AggregateDYOD::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}

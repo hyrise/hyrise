@@ -48,8 +48,8 @@ struct ChunkedVector : public BaseChunkedVector {
 };
 
 template <typename T>
-void _emit_output_column(ChunkedVector<T>&& values, ChunkedVector<bool>&& nulls, const bool nullable,
-                         std::vector<Segments>& output_chunks, const size_t column_index) {
+void emit_output_column(ChunkedVector<T> values, ChunkedVector<bool> nulls, const bool nullable,
+                        std::vector<Segments>& output_chunks, const size_t column_index) {
   const auto chunk_count = values.chunks.size();
   for (auto chunk_index = size_t{0}; chunk_index < chunk_count; ++chunk_index) {
     if (nullable) {
@@ -88,7 +88,7 @@ struct RegularAggregateState {
     }
 
     with_string_segment_iterate<ColumnDataType>(segment,
-                                                [&](const auto& value, const bool is_null, const auto needs_copy) {
+                                                [&](const auto& value, const bool is_null, const auto /*needs_copy*/) {
                                                   if (is_null) {
                                                     return;
                                                   }
@@ -153,7 +153,7 @@ struct CountDistinctAggregateState {
   void accumulate_entire_chunk(const std::shared_ptr<const Chunk>& chunk, const ColumnID input_column_id) {
     const auto& segment = chunk->get_segment(input_column_id);
     with_string_segment_iterate<ColumnDataType>(segment,
-                                                [&](const auto& value, const bool is_null, const auto needs_copy) {
+                                                [&](const auto& value, const bool is_null, const auto /*needs_copy*/) {
                                                   if (is_null) {
                                                     return;
                                                   }
@@ -297,8 +297,8 @@ struct AggregateInfo {
 };
 
 // Creates the aggregation state matching the aggregate's input data type and window function.
-inline std::shared_ptr<void> _make_no_groupby_aggregate_state(const DataType data_type,
-                                                              const WindowFunction window_function) {
+inline std::shared_ptr<void> make_no_groupby_aggregate_state(const DataType data_type,
+                                                             const WindowFunction window_function) {
   auto state = std::shared_ptr<void>{};
   resolve_data_type(data_type, [&](const auto data_type_t) {
     using ColumnDataType = typename decltype(data_type_t)::type;
