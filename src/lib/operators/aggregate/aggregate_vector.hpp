@@ -39,7 +39,8 @@ class AbstractAggregateVector {
 };
 
 template <typename ColumnDataType, WindowFunction aggregate_function>
-struct TypedAggregateVector : AbstractAggregateVector {
+class TypedAggregateVector : public AbstractAggregateVector {
+ protected:
   using AggregateDataType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
   using AccumulatorDataType = std::conditional_t<aggregate_function == WindowFunction::CountDistinct,
                                                  boost::unordered_flat_set<ColumnDataType>, AggregateDataType>;
