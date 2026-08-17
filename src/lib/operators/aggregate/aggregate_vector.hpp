@@ -39,9 +39,8 @@ class AbstractAggregateVector {
 template <typename ColumnDataType, WindowFunction aggregate_function>
 struct TypedAggregateVector : AbstractAggregateVector {
   using AggregateDataType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
-  using DistinctValues = std::unordered_set<ColumnDataType>;
   using AccumulatorDataType =
-      std::conditional_t<aggregate_function == WindowFunction::CountDistinct, DistinctValues, AggregateDataType>;
+      std::conditional_t<aggregate_function == WindowFunction::CountDistinct, std::unordered_set<ColumnDataType>, AggregateDataType>;
 
  public:
   // The mutable accessor is needed because aggregator functions mutate values directly.
