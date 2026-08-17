@@ -74,7 +74,7 @@ struct MultiThreadedState {
 
 /*
  * Aggregate operator using a global hash table to aggregate concurrently. This is based on the approach described
- * by Xue and Marcus in https://dl.acm.org/doi/10.14778/3750601.3750664.
+ * by Xue and Marcus in https://doi.org/10.14778/3778092.3778110.
  *
  * Every worker, when processing a row, retrieves an integer group ID based on the row’s group key. A global hash
  * table stores a mapping from group keys to group IDs. The aggregation results are stored in a thread-local vector
