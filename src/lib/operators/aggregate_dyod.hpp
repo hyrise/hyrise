@@ -39,7 +39,7 @@ class WorkerState : public Noncopyable {
   // transparently reserves a new range before returning.
   GroupID next_group_id();
 
-  AbstractAggregateVector& aggregate_vector(size_t index);
+  AbstractAggregateVector& aggregate_vector(const size_t index);
   std::vector<std::unique_ptr<AbstractAggregateVector>>& aggregate_vectors();
 
  protected:
@@ -70,7 +70,6 @@ struct MultiThreadedState {
   std::atomic<GroupID> next_group_id{0};
   tbb::concurrent_vector<RowIDs> row_ids;
 };
-
 
 /*
  * Aggregate operator using a global hash table to aggregate concurrently. This is based on the approach described
@@ -127,57 +126,58 @@ class AggregateDYOD : public AbstractAggregateOperator {
   std::shared_ptr<Table> _write_output_table(WorkerState& worker_state);
 
   // Return column definitions for the groupby and aggregate columns
-  TableColumnDefinitions _output_column_definitions();
+  TableColumnDefinitions _output_column_definitions() const;
 
   // Return column definitions of the groupby columns
-  TableColumnDefinitions _groupby_column_definitions();
+  TableColumnDefinitions _groupby_column_definitions() const;
 
   // Return column definitions of the aggregate columns
-  TableColumnDefinitions _aggregate_column_definitions();
+  TableColumnDefinitions _aggregate_column_definitions() const;
 
   // Write a chunk for the temporary data table containing only ValueSegments for all aggregates
   std::shared_ptr<Chunk> _write_aggregate_output_chunk(WorkerState& worker_state,
                                                        const std::vector<size_t>& occupied_group_ids,
-                                                       size_t start_index, size_t end_index);
+                                                       const size_t start_index, const size_t end_index);
 
   // Write a chunk for the output reference table containing ReferenceSegments for groupby and aggregate columns.
   // The segments for groupby columns reference the input table while the segments for aggregate columns
   // reference the temporary data table.
-  std::shared_ptr<Chunk> _write_reference_output_chunk(const std::shared_ptr<Table>& aggregates_table, ChunkID chunk_id,
+  std::shared_ptr<Chunk> _write_reference_output_chunk(const std::shared_ptr<Table>& aggregates_table,
+                                                       const ChunkID chunk_id,
                                                        const std::vector<size_t>& occupied_group_ids,
-                                                       size_t start_index, size_t end_index);
+                                                       const size_t start_index, const size_t end_index);
 
   // Write a ReferenceSegment for the given groupby column. The segment references the input table.
-  std::shared_ptr<AbstractSegment> _write_groupby_segment(size_t groupby_column_index,
+  std::shared_ptr<AbstractSegment> _write_groupby_segment(const size_t groupby_column_index,
                                                           const std::vector<size_t>& occupied_group_ids,
-                                                          size_t start_index, size_t end_index);
+                                                          const size_t start_index, const size_t end_index);
 
   // Write a ValueSegment for the given aggregate. This overload is selected for AVG aggregates.
   template <typename ColumnDataType, WindowFunction aggregate_function>
     requires(aggregate_function == WindowFunction::Avg && std::is_arithmetic_v<ColumnDataType>)
   std::shared_ptr<AbstractSegment> _write_aggregate_segment(
-      TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector, bool is_nullable,
-      const std::vector<size_t>& occupied_group_ids, size_t start_index, size_t end_index);
+      TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector, const bool is_nullable,
+      const std::vector<size_t>& occupied_group_ids, const size_t start_index, const size_t end_index);
 
   // Write a ValueSegment for the given aggregate. This overload is selected for COUNT aggregates.
   template <typename ColumnDataType, WindowFunction aggregate_function>
     requires(aggregate_function == WindowFunction::Count)
   std::shared_ptr<AbstractSegment> _write_aggregate_segment(
-      TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector, bool is_nullable,
-      const std::vector<size_t>& occupied_group_ids, size_t start_index, size_t end_index);
+      TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector, const bool is_nullable,
+      const std::vector<size_t>& occupied_group_ids, const size_t start_index, const size_t end_index);
 
   // Write a ValueSegment for the given aggregate. This overload is selected for COUNT DISTINCT aggregates.
   template <typename ColumnDataType, WindowFunction aggregate_function>
     requires(aggregate_function == WindowFunction::CountDistinct)
   std::shared_ptr<AbstractSegment> _write_aggregate_segment(
-      TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector, bool is_nullable,
-      const std::vector<size_t>& occupied_group_ids, size_t start_index, size_t end_index);
+      TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector, const bool is_nullable,
+      const std::vector<size_t>& occupied_group_ids, const size_t start_index, const size_t end_index);
 
   // Write a ValueSegment for the given aggregate. This overload is selected for MIN, MAX, SUM, ANY aggregates.
   template <typename ColumnDataType, WindowFunction aggregate_function>
   std::shared_ptr<AbstractSegment> _write_aggregate_segment(
-      TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector, bool is_nullable,
-      const std::vector<size_t>& occupied_group_ids, size_t start_index, size_t end_index);
+      TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector, const bool is_nullable,
+      const std::vector<size_t>& occupied_group_ids, const size_t start_index, const size_t end_index);
 
   // Insert the group key into the global group ID map and store the row IDs so we can access them when
   // writing the output and return the corresponding group ID. If the group key already exists in the
@@ -187,7 +187,7 @@ class AggregateDYOD : public AbstractAggregateOperator {
 
   // Serialize group keys for all rows in the chunk. Returns a vector of group IDs for all rows and the
   // maximum group ID in the chunk.
-  std::pair<std::vector<GroupID>, GroupID> _group_ids_for_chunk(ChunkID chunk_id, const Chunk& chunk,
+  std::pair<std::vector<GroupID>, GroupID> _group_ids_for_chunk(const ChunkID chunk_id, const Chunk& chunk,
                                                                 WorkerState& worker_state);
 
   // Reserve a new range of group IDs. Returns the inclusive start and inclusive end of the new range.
@@ -199,7 +199,7 @@ class AggregateDYOD : public AbstractAggregateOperator {
   // of occupied (i.e., used) group IDs.
   std::vector<size_t> _get_occupied_group_ids();
 
-  void _aggregate_chunk(WorkerState& state, ChunkID chunk_id, const Chunk& chunk);
+  void _aggregate_chunk(WorkerState& state, const ChunkID chunk_id, const Chunk& chunk);
 
   template <typename ColumnDataType, WindowFunction aggregate_function>
   void _aggregate_segment(TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector,
@@ -217,13 +217,11 @@ class AggregateDYOD : public AbstractAggregateOperator {
 
   void _aggregate_count_star(AbstractAggregateVector& state, const std::vector<GroupID>& group_ids);
 
-  DataType _aggregate_data_type(size_t aggregate_index);
+  const std::string _aggregate_column_name(const size_t aggregate_index) const;
 
-  std::string _aggregate_column_name(size_t aggregate_index);
+  bool _aggregate_is_nullable(const size_t aggregate_index) const;
 
-  bool _aggregate_is_nullable(size_t aggregate_index);
-
-  DataType _aggregate_column_data_type(size_t aggregate_index);
+  DataType _aggregate_column_data_type(const size_t aggregate_index) const;
 };
 
 }  // namespace hyrise

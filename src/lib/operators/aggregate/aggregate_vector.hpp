@@ -18,18 +18,18 @@ namespace hyrise {
 class AbstractAggregateVector {
  public:
   virtual ~AbstractAggregateVector() = default;
-  virtual void grow_if_necessary(size_t size) = 0;
+  virtual void grow_if_necessary(const size_t size) = 0;
   virtual void merge(AbstractAggregateVector& other) = 0;
 
-  size_t count(GroupID group_id) {
+  size_t count(const GroupID group_id) const {
     return _counts[group_id];
   }
 
-  void increment_count(GroupID group_id) {
+  void increment_count(const GroupID group_id) {
     _counts[group_id]++;
   }
 
-  std::vector<size_t>& counts() {
+  const std::vector<size_t>& counts() const {
     return _counts;
   }
 
@@ -46,15 +46,15 @@ struct TypedAggregateVector : AbstractAggregateVector {
 
  public:
   // The mutable accessor is needed because aggregator functions mutate values directly.
-  AccumulatorDataType& accumulator(GroupID group_id) {
+  AccumulatorDataType& accumulator(const GroupID group_id) {
     return _accumulators[group_id];
   }
 
-  std::vector<AccumulatorDataType>& accumulators() {
+  const std::vector<AccumulatorDataType>& accumulators() const {
     return _accumulators;
   }
 
-  void grow_if_necessary(size_t size) override {
+  void grow_if_necessary(const size_t size) override {
     if (_counts.size() < size) {
       _counts.resize(size);
       _accumulators.resize(size);
@@ -113,7 +113,7 @@ struct TypedAggregateVector : AbstractAggregateVector {
       const auto& other_counts = other._counts;
       const auto other_size = other_accumulators.size();
 
-      auto aggregator =
+      const auto aggregator =
           WindowFunctionBuilder<AggregateDataType, AggregateDataType, aggregate_function>().get_aggregate_function();
 
       for (auto index = size_t{0}; index < new_size; ++index) {

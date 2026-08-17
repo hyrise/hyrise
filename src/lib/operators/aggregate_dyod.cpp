@@ -45,8 +45,8 @@
 namespace hyrise {
 
 WorkerState::WorkerState(const std::vector<std::shared_ptr<WindowFunctionExpression>>& aggregates,
-                         std::function<std::pair<GroupID, GroupID>()> reserve_new_group_id_range) {
-  auto [initial_next_group_id, initial_max_group_id] = reserve_new_group_id_range();
+                         const std::function<std::pair<GroupID, GroupID>()> reserve_new_group_id_range) {
+  const auto [initial_next_group_id, initial_max_group_id] = reserve_new_group_id_range();
   _next_group_id = initial_next_group_id;
   _max_group_id = initial_max_group_id;
   _reserve_new_group_id_range = reserve_new_group_id_range;
@@ -90,7 +90,7 @@ GroupID WorkerState::next_group_id() {
   return _next_group_id++;
 }
 
-AbstractAggregateVector& WorkerState::aggregate_vector(size_t index) {
+AbstractAggregateVector& WorkerState::aggregate_vector(const size_t index) {
   return *_vectors[index];
 }
 
@@ -250,7 +250,7 @@ std::shared_ptr<Table> AggregateDYOD::_write_output_table(WorkerState& worker_st
   return std::make_shared<Table>(column_definitions, TableType::References, std::move(reference_chunks));
 }
 
-TableColumnDefinitions AggregateDYOD::_output_column_definitions() {
+TableColumnDefinitions AggregateDYOD::_output_column_definitions() const {
   auto column_definitions = _groupby_column_definitions();
   const auto aggregate_column_definitions = _aggregate_column_definitions();
   column_definitions.insert(column_definitions.end(), aggregate_column_definitions.begin(),
@@ -258,7 +258,7 @@ TableColumnDefinitions AggregateDYOD::_output_column_definitions() {
   return column_definitions;
 }
 
-TableColumnDefinitions AggregateDYOD::_groupby_column_definitions() {
+TableColumnDefinitions AggregateDYOD::_groupby_column_definitions() const {
   const auto input_table = left_input_table();
   auto column_definitions = TableColumnDefinitions{};
 
@@ -271,7 +271,7 @@ TableColumnDefinitions AggregateDYOD::_groupby_column_definitions() {
   return column_definitions;
 }
 
-TableColumnDefinitions AggregateDYOD::_aggregate_column_definitions() {
+TableColumnDefinitions AggregateDYOD::_aggregate_column_definitions() const {
   auto column_definitions = TableColumnDefinitions{};
   column_definitions.reserve(_aggregates.size());
 
@@ -297,7 +297,7 @@ TableColumnDefinitions AggregateDYOD::_aggregate_column_definitions() {
 
 std::shared_ptr<Chunk> AggregateDYOD::_write_aggregate_output_chunk(WorkerState& worker_state,
                                                                     const std::vector<size_t>& occupied_group_ids,
-                                                                    size_t start_index, size_t end_index) {
+                                                                    const size_t start_index, const size_t end_index) {
   TRACE_EVENT("aggregate_operator", "_write_aggregate_output_chunk");
   const auto aggregate_count = _aggregates.size();
 
@@ -326,7 +326,7 @@ std::shared_ptr<Chunk> AggregateDYOD::_write_aggregate_output_chunk(WorkerState&
 std::shared_ptr<Chunk> AggregateDYOD::_write_reference_output_chunk(const std::shared_ptr<Table>& aggregates_table,
                                                                     ChunkID chunk_id,
                                                                     const std::vector<size_t>& occupied_group_ids,
-                                                                    size_t start_index, size_t end_index) {
+                                                                    const size_t start_index, const size_t end_index) {
   TRACE_EVENT("aggregate_operator", "_write_reference_chunk");
   const auto groupby_column_count = _groupby_column_ids.size();
   const auto aggregate_count = _aggregates.size();
@@ -350,9 +350,10 @@ std::shared_ptr<Chunk> AggregateDYOD::_write_reference_output_chunk(const std::s
   return std::make_shared<Chunk>(segments);
 }
 
-std::shared_ptr<AbstractSegment> AggregateDYOD::_write_groupby_segment(size_t groupby_column_index,
+std::shared_ptr<AbstractSegment> AggregateDYOD::_write_groupby_segment(const size_t groupby_column_index,
                                                                        const std::vector<size_t>& occupied_group_ids,
-                                                                       size_t start_index, size_t end_index) {
+                                                                       const size_t start_index,
+                                                                       const size_t end_index) {
   TRACE_EVENT("aggregate_operator", "_write_groupby_segment");
   const auto input_table = left_input_table();
   const auto column_id = _groupby_column_ids[groupby_column_index];
@@ -392,7 +393,7 @@ template <typename ColumnDataType, WindowFunction aggregate_function>
   requires(aggregate_function == WindowFunction::Avg && std::is_arithmetic_v<ColumnDataType>)
 std::shared_ptr<AbstractSegment> AggregateDYOD::_write_aggregate_segment(
     TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector, bool /*is_nullable*/,
-    const std::vector<size_t>& occupied_group_ids, size_t start_index, size_t end_index) {
+    const std::vector<size_t>& occupied_group_ids, const size_t start_index, const size_t end_index) {
   TRACE_EVENT("aggregate_operator", "_write_aggregate_segment", "aggregate_function", "AVG");
   using AggregateDataType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
   const auto& sums = aggregate_vector.accumulators();
@@ -421,7 +422,7 @@ template <typename ColumnDataType, WindowFunction aggregate_function>
   requires(aggregate_function == WindowFunction::Count)
 std::shared_ptr<AbstractSegment> AggregateDYOD::_write_aggregate_segment(
     TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector, bool /*is_nullable*/,
-    const std::vector<size_t>& occupied_group_ids, size_t start_index, size_t end_index) {
+    const std::vector<size_t>& occupied_group_ids, const size_t start_index, const size_t end_index) {
   TRACE_EVENT("aggregate_operator", "_write_aggregate_segment", "aggregate_function", "COUNT");
   using AggregateDataType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
   const auto& counts = aggregate_vector.counts();
@@ -440,7 +441,7 @@ template <typename ColumnDataType, WindowFunction aggregate_function>
   requires(aggregate_function == WindowFunction::CountDistinct)
 std::shared_ptr<AbstractSegment> AggregateDYOD::_write_aggregate_segment(
     TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector, bool /*is_nullable*/,
-    const std::vector<size_t>& occupied_group_ids, size_t start_index, size_t end_index) {
+    const std::vector<size_t>& occupied_group_ids, const size_t start_index, const size_t end_index) {
   TRACE_EVENT("aggregate_operator", "_write_aggregate_segment", "aggregate_function", "COUNT_DISTINCT");
   using AggregateDataType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
   const auto chunk_size = end_index - start_index;
@@ -459,7 +460,7 @@ std::shared_ptr<AbstractSegment> AggregateDYOD::_write_aggregate_segment(
 template <typename ColumnDataType, WindowFunction aggregate_function>
 std::shared_ptr<AbstractSegment> AggregateDYOD::_write_aggregate_segment(
     TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector, bool is_nullable,
-    const std::vector<size_t>& occupied_group_ids, size_t start_index, size_t end_index) {
+    const std::vector<size_t>& occupied_group_ids, const size_t start_index, const size_t end_index) {
   TRACE_EVENT("aggregate_operator", "_write_aggregate_segment", "aggregate_function", "default");
   using AggregateDataType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
   const auto chunk_size = end_index - start_index;
@@ -501,7 +502,7 @@ GroupID AggregateDYOD::_group_id(StateType& state, RowIDs& row_ids, const GroupK
 
   // TODO(anyone): This may allocate a group ID even if there was a race and another thread inserted the key first.
   // Not a correctness problem, but it might hurt performance.
-  auto [insert_it, inserted] = state.group_id_map.insert({group_key, worker_state.next_group_id()});
+  const auto& [insert_it, inserted] = state.group_id_map.insert({group_key, worker_state.next_group_id()});
   const auto group_id = insert_it->second;
 
   if (inserted) {
@@ -545,7 +546,7 @@ std::vector<size_t> AggregateDYOD::_get_occupied_group_ids() {
   // clang-format off
   return std::visit([&](auto& state) {
     auto view = std::views::iota(size_t{0}, state.row_ids.size())
-      | std::views::filter([&](size_t index) { return !state.row_ids[index].empty(); });
+      | std::views::filter([&](const size_t index) { return !state.row_ids[index].empty(); });
     return std::vector<size_t>(view.begin(), view.end());
   }, _state);
   // clang-format on
@@ -795,7 +796,7 @@ void AggregateDYOD::_aggregate_count_star(AbstractAggregateVector& aggregate_vec
   }
 }
 
-bool AggregateDYOD::_aggregate_is_nullable(size_t aggregate_index) {
+bool AggregateDYOD::_aggregate_is_nullable(const size_t aggregate_index) const {
   const auto aggregate_function = _aggregates[aggregate_index]->window_function;
 
   if (aggregate_function == WindowFunction::Count || aggregate_function == WindowFunction::CountDistinct) {
@@ -812,13 +813,13 @@ bool AggregateDYOD::_aggregate_is_nullable(size_t aggregate_index) {
   return true;
 }
 
-DataType AggregateDYOD::_aggregate_column_data_type(size_t aggregate_index) {
+DataType AggregateDYOD::_aggregate_column_data_type(const size_t aggregate_index) const {
   const auto& aggregate = _aggregates[aggregate_index];
   const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
   return pqp_column.data_type();
 }
 
-std::string AggregateDYOD::_aggregate_column_name(size_t aggregate_index) {
+const std::string AggregateDYOD::_aggregate_column_name(const size_t aggregate_index) const {
   const auto input_table = left_input_table();
   const auto& aggregate = _aggregates[aggregate_index];
   const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());

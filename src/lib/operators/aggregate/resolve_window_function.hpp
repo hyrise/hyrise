@@ -9,7 +9,7 @@ namespace hyrise {
 
 // Resolve the window function and pass it to the functor as a compile-time constant.
 template <typename Functor>
-void resolve_window_function(WindowFunction window_function, Functor&& functor) {
+void resolve_window_function(const WindowFunction window_function, const Functor&& functor) {
   switch (window_function) {
     case WindowFunction::Min:
       functor(std::integral_constant<WindowFunction, WindowFunction::Min>{});
