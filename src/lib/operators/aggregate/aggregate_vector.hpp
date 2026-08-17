@@ -6,6 +6,8 @@
 #include <unordered_set>
 #include <vector>
 
+#include <boost/unordered/unordered_flat_set.hpp>
+
 #include "operators/abstract_aggregate_operator.hpp"
 #include "types.hpp"
 #include "window_function_traits.hpp"
@@ -39,8 +41,8 @@ class AbstractAggregateVector {
 template <typename ColumnDataType, WindowFunction aggregate_function>
 struct TypedAggregateVector : AbstractAggregateVector {
   using AggregateDataType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
-  using AccumulatorDataType =
-      std::conditional_t<aggregate_function == WindowFunction::CountDistinct, std::unordered_set<ColumnDataType>, AggregateDataType>;
+  using AccumulatorDataType = std::conditional_t<aggregate_function == WindowFunction::CountDistinct,
+                                                 boost::unordered_flat_set<ColumnDataType>, AggregateDataType>;
 
  public:
   // The mutable accessor is needed because aggregator functions mutate values directly.
