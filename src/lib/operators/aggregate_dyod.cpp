@@ -491,16 +491,6 @@ std::shared_ptr<AbstractSegment> AggregateDYOD::_write_aggregate_segment(
   return std::make_shared<ValueSegment<AggregateDataType>>(std::move(values));
 }
 
-template <typename ColumnDataType, WindowFunction aggregate_function>
-  requires(WindowFunctionTraits<ColumnDataType, aggregate_function>::RESULT_TYPE == DataType::Null)
-std::shared_ptr<AbstractSegment> AggregateDYOD::_write_aggregate_segment(
-    TypedAggregateVector<ColumnDataType, aggregate_function>& /*aggregate_vector*/, bool /*is_nullable*/,
-    const std::vector<size_t>& /*occupied_group_ids*/, size_t /*start_index*/, size_t /*end_index*/) {
-  // Invalid combinations of ColumnDataType and WindowFunction may be instantiated at compile time, but
-  // should never be reached at runtime.
-  Fail("Invalid combination of column type and aggregate function.");
-}
-
 template <typename StateType>
 GroupID AggregateDYOD::_group_id(StateType& state, RowIDs& row_ids, const GroupKey& group_key,
                                  WorkerState& worker_state) {

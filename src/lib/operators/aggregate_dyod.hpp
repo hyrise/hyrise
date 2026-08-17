@@ -179,13 +179,6 @@ class AggregateDYOD : public AbstractAggregateOperator {
       TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector, bool is_nullable,
       const std::vector<size_t>& occupied_group_ids, size_t start_index, size_t end_index);
 
-  // This overload should never be reached at runtime.
-  template <typename ColumnDataType, WindowFunction aggregate_function>
-    requires(WindowFunctionTraits<ColumnDataType, aggregate_function>::RESULT_TYPE == DataType::Null)
-  std::shared_ptr<AbstractSegment> _write_aggregate_segment(
-      TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector, bool is_nullable,
-      const std::vector<size_t>& occupied_group_ids, size_t start_index, size_t end_index);
-
   // Insert the group key into the global group ID map and store the row IDs so we can access them when
   // writing the output and return the corresponding group ID. If the group key already exists in the
   // global group ID map, return the existing group ID.
