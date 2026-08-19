@@ -862,7 +862,7 @@ TEST_F(StressTest, SharedOperatorState) {
   };
 
   // Push some work to task queues and execute some directly from the main thread.
-  constexpr auto SCHEDULED_TASK_COUNT = 20'000;
+  constexpr auto SCHEDULED_TASK_COUNT = HYRISE_WITH_TSAN ? 2'000 : 20'000;
   constexpr auto DIRECTLY_EXECUTED_TASK_COUNT = SCHEDULED_TASK_COUNT / 10;
   auto operator_state = OperatorSharedState<TestWorkerState>{};
   auto start_flag = std::atomic_flag{};
