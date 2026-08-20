@@ -603,7 +603,11 @@ AggregateDYOD::AggregateDYOD(const std::shared_ptr<AbstractOperator>& input_oper
                              const std::vector<ColumnID>& groupby_column_ids)
     : AbstractAggregateOperator(input_operator, aggregates, groupby_column_ids,
                                 std::make_unique<OperatorPerformanceData<OperatorSteps>>()),
-      _has_aggregate_functions(has_aggregate_functions(_aggregates)) {}
+      _has_aggregate_functions(has_aggregate_functions(_aggregates)) {
+  // We need to initialize all fields in the constructor, but the calculation for _max_job_size reads the input and is
+  // thus only calculated in _on_execute.
+  _max_job_size = size_t{1};
+}
 
 const std::string& AggregateDYOD::name() const {
   static const auto name = std::string{"AggregateDYOD"};
