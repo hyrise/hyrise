@@ -756,7 +756,7 @@ void AggregateDYOD::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, 
   auto& result_ids = *context.result_ids;
   auto& results = context.results;
 
-  using AccumulatorType = DYODAggregateResult<ColumnDataType, aggregate_function>::AccumulatorType;
+  using AccumulatorType = typename DYODAggregateResult<ColumnDataType, aggregate_function>::AccumulatorType;
   constexpr auto AGGREGATOR =
       DYODWindowFunctionBuilder<ColumnDataType, AccumulatorType, aggregate_function>().get_aggregate_function();
 
