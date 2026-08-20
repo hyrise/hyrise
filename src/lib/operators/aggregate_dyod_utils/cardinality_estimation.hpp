@@ -15,11 +15,12 @@
 #include "operators/operator_state.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
 // Cardinality estimation for sizing the fixed-capacity `ConcurrentTicketMap`.
-// We use a precision of 10 bits, so the number of registers for HyperLogLog `m`  is 1024.
+// We use a precision of 10 bits, so the number of registers for HyperLogLog `m` is 1024.
 // This gives a relative standard error of 1.04 / sqrt(m) = 0.0325, or 3.25 %.
 // We use a precision of 10 giving 1 KiB of registers per sketch.
 // The entire implementation here is stolen from "HyperLogLog: the analysis of a near-optimal cardinality estimation
@@ -108,6 +109,7 @@ inline size_t estimate_group_count_multi_column(const RowFormat& format,
     }
 
     const auto& chunk = input_table->get_chunk(chunk_id);
+    DebugAssert(chunk, "Expected an existing input chunk.");
     materialize_rows(format, chunk, groupby_column_ids, materialized);
 
     auto* row_ptr = materialized.rows.get();
@@ -142,6 +144,7 @@ size_t estimate_group_count_single_column(const ColumnID groupby_column_id,
   const auto process_chunk = [&](const ChunkID chunk_id) {
     auto& worker_state = operator_state.current_worker_state();
     const auto& chunk = input_table->get_chunk(chunk_id);
+    DebugAssert(chunk, "Expected an existing input chunk.");
     segment_iterate<ColumnDataType>(*chunk->get_segment(groupby_column_id), [&](const auto& position) {
       if (!position.is_null()) {
         // NOTE: Preserve floating-point representations instead of truncating them to uint64_t.

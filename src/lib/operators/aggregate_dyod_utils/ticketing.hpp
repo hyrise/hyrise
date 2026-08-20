@@ -98,8 +98,9 @@ bool with_string_segment_iterate(const std::shared_ptr<ReferenceSegment>& segmen
 
   const auto& referenced_table = segment->referenced_table();
   const auto referenced_column_id = segment->referenced_column_id();
-  const auto referenced_segment =
-      referenced_table->get_chunk(pos_list->common_chunk_id())->get_segment(referenced_column_id);
+  const auto referenced_chunk = referenced_table->get_chunk(pos_list->common_chunk_id());
+  DebugAssert(referenced_chunk, "Expected an existing referenced chunk.");
+  const auto referenced_segment = referenced_chunk->get_segment(referenced_column_id);
   const auto pos_list_size = pos_list->size();
 
   if (const auto referenced_value = std::dynamic_pointer_cast<ValueSegment<pmr_string>>(referenced_segment)) {

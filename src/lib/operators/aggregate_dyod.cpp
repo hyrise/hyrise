@@ -31,6 +31,7 @@
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
@@ -64,6 +65,9 @@ struct NoGroupByWorkerState : public Noncopyable {
     for (auto aggregate_id = size_t{0}; aggregate_id < aggregate_count; ++aggregate_id) {
       // Aggregates that need no per-chunk work (see `AggregateInfo::counts_all_rows`) have no state.
       const auto& aggregate_state = aggregate_states[aggregate_id];
+      if (!aggregate_state) {
+        continue;
+      }
       const auto& current_aggregate_info = aggregate_info[aggregate_id];
 
       resolve_data_type(current_aggregate_info.data_type, [&](const auto data_type_t) {
@@ -180,13 +184,15 @@ void accumulate_no_groupby_states(const std::shared_ptr<const Table>& input_tabl
     return;
   }
 
-  run_jobs_over_chunks(chunk_count, chunk_count, [&](const size_t, auto&& next_chunk) {
+  const auto job_count = std::min<size_t>(Hyrise::get().topology.num_cpus(), chunk_count);
+  run_jobs_over_chunks(chunk_count, job_count, [&](const size_t, auto&& next_chunk) {
     // A job runs to completion on the worker that picked it up, so the states obtained here are ours for as
     // long as we process chunks.
     auto& aggregate_states = initialized_worker_state().aggregate_states;
 
     while (const auto chunk_id = next_chunk()) {
-      const auto& chunk = input_table->get_chunk(*chunk_id);
+      const auto chunk = input_table->get_chunk(*chunk_id);
+      DebugAssert(chunk, "Expected an existing input chunk.");
 
       for (auto aggregate_id = size_t{0}; aggregate_id < aggregate_count; ++aggregate_id) {
         if (!aggregate_states[aggregate_id]) {
@@ -226,7 +232,9 @@ std::vector<AllTypeVariant> no_groupby_result_row(const std::shared_ptr<const Ta
       using ColumnDataType = typename decltype(data_type_t)::type;
       resolve_window_function(info.window_function, [&](const auto window_function_t) {
         using AggregateState = IntermediateState<ColumnDataType, decltype(window_function_t)::value>;
-        const auto& state = *std::static_pointer_cast<AggregateState>(aggregate_states[aggregate_id]);
+        const auto aggregate_state = std::static_pointer_cast<AggregateState>(aggregate_states[aggregate_id]);
+        DebugAssert(aggregate_state, "Missing state for aggregate that requires per-row aggregation.");
+        const auto& state = *aggregate_state;
         const auto [value, is_null] = state.finalize();
         result_values.emplace_back(is_null ? AllTypeVariant{} : AllTypeVariant{value});
       });
@@ -322,14 +330,15 @@ allocate_final_results(const TableColumnDefinitions& column_definitions, const s
 
 // --------------------------------------------- Group-by: Aggregate ---------------------------------------------
 
-template <typename ColumnDataType, typename AggregateType, WindowFunction window_function, typename AggregateState,
-          bool force_spill = false>
+template <typename AggregateState, bool force_spill = false>
 void spill_local_hash_table_to_global_aggregate_result(
     boost::unordered_flat_map<uint64_t, AggregateState>& local_hash_table,
     const std::shared_ptr<std::vector<AggregateState>>& global_aggregate_result,
     std::vector<std::atomic_flag>& intermediate_result_atomics) {
   if constexpr (force_spill) {
     for (auto& [ticket, state] : local_hash_table) {
+      DebugAssert(ticket < global_aggregate_result->size(), "Aggregate ticket exceeds the result size.");
+      DebugAssert(ticket < intermediate_result_atomics.size(), "Aggregate ticket exceeds the atomic flag size.");
       while (intermediate_result_atomics[ticket].test_and_set()) {
         // Spin until the atomic flag is cleared by the thread that is currently merging this ticket's state.
       }
@@ -340,19 +349,21 @@ void spill_local_hash_table_to_global_aggregate_result(
   } else {
     boost::unordered::erase_if(local_hash_table, [&](auto& entry) {
       auto& [ticket, state] = entry;
+      DebugAssert(ticket < global_aggregate_result->size(), "Aggregate ticket exceeds the result size.");
+      DebugAssert(ticket < intermediate_result_atomics.size(), "Aggregate ticket exceeds the atomic flag size.");
       if (intermediate_result_atomics[ticket].test_and_set()) {
         return false;  // We do not spill and skip this entry.
       }
       global_aggregate_result->operator[](ticket).merge(state);
       intermediate_result_atomics[ticket].clear();
-      return true;  // Sucessfully spilled -> erase the entry.
+      return true;  // Successfully spilled -> erase the entry.
     });
   }
 }
 
 // COUNT(*) does not reference an input column. It counts all rows per group (NULLs included), so every row of the
 // chunk contributes to its group's count.
-template <typename ColumnDataType, typename AggregateType, WindowFunction window_function, typename AggregateState>
+template <typename AggregateState>
 void accumulate_count_star(const uint64_t* const tickets, const size_t row_index, const size_t chunk_size,
                            boost::unordered_flat_map<uint64_t, AggregateState>& local_hash_table,
                            const std::shared_ptr<std::vector<AggregateState>>& global_aggregate_result,
@@ -361,15 +372,15 @@ void accumulate_count_star(const uint64_t* const tickets, const size_t row_index
     ++local_hash_table[tickets[row_index + chunk_offset]].value_count;
 
     if (local_hash_table.size() >= AGG_MAX_LOCAL_HASH_TABLE_SIZE) {
-      spill_local_hash_table_to_global_aggregate_result<ColumnDataType, AggregateType, window_function, AggregateState>(
-          local_hash_table, global_aggregate_result, intermediate_result_atomics);
+      spill_local_hash_table_to_global_aggregate_result<AggregateState>(local_hash_table, global_aggregate_result,
+                                                                        intermediate_result_atomics);
     }
   }
 }
 
 // Aggregate a single chunk of a single aggregate.
 template <typename ColumnDataType, typename AggregateType, WindowFunction window_function, typename AggregateState>
-void accumulate_job(const uint64_t* const tickets, uint32_t row_index,
+void accumulate_job(const uint64_t* const tickets, size_t row_index,
                     const std::shared_ptr<AbstractSegment>& aggregate_segment,
                     boost::unordered_flat_map<uint64_t, AggregateState>& local_hash_table,
                     const std::shared_ptr<std::vector<AggregateState>>& global_aggregate_result,
@@ -389,21 +400,21 @@ void accumulate_job(const uint64_t* const tickets, uint32_t row_index,
           local_hash_table[ticket] = AggregateState();
           hash_table_size += 1;
         }
+        auto& state = local_hash_table[ticket];
 
         if constexpr (window_function != WindowFunction::StandardDeviationSample &&
                       window_function != WindowFunction::CountDistinct) {
-          aggregate_function(value, local_hash_table[ticket].value_count, local_hash_table[ticket].accumulator);
-          local_hash_table[ticket].value_count += 1;
+          aggregate_function(value, state.value_count, state.accumulator);
+          state.value_count += 1;
         } else if constexpr (window_function == WindowFunction::CountDistinct) {
-          local_hash_table[ticket].distinct_values.insert(value);
+          state.distinct_values.insert(value);
         } else if constexpr (window_function == WindowFunction::StandardDeviationSample) {
-          aggregate_function(value, size_t{0}, local_hash_table[ticket].standard_deviation);
+          aggregate_function(value, size_t{0}, state.standard_deviation);
         }
 
         if (hash_table_size >= AGG_MAX_LOCAL_HASH_TABLE_SIZE) {
-          spill_local_hash_table_to_global_aggregate_result<ColumnDataType, AggregateType, window_function,
-                                                            AggregateState, true>(
-              local_hash_table, global_aggregate_result, intermediate_result_atomics);
+          spill_local_hash_table_to_global_aggregate_result<AggregateState>(local_hash_table, global_aggregate_result,
+                                                                            intermediate_result_atomics);
           hash_table_size = local_hash_table.size();
         }
       });
@@ -458,15 +469,16 @@ void delegate_accumulate(const std::shared_ptr<const Table>& input_table,
               break;
             }
             const auto chunk_id = ChunkID{static_cast<ChunkID::base_type>(next_chunk)};
-            const auto& chunk = input_table->get_chunk(chunk_id);
+            const auto chunk = input_table->get_chunk(chunk_id);
+            DebugAssert(chunk, "Expected an existing input chunk.");
             const auto row_index = chunk_offsets[chunk_id];
 
             if constexpr (window_function == WindowFunction::Count) {
               // COUNT(*) references no input column, so there is no segment to iterate.
               if (info.is_count_star) {
-                accumulate_count_star<ColumnDataType, AggregateType, window_function, AggregateState>(
-                    tickets, row_index, chunk->size(), local_hash_table, this_column_intermediate_results,
-                    this_column_intermediate_result_atomics);
+                accumulate_count_star<AggregateState>(tickets, row_index, chunk->size(), local_hash_table,
+                                                      this_column_intermediate_results,
+                                                      this_column_intermediate_result_atomics);
                 continue;
               }
             }
@@ -477,8 +489,7 @@ void delegate_accumulate(const std::shared_ptr<const Table>& input_table,
           }
           // Finally, force a spill of all entries that remain in the local hash table. This also clears the local
           // hashtable.
-          spill_local_hash_table_to_global_aggregate_result<ColumnDataType, AggregateType, window_function,
-                                                            AggregateState, true>(
+          spill_local_hash_table_to_global_aggregate_result<AggregateState, true>(
               local_hash_table, this_column_intermediate_results, this_column_intermediate_result_atomics);
         });
       });
@@ -499,16 +510,17 @@ void delegate_accumulate(const std::shared_ptr<const Table>& input_table,
 
 // Performs ANY(column) on a single chunk. Now it is only used for group-by columns with high cardinality.
 template <typename ColumnDataType>
-void any_grouped_chunk(const uint64_t* const tickets, const std::shared_ptr<const Table>& input_table,
-                       const ColumnID input_column_id, const ChunkID chunk_id, const size_t first_row_index,
+void any_grouped_chunk(const uint64_t* const tickets, const std::shared_ptr<const Chunk>& chunk,
+                       const ColumnID input_column_id, const size_t first_row_index,
                        std::vector<std::atomic_flag>& seen, ChunkedVector<ColumnDataType>& values,
                        std::vector<uint8_t>& nulls) {
   auto row_index = first_row_index;  // global row index, used to look up the group ticket in `tickets`
-  const auto& groupby_segment = input_table->get_chunk(chunk_id)->get_segment(input_column_id);
+  const auto& groupby_segment = chunk->get_segment(input_column_id);
 
   with_string_segment_iterate<ColumnDataType>(
       groupby_segment, [&](const auto& value, const bool is_null, const auto /*needs_copy*/) {
         const auto ticket = tickets[row_index++];
+        DebugAssert(ticket < seen.size(), "Group ticket exceeds the seen flags size.");
         // The claim only needs to be atomic; the written values are published by the jobs joining.
         if (seen[ticket].test(std::memory_order_relaxed) || seen[ticket].test_and_set(std::memory_order_relaxed)) {
           return;  // Another row of this group already provided the value.
@@ -525,6 +537,7 @@ template <typename ColumnDataType, typename NullContainer>
 void write_groupby_value_from_key_row(const GroupKey& key, const uint64_t ticket, const RowFormat& format,
                                       const size_t groupby_index, const size_t string_col_index,
                                       ChunkedVector<ColumnDataType>& values, NullContainer& nulls) {
+  DebugAssert(ticket < nulls.size(), "Group ticket exceeds the output size.");
   const auto row_view = RowView{.base = key.row, .format = format};
   const auto null_mask_bit = uint64_t{1} << groupby_index;
 
@@ -560,7 +573,7 @@ void build_groupby_output_columns(const std::shared_ptr<const Table>& input_tabl
 
   // For low-cardinality group-bys (far fewer groups than input rows), each group-by column is cheaper to build by
   // reading every group's value once from its distinct key row in the hash table than by scanning the whole source
-  // column. above that ratio the scattered key-row access loses to a sequential source scan. Only the multi-column
+  // column. Above that ratio the scattered key-row access loses to a sequential source scan. Only the multi-column
   // grouping path exposes a hash table (`has_hash_table`); the single-column fast path recovers group-by values by
   // scanning.
   const auto use_hash_table_for_groupby =
@@ -612,17 +625,24 @@ void build_groupby_output_columns(const std::shared_ptr<const Table>& input_tabl
       }
       // High cardinality: a sequential scan of the source column beats chasing the scattered key rows.
       const auto chunk_id = ChunkID{static_cast<ChunkID::base_type>(first_part_index)};
-      any_grouped_chunk<ColumnDataType>(tickets, input_table, groupby_column_id, chunk_id, chunk_offsets[chunk_id],
+      const auto chunk = input_table->get_chunk(chunk_id);
+      DebugAssert(chunk, "Expected an existing input chunk.");
+      any_grouped_chunk<ColumnDataType>(tickets, chunk, groupby_column_id, chunk_offsets[chunk_id],
                                         groupby_seen[groupby_index], values, nulls);
     });
   };
 
   {
     auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+    const auto chunk_count = input_table->chunk_count();
+    const auto slot_count = use_hash_table_for_groupby ? groups.global_hash_table.capacity() : chunk_count;
+    const auto parts_per_column = use_hash_table_for_groupby ? (slot_count + GROUPBY_HASH_TABLE_SLOTS_PER_JOB - 1) /
+                                                                   GROUPBY_HASH_TABLE_SLOTS_PER_JOB
+                                                             : chunk_count;
+    jobs.reserve(groupby_column_count * parts_per_column);
     for (auto groupby_index = uint32_t{0}; groupby_index < groupby_column_count; ++groupby_index) {
       if (use_hash_table_for_groupby) {
         // One job per slot range of the grouping hash table. Only the multi-column path builds one.
-        const auto slot_count = groups.global_hash_table.capacity();
         for (auto first_slot = size_t{0}; first_slot < slot_count; first_slot += GROUPBY_HASH_TABLE_SLOTS_PER_JOB) {
           const auto end_slot = std::min(first_slot + GROUPBY_HASH_TABLE_SLOTS_PER_JOB, slot_count);
           jobs.emplace_back(std::make_shared<JobTask>([&build_groupby_part, groupby_index, first_slot, end_slot]() {
@@ -632,7 +652,6 @@ void build_groupby_output_columns(const std::shared_ptr<const Table>& input_tabl
         continue;
       }
       // One job per chunk of the source column.
-      const auto chunk_count = input_table->chunk_count();
       for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
         jobs.emplace_back(std::make_shared<JobTask>([&build_groupby_part, groupby_index, chunk_id]() {
           build_groupby_part(groupby_index, chunk_id, chunk_id + 1);
@@ -766,7 +785,7 @@ std::shared_ptr<const Table> AggregateDYOD::_groupby_aggregate() {
 
   const auto aggregate_infos = build_aggregate_infos(_aggregates, input_table);
 
-  // The output schema is [group-by columns..., aggregate columns...]. Here we only define the columns. the group-by
+  // The output schema is [group-by columns..., aggregate columns...]. Here we only define the columns. The group-by
   // output segments and the aggregate segments are each filled by their own jobs.
   const auto column_definitions =
       build_output_column_definitions(*input_table, _groupby_column_ids, _aggregates, aggregate_infos);
@@ -785,6 +804,8 @@ std::shared_ptr<const Table> AggregateDYOD::_groupby_aggregate() {
   // `finalize_grouped_aggregates`), so their allocation jobs run concurrently with it and stay off the critical path.
   // We do this because the final results use `pmr_vector` which does not rely on trivial default construction.
   auto final_result_allocation_jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+  final_result_allocation_jobs.reserve(result_column_count *
+                                       ((group_count + TARGET_CHUNK_SIZE - 1) / TARGET_CHUNK_SIZE));
   const auto [final_results, final_result_nulls] =
       allocate_final_results(column_definitions, group_count, final_result_allocation_jobs);
   for (const auto& job : final_result_allocation_jobs) {
@@ -796,7 +817,9 @@ std::shared_ptr<const Table> AggregateDYOD::_groupby_aggregate() {
   auto row_offset = size_t{0};
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     chunk_offsets[chunk_id] = row_offset;
-    row_offset += input_table->get_chunk(chunk_id)->size();
+    const auto chunk = input_table->get_chunk(chunk_id);
+    DebugAssert(chunk, "Expected an existing input chunk.");
+    row_offset += chunk->size();
   }
 
   delegate_accumulate(input_table, aggregate_infos, tickets, chunk_offsets, intermediate_results, group_count,

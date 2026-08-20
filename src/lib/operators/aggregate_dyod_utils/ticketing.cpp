@@ -181,7 +181,7 @@ uint64_t remove_fuzzy_ticketing_gaps(std::vector<std::pair<uint64_t, uint64_t>>&
 
 // NOLINTEND(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
 
-// Multi-column path that materialize each row's group-by key into a packed row format, hashes it and probes
+// Multi-column path that materializes each row's group-by key into a packed row format, hashes it and probes
 // a shared, lock-free `ConcurrentTicketMap`. Each thread hands out tickets from its own claimed range, so the shared
 // range 'cursor' is fought over once per range rather than once per group (= fuzzy ticketing). The trailing unused
 // tickets of each thread's last range are compacted afterwards so the final tickets form a dense [0, group_count)
@@ -206,12 +206,15 @@ std::shared_ptr<GroupKeyData> compute_groups_multi_column(const std::vector<Colu
   // Compute the starting offset into the ticket vector for each chunk.
   {
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count - 1; ++chunk_id) {
-      const auto chunk_size = input_table->get_chunk(chunk_id)->size();
+      const auto chunk = input_table->get_chunk(chunk_id);
+      DebugAssert(chunk, "Expected an existing input chunk.");
+      const auto chunk_size = chunk->size();
       ticket_offsets[chunk_id + 1] = ticket_offsets[chunk_id] + static_cast<uint64_t>(chunk_size);
       max_chunk_size = std::max(max_chunk_size, static_cast<size_t>(chunk_size));
     }
-    max_chunk_size =
-        std::max(max_chunk_size, static_cast<size_t>(input_table->get_chunk(ChunkID{chunk_count - 1})->size()));
+    const auto last_chunk = input_table->get_chunk(ChunkID{chunk_count - 1});
+    DebugAssert(last_chunk, "Expected an existing input chunk.");
+    max_chunk_size = std::max(max_chunk_size, static_cast<size_t>(last_chunk->size()));
   }
 
   const auto row_count = input_table->row_count();
@@ -230,7 +233,8 @@ std::shared_ptr<GroupKeyData> compute_groups_multi_column(const std::vector<Colu
   const auto process_chunk = [&](const ChunkID chunk_id, MaterializedRows& materialized,
                                  std::pmr::monotonic_buffer_resource& arena, uint64_t& next_ticket,
                                  uint64_t& ticket_range_end) {
-    const auto& chunk = input_table->get_chunk(chunk_id);
+    const auto chunk = input_table->get_chunk(chunk_id);
+    DebugAssert(chunk, "Expected an existing input chunk.");
     materialize_rows(row_format, chunk, groupby_column_ids, materialized);
 
     const auto promote_key = [&](const GroupKey& key) {
@@ -327,8 +331,9 @@ std::shared_ptr<GroupKeyData> compute_groups_single_column(const ColumnID groupb
       auto ticket_offsets = std::vector<uint64_t>(chunk_count, 0);
       for (auto chunk_id = ChunkID{1}; chunk_id < chunk_count; ++chunk_id) {
         const auto previous_chunk_id = ChunkID{chunk_id - 1};
-        ticket_offsets[chunk_id] = ticket_offsets[previous_chunk_id] +
-                                   static_cast<uint64_t>(input_table->get_chunk(previous_chunk_id)->size());
+        const auto previous_chunk = input_table->get_chunk(previous_chunk_id);
+        DebugAssert(previous_chunk, "Expected an existing input chunk.");
+        ticket_offsets[chunk_id] = ticket_offsets[previous_chunk_id] + static_cast<uint64_t>(previous_chunk->size());
       }
 
       const auto estimated_groups = estimate_group_count_single_column<ColumnDataType>(groupby_column_id, input_table);
@@ -352,7 +357,8 @@ std::shared_ptr<GroupKeyData> compute_groups_single_column(const ColumnID groupb
       auto next_ticket_range_start = std::atomic<uint64_t>{reserves_null_ticket ? uint64_t{1} : uint64_t{0}};
 
       const auto process_chunk = [&](const ChunkID chunk_id, uint64_t& next_ticket, uint64_t& ticket_range_end) {
-        const auto& chunk = input_table->get_chunk(chunk_id);
+        const auto chunk = input_table->get_chunk(chunk_id);
+        DebugAssert(chunk, "Expected an existing input chunk.");
         const auto& segment = chunk->get_segment(groupby_column_id);
         const auto chunk_start = ticket_offsets[chunk_id];
         auto chunk_offset = size_t{0};
@@ -513,7 +519,7 @@ void materialize_rows(const RowFormat& format, const std::shared_ptr<const Chunk
 
 std::shared_ptr<GroupKeyData> compute_groups(const std::vector<ColumnID>& groupby_column_ids,
                                              const std::shared_ptr<const Table>& input_table) {
-  // We do not support non-trivial types in the concurrent HashMap, so. we fall back to the multi-column path for
+  // We do not support non-trivial types in the concurrent HashMap, so we fall back to the multi-column path for
   // single-column group-bys on strings.
   if (groupby_column_ids.size() == 1 && input_table->column_data_type(groupby_column_ids[0]) != DataType::String) {
     // For a single column, we can use the concurrent ticketing path, which is faster than the multi-column path.
