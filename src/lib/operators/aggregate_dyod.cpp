@@ -603,11 +603,8 @@ AggregateDYOD::AggregateDYOD(const std::shared_ptr<AbstractOperator>& input_oper
                              const std::vector<ColumnID>& groupby_column_ids)
     : AbstractAggregateOperator(input_operator, aggregates, groupby_column_ids,
                                 std::make_unique<OperatorPerformanceData<OperatorSteps>>()),
-      _has_aggregate_functions(has_aggregate_functions(_aggregates)) {
-  // We need to initialize all fields in the constructor, but the calculation for _max_job_size reads the input and is
-  // thus only calculated in _on_execute.
-  _max_job_size = size_t{1};
-}
+      _max_job_size(size_t{1}),
+      _has_aggregate_functions(has_aggregate_functions(_aggregates)) {}
 
 const std::string& AggregateDYOD::name() const {
   static const auto name = std::string{"AggregateDYOD"};
@@ -1861,6 +1858,8 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
   // However, more specializations mean more compile time. We now have specializations for 0, 1, 2, and >2 GROUP BY
   // columns.
   const auto num_cpus = Hyrise::get().topology.num_cpus();
+  // We need to initialize all fields in the constructor, but the calculation for _max_job_size reads the input and is
+  // thus only calculated in _on_execute.
   _max_job_size = std::max(size_t{1}, left_input_table()->row_count() / (num_cpus * IDEAL_CPU_JOB_COUNT));
 
   switch (_groupby_column_ids.size()) {
