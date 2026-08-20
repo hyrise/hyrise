@@ -909,7 +909,8 @@ TYPED_TEST(OperatorsAggregateTest, StringVariations) {
   const auto& result = aggregate->get_output();
 
   auto result_values = std::vector<pmr_string>{};
-  for (auto row_number = size_t{0}; row_number < result->row_count(); ++row_number) {
+  const auto row_count = result->row_count();
+  for (auto row_number = size_t{0}; row_number < row_count; ++row_number) {
     result_values.emplace_back(*result->template get_value<pmr_string>(ColumnID{0}, row_number));
   }
 
@@ -947,7 +948,8 @@ TYPED_TEST(OperatorsAggregateTest, DYODStringGroupByWithNullsAndLongStrings) {
 
   auto distinct_non_null = std::set<pmr_string>{};
   auto null_group_count = size_t{0};
-  for (auto row_number = size_t{0}; row_number < result->row_count(); ++row_number) {
+  const auto row_count = result->row_count();
+  for (auto row_number = size_t{0}; row_number < row_count; ++row_number) {
     const auto value = result->template get_value<pmr_string>(ColumnID{0}, row_number);
     if (value) {
       distinct_non_null.insert(*value);
@@ -984,7 +986,8 @@ TYPED_TEST(OperatorsAggregateTest, DYODLowCardinalityMultiColumnGroupBy) {
 
   auto groups = std::set<std::pair<int32_t, pmr_string>>{};
   const auto& result = aggregate->get_output();
-  for (auto row = size_t{0}; row < result->row_count(); ++row) {
+  const auto row_count = result->row_count();
+  for (auto row = size_t{0}; row < row_count; ++row) {
     const auto value = result->template get_value<pmr_string>(ColumnID{1}, row);
     groups.emplace(*result->template get_value<int32_t>(ColumnID{0}, row), value.value_or(pmr_string{"<NULL>"}));
   }
@@ -1020,7 +1023,8 @@ TYPED_TEST(OperatorsAggregateTest, DYODNonNullableGroupByDropsNullBitmap) {
   const auto& result = aggregate->get_output();
 
   auto groups = std::set<std::pair<int32_t, pmr_string>>{};
-  for (auto row_number = size_t{0}; row_number < result->row_count(); ++row_number) {
+  const auto row_count = result->row_count();
+  for (auto row_number = size_t{0}; row_number < row_count; ++row_number) {
     groups.emplace(*result->template get_value<int32_t>(ColumnID{0}, row_number),
                    *result->template get_value<pmr_string>(ColumnID{1}, row_number));
   }

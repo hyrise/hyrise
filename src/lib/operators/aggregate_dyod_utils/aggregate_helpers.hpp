@@ -8,6 +8,7 @@
 #include <type_traits>
 #include <unordered_set>
 #include <utility>
+#include <vector>
 
 #include "expression/window_function_expression.hpp"
 #include "operators/abstract_aggregate_operator.hpp"

@@ -225,6 +225,7 @@ set(
     operators/aggregate_dyod_utils/ticketing.hpp
     operators/aggregate_dyod_utils/concurrent_ticket_map.hpp
     operators/aggregate_dyod_utils/aggregate_helpers.hpp
+    operators/aggregate_dyod_utils/chunk_job_runner.hpp
     operators/aggregate_dyod.cpp
     operators/aggregate_dyod.hpp
     operators/aggregate_hash.cpp
