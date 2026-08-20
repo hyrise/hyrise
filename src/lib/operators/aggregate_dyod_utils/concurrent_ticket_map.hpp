@@ -10,11 +10,15 @@
 #include <functional>
 #include <limits>
 #include <memory>
+#include <thread>
+#include <type_traits>
 #include <vector>
 
 #include "hyrise.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
+
+namespace hyrise {
 
 inline std::uint64_t rotl(const std::uint64_t value, const std::uint64_t rotation) {
   return (value << rotation) | (value >> (64U - rotation));
@@ -69,8 +73,6 @@ inline std::uint64_t compute_hash(const void* key, std::size_t len, std::uint64_
   return hash;
 }
 
-namespace hyrise {
-
 // Slot meanings:
 //   state == EMPTY (0)    : free.
 //   state == CLAIMED (1)  : a thread is writing its key
@@ -78,6 +80,9 @@ namespace hyrise {
 template <typename Key, typename Hash = std::hash<Key>, typename KeyEqual = std::equal_to<Key>>
 class ConcurrentTicketMap {
  public:
+  static_assert(std::is_trivially_copyable_v<Key> && std::is_trivially_destructible_v<Key>,
+                "ConcurrentTicketMap keys must be trivially copyable and destructible.");
+
   ConcurrentTicketMap() = default;
 
   // Sizes the table to hold at least `max_groups` entries below the load factor, rounded up to a power of two.
@@ -122,20 +127,21 @@ class ConcurrentTicketMap {
       auto index = static_cast<size_t>(hash) & _mask;
       while (probe_counter < _probe_limit) {
         auto& slot = _slots[index];
-        auto state = slot.state.load();
+        auto state = slot.state.load(std::memory_order_acquire);
 
         if (state == EMPTY) {
           auto expected = EMPTY;
-          if (slot.state.compare_exchange_strong(expected, CLAIMED)) {
+          if (slot.state.compare_exchange_strong(expected, CLAIMED, std::memory_order_relaxed,
+                                                 std::memory_order_relaxed)) {
             slot.key = promote_key(key);
-            slot.state = ticket + TICKET_BIAS;
+            slot.state.store(ticket + TICKET_BIAS, std::memory_order_release);
             return ticket;
           }
           state = expected;
         }
 
         while (state == CLAIMED) {
-          state = slot.state.load();
+          state = slot.state.load(std::memory_order_acquire);
         }
 
         if (_key_equal(slot.key, key)) {
@@ -149,14 +155,17 @@ class ConcurrentTicketMap {
 
       // The probe chain ran past `_probe_limit`. Grow and then retry against the new table.
       _probers.fetch_sub(1, std::memory_order_release);
-      if (!_is_resizing.test_and_set()) {
-        while (_probers.load() > 0) {
-          // Spin until every other prober has left.
+      if (!_is_resizing.test_and_set(std::memory_order_acq_rel)) {
+        auto backoff = size_t{1};
+        while (_probers.load(std::memory_order_relaxed) > 0) {
+          _spin_pause(backoff);
+          backoff = std::min(backoff * 2, size_t{64});
         }
+        std::atomic_thread_fence(std::memory_order_acquire);
         resize(_capacity * 2);
-        _is_resizing.clear();
+        _is_resizing.clear(std::memory_order_release);
       }
-      _probers.fetch_add(1);
+      register_prober();
     }
   }
 
@@ -178,9 +187,9 @@ class ConcurrentTicketMap {
     SlotArray new_slots{new_slots_ptr};
     const auto new_mask = new_capacity - 1;
 
-    for (size_t i = 0; i < _capacity; ++i) {
-      auto& old_slot = _slots[i];
-      auto state = old_slot.state.load();
+    for (auto index = size_t{0}; index < _capacity; ++index) {
+      auto& old_slot = _slots[index];
+      auto state = old_slot.state.load(std::memory_order_acquire);
       if (state >= TICKET_BIAS) {
         const auto ticket = state - TICKET_BIAS;
         const auto& key = old_slot.key;
@@ -190,9 +199,10 @@ class ConcurrentTicketMap {
         while (true) {
           auto& new_slot = new_slots[index];
           auto expected = EMPTY;
-          if (new_slot.state.compare_exchange_strong(expected, CLAIMED)) {
+          if (new_slot.state.compare_exchange_strong(expected, CLAIMED, std::memory_order_relaxed,
+                                                     std::memory_order_relaxed)) {
             new_slot.key = key;
-            new_slot.state = ticket + TICKET_BIAS;
+            new_slot.state.store(ticket + TICKET_BIAS, std::memory_order_release);
             break;
           }
           index = (index + 1) & new_mask;  // Linear probing
@@ -225,7 +235,7 @@ class ConcurrentTicketMap {
   template <typename Fn>
   void for_each_slot_range(const size_t first_slot, const size_t end_slot, const Fn& callback) const {
     for (auto index = first_slot; index < end_slot; ++index) {
-      const auto state = _slots[index].state.load();
+      const auto state = _slots[index].state.load(std::memory_order_acquire);
       if (state >= TICKET_BIAS) {
         callback(_slots[index].key, state - TICKET_BIAS);
       }
@@ -239,19 +249,21 @@ class ConcurrentTicketMap {
 
   void register_prober() {
     while (true) {
-      _probers.fetch_add(1);
-      if (!_is_resizing.test()) {
+      _probers.fetch_add(1, std::memory_order_acquire);
+      if (!_is_resizing.test(std::memory_order_acquire)) {
         return;
       }
-      _probers.fetch_sub(1);
-      while (_is_resizing.test()) {
-        // Spin until the resize is done.
+      _probers.fetch_sub(1, std::memory_order_release);
+      auto backoff = size_t{1};
+      while (_is_resizing.test(std::memory_order_acquire)) {
+        _spin_pause(backoff);
+        backoff = std::min(backoff * 2, size_t{64});
       }
     }
   }
 
   void unregister_prober() {
-    _probers.fetch_sub(1);
+    _probers.fetch_sub(1, std::memory_order_release);
   }
 
  private:
@@ -274,7 +286,6 @@ class ConcurrentTicketMap {
   static constexpr auto EMPTY = uint64_t{0};
   static constexpr auto CLAIMED = uint64_t{1};
   static constexpr auto TICKET_BIAS = uint64_t{2};
-  static constexpr auto PLACE_HOLDER = std::numeric_limits<uint64_t>::max() - TICKET_BIAS;
   static constexpr auto MIN_CAPACITY = size_t{16};
   static constexpr auto MAX_LOAD_FACTOR = 0.7;
   static constexpr auto PARALLEL_INIT_SLOTS = size_t{1} << 18U;
@@ -288,6 +299,12 @@ class ConcurrentTicketMap {
     const auto log2_capacity = static_cast<double>(std::bit_width(capacity) - 1);
     const auto probe_count = static_cast<size_t>(average_probes * log2_capacity);
     return std::min(capacity, std::max(MIN_PROBE_COUNT, probe_count));
+  }
+
+  static void _spin_pause(const size_t iterations) {
+    for (auto iteration = size_t{0}; iteration < iterations; ++iteration) {
+      std::this_thread::yield();
+    }
   }
 
   // Splits capacity into ranges and for each range runs `fn(begin, end)`.

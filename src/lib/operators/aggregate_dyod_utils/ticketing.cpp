@@ -77,8 +77,8 @@ void materialize_string_column(const RowFormat& format, const std::shared_ptr<Ab
 
   auto chunk_offset = size_t{0};
 
-  // `needs_copy` is a `std::bool_constant` (see `with_string_segment_iterate`). It is set depending on, so only the
-  // taken branch is compiled for any given segment kind and no per-row check remains.
+  // `needs_copy` is a `std::bool_constant` (see `with_string_segment_iterate`). It is set based on the segment type,
+  // so only the taken branch is compiled for any given segment kind and no per-row check remains.
   const auto callback = [&](const auto& str_value, const bool is_null, const auto needs_copy) {
     const auto row = row_at(chunk_offset);
     ++chunk_offset;
@@ -117,7 +117,7 @@ GroupKey promote_key_row(const RowFormat& format, const uint8_t* const row_ptr, 
       continue;
     }
     const auto* const str_ptr = copy_view.string_ptr(string_col_index);
-    if (str_ptr != nullptr) {
+    if (str_ptr) {
       const auto length = std::strlen(str_ptr) + 1;
       auto* const arena_str = static_cast<char*>(arena.allocate(length));
       std::memcpy(arena_str, str_ptr, length);
@@ -147,7 +147,7 @@ uint64_t remove_fuzzy_ticketing_gaps(std::vector<std::pair<uint64_t, uint64_t>>&
         unused_before_gap[gap_index] + (ticket_gaps[gap_index].second - ticket_gaps[gap_index].first);
   }
 
-  // A used ticket must be shifted down by the total size of all gaps preceeding it.
+  // A used ticket must be shifted down by the total size of all gaps preceding it.
   const auto compact = [&](const uint64_t ticket) {
     const auto gaps_below =
         static_cast<size_t>(std::ranges::lower_bound(sorted_gap_starts, ticket) - sorted_gap_starts.begin());
@@ -276,30 +276,19 @@ std::shared_ptr<GroupKeyData> compute_groups_multi_column(const std::vector<Colu
   // of its last claimed range. We record these per-thread gaps here and compact them out below so the final tickets
   // form a contiguous [0, group_count) range.
   auto ticket_gaps = std::vector<std::pair<uint64_t, uint64_t>>(job_count);
-  auto next_chunk_id = std::atomic<uint32_t>{0};
-  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
-  jobs.reserve(job_count);
-  for (auto job_id = uint32_t{0}; job_id < job_count; ++job_id) {
-    jobs.emplace_back(std::make_shared<JobTask>([&process_chunk, &row_format, &arenas, &next_ticket_range_start,
-                                                 &ticket_gaps, max_chunk_size, chunk_count, &next_chunk_id, job_id]() {
-      auto materialized = MaterializedRows{};
-      // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
-      materialized.rows = std::make_unique<uint8_t[]>(max_chunk_size * row_format.row_size);
-      auto& arena = *arenas[job_id];
+  run_jobs_over_chunks(chunk_count, job_count, [&](const size_t job_id, auto&& next_chunk) {
+    auto materialized = MaterializedRows{};
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
+    materialized.rows = std::make_unique<uint8_t[]>(max_chunk_size * row_format.row_size);
+    auto& arena = *arenas[job_id];
 
-      auto next_ticket = next_ticket_range_start.fetch_add(TICKET_RANGE_LENGTH);
-      auto ticket_range_end = next_ticket + TICKET_RANGE_LENGTH;
-      while (true) {
-        const auto chunk_id = next_chunk_id.fetch_add(1);
-        if (chunk_id >= chunk_count) {
-          break;
-        }
-        process_chunk(ChunkID{chunk_id}, materialized, arena, next_ticket, ticket_range_end);
-      }
-      ticket_gaps[job_id] = {next_ticket, ticket_range_end};
-    }));
-  }
-  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+    auto next_ticket = next_ticket_range_start.fetch_add(TICKET_RANGE_LENGTH);
+    auto ticket_range_end = next_ticket + TICKET_RANGE_LENGTH;
+    while (const auto chunk_id = next_chunk()) {
+      process_chunk(*chunk_id, materialized, arena, next_ticket, ticket_range_end);
+    }
+    ticket_gaps[job_id] = {next_ticket, ticket_range_end};
+  });
   // The number of distinct groups is the total claimed ticket space (the top of the highest range) minus the unused
   // tickets in all trailing gaps. Unlike the single-column path there is no separate NULL group: NULLs are part of the
   // row's null bitmap and hash into ordinary group keys.
@@ -385,7 +374,7 @@ std::shared_ptr<GroupKeyData> compute_groups_single_column(const ColumnID groupb
             }
           }
           tickets[chunk_start + chunk_offset] = current_ticket;
-          chunk_offset++;
+          ++chunk_offset;
         });
 
         value_to_ticket.unregister_prober();
@@ -397,25 +386,14 @@ std::shared_ptr<GroupKeyData> compute_groups_single_column(const ColumnID groupb
       // usually leaves a trailing gap [next_ticket, ticket_range_end) of unused tickets at the end of its last claimed
       // range. We record these per-thread gaps here and compact them out below.
       auto ticket_gaps = std::vector<std::pair<uint64_t, uint64_t>>(job_count);
-      auto next_chunk_id = std::atomic<uint32_t>{0};
-
-      auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
-      jobs.reserve(job_count);
-      for (auto job_id = uint32_t{0}; job_id < job_count; ++job_id) {
-        jobs.emplace_back(std::make_shared<JobTask>([&, job_id] {
-          auto next_ticket = next_ticket_range_start.fetch_add(TICKET_RANGE_LENGTH);
-          auto ticket_range_end = next_ticket + TICKET_RANGE_LENGTH;
-          while (true) {
-            const auto chunk_id = next_chunk_id.fetch_add(1);
-            if (chunk_id >= chunk_count) {
-              break;
-            }
-            process_chunk(ChunkID{chunk_id}, next_ticket, ticket_range_end);
-          }
-          ticket_gaps[job_id] = {next_ticket, ticket_range_end};
-        }));
-      }
-      Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+      run_jobs_over_chunks(chunk_count, job_count, [&](const size_t job_id, auto&& next_chunk) {
+        auto next_ticket = next_ticket_range_start.fetch_add(TICKET_RANGE_LENGTH);
+        auto ticket_range_end = next_ticket + TICKET_RANGE_LENGTH;
+        while (const auto chunk_id = next_chunk()) {
+          process_chunk(*chunk_id, next_ticket, ticket_range_end);
+        }
+        ticket_gaps[job_id] = {next_ticket, ticket_range_end};
+      });
 
       if (reserves_null_ticket && !has_null.load(std::memory_order_relaxed)) {
         // The column is nullable, but holds no NULL: hand the reserved ticket to the compaction as an unused range so
@@ -454,7 +432,7 @@ RowFormat create_row_format(const TableColumnDefinitions& column_definitions,
     col_offsets[group_index] = curr_offset;
     if (column_definition.data_type == DataType::String) {
       curr_offset += (sizeof(char) * PREFIX_LENGTH) + sizeof(size_t);  // prefix + length
-      string_column_count++;
+      ++string_column_count;
     } else {
       resolve_data_type(column_definition.data_type, [&](auto type) {
         using ColumnDataType = typename decltype(type)::type;
@@ -498,8 +476,8 @@ void materialize_rows(const RowFormat& format, const std::shared_ptr<const Chunk
 
   // Index of the current string column among the group-by columns. Selects which string-pointer slot to write.
   auto string_col_index = size_t{0};
-  for (auto group_by_column_index = size_t{0}; group_by_column_index < groupby_column_ids.size();
-       ++group_by_column_index) {
+  const auto group_by_column_count = groupby_column_ids.size();
+  for (auto group_by_column_index = size_t{0}; group_by_column_index < group_by_column_count; ++group_by_column_index) {
     const auto column_id = groupby_column_ids[group_by_column_index];
     const auto& segment = chunk->get_segment(column_id);
     const auto null_mask_bit = uint64_t{1} << group_by_column_index;
@@ -520,7 +498,13 @@ void materialize_rows(const RowFormat& format, const std::shared_ptr<const Chunk
             row.set_null_bitmap(row.null_bitmap() | null_mask_bit);
             return;
           }
-          row.write_value(group_by_column_index, position.value());
+          auto value = position.value();
+          if constexpr (std::is_floating_point_v<ColumnDataType>) {
+            if (value == ColumnDataType{0}) {
+              value = ColumnDataType{0};
+            }
+          }
+          row.write_value(group_by_column_index, value);
         });
       }
     });

@@ -1,22 +1,25 @@
 #pragma once
 
 #include <algorithm>
+#include <cmath>
 #include <cstddef>
+#include <format>
 #include <memory>
+#include <type_traits>
 #include <unordered_set>
 #include <utility>
-#include <vector>
 
 #include "expression/window_function_expression.hpp"
 #include "operators/abstract_aggregate_operator.hpp"
 #include "operators/aggregate/window_function_traits.hpp"
 #include "operators/aggregate_dyod_utils/ticketing.hpp"
 #include "storage/chunk.hpp"
-#include "storage/dictionary_segment.hpp"
 
 namespace hyrise {
 
-struct BaseChunkedVector {
+/** Type-erased base class for the chunked vectors used to build output columns. */
+class BaseChunkedVector {
+ public:
   BaseChunkedVector() = default;
   BaseChunkedVector(const BaseChunkedVector&) = default;
   BaseChunkedVector(BaseChunkedVector&&) = default;
@@ -26,8 +29,10 @@ struct BaseChunkedVector {
   virtual ~BaseChunkedVector() = default;
 };
 
+/** A vector split into Hyrise-sized chunks. */
 template <typename T>
-struct ChunkedVector : public BaseChunkedVector {
+class ChunkedVector : public BaseChunkedVector {
+ public:
   static constexpr auto CHUNK_SIZE = static_cast<size_t>(TARGET_CHUNK_SIZE);
 
   ChunkedVector() = default;
@@ -39,14 +44,16 @@ struct ChunkedVector : public BaseChunkedVector {
     }
   }
 
-  // This will normally retunr T& but not if T is bool. There bit packing makes it return a proxy object.
+  // This will normally return T& but not if T is bool. Bit packing makes it return a proxy object.
   decltype(auto) operator[](const size_t index) {
     return chunks[index / CHUNK_SIZE][index % CHUNK_SIZE];
   }
 
+  // Kept public because output-building jobs fill the chunks directly.
   std::vector<pmr_vector<T>> chunks;
 };
 
+/** Moves a completed chunked column into the output chunks. */
 template <typename T>
 void emit_output_column(ChunkedVector<T> values, ChunkedVector<bool> nulls, const bool nullable,
                         std::vector<Segments>& output_chunks, const size_t column_index) {
@@ -62,10 +69,10 @@ void emit_output_column(ChunkedVector<T> values, ChunkedVector<bool> nulls, cons
   }
 }
 
-// Incrementally computable aggregates (MIN/MAX/SUM/AVG/COUNT/ANY). NULL input values never contribute; an aggregate
-// without a single contributing value yields NULL, except COUNT which yields 0.
+/** State for MIN/MAX/SUM/AVG/COUNT/ANY. NULL input values never contribute. */
 template <typename ColumnDataType, WindowFunction window_function>
-struct RegularAggregateState {
+class RegularAggregateState {
+ public:
   using AggregateType = typename WindowFunctionTraits<ColumnDataType, window_function>::ReturnType;
 
   void accumulate_entire_chunk(const std::shared_ptr<const Chunk>& chunk, const ColumnID input_column_id) {
@@ -145,9 +152,10 @@ struct RegularAggregateState {
   size_t value_count{0};
 };
 
-// COUNT(DISTINCT): number of distinct non-NULL values. Never NULL (0 for an all-NULL input).
+/** State for COUNT(DISTINCT), which counts distinct non-NULL values. */
 template <typename ColumnDataType>
-struct CountDistinctAggregateState {
+class CountDistinctAggregateState {
+ public:
   using AggregateType = typename WindowFunctionTraits<ColumnDataType, WindowFunction::CountDistinct>::ReturnType;
 
   void accumulate_entire_chunk(const std::shared_ptr<const Chunk>& chunk, const ColumnID input_column_id) {
@@ -172,9 +180,10 @@ struct CountDistinctAggregateState {
   std::unordered_set<ColumnDataType> distinct_values;
 };
 
-// STDDEV_SAMP: NULL for fewer than two contributing values.
+/** State for STDDEV_SAMP, which is NULL for fewer than two contributing values. */
 template <typename ColumnDataType>
-struct StandardDeviationSampleAggregateState {
+class StandardDeviationSampleAggregateState {
+ public:
   using AggregateType =
       typename WindowFunctionTraits<ColumnDataType, WindowFunction::StandardDeviationSample>::ReturnType;
 
@@ -206,7 +215,7 @@ struct StandardDeviationSampleAggregateState {
     const auto count = standard_deviation[0];
     const auto combined_count = count + other_count;
     const auto delta = other_data[1] - standard_deviation[1];
-    standard_deviation[2] += other_data[2] + delta * delta * count * other_count / combined_count;
+    standard_deviation[2] += other_data[2] + (delta * delta * count * other_count / combined_count);
     standard_deviation[1] += delta * other_count / combined_count;
     standard_deviation[0] = combined_count;
     // `standard_deviation[3]` (the running result) is stale after merging. `finalize` recomputes it from the combined

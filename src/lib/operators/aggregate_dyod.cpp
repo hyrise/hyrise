@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "aggregate_dyod_utils/aggregate_helpers.hpp"
+#include "aggregate_dyod_utils/chunk_job_runner.hpp"
 #include "aggregate_dyod_utils/ticketing.hpp"
 #include "all_type_variant.hpp"
 #include "expression/abstract_expression.hpp"
@@ -179,42 +180,31 @@ void accumulate_no_groupby_states(const std::shared_ptr<const Table>& input_tabl
     return;
   }
 
-  auto next_chunk_id = std::atomic<uint32_t>{0};
-  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
-  jobs.reserve(chunk_count);
+  run_jobs_over_chunks(chunk_count, chunk_count, [&](const size_t, auto&& next_chunk) {
+    // A job runs to completion on the worker that picked it up, so the states obtained here are ours for as
+    // long as we process chunks.
+    auto& aggregate_states = initialized_worker_state().aggregate_states;
 
-  for (auto job_id = size_t{0}; job_id < chunk_count; ++job_id) {
-    jobs.emplace_back(std::make_shared<JobTask>([&, chunk_count]() {
-      // A job runs to completion on the worker that picked it up, so the states obtained here are ours for as
-      // long as we process chunks.
-      auto& aggregate_states = initialized_worker_state().aggregate_states;
+    while (const auto chunk_id = next_chunk()) {
+      const auto& chunk = input_table->get_chunk(*chunk_id);
 
-      while (true) {
-        const auto chunk_id = next_chunk_id.fetch_add(1, std::memory_order_relaxed);
-        if (chunk_id >= chunk_count) {
-          break;
+      for (auto aggregate_id = size_t{0}; aggregate_id < aggregate_count; ++aggregate_id) {
+        if (!aggregate_states[aggregate_id]) {
+          continue;  // Aggregates that need no per-chunk work (`counts_all_rows`) have no state.
         }
 
-        const auto& chunk = input_table->get_chunk(ChunkID{chunk_id});
-        for (auto aggregate_id = size_t{0}; aggregate_id < aggregate_count; ++aggregate_id) {
-          if (!aggregate_states[aggregate_id]) {
-            continue;  // Aggregates that need no per-chunk work (`counts_all_rows`) have no state.
-          }
-
-          const auto& info = aggregate_infos[aggregate_id];
-          resolve_data_type(info.data_type, [&](const auto data_type_t) {
-            using ColumnDataType = typename decltype(data_type_t)::type;
-            resolve_window_function(info.window_function, [&](const auto window_function_t) {
-              using AggregateState = IntermediateState<ColumnDataType, decltype(window_function_t)::value>;
-              auto& state = *std::static_pointer_cast<AggregateState>(aggregate_states[aggregate_id]);
-              state.accumulate_entire_chunk(chunk, info.input_column_id);
-            });
+        const auto& info = aggregate_infos[aggregate_id];
+        resolve_data_type(info.data_type, [&](const auto data_type_t) {
+          using ColumnDataType = typename decltype(data_type_t)::type;
+          resolve_window_function(info.window_function, [&](const auto window_function_t) {
+            using AggregateState = IntermediateState<ColumnDataType, decltype(window_function_t)::value>;
+            auto& state = *std::static_pointer_cast<AggregateState>(aggregate_states[aggregate_id]);
+            state.accumulate_entire_chunk(chunk, info.input_column_id);
           });
-        }
+        });
       }
-    }));
-  }
-  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+    }
+  });
 }
 
 // Produces the single output row by finalizing the merged aggregate states.

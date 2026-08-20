@@ -1,18 +1,18 @@
 #pragma once
 
 #include <algorithm>
-#include <atomic>
+#include <array>
+#include <bit>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
-#include <cstring>
 #include <memory>
+#include <type_traits>
 #include <vector>
 
-#include "hyrise.hpp"
+#include "operators/aggregate_dyod_utils/chunk_job_runner.hpp"
 #include "operators/aggregate_dyod_utils/ticketing.hpp"
 #include "operators/operator_state.hpp"
-#include "scheduler/abstract_task.hpp"
-#include "scheduler/job_task.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
 
@@ -113,31 +113,18 @@ inline size_t estimate_group_count_multi_column(const RowFormat& format,
     auto* row_ptr = materialized.rows.get();
     for (auto chunk_offset = uint64_t{0}; chunk_offset < materialized.row_count; ++chunk_offset) {
       const auto row_view = RowView{.base = row_ptr, .format = format};
-      // NOTE: We only compute the hash of the key bytes here. For strings this can amounts to only hashing the
+      // NOTE: We only compute the hash of the key bytes here. For strings, this can amount to only hashing the
       // inline prefix!
       worker_state.sketch.add(fmix64(compute_hash(row_view.key_bytes(), format.key_length)));
       row_ptr += format.row_size;
     }
   };
 
-  const auto job_count = std::min<size_t>(Hyrise::get().topology.num_cpus(), chunk_count);
-  auto next_chunk_id = std::atomic<uint32_t>{0};
-  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
-  jobs.reserve(job_count);
-
-  for (auto job_id = size_t{0}; job_id < job_count; ++job_id) {
-    jobs.emplace_back(std::make_shared<JobTask>([&] {
-      while (true) {
-        const auto chunk_id = next_chunk_id.fetch_add(1);
-        if (chunk_id >= chunk_count) {
-          break;
-        }
-        process_chunk(ChunkID{chunk_id});
-      }
-    }));
-  }
-
-  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+  run_jobs_over_chunks(chunk_count, [&](const size_t, auto&& next_chunk) {
+    while (const auto chunk_id = next_chunk()) {
+      process_chunk(*chunk_id);
+    }
+  });
   return operator_state.merge_worker_states().sketch.estimate_upper_bound();
 }
 
@@ -157,30 +144,22 @@ size_t estimate_group_count_single_column(const ColumnID groupby_column_id,
     const auto& chunk = input_table->get_chunk(chunk_id);
     segment_iterate<ColumnDataType>(*chunk->get_segment(groupby_column_id), [&](const auto& position) {
       if (!position.is_null()) {
-        // NOTE: We only 'mix' here as all the possible values here are less that 64 bits anyway.
-        worker_state.add(fmix64(static_cast<uint64_t>(position.value())));
+        // NOTE: Preserve floating-point representations instead of truncating them to uint64_t.
+        if constexpr (std::is_floating_point_v<ColumnDataType>) {
+          using Bits = std::conditional_t<sizeof(ColumnDataType) == sizeof(float), uint32_t, uint64_t>;
+          worker_state.add(fmix64(static_cast<uint64_t>(std::bit_cast<Bits>(position.value()))));
+        } else {
+          worker_state.add(fmix64(static_cast<uint64_t>(position.value())));
+        }
       }
     });
   };
 
-  const auto job_count = std::min<size_t>(Hyrise::get().topology.num_cpus(), chunk_count);
-  auto next_chunk_id = std::atomic<uint32_t>{0};
-  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
-  jobs.reserve(job_count);
-
-  for (auto job_id = size_t{0}; job_id < job_count; ++job_id) {
-    jobs.emplace_back(std::make_shared<JobTask>([&] {
-      while (true) {
-        const auto chunk_id = next_chunk_id.fetch_add(1);
-        if (chunk_id >= chunk_count) {
-          break;
-        }
-        process_chunk(ChunkID{chunk_id});
-      }
-    }));
-  }
-
-  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+  run_jobs_over_chunks(chunk_count, [&](const size_t, auto&& next_chunk) {
+    while (const auto chunk_id = next_chunk()) {
+      process_chunk(*chunk_id);
+    }
+  });
   return operator_state.merge_worker_states().estimate_upper_bound();
 }
 
