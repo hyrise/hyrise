@@ -1860,7 +1860,7 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
   const auto num_cpus = Hyrise::get().topology.num_cpus();
   // We need to initialize all fields in the constructor, but the calculation for _max_job_size reads the input and is
   // thus only calculated in _on_execute.
-  _max_job_size = std::max(size_t{1}, left_input_table()->row_count() / (num_cpus * IDEAL_CPU_JOB_COUNT));
+  _max_job_size = std::max<size_t>(1, left_input_table()->row_count() / (num_cpus * IDEAL_CPU_JOB_COUNT));
 
   switch (_groupby_column_ids.size()) {
     case 0:
