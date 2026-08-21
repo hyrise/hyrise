@@ -1683,7 +1683,7 @@ void AggregateDYOD::_aggregate_partition(ContextsPerColumn& contexts_per_column,
       Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
     }
   }
-}  // NOLINT(readability/fn_size)
+}
 
 void AggregateDYOD::_write_output(ContextsPerColumn& contexts_per_column,
                                   const std::shared_ptr<const Table>& input_table, std::shared_ptr<Table>& output_table,
