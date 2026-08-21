@@ -173,4 +173,12 @@ TEST_F(ConstraintUtilsTest, CheckIfTableKeyConstraintIsKnownToBeInvalid) {
       _table_b, {{ColumnID{1}}, KeyConstraintType::UNIQUE, CommitID{1}, CommitID{2}}));
 }
 
+TEST_F(ConstraintUtilsTest, CheckConstraintEqualityOperator) {
+  EXPECT_EQ(TableKeyConstraint({ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY),
+            TableKeyConstraint({ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY));
+
+  EXPECT_NE(TableKeyConstraint({ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY),
+            TableKeyConstraint({ColumnID{0}, ColumnID{1}}, KeyConstraintType::UNIQUE));
+}
+
 }  // namespace hyrise
