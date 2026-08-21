@@ -32,7 +32,6 @@
 #include "operator_state.hpp"
 #include "operators/abstract_aggregate_operator.hpp"
 #include "operators/abstract_operator.hpp"
-#include "perfetto.h"
 #include "storage/abstract_segment.hpp"
 #include "storage/pos_lists/entire_chunk_pos_list.hpp"
 #include "storage/pos_lists/row_id_pos_list.hpp"
@@ -40,7 +39,6 @@
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
 #include "types.hpp"
-#include "utils/tracing.hpp"
 
 namespace hyrise {
 
@@ -109,7 +107,6 @@ const std::string& AggregateDYOD::name() const {
 }
 
 std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
-  TRACE_EVENT("aggregate_operator", "_on_execute");
   const auto input_table = left_input_table();
 
   _validate_aggregates();
@@ -123,10 +120,7 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
 
   // clang-format off
   std::visit([&](auto& state) {
-    {
-      TRACE_EVENT("aggregate_operator", "_row_ids.reserve");
-      state.row_ids.reserve(GROUP_ID_INITIAL_CARDINALITY);
-    }
+    state.row_ids.reserve(GROUP_ID_INITIAL_CARDINALITY);
   }, _state);
   // clang-format on
 
@@ -149,14 +143,10 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
     });
   }
 
-  {
-    TRACE_EVENT("aggregate_operator", "schedule_and_wait_for_tasks");
-    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
-  }
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 
   // If we haven't run any jobs, attempting to merge the worker states would fail
   auto merged_worker_states = [&]() {
-    TRACE_EVENT("aggregate_operator", "merge_worker_states");
     return jobs.empty() ? WorkerState(_aggregates, get_new_group_id_range) : std::move(state.merge_worker_states());
   }();
 
@@ -181,8 +171,6 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
 }
 
 std::shared_ptr<Table> AggregateDYOD::_write_output_table(WorkerState& worker_state) {
-  TRACE_EVENT("aggregate_operator", "_write_output_table");
-
   // We use ReferenceSegments referencing the input table for groupby columns, and ValueSegments for aggregate
   // columns. Hyrise requires that a table contains either only ReferenceSegments or only ValueSegments. Therefore,
   // we first create a temporary table containing only the ValueSegments for aggregate columns. The final output
@@ -201,23 +189,19 @@ std::shared_ptr<Table> AggregateDYOD::_write_output_table(WorkerState& worker_st
   // Chunks for the temporary data table containing aggregate columns
   auto aggregate_chunks = std::vector<std::shared_ptr<Chunk>>(chunk_count);
 
-  {
-    TRACE_EVENT("aggregate_operator", "write temporary aggregate chunks");
+  if (total_group_count > 0 && aggregate_count > 0) {
+    auto jobs = std::vector<std::shared_ptr<AbstractTask>>(chunk_count);
 
-    if (total_group_count > 0 && aggregate_count > 0) {
-      auto jobs = std::vector<std::shared_ptr<AbstractTask>>(chunk_count);
-
-      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-        jobs[chunk_id] = std::make_shared<JobTask>([&, chunk_id]() {
-          const auto start_index = size_t{chunk_id} * Chunk::DEFAULT_SIZE;
-          const auto end_index = std::min(start_index + Chunk::DEFAULT_SIZE, total_group_count);
-          aggregate_chunks[chunk_id] =
-              _write_aggregate_output_chunk(worker_state, occupied_group_ids, start_index, end_index);
-        });
-      }
-
-      Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+      jobs[chunk_id] = std::make_shared<JobTask>([&, chunk_id]() {
+        const auto start_index = size_t{chunk_id} * Chunk::DEFAULT_SIZE;
+        const auto end_index = std::min(start_index + Chunk::DEFAULT_SIZE, total_group_count);
+        aggregate_chunks[chunk_id] =
+            _write_aggregate_output_chunk(worker_state, occupied_group_ids, start_index, end_index);
+      });
     }
+
+    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
   }
 
   // Construct the temporary data table for aggregate columns
@@ -227,23 +211,19 @@ std::shared_ptr<Table> AggregateDYOD::_write_output_table(WorkerState& worker_st
   // Chunks for the actual output reference table.
   auto reference_chunks = std::vector<std::shared_ptr<Chunk>>(chunk_count);
 
-  {
-    TRACE_EVENT("aggregate_operator", "write reference chunks");
+  if (total_group_count > 0) {
+    auto jobs = std::vector<std::shared_ptr<AbstractTask>>(chunk_count);
 
-    if (total_group_count > 0) {
-      auto jobs = std::vector<std::shared_ptr<AbstractTask>>(chunk_count);
-
-      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-        jobs[chunk_id] = std::make_shared<JobTask>([&, chunk_id]() {
-          const auto start_index = size_t{chunk_id} * Chunk::DEFAULT_SIZE;
-          const auto end_index = std::min(start_index + Chunk::DEFAULT_SIZE, total_group_count);
-          reference_chunks[chunk_id] =
-              _write_reference_output_chunk(aggregates_table, chunk_id, occupied_group_ids, start_index, end_index);
-        });
-      }
-
-      Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+      jobs[chunk_id] = std::make_shared<JobTask>([&, chunk_id]() {
+        const auto start_index = size_t{chunk_id} * Chunk::DEFAULT_SIZE;
+        const auto end_index = std::min(start_index + Chunk::DEFAULT_SIZE, total_group_count);
+        reference_chunks[chunk_id] =
+            _write_reference_output_chunk(aggregates_table, chunk_id, occupied_group_ids, start_index, end_index);
+      });
     }
+
+    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
   }
 
   const auto column_definitions = _output_column_definitions();
@@ -298,7 +278,6 @@ TableColumnDefinitions AggregateDYOD::_aggregate_column_definitions() const {
 std::shared_ptr<Chunk> AggregateDYOD::_write_aggregate_output_chunk(WorkerState& worker_state,
                                                                     const std::vector<size_t>& occupied_group_ids,
                                                                     const size_t start_index, const size_t end_index) {
-  TRACE_EVENT("aggregate_operator", "_write_aggregate_output_chunk");
   const auto aggregate_count = _aggregates.size();
 
   auto segments = Segments{};
@@ -327,7 +306,6 @@ std::shared_ptr<Chunk> AggregateDYOD::_write_reference_output_chunk(const std::s
                                                                     ChunkID chunk_id,
                                                                     const std::vector<size_t>& occupied_group_ids,
                                                                     const size_t start_index, const size_t end_index) {
-  TRACE_EVENT("aggregate_operator", "_write_reference_chunk");
   const auto groupby_column_count = _groupby_column_ids.size();
   const auto aggregate_count = _aggregates.size();
   const auto chunk_size = static_cast<ChunkOffset>(end_index - start_index);
@@ -354,7 +332,6 @@ std::shared_ptr<AbstractSegment> AggregateDYOD::_write_groupby_segment(const siz
                                                                        const std::vector<size_t>& occupied_group_ids,
                                                                        const size_t start_index,
                                                                        const size_t end_index) {
-  TRACE_EVENT("aggregate_operator", "_write_groupby_segment");
   const auto input_table = left_input_table();
   const auto column_id = _groupby_column_ids[groupby_column_index];
   const auto chunk_size = end_index - start_index;
@@ -394,7 +371,6 @@ template <typename ColumnDataType, WindowFunction aggregate_function>
 std::shared_ptr<AbstractSegment> AggregateDYOD::_write_aggregate_segment(
     TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector, bool /*is_nullable*/,
     const std::vector<size_t>& occupied_group_ids, const size_t start_index, const size_t end_index) {
-  TRACE_EVENT("aggregate_operator", "_write_aggregate_segment", "aggregate_function", "AVG");
   using AggregateDataType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
   const auto& sums = aggregate_vector.accumulators();
   const auto& counts = aggregate_vector.counts();
@@ -423,7 +399,6 @@ template <typename ColumnDataType, WindowFunction aggregate_function>
 std::shared_ptr<AbstractSegment> AggregateDYOD::_write_aggregate_segment(
     TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector, bool /*is_nullable*/,
     const std::vector<size_t>& occupied_group_ids, const size_t start_index, const size_t end_index) {
-  TRACE_EVENT("aggregate_operator", "_write_aggregate_segment", "aggregate_function", "COUNT");
   using AggregateDataType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
   const auto& counts = aggregate_vector.counts();
   auto values = pmr_vector<AggregateDataType>(end_index - start_index);
@@ -442,7 +417,6 @@ template <typename ColumnDataType, WindowFunction aggregate_function>
 std::shared_ptr<AbstractSegment> AggregateDYOD::_write_aggregate_segment(
     TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector, bool /*is_nullable*/,
     const std::vector<size_t>& occupied_group_ids, const size_t start_index, const size_t end_index) {
-  TRACE_EVENT("aggregate_operator", "_write_aggregate_segment", "aggregate_function", "COUNT_DISTINCT");
   using AggregateDataType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
   const auto chunk_size = end_index - start_index;
   const auto& distinct_values = aggregate_vector.accumulators();
@@ -461,7 +435,6 @@ template <typename ColumnDataType, WindowFunction aggregate_function>
 std::shared_ptr<AbstractSegment> AggregateDYOD::_write_aggregate_segment(
     TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector, bool is_nullable,
     const std::vector<size_t>& occupied_group_ids, const size_t start_index, const size_t end_index) {
-  TRACE_EVENT("aggregate_operator", "_write_aggregate_segment", "aggregate_function", "default");
   using AggregateDataType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
   const auto chunk_size = end_index - start_index;
   auto& aggregate_values = aggregate_vector.accumulators();
@@ -542,7 +515,6 @@ std::pair<GroupID, GroupID> AggregateDYOD::_reserve_new_group_id_range(MultiThre
 }
 
 std::vector<size_t> AggregateDYOD::_get_occupied_group_ids() {
-  TRACE_EVENT("aggregate_operator", "_get_occupied_group_ids");
   // clang-format off
   return std::visit([&](auto& state) {
     auto view = std::views::iota(size_t{0}, state.row_ids.size())
@@ -553,7 +525,6 @@ std::vector<size_t> AggregateDYOD::_get_occupied_group_ids() {
 }
 
 void AggregateDYOD::_aggregate_chunk(WorkerState& worker_state, ChunkID chunk_id, const Chunk& chunk) {
-  TRACE_EVENT("aggregate_operator", "_aggregate_chunk");
   const auto [group_ids, max_group_id] = _group_ids_for_chunk(chunk_id, chunk, worker_state);
 
   // Grow the aggregate vectors once per chunk (to the size needed to contain the maximum group ID)
@@ -600,7 +571,6 @@ std::pair<std::vector<GroupID>, GroupID> AggregateDYOD::_group_ids_for_chunk(Chu
   // 2. For every row, store the serialized values of all groupby columns in a single byte buffer. The group
   //    key is a std::span referencing the subslice of the buffer. Use the group key to get the group ID.
 
-  TRACE_EVENT("aggregate_operator", "_group_ids_for_chunk");
   const auto input_table = left_input_table();
   const auto groupby_column_count = _groupby_column_ids.size();
   const auto row_count = chunk.size();
@@ -617,53 +587,50 @@ std::pair<std::vector<GroupID>, GroupID> AggregateDYOD::_group_ids_for_chunk(Chu
                                                              std::vector<ColumnStart>(row_count + 1, ColumnStart{0}));
 
   // Stage 1: Serialize the group keys within each column and append it to the respective column buffer.
-  {
-    TRACE_EVENT("aggregate_operator", "serialize group keys");
-    for (auto groupby_column_index = size_t{0}; groupby_column_index < groupby_column_count; ++groupby_column_index) {
-      const auto groupby_column_id = _groupby_column_ids[groupby_column_index];
-      const auto data_type = input_table->column_data_type(groupby_column_id);
-      const auto is_nullable = input_table->column_is_nullable(groupby_column_id);
-      auto& column_buffer = column_buffers[groupby_column_index];
-      auto& starts = column_starts[groupby_column_index];
+  for (auto groupby_column_index = size_t{0}; groupby_column_index < groupby_column_count; ++groupby_column_index) {
+    const auto groupby_column_id = _groupby_column_ids[groupby_column_index];
+    const auto data_type = input_table->column_data_type(groupby_column_id);
+    const auto is_nullable = input_table->column_is_nullable(groupby_column_id);
+    auto& column_buffer = column_buffers[groupby_column_index];
+    auto& starts = column_starts[groupby_column_index];
 
-      resolve_data_type(data_type, [&](auto type) {
-        using ColumnDataType = typename decltype(type)::type;
-        const auto segment = chunk.get_segment(groupby_column_id);
+    resolve_data_type(data_type, [&](auto type) {
+      using ColumnDataType = typename decltype(type)::type;
+      const auto segment = chunk.get_segment(groupby_column_id);
 
-        segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
-          const auto chunk_offset = position.chunk_offset();
-          starts[chunk_offset] = static_cast<ColumnStart>(column_buffer.size());
+      segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
+        const auto chunk_offset = position.chunk_offset();
+        starts[chunk_offset] = static_cast<ColumnStart>(column_buffer.size());
 
-          if (is_nullable) {
-            serialize_value(column_buffer, position.value(), position.is_null());
-          } else {
-            serialize_value(column_buffer, position.value());
+        if (is_nullable) {
+          serialize_value(column_buffer, position.value(), position.is_null());
+        } else {
+          serialize_value(column_buffer, position.value());
+        }
+      });
+
+      const auto reference_segment = std::dynamic_pointer_cast<const ReferenceSegment>(segment);
+
+      DebugAssert(column_buffer.size() <= std::numeric_limits<ColumnStart>::max(), "Column buffer is too large.");
+
+      // Store the end position of the last entry (so we can compute the length of each entry).
+      starts[row_count] = static_cast<ColumnStart>(column_buffer.size());
+
+      if (reference_segment) {
+        // If the segment is a ReferenceSegment, iterate through the position list and store the dereferenced RowIDs.
+        // We need to store RowIDs for each GroupID to be able to construct the groupby columns in the output table.
+        auto row_ids = std::vector<RowID>(row_count);
+        auto chunk_offset = ChunkOffset{0};
+
+        resolve_pos_list_type(reference_segment->pos_list(), [&](auto pos_list) {
+          for (const auto row_id : *pos_list) {
+            row_ids[chunk_offset++] = row_id;
           }
         });
 
-        const auto reference_segment = std::dynamic_pointer_cast<const ReferenceSegment>(segment);
-
-        DebugAssert(column_buffer.size() <= std::numeric_limits<ColumnStart>::max(), "Column buffer is too large.");
-
-        // Store the end position of the last entry (so we can compute the length of each entry).
-        starts[row_count] = static_cast<ColumnStart>(column_buffer.size());
-
-        if (reference_segment) {
-          // If the segment is a ReferenceSegment, iterate through the position list and store the dereferenced RowIDs.
-          // We need to store RowIDs for each GroupID to be able to construct the groupby columns in the output table.
-          auto row_ids = std::vector<RowID>(row_count);
-          auto chunk_offset = ChunkOffset{0};
-
-          resolve_pos_list_type(reference_segment->pos_list(), [&](auto pos_list) {
-            for (const auto row_id : *pos_list) {
-              row_ids[chunk_offset++] = row_id;
-            }
-          });
-
-          column_row_ids[groupby_column_index] = std::optional{std::move(row_ids)};
-        }
-      });
-    }
+        column_row_ids[groupby_column_index] = std::optional{std::move(row_ids)};
+      }
+    });
   }
 
   // Stage 2: Assemble the group keys per row and get the GroupID.
@@ -686,8 +653,6 @@ std::pair<std::vector<GroupID>, GroupID> AggregateDYOD::_group_ids_for_chunk(Chu
 
   std::visit(
       [&](auto& state) {
-        TRACE_EVENT("aggregate_operator", "get group IDs");
-
         for (auto offset = ChunkOffset{0}; offset < row_count; ++offset) {
           const auto chunk_buffer_start = chunk_buffer.size();
 
@@ -743,7 +708,6 @@ std::pair<std::vector<GroupID>, GroupID> AggregateDYOD::_group_ids_for_chunk(Chu
 template <typename ColumnDataType, WindowFunction aggregate_function>
 void AggregateDYOD::_aggregate_segment(TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector,
                                        const AbstractSegment& segment, const std::vector<GroupID>& group_ids) {
-  TRACE_EVENT("aggregate_operator", "_aggregate_segment", "aggregate_function", "default");
   using AggregateDataType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
   auto aggregator =
       WindowFunctionBuilder<ColumnDataType, AggregateDataType, aggregate_function>().get_aggregate_function();
@@ -760,7 +724,6 @@ template <typename ColumnDataType, WindowFunction aggregate_function>
   requires(aggregate_function == WindowFunction::CountDistinct)
 void AggregateDYOD::_aggregate_segment(TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector,
                                        const AbstractSegment& segment, const std::vector<GroupID>& group_ids) {
-  TRACE_EVENT("aggregate_operator", "_aggregate_segment", "aggregate_function", "CountDistinct");
   segment_iterate<ColumnDataType>(segment, [&](const auto& position) {
     if (!position.is_null()) {
       const auto group_id = group_ids[position.chunk_offset()];
@@ -773,7 +736,6 @@ template <typename ColumnDataType, WindowFunction aggregate_function>
   requires(aggregate_function == WindowFunction::Any)
 void AggregateDYOD::_aggregate_segment(TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector,
                                        const AbstractSegment& segment, const std::vector<GroupID>& group_ids) {
-  TRACE_EVENT("aggregate_operator", "_aggregate_segment", "aggregate_function", "Any");
   // TODO(anyone): We don’t need to iterate through the segment if we’ve already found any
   // value for all groups (i.e., the count for the respective group_id is greater than 0).
   segment_iterate<ColumnDataType>(segment, [&](const auto& position) {
@@ -790,7 +752,6 @@ void AggregateDYOD::_aggregate_segment(TypedAggregateVector<ColumnDataType, aggr
 
 void AggregateDYOD::_aggregate_count_star(AbstractAggregateVector& aggregate_vector,
                                           const std::vector<GroupID>& group_ids) {
-  TRACE_EVENT("aggregate_operator", "_aggregate_count_star");
   for (const auto group_id : group_ids) {
     aggregate_vector.increment_count(group_id);
   }

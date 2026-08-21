@@ -706,8 +706,6 @@ set(
     utils/template_type.hpp
     utils/timer.cpp
     utils/timer.hpp
-    utils/tracing.cpp
-    utils/tracing.hpp
     visualization/abstract_visualizer.hpp
     visualization/join_graph_visualizer.cpp
     visualization/join_graph_visualizer.hpp
@@ -805,10 +803,6 @@ target_precompile_headers(hyrise_impl PRIVATE
 
 # -fPIC generates position independent code which is necessary because plugins might access hyrise functions.
 target_compile_options(hyrise_impl PRIVATE -fPIC)
-
-set_target_properties(perfetto PROPERTIES POSITION_INDEPENDENT_CODE ON)
-target_link_libraries_system(hyrise_impl perfetto)
-target_link_libraries(hyrise_impl PUBLIC perfetto-wrapper)
 
 # Dependency hyrise --> git_watcher needs to be added manually, apparently. Otherwise version.hpp, for reasons unknown
 # isn't updated when HEAD changes
