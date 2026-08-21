@@ -84,6 +84,7 @@ bool dyod_write_aggregate_values(const DYODAggregateResults<ColumnDataType, aggr
                                 [&](auto begin, const auto end, const ChunkID chunk_id) {
                                   auto& values = value_vectors[chunk_id];
                                   auto& null_values = null_vectors[chunk_id];
+                                  bool local_null_written = false;
 
                                   for (; begin != end; ++begin) {
                                     const auto& result = *begin;
@@ -101,8 +102,11 @@ bool dyod_write_aggregate_values(const DYODAggregateResults<ColumnDataType, aggr
                                     } else {
                                       values.emplace_back();
                                       null_values.emplace_back(true);
-                                      null_written.store(true, std::memory_order_relaxed);
+                                      local_null_written = true;
                                     }
+                                  }
+                                  if (local_null_written) {
+                                    null_written.store(true, std::memory_order_relaxed);
                                   }
                                 });
   return null_written;
@@ -171,6 +175,7 @@ bool dyod_write_aggregate_values(const DYODAggregateResults<ColumnDataType, aggr
       true, results, value_vectors, null_vectors, [&](auto begin, const auto end, const ChunkID chunk_id) {
         auto& values = value_vectors[chunk_id];
         auto& null_values = null_vectors[chunk_id];
+        bool local_null_written = false;
 
         for (; begin != end; ++begin) {
           const auto& result = *begin;
@@ -187,8 +192,11 @@ bool dyod_write_aggregate_values(const DYODAggregateResults<ColumnDataType, aggr
           } else {
             values.emplace_back();
             null_values.emplace_back(true);
-            null_written.store(true, std::memory_order_relaxed);
+            local_null_written = true;
           }
+        }
+        if (local_null_written) {
+          null_written.store(true, std::memory_order_relaxed);
         }
       });
   return null_written;
@@ -214,6 +222,7 @@ bool dyod_write_aggregate_values(const DYODAggregateResults<ColumnDataType, aggr
                                 [&](auto begin, const auto end, const ChunkID chunk_id) {
                                   auto& values = value_vectors[chunk_id];
                                   auto& null_values = null_vectors[chunk_id];
+                                  bool local_null_written = false;
 
                                   for (; begin != end; ++begin) {
                                     const auto& result = *begin;
@@ -233,8 +242,11 @@ bool dyod_write_aggregate_values(const DYODAggregateResults<ColumnDataType, aggr
                                       // STDDEV_SAMP is undefined for lists with less than two elements.
                                       values.emplace_back();
                                       null_values.emplace_back(true);
-                                      null_written.store(true, std::memory_order_relaxed);
+                                      local_null_written = true;
                                     }
+                                  }
+                                  if (local_null_written) {
+                                    null_written.store(true, std::memory_order_relaxed);
                                   }
                                 });
   return null_written;
