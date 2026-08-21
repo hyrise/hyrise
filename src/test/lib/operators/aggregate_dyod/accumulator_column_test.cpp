@@ -135,8 +135,8 @@ TEST_F(AggregateDYODAccumulatorColumnTest, LowCardinalityEligibilityRejectsCount
       make_aggregate(WindowFunction::CountDistinct, *table, ColumnID{0})};
   EXPECT_FALSE(low_cardinality_eligible(AggregateSchema::build(count_distinct, *table)));
 
-  const auto any = std::vector<std::shared_ptr<WindowFunctionExpression>>{
-      make_aggregate(WindowFunction::Any, *table, ColumnID{0})};
+  const auto any =
+      std::vector<std::shared_ptr<WindowFunctionExpression>>{make_aggregate(WindowFunction::Any, *table, ColumnID{0})};
   EXPECT_FALSE(low_cardinality_eligible(AggregateSchema::build(any, *table)));
 }
 
@@ -297,9 +297,9 @@ TEST_F(AggregateDYODAccumulatorColumnTest, NumericStreamScattersOnlyItsRowWindow
 }
 
 TEST_F(AggregateDYODAccumulatorColumnTest, StringStreamScattersOnlyItsRowWindow) {
-  const auto table = make_input_table(
-      {{"a", DataType::String, false}},
-      {{pmr_string{"pear"}}, {pmr_string{"apple"}}, {pmr_string{"fig"}}, {pmr_string{"plum"}}});
+  const auto table =
+      make_input_table({{"a", DataType::String, false}},
+                       {{pmr_string{"pear"}}, {pmr_string{"apple"}}, {pmr_string{"fig"}}, {pmr_string{"plum"}}});
   const auto segment = table->get_chunk(ChunkID{0})->get_segment(ColumnID{0});
   const auto aggregates =
       std::vector<std::shared_ptr<WindowFunctionExpression>>{make_aggregate(WindowFunction::Min, *table, ColumnID{0})};

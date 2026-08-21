@@ -60,13 +60,13 @@ inline uint64_t mix64(uint64_t hash) {
 }
 
 inline void HllSketch::add(const uint64_t key_hash) {
-  constexpr auto REMAINING_HASH_BITS = 64 - HLL_PRECISION;
+  constexpr auto REMAINING_BIT_COUNT = 64 - HLL_PRECISION;
 
   const auto mixed_hash = mix64(key_hash);
-  const auto register_index = static_cast<size_t>(mixed_hash >> REMAINING_HASH_BITS);
+  const auto register_index = static_cast<size_t>(mixed_hash >> REMAINING_BIT_COUNT);
   const auto remaining_hash_bits = mixed_hash << HLL_PRECISION;
 
-  const auto rank = remaining_hash_bits == 0 ? static_cast<uint8_t>(REMAINING_HASH_BITS + 1)
+  const auto rank = remaining_hash_bits == 0 ? static_cast<uint8_t>(REMAINING_BIT_COUNT + 1)
                                              : static_cast<uint8_t>(std::countl_zero(remaining_hash_bits) + 1);
   _registers[register_index] = std::max(_registers[register_index], rank);
 }

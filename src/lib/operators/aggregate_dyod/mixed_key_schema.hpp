@@ -35,6 +35,9 @@ namespace hyrise {
 template <size_t LenWidth>
 class MixedKeySchema {
  public:
+  static_assert(LenWidth == 1 || LenWidth == 2 || LenWidth == 4 || LenWidth == 8,
+                "LenWidth is the byte width of each string's length prefix and must be 1, 2, 4, or 8.");
+
   static constexpr KeyComposition COMPOSITION = KeyComposition::Mixed;
   static constexpr bool HAS_STRINGS = true;
   static constexpr size_t LENGTH_FIELD_WIDTH = LenWidth;

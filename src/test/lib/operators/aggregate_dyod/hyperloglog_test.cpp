@@ -234,13 +234,13 @@ TEST_F(HllSketchTest, ChoosePartitionCountClampsOversizedWorkerCountToCap) {
 
 TEST_F(HllSketchTest, ChoosePartitionCountAlwaysReturnsPowerOfTwo) {
   const auto inputs = std::array<std::tuple<size_t, size_t, size_t>, 8>{{{0, 0, 1},
-                                                                        {1, 1, 2},
-                                                                        {keys_budget() - 1, 1, 2},
-                                                                        {keys_budget() + 1, 1, 3},
-                                                                        {3 * keys_budget(), 1, 4},
-                                                                        {100 * keys_budget(), 3, 5},
-                                                                        {1'000 * keys_budget(), 64, 8},
-                                                                        {size_t{1} << 62, 17, 16}}};
+                                                                         {1, 1, 2},
+                                                                         {keys_budget() - 1, 1, 2},
+                                                                         {keys_budget() + 1, 1, 3},
+                                                                         {3 * keys_budget(), 1, 4},
+                                                                         {100 * keys_budget(), 3, 5},
+                                                                         {1'000 * keys_budget(), 64, 8},
+                                                                         {size_t{1} << 62, 17, 16}}};
 
   for (const auto& [cardinality_estimate, worker_count, stream_count] : inputs) {
     EXPECT_TRUE(is_power_of_two(choose_partition_count(cardinality_estimate, worker_count, stream_count)));

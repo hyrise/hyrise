@@ -181,23 +181,6 @@ class StandardAggregator : public AbstractAggregator {
     }
 
     const auto& segment = *chunk.get_segment(_column_id);
-    if constexpr (window_function == WindowFunction::Min || window_function == WindowFunction::Max) {
-      if (const auto* dictionary = dynamic_cast<const BaseDictionarySegment*>(&segment)) {
-        const auto distinct_count = dictionary->unique_values_count();
-
-        if (distinct_count == 0) {
-          return;
-        }
-
-        const auto candidate_id = (window_function == WindowFunction::Min) ? ValueID{0} : ValueID{distinct_count - 1};
-        const auto candidate = boost::get<ColumnDataType>(dictionary->value_of_value_id(candidate_id));
-
-        fold(candidate, state.count, state.accumulator);
-        ++state.count;
-        return;
-      }
-    }
-
     if constexpr (std::is_same_v<ColumnDataType, pmr_string> &&
                   (window_function == WindowFunction::Min || window_function == WindowFunction::Max)) {
       // segment_iterate materializes every string by value; decoded views skip the per-row copies.
@@ -1186,7 +1169,8 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate_low_cardinality(const KeySchema
 
   auto per_worker_private_maps = std::vector<MergeMap<KeySchema>>{};
   per_worker_private_maps.reserve(worker_count);
-  for (auto worker = size_t{0}; worker < worker_count; worker++) {
+  for (auto worker = size_t{0}; worker < worker_count; ++worker) {
+    // No radix partitioning on this path, so the map probes on the full hash instead of shifting out partition bits.
     per_worker_private_maps.emplace_back(key_schema, uint32_t{0}, aggregate_schema.make_accumulator_columns());
   }
 
