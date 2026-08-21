@@ -61,14 +61,25 @@ class WorkerState : public Noncopyable {
 struct SingleThreadedState {
   boost::unordered_flat_map<GroupKey, GroupID, GroupKeyHash, GroupKeyEqual> group_id_map;
   GroupID next_group_id{0};
+
+  // Two parallel vectors storing for each group ID the row IDs (used to construct ReferenceSegments
+  // for the groupby columns) and whether a group ID is occupied.
   std::vector<RowIDs> row_ids;
+  std::vector<bool> occupied_group_ids;
 };
 
 // Operator state for multi-threaded execution. Uses concurrency-safe data structures.
 struct MultiThreadedState {
   tbb::concurrent_unordered_map<GroupKey, GroupID, GroupKeyHash, GroupKeyEqual> group_id_map;
   std::atomic<GroupID> next_group_id{0};
+
+  // Two parallel vectors storing for each group ID the row IDs (used to construct ReferenceSegments
+  // for the groupby columns) and whether a group ID is occupied.
   tbb::concurrent_vector<RowIDs> row_ids;
+  tbb::concurrent_vector<bool> occupied_group_ids;
+
+  // Used when resizing `row_ids` and `occupied_group_ids`
+  std::mutex lock;
 };
 
 /*
