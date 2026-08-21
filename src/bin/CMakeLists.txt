@@ -37,7 +37,6 @@ target_link_libraries(
     hyriseDYODEvaluation
 
     hyrise
-    perfetto-wrapper
     hyriseBenchmarkLib
 )
 
