@@ -79,13 +79,14 @@ struct MultiThreadedState {
  * table stores a mapping from group keys to group IDs. The aggregation results are stored in a thread-local vector
  * indexed by the group ID and merged once all rows have been processed. A global atomic counter is used to store
  * the next available group ID. To construct the output, we also keep track of the RowIDs of the input table in a
- * parallel vector. To reduce contention on the atomic counter, workers reserve tickets in batches of 256.
+ * parallel vector. To reduce contention on the atomic counter, workers reserve tickets in batches of 256. Our 
  *
- * This implementation currently uses an off-the-shelf concurrent map (tbb::concurrent_unordered_map) making it
- * relatively simple. However, the global map is the main bottleneck and performance degrades significantly with
- * the number of threads. Xue and Marcus suggest using a specialized map (a Folklore variant) that supports only
- * the GET_OR_INSERT operation required for this use case, and this would be a natural next step in optimizing
- * the implementation.
+ * The chunks of the input table are processed in parallel. A worker first computes the group IDs for each row in the
+ * chunk, then computes the aggregates. We currently use an off-the-shelf concurrent map (tbb::concurrent_unordered_map)
+ * making it relatively simple. However, the global map is the main bottleneck and performance degrades significantly
+ * with the number of threads. Xue and Marcus suggest using a specialized map (a Folklore variant) that supports only
+ * the GET_OR_INSERT operation required for this use case, and this would be a natural next step in optimizing the
+ * implementation.
  */
 class AggregateDYOD : public AbstractAggregateOperator {
  public:
