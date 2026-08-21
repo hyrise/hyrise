@@ -35,7 +35,7 @@
 #include "join_node.hpp"
 #include "limit_node.hpp"
 #include "null_value.hpp"
-#include "operators/aggregate_hash.hpp"
+#include "operators/aggregate_dyod.hpp"
 #include "operators/alias_operator.hpp"
 #include "operators/change_meta_table.hpp"
 #include "operators/delete.hpp"
@@ -448,7 +448,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
     Assert(column_id, std::format("GroupBy expression '{}' not available as column.", expression->as_column_name()));
     group_by_column_ids.emplace_back(*column_id);
   }
-  return std::make_shared<AggregateHash>(input_operator, pqp_aggregate_expressions, group_by_column_ids);
+  return std::make_shared<AggregateDYOD>(input_operator, pqp_aggregate_expressions, group_by_column_ids);
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_limit_node(
