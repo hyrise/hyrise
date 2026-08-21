@@ -27,7 +27,7 @@ void serialize_value(std::vector<std::byte>& buffer, const pmr_string& value) {
 // write a single 0x01 byte into the buffer followed by the byte representation of the value.
 template <typename T>
   requires std::is_trivially_copyable_v<T>
-void serialize_value(std::vector<std::byte>& buffer, const T& value, bool is_null) {
+void serialize_value(std::vector<std::byte>& buffer, const T& value, const bool is_null) {
   if (is_null) {
     buffer.push_back(std::byte{0x01});
     return;
@@ -40,7 +40,7 @@ void serialize_value(std::vector<std::byte>& buffer, const T& value, bool is_nul
 
 // If `is_null` is true, write a single 0x00 byte into the buffer. If `is_null` is false
 // write a single 0x01 byte into the buffer followed by the byte representation of the string.
-void serialize_value(std::vector<std::byte>& buffer, const pmr_string& value, bool is_null) {
+void serialize_value(std::vector<std::byte>& buffer, const pmr_string& value, const bool is_null) {
   if (is_null) {
     buffer.push_back(std::byte{0x01});
     return;

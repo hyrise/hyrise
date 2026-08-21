@@ -41,20 +41,6 @@ target_link_libraries(
     hyriseBenchmarkLib
 )
 
-# Configure DYODProfiling
-add_executable(
-    hyriseDYODProfiling
-
-    dyod_profiling.cpp
-)
-
-target_link_libraries(
-    hyriseDYODProfiling
-
-    hyrise
-    hyriseBenchmarkLib
-)
-
 # Configure client
 add_executable(
     hyriseClient
