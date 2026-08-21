@@ -730,9 +730,14 @@ struct DYODAggregateContext : public DYODAggregateResultContext<ColumnDataType, 
   // Currently we only merge two contexts with a single result i.e., a single group.
   void merge(std::shared_ptr<DYODAggregateContext<ColumnDataType, aggregate_function, AggregateKey>>& other) {
     DebugAssert(other->results.size() <= 1, "Expected other to have at most one result.");
-    DebugAssert(other->results.size() >= 1, "Expected other to have at least one result.");
     DebugAssert(this->results.size() <= 1, "Expected this to have at most one result.");
-    DebugAssert(this->results.size() >= 1, "Expected this to have at least one result.");
+    if (other->results.size() == 0) {
+      return;
+    }
+    if (this->results.size() == 0) {
+      this->results = std::move(other->results);
+      return;
+    }
     auto& other_result = other->results[0];
     auto& result = this->results[0];
     if (!result.has_aggregates) {
