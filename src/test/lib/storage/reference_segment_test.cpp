@@ -122,4 +122,19 @@ TEST_F(ReferenceSegmentTest, MemoryUsageEstimation) {
             reference_segment_b.memory_usage(MemoryUsageCalculationMode::Sampled) + 2 * sizeof(RowID));
 }
 
+TEST_F(ReferenceSegmentTest, DoesNotAllowMultipleIndirection) {
+  auto inner_pos_list = std::make_shared<RowIDPosList>();
+  inner_pos_list->emplace_back(ChunkID{0}, ChunkOffset{0});
+  auto inner_ref_segment = std::make_shared<ReferenceSegment>(_test_table, ColumnID{0}, inner_pos_list);
+
+  auto column_definitions = TableColumnDefinitions();
+  column_definitions.emplace_back(_test_table->column_definitions()[0]);
+  auto ref_table = std::make_shared<Table>(column_definitions, TableType::References);
+  ref_table->append_chunk(Segments{inner_ref_segment});
+
+  auto outer_pos_list = std::make_shared<RowIDPosList>();
+  outer_pos_list->emplace_back(RowID{ChunkID{0}, ChunkOffset{0}});
+  EXPECT_THROW(ReferenceSegment(ref_table, ColumnID{0}, outer_pos_list), std::logic_error);
+}
+
 }  // namespace hyrise

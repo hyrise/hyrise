@@ -116,6 +116,31 @@ TEST_F(OperatorsValidateTest, ScanValidate) {
   EXPECT_TABLE_EQ_UNORDERED(validate->get_output(), expected_result);
 }
 
+TEST_F(OperatorsValidateTest, ParallelValidateJobTask) {
+  //  This test ensures that the multi-threaded validation path works correctly under a parallel scheduler.
+  //  To bypass the 'execute_directly' shortcut, the table must have more rows than Chunk::DEFAULT_SIZE
+  //  (65,535 rows) so that the first bundled package fills up. Additionally, there must be remaining
+  //  chunks left over afterward, which splits the table into multiple JobTasks instead of a single
+  //  synchronous execution.
+  const auto lineitem_table = load_table("resources/test_data/tbl/tpch/sf-0.02/lineitem.tbl", ChunkOffset{25000});
+
+  set_all_records_visible(*lineitem_table);
+
+  const auto table_wrapper = std::make_shared<TableWrapper>(lineitem_table);
+  table_wrapper->execute();
+
+  auto context = std::make_shared<TransactionContext>(TransactionID{1}, CommitID{3}, AutoCommit::No);
+
+  auto validate = std::make_shared<Validate>(table_wrapper);
+  validate->set_transaction_context(context);
+
+  validate->execute();
+
+  const auto& output_table = validate->get_output();
+  EXPECT_EQ(output_table->row_count(), lineitem_table->row_count());
+  EXPECT_EQ(output_table->type(), TableType::References);
+}
+
 TEST_F(OperatorsValidateTest, ValidateAfterDelete) {
   auto t1_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
 
