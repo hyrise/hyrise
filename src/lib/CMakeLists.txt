@@ -223,8 +223,11 @@ set(
     operators/aggregate_dyod.cpp
     operators/aggregate_dyod.hpp
     operators/aggregate_dyod/accumulator_column.hpp
+    operators/aggregate_dyod/aggregate_dyod_config.cpp
     operators/aggregate_dyod/aggregate_dyod_config.hpp
+    operators/aggregate_dyod/aggregate_schema.cpp
     operators/aggregate_dyod/aggregate_schema.hpp
+    operators/aggregate_dyod/cache_info.cpp
     operators/aggregate_dyod/cache_info.hpp
     operators/aggregate_dyod/distinct_set.hpp
     operators/aggregate_dyod/hyperloglog.hpp

@@ -1,8 +1,5 @@
 #pragma once
 
-#include <algorithm>
-#include <bit>
-#include <cmath>
 #include <cstddef>
 #include <cstdint>
 
@@ -33,13 +30,9 @@ constexpr size_t MERGE_MAP_BYTES_PER_KEY = 128;
  * A larger budget yields fewer, larger partitions whose merge maps risk spilling out of cache; a smaller one yields
  * more, smaller partitions at the cost of higher per-partition overhead.
  */
-inline size_t keys_budget_for(const CacheSizes& sizes) {
-  return sizes.l3_bytes / sizes.llc_sharing_cpus / MERGE_MAP_BYTES_PER_KEY;
-}
+size_t keys_budget_for(const CacheSizes& sizes);
 
-inline size_t keys_budget() {
-  return keys_budget_for(cache_sizes());
-}
+size_t keys_budget();
 
 /**
  * Row-count cutoff at or above which the estimate phase runs in parallel.
@@ -55,9 +48,7 @@ constexpr size_t PARALLEL_ESTIMATE_THRESHOLD = 100'000;
 constexpr size_t ESTIMATE_SAMPLE_CHUNKS = 16;
 
 /** Chunk stride of the estimate phase: sample every k-th chunk so about ESTIMATE_SAMPLE_CHUNKS chunks are read. */
-inline size_t estimate_sample_stride(const size_t chunk_count) {
-  return std::max(size_t{1}, chunk_count / ESTIMATE_SAMPLE_CHUNKS);
-}
+size_t estimate_sample_stride(size_t chunk_count);
 
 /**
  * Rescale a sketch estimate taken over every stride-th chunk to the full input.
@@ -68,20 +59,7 @@ inline size_t estimate_sample_stride(const size_t chunk_count) {
  * is scaled by the stride, and partial growth is extrapolated as stride^log2(growth). The result is clamped to
  * [estimate, min(total rows, estimate * stride)]; an empty sample carries no information and yields the row count.
  */
-inline size_t scale_sampled_estimate(const size_t estimate, const size_t half_sample_estimate,
-                                     const size_t total_row_count, const size_t stride) {
-  if (stride == 1) {
-    return estimate;
-  }
-  if (estimate == 0) {
-    return total_row_count;
-  }
-  const auto growth = std::clamp(
-      static_cast<double>(estimate) / static_cast<double>(std::max(half_sample_estimate, size_t{1})), 1.0, 2.0);
-  const auto scaled = static_cast<double>(estimate) * std::pow(static_cast<double>(stride), std::log2(growth));
-  const auto ceiling = std::min(static_cast<double>(total_row_count), static_cast<double>(estimate * stride));
-  return static_cast<size_t>(std::llround(std::clamp(scaled, static_cast<double>(estimate), ceiling)));
-}
+size_t scale_sampled_estimate(size_t estimate, size_t half_sample_estimate, size_t total_row_count, size_t stride);
 
 /**
  * HyperLogLog register precision: the sketch uses 2^HLL_PRECISION registers.
@@ -106,15 +84,9 @@ constexpr size_t SWWC_LINE_BYTES = 64;
  * The result is rounded down to a power of two (P indexes by the low bits of a hash) and clamped by the absolute
  * MAX_PARTITION_COUNT.
  */
-inline PartitionCount max_partition_count_for(const CacheSizes& sizes, const size_t stream_count) {
-  const auto staging_bytes_per_partition = std::max(size_t{1}, stream_count) * (SWWC_LINE_BYTES + sizeof(size_t));
-  const auto fitting_partitions = std::bit_floor(std::max(size_t{1}, sizes.l2_bytes / staging_bytes_per_partition));
-  return static_cast<PartitionCount>(std::min(fitting_partitions, static_cast<size_t>(MAX_PARTITION_COUNT)));
-}
+PartitionCount max_partition_count_for(const CacheSizes& sizes, size_t stream_count);
 
-inline PartitionCount max_partition_count(const size_t stream_count) {
-  return max_partition_count_for(cache_sizes(), stream_count);
-}
+PartitionCount max_partition_count(size_t stream_count);
 
 /**
  * Fraction of L1d granted to the merge phase's row->slot scratch: scratch budget = L1d / this.
@@ -129,13 +101,9 @@ constexpr size_t MERGE_SCRATCH_L1_DIVISOR = 4;
  * A larger tile grows the scratch until it no longer fits in L1 (defeating the tiling); a smaller one shrinks the
  * scratch but pays more virtual fold dispatches per partition.
  */
-inline size_t merge_tile_rows_for(const CacheSizes& sizes) {
-  return sizes.l1d_bytes / MERGE_SCRATCH_L1_DIVISOR / sizeof(uint32_t);
-}
+size_t merge_tile_rows_for(const CacheSizes& sizes);
 
-inline size_t merge_tile_rows() {
-  return merge_tile_rows_for(cache_sizes());
-}
+size_t merge_tile_rows();
 
 /**
  * Rows at which a merge partition counts as oversized, as a multiple of the mean partition's rows.
@@ -163,19 +131,8 @@ constexpr size_t MERGE_SPLIT_ROWS_PER_KEY = 8;
  * against both the mean partition and the keys a partition is expected to hold; the number of ways then brings the
  * largest way down to about the mean partition's rows.
  */
-inline size_t merge_split_ways_for(const size_t partition_rows, const size_t mean_partition_rows,
-                                   const size_t expected_keys_per_partition, const size_t store_count,
-                                   const size_t worker_limit) {
-  const auto split_limit = std::min(store_count, worker_limit);
-  if (split_limit < 2 || mean_partition_rows == 0) {
-    return 1;
-  }
-  if (partition_rows < MERGE_SPLIT_MEAN_ROW_FACTOR * mean_partition_rows ||
-      partition_rows < MERGE_SPLIT_ROWS_PER_KEY * expected_keys_per_partition) {
-    return 1;
-  }
-  return std::min(partition_rows / mean_partition_rows, split_limit);
-}
+size_t merge_split_ways_for(size_t partition_rows, size_t mean_partition_rows, size_t expected_keys_per_partition,
+                            size_t store_count, size_t worker_limit);
 
 /**
  * Inline string-blob capacity budget per string group-by column.
@@ -196,9 +153,7 @@ constexpr size_t DICTIONARY_BOUND_SCAN_LIMIT = size_t{1} << 20;
 /**
  * Number of distinct output groups where the low-cardinality path is taken
 */
-inline size_t low_cardinality_threshold() {
-  return keys_budget() / 2;
-}
+size_t low_cardinality_threshold();
 
 /**
  * Width of the pieces a packed key is staged in during the scatter phase (unit: bytes).
@@ -206,12 +161,7 @@ inline size_t low_cardinality_threshold() {
  * The widest of {16, 8, 4} that divides the key width, so a key needs as few push calls as possible while every
  * piece still evenly divides the SWWC staging line. Key widths are always multiples of 4.
  */
-inline size_t key_piece_width(const size_t key_width) {
-  if (key_width % 16 == 0) {
-    return 16;
-  }
-  return key_width % 8 == 0 ? 8 : 4;
-}
+size_t key_piece_width(size_t key_width);
 
 /**
  * Number of rows a worker claims at a time in the scanning phases: estimate, scatter, and the low-cardinality fold.
@@ -222,9 +172,7 @@ inline size_t key_piece_width(const size_t key_width) {
 constexpr size_t MORSEL_ROWS = 16'384;
 
 /** Morsels a chunk of `chunk_rows` rows is claimed in; a chunk shorter than one morsel is a single morsel. */
-inline size_t morsel_count_for(const size_t chunk_rows, const size_t rows_per_morsel) {
-  return std::max(size_t{1}, (chunk_rows + rows_per_morsel - 1) / rows_per_morsel);
-}
+size_t morsel_count_for(size_t chunk_rows, size_t rows_per_morsel);
 
 /**
  * Ceiling on the number of workers a phase fans out to.
@@ -233,8 +181,6 @@ inline size_t morsel_count_for(const size_t chunk_rows, const size_t rows_per_mo
  * store or map is pure setup and teardown; the limit is 1 there and the CPU count otherwise. It also lower-bounds the
  * partition count via choose_partition_count(), so single-threaded runs size P from the cardinality alone.
  */
-inline size_t worker_limit_for(const bool is_multi_threaded, const size_t num_cpus) {
-  return is_multi_threaded ? std::max(size_t{1}, num_cpus) : size_t{1};
-}
+size_t worker_limit_for(bool is_multi_threaded, size_t num_cpus);
 
 }  // namespace hyrise
