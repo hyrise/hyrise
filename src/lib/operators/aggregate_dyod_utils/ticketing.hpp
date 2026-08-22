@@ -343,8 +343,10 @@ struct GroupKeyDataBase {
 struct GroupKeyData : GroupKeyDataBase {
   ConcurrentTicketMap<GroupKey, GroupKeyHash, GroupKeyEqual> global_hash_table;
 
-  explicit GroupKeyData(const RowFormat& init_row_format, size_t estimated_groups) : GroupKeyDataBase(init_row_format) {
-    global_hash_table.initialize(estimated_groups, GroupKeyHash{}, GroupKeyEqual{&this->row_format});
+  // `row_count` is the input's row count and caps the hash table's capacity (see `ConcurrentTicketMap::initialize`).
+  explicit GroupKeyData(const RowFormat& init_row_format, size_t estimated_groups, size_t row_count)
+      : GroupKeyDataBase(init_row_format) {
+    global_hash_table.initialize(estimated_groups, row_count, GroupKeyHash{}, GroupKeyEqual{&this->row_format});
   }
 };
 

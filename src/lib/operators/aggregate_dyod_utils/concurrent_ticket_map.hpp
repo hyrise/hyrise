@@ -86,23 +86,22 @@ class ConcurrentTicketMap {
   ConcurrentTicketMap() = default;
 
   // Sizes the table to hold at least `max_groups` entries below the load factor, rounded up to a power of two.
-  // The table never grows, `max_groups` MUST!!!!! be a true upper bound on the number of distinct groups.
-  explicit ConcurrentTicketMap(const size_t max_groups, const Hash& hash = Hash{},
+  // `max_groups` is only an estimate, the table grows if it turns out to be too low. `max_possible_groups` however
+  // MUST!!!!! be a true upper bound on the number of distinct groups (e.g. the input's row count).
+  explicit ConcurrentTicketMap(const size_t max_groups, const size_t max_possible_groups, const Hash& hash = Hash{},
                                const KeyEqual& key_equal = KeyEqual{}) {
-    initialize(max_groups, hash, key_equal);
+    initialize(max_groups, max_possible_groups, hash, key_equal);
   }
 
-  void initialize(const size_t max_groups, const Hash& hash = Hash{}, const KeyEqual& key_equal = KeyEqual{}) {
+  void initialize(const size_t max_groups, const size_t max_possible_groups, const Hash& hash = Hash{},
+                  const KeyEqual& key_equal = KeyEqual{}) {
     _hash = hash;
     _key_equal = key_equal;
 
-    auto capacity = MIN_CAPACITY;
-    while (static_cast<double>(capacity) * MAX_LOAD_FACTOR < static_cast<double>(max_groups + 1)) {
-      capacity <<= 1U;
-    }
-    _capacity = capacity;
-    _mask = capacity - 1;
-    _probe_limit = _max_probe_count(capacity);
+    _capacity_ceiling = _capacity_for(max_possible_groups, std::numeric_limits<size_t>::max());
+    _capacity = _capacity_for(max_groups, _capacity_ceiling);
+    _mask = _capacity - 1;
+    _probe_limit = _probe_limit_for(_capacity);
 
     // `calloc` is deliberate here, because it hands out lazily zeroed pages.
     // NOLINTNEXTLINE(cppcoreguidelines-no-malloc,cppcoreguidelines-owning-memory,hicpp-no-malloc)
@@ -171,15 +170,13 @@ class ConcurrentTicketMap {
 
   // NOTE: This is just a fallback and VERY slow. We should never hit it though...
   void resize(const size_t new_max_groups) {
-    // If another thread already resized the table we can skip this resize.
-    if (new_max_groups <= static_cast<size_t>(static_cast<double>(_capacity) * MAX_LOAD_FACTOR)) {
+    // If another thread already resized the table, or it reached the capacity ceiling, we can skip this resize.
+    if (new_max_groups <= static_cast<size_t>(static_cast<double>(_capacity) * MAX_LOAD_FACTOR) ||
+        _capacity >= _capacity_ceiling) {
       return;
     }
 
-    auto new_capacity = MIN_CAPACITY;
-    while (static_cast<double>(new_capacity) * MAX_LOAD_FACTOR < static_cast<double>(new_max_groups + 1)) {
-      new_capacity <<= 1U;
-    }
+    const auto new_capacity = _capacity_for(new_max_groups, _capacity_ceiling);
 
     // NOLINTNEXTLINE(cppcoreguidelines-no-malloc,cppcoreguidelines-owning-memory,hicpp-no-malloc)
     auto* new_slots_ptr = static_cast<Slot*>(std::calloc(new_capacity, sizeof(Slot)));
@@ -213,7 +210,7 @@ class ConcurrentTicketMap {
     _slots.swap(new_slots);
     _capacity = new_capacity;
     _mask = new_mask;
-    _probe_limit = _max_probe_count(new_capacity);
+    _probe_limit = _probe_limit_for(new_capacity);
   }
 
   template <typename Fn>
@@ -291,6 +288,16 @@ class ConcurrentTicketMap {
   static constexpr auto PARALLEL_INIT_SLOTS = size_t{1} << 18U;
   static constexpr auto MIN_PROBE_COUNT = size_t{8};
 
+  // Smallest power-of-two capacity that holds `max_groups` entries below the load factor, capped at `max_capacity`.
+  static constexpr size_t _capacity_for(const size_t max_groups, const size_t max_capacity) {
+    auto capacity = MIN_CAPACITY;
+    while (capacity < max_capacity &&
+           static_cast<double>(capacity) * MAX_LOAD_FACTOR < static_cast<double>(max_groups + 1)) {
+      capacity <<= 1U;
+    }
+    return capacity;
+  }
+
   // From Knuth's hashing result for the expected number of probes in an unsuccessful search. (The maximum probe count
   // then grows logarithmically with table size).
   static constexpr size_t _max_probe_count(const size_t capacity, const double load_factor = MAX_LOAD_FACTOR) {
@@ -299,6 +306,13 @@ class ConcurrentTicketMap {
     const auto log2_capacity = static_cast<double>(std::bit_width(capacity) - 1);
     const auto probe_count = static_cast<size_t>(average_probes * log2_capacity);
     return std::min(capacity, std::max(MIN_PROBE_COUNT, probe_count));
+  }
+
+  // At the ceiling the table cannot grow any further, so we probe all of it rather than give up after
+  // `_max_probe_count` slots and run into a resize that can no longer do anything. The ceiling keeps the table below
+  // `MAX_LOAD_FACTOR`, so a free slot is guaranteed to exist and the probe terminates.
+  size_t _probe_limit_for(const size_t capacity) const {
+    return capacity < _capacity_ceiling ? _max_probe_count(capacity) : capacity;
   }
 
   static void _spin_pause(const size_t iterations) {
@@ -344,6 +358,7 @@ class ConcurrentTicketMap {
 
   SlotArray _slots;
   size_t _capacity = 0;
+  size_t _capacity_ceiling = 0;
   size_t _mask = 0;
   size_t _probe_limit = 0;
   Hash _hash{};

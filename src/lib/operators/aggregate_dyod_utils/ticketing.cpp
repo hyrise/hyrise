@@ -193,7 +193,7 @@ std::shared_ptr<GroupKeyData> compute_groups_multi_column(const std::vector<Colu
 
   // Guard the offset computation below, which would underflow `chunk_count - 1` on an empty table.
   if (chunk_count == 0) {
-    auto group_key_data = std::make_shared<GroupKeyData>(row_format, 0);
+    auto group_key_data = std::make_shared<GroupKeyData>(row_format, 0, 0);
     // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
     group_key_data->tickets = std::make_unique_for_overwrite<uint64_t[]>(0);
     group_key_data->group_count = 0;
@@ -221,7 +221,7 @@ std::shared_ptr<GroupKeyData> compute_groups_multi_column(const std::vector<Colu
   const auto estimated_groups =
       estimate_group_count_multi_column(row_format, groupby_column_ids, input_table, max_chunk_size);
 
-  auto group_key_data = std::make_shared<GroupKeyData>(row_format, estimated_groups);
+  auto group_key_data = std::make_shared<GroupKeyData>(row_format, estimated_groups, row_count);
   // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
   group_key_data->tickets = std::make_unique_for_overwrite<uint64_t[]>(row_count);
   auto& global_hash_table = group_key_data->global_hash_table;
@@ -310,7 +310,7 @@ std::shared_ptr<GroupKeyData> compute_groups_single_column(const ColumnID groupb
   const auto data_type = input_table->column_data_type(groupby_column_id);
   const auto chunk_count = input_table->chunk_count();
 
-  auto return_group_key_data = std::make_shared<GroupKeyData>(RowFormat{}, 0);
+  auto return_group_key_data = std::make_shared<GroupKeyData>(RowFormat{}, 0, 0);
 
   resolve_data_type(data_type, [&](const auto data_type_t) {
     using ColumnDataType = typename decltype(data_type_t)::type;
@@ -341,7 +341,7 @@ std::shared_ptr<GroupKeyData> compute_groups_single_column(const ColumnID groupb
       // only a tickets + group-count carrier and its `row_format`/`global_hash_table` stay unused. Grouping runs
       // against the local `value_to_ticket` below, so the carrier's map is sized for nothing rather than for
       // `estimated_groups`.
-      auto group_key_data = std::make_shared<GroupKeyData>(RowFormat{}, 0);
+      auto group_key_data = std::make_shared<GroupKeyData>(RowFormat{}, 0, 0);
       auto& tickets = group_key_data->tickets;
       // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
       tickets = std::make_unique_for_overwrite<uint64_t[]>(input_table->row_count());
@@ -353,7 +353,7 @@ std::shared_ptr<GroupKeyData> compute_groups_single_column(const ColumnID groupb
         return;
       }
 
-      auto value_to_ticket = ConcurrentTicketMap<ColumnDataType>(estimated_groups);
+      auto value_to_ticket = ConcurrentTicketMap<ColumnDataType>(estimated_groups, input_table->row_count());
       auto next_ticket_range_start = std::atomic<uint64_t>{reserves_null_ticket ? uint64_t{1} : uint64_t{0}};
 
       const auto process_chunk = [&](const ChunkID chunk_id, uint64_t& next_ticket, uint64_t& ticket_range_end) {
