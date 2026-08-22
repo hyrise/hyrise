@@ -55,7 +55,7 @@ class AbstractAggregator {
  public:
   virtual ~AbstractAggregator() = default;
   virtual void set_worker_count(size_t worker_count) = 0;
-  virtual void accumulate(size_t worker_id, const Chunk& chunk) = 0;
+  virtual void accumulate(size_t worker_id, ChunkID chunk_id, const Chunk& chunk) = 0;
   virtual void merge() = 0;
   virtual std::shared_ptr<AbstractSegment> build_segment() const = 0;
   virtual TableColumnDefinition output_column_definition() const = 0;
@@ -145,7 +145,7 @@ class StandardAggregator : public AbstractAggregator {
     }
   }
 
-  void accumulate(const size_t worker_id, const Chunk& chunk) override {
+  void accumulate(const size_t worker_id, const ChunkID /*chunk_id*/, const Chunk& chunk) override {
     auto& state = _states[worker_id].state;
     const auto fold = WindowFunctionBuilder<ColumnDataType, AggregateType, window_function>{}.get_aggregate_function();
 
@@ -279,6 +279,7 @@ template <typename ColumnDataType>
 class AnyAggregator : public AbstractAggregator {
   struct State {
     AllTypeVariant value;
+    ChunkID chunk_id{0};
     bool seen{false};
   };
 
@@ -294,20 +295,23 @@ class AnyAggregator : public AbstractAggregator {
     _states.assign(worker_count, PaddedState{});
   }
 
-  void accumulate(const size_t worker_id, const Chunk& chunk) override {
+  void accumulate(const size_t worker_id, const ChunkID chunk_id, const Chunk& chunk) override {
     auto& state = _states[worker_id].state;
     if (state.seen || chunk.size() == 0) {
       return;
     }
     state.value = (*chunk.get_segment(_column_id))[ChunkOffset{0}];
+    state.chunk_id = chunk_id;
     state.seen = true;
   }
 
   void merge() override {
+    // Take the row from the lowest chunk across workers so ANY is the first row of the first non-empty chunk,
+    // independent of how the scheduler handed chunks to workers.
     for (const auto& padded : _states) {
-      if (padded.state.seen) {
-        _final = padded.state;
-        break;
+      const auto& state = padded.state;
+      if (state.seen && (!_final.seen || state.chunk_id < _final.chunk_id)) {
+        _final = state;
       }
     }
   }
@@ -347,7 +351,7 @@ class CountStarAggregator : public AbstractAggregator {
     _states.assign(worker_count, PaddedCount{});
   }
 
-  void accumulate(const size_t worker_id, const Chunk& chunk) override {
+  void accumulate(const size_t worker_id, const ChunkID /*chunk_id*/, const Chunk& chunk) override {
     _states[worker_id].count += chunk.size();
   }
 
@@ -385,7 +389,7 @@ class CountColumnAggregator : public AbstractAggregator {
     _states.assign(worker_count, PaddedCount{});
   }
 
-  void accumulate(const size_t worker_id, const Chunk& chunk) override {
+  void accumulate(const size_t worker_id, const ChunkID /*chunk_id*/, const Chunk& chunk) override {
     auto count = _states[worker_id].count;
     segment_iterate<ColumnDataType>(*chunk.get_segment(_column_id), [&](const auto& position) {
       if (!position.is_null()) {
@@ -433,7 +437,7 @@ class CountDistinctAggregator : public AbstractAggregator {
     }
   }
 
-  void accumulate(const size_t worker_id, const Chunk& chunk) override {
+  void accumulate(const size_t worker_id, const ChunkID /*chunk_id*/, const Chunk& chunk) override {
     auto& set = _states[worker_id].set;
     if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
       auto& decoded = _decode_scratch[worker_id];
@@ -1278,12 +1282,13 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate_without_group_by(const Aggregat
       if (morsel >= morsel_count) {
         break;
       }
-      const auto chunk = input_table.get_chunk(ChunkID{static_cast<ChunkID::base_type>(morsel)});
+      const auto chunk_id = ChunkID{static_cast<ChunkID::base_type>(morsel)};
+      const auto chunk = input_table.get_chunk(chunk_id);
       if (!chunk) {
         continue;
       }
       for (const auto& aggregator : aggregators) {
-        aggregator->accumulate(worker_id, *chunk);
+        aggregator->accumulate(worker_id, chunk_id, *chunk);
       }
     }
   });
