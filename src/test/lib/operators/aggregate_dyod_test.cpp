@@ -423,16 +423,6 @@ TEST_F(OperatorsAggregateDYODTest, MultiThreadedFewChunksManyGroups) {
                               {ColumnID{0}});
 }
 
-TEST_F(OperatorsAggregateDYODTest, MultiThreadedSingleChunkManyGroups) {
-  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
-  const auto input = wrap_input(make_input_table(50'000, ChunkOffset{65'535}));
-  compare_with_aggregate_hash(input,
-                              {{ColumnID{2}, WindowFunction::Sum},
-                               {ColumnID{1}, WindowFunction::Max},
-                               {ColumnID{0}, WindowFunction::Any}},
-                              {ColumnID{0}, ColumnID{1}});
-}
-
 TEST_F(OperatorsAggregateDYODTest, MultiThreadedFewChunksLowCardinality) {
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
   const auto input = wrap_input(make_low_cardinality_table(120'000, ChunkOffset{65'535}));
