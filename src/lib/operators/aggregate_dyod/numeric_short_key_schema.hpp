@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -122,7 +123,7 @@ template <size_t PackedWidth>
 void NumericShortKeySchema<PackedWidth>::pack(const KeyDecodeScratch& scratch, const ChunkOffset chunk_offset,
                                               std::byte* key_out, StringSpillBuffer& /*spill_buffer*/) const {
   std::memset(key_out, 0, PackedWidth);
-  pack_numeric_lanes(_lanes, scratch, chunk_offset, key_out);
+  pack_numeric_lanes<std::min(PackedWidth, size_t{8})>(_lanes, scratch, chunk_offset, key_out);
 }
 
 template <size_t PackedWidth>

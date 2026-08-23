@@ -362,18 +362,21 @@ inline uintptr_t read_spill_pointer(const std::byte* key, const size_t fixed_par
   return pointer_value;
 }
 
-inline void pack_numeric_lanes(const NumericKeyLanes& lanes, const KeyDecodeScratch& scratch,
-                               const ChunkOffset chunk_offset, std::byte* key_out) {
+template <size_t max_lane_width = 8>
+void pack_numeric_lanes(const NumericKeyLanes& lanes, const KeyDecodeScratch& scratch, const ChunkOffset chunk_offset,
+                        std::byte* key_out) {
   const auto lane_count = lanes.size();
   for (auto index = size_t{0}; index < lane_count; ++index) {
     const auto& field = lanes[index].field;
     const auto& lane = scratch.numeric_lanes[index];
-    if (lane.nulls[chunk_offset]) {
+    if (lane.nulls[chunk_offset] != 0) {
       set_null_bit(key_out, field.null_bit_index);
       continue;
     }
-    const auto* source = lane.values.data() + size_t{chunk_offset} * field.width;
-    if (field.width == 4) {
+    const auto* source = lane.values.data() + (size_t{chunk_offset} * field.width);
+    if constexpr (max_lane_width < 8) {
+      std::memcpy(key_out + field.field_offset, source, 4);
+    } else if (field.width == 4) {
       std::memcpy(key_out + field.field_offset, source, 4);
     } else {
       std::memcpy(key_out + field.field_offset, source, 8);
