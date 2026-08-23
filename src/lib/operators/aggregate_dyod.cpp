@@ -35,6 +35,8 @@
 
 namespace hyrise {
 
+namespace {
+
 // Threshold that decides how the group-by output columns are built. When the input has at least this many rows per
 // group, each group-by column is materialized by reading every group's value directly from the ticketing hashtable.
 constexpr auto GROUPBY_HASH_TABLE_MIN_ROWS_PER_GROUP = size_t{4};
@@ -46,46 +48,6 @@ constexpr auto AGG_MAX_LOCAL_HASH_TABLE_SIZE = size_t{1} << size_t{12};  // 4096
 
 // Rows of the per-group intermediate results that one job finalizes.
 constexpr auto FINALIZE_ROWS_BATCH_SIZE = size_t{1} << size_t{16};
-
-namespace {
-
-// State of one worker for the no-group-by aggregation.
-struct NoGroupByWorkerState : public Noncopyable {
-  void merge(NoGroupByWorkerState& other) {
-    if (other.aggregate_states.empty()) {
-      return;
-    }
-    if (aggregate_states.empty()) {
-      aggregate_states = std::move(other.aggregate_states);
-      aggregate_info = std::move(other.aggregate_info);
-      return;
-    }
-
-    const auto aggregate_count = aggregate_states.size();
-    for (auto aggregate_id = size_t{0}; aggregate_id < aggregate_count; ++aggregate_id) {
-      // Aggregates that need no per-chunk work (see `AggregateInfo::counts_all_rows`) have no state.
-      const auto& aggregate_state = aggregate_states[aggregate_id];
-      if (!aggregate_state) {
-        continue;
-      }
-      const auto& current_aggregate_info = aggregate_info[aggregate_id];
-
-      resolve_data_type(current_aggregate_info.data_type, [&](const auto data_type_t) {
-        using ColumnDataType = typename decltype(data_type_t)::type;
-        resolve_window_function(current_aggregate_info.window_function, [&](const auto window_function_t) {
-          using AggregateState = IntermediateState<ColumnDataType, decltype(window_function_t)::value>;
-          auto& state = *std::static_pointer_cast<AggregateState>(aggregate_state);
-          auto& other_state = *std::static_pointer_cast<AggregateState>(other.aggregate_states[aggregate_id]);
-
-          state.merge(other_state);
-        });
-      });
-    }
-  }
-
-  std::vector<std::shared_ptr<void>> aggregate_states;
-  std::vector<AggregateInfo> aggregate_info;
-};
 
 // Resolves the per-aggregate information that both paths need from the aggregate expressions and the input schema.
 std::vector<AggregateInfo> build_aggregate_infos(
@@ -149,6 +111,43 @@ TableColumnDefinitions build_output_column_definitions(
 }
 
 // ---------------------------------------------- No-group-by path -----------------------------------------------
+// State of one worker for the no-group-by aggregation.
+struct NoGroupByWorkerState : public Noncopyable {
+  void merge(NoGroupByWorkerState& other) {
+    if (other.aggregate_states.empty()) {
+      return;
+    }
+    if (aggregate_states.empty()) {
+      aggregate_states = std::move(other.aggregate_states);
+      aggregate_info = std::move(other.aggregate_info);
+      return;
+    }
+
+    const auto aggregate_count = aggregate_states.size();
+    for (auto aggregate_id = size_t{0}; aggregate_id < aggregate_count; ++aggregate_id) {
+      // Aggregates that need no per-chunk work (see `AggregateInfo::counts_all_rows`) have no state.
+      const auto& aggregate_state = aggregate_states[aggregate_id];
+      if (!aggregate_state) {
+        continue;
+      }
+      const auto& current_aggregate_info = aggregate_info[aggregate_id];
+
+      resolve_data_type(current_aggregate_info.data_type, [&](const auto data_type_t) {
+        using ColumnDataType = typename decltype(data_type_t)::type;
+        resolve_window_function(current_aggregate_info.window_function, [&](const auto window_function_t) {
+          using AggregateState = IntermediateState<ColumnDataType, decltype(window_function_t)::value>;
+          auto& state = *std::static_pointer_cast<AggregateState>(aggregate_state);
+          auto& other_state = *std::static_pointer_cast<AggregateState>(other.aggregate_states[aggregate_id]);
+
+          state.merge(other_state);
+        });
+      });
+    }
+  }
+
+  std::vector<std::shared_ptr<void>> aggregate_states;
+  std::vector<AggregateInfo> aggregate_info;
+};
 
 // Aggregates every chunk of the input into per-worker states: one job per chunk, with the jobs pulling chunks from a
 // shared counter/cursor. Every worker accumulates into its own state, so the jobs never share an accumulator.
@@ -243,28 +242,7 @@ std::vector<AllTypeVariant> no_groupby_result_row(const std::shared_ptr<const Ta
   return result_values;
 }
 
-}  // namespace
-
-std::shared_ptr<const Table> AggregateDYOD::_no_groupby_aggregate() {
-  const auto input_table = left_input_table();
-  const auto aggregate_infos = build_aggregate_infos(_aggregates, input_table);
-
-  // Every worker aggregates the chunks it processes into its own state. Then, the states are combined into the single
-  // result row once all chunks have been processed (at most one state per worker, regardless of the number of chunks).
-  auto operator_state = OperatorSharedState<NoGroupByWorkerState>{};
-  accumulate_no_groupby_states(input_table, aggregate_infos, operator_state);
-  const auto& aggregate_states = operator_state.merge_worker_states().aggregate_states;
-
-  auto result_table = std::make_shared<Table>(
-      build_output_column_definitions(*input_table, {}, _aggregates, aggregate_infos), TableType::Data);
-  result_table->append(no_groupby_result_row(input_table, aggregate_infos, aggregate_states));
-  return result_table;
-}
-
 // ------------------------------------------------ Group-by path ------------------------------------------------
-
-namespace {
-
 // Emits one job per chunk of `vector`, each value-initializing its chunk's storage. This spreads the zeroing and the
 // first-touch page faults of the large per-group containers over all cores instead of a single allocating thread.
 template <typename T>
@@ -772,6 +750,22 @@ void emit_aggregate_columns(const std::vector<AggregateInfo>& aggregate_infos,
 }
 
 }  // namespace
+
+std::shared_ptr<const Table> AggregateDYOD::_no_groupby_aggregate() {
+  const auto input_table = left_input_table();
+  const auto aggregate_infos = build_aggregate_infos(_aggregates, input_table);
+
+  // Every worker aggregates the chunks it processes into its own state. Then, the states are combined into the single
+  // result row once all chunks have been processed (at most one state per worker, regardless of the number of chunks).
+  auto operator_state = OperatorSharedState<NoGroupByWorkerState>{};
+  accumulate_no_groupby_states(input_table, aggregate_infos, operator_state);
+  const auto& aggregate_states = operator_state.merge_worker_states().aggregate_states;
+
+  auto result_table = std::make_shared<Table>(
+      build_output_column_definitions(*input_table, {}, _aggregates, aggregate_infos), TableType::Data);
+  result_table->append(no_groupby_result_row(input_table, aggregate_infos, aggregate_states));
+  return result_table;
+}
 
 std::shared_ptr<const Table> AggregateDYOD::_groupby_aggregate() {
   const auto input_table = left_input_table();

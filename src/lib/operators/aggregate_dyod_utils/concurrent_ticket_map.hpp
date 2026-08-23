@@ -124,6 +124,15 @@ class ConcurrentTicketMap {
     while (true) {
       auto probe_counter = size_t{0};
       auto index = static_cast<size_t>(hash) & _mask;
+
+      // TODO(@anyone): This way of registering that the capacity of the hash table is reached is not ideal. It
+      // entirely depends on the hope that the hash keys are well distributed. When strings share a common prefix of
+      // `PREFIX_LENGTH` bytes, they can share the same hash and lead to a very long probe chain. This would forces us
+      // to continously grow the hash table, even though the number of distinct keys is quite small. The temporary
+      // solution is to increase this length to 16.
+      // The proper solution would be to e.g. store a counter of inserted values for each worker and sum them up to
+      // check the actual capacity before growing the hash table.
+
       while (probe_counter < _probe_limit) {
         auto& slot = _slots[index];
         auto state = slot.state.load(std::memory_order_acquire);
