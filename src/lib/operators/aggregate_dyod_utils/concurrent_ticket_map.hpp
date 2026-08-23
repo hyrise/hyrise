@@ -139,7 +139,7 @@ class ConcurrentTicketMap {
 
         if (state == EMPTY) {
           auto expected = EMPTY;
-          if (slot.state.compare_exchange_strong(expected, CLAIMED, std::memory_order_relaxed,
+          if (slot.state.compare_exchange_strong(expected, CLAIMED, std::memory_order_acquire,
                                                  std::memory_order_acquire)) {
             slot.key = promote_key(key);
             slot.state.store(ticket + TICKET_BIAS, std::memory_order_release);
