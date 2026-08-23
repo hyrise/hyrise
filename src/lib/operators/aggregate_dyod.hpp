@@ -125,7 +125,7 @@ class AggregateDYOD : public AbstractAggregateOperator {
     std::span<NormalizedKey> normalized_keys;
     std::span<pmr_string> groupby_strings;
 
-    uint64_t group_count;
+    uint64_t group_count{0};
     std::vector<uint64_t> group_sizes;
 
     Morsel(const AggregateDYOD& init_morsel_operator, const uint64_t init_row_count, const uint64_t init_row_offset,
@@ -136,8 +136,7 @@ class AggregateDYOD : public AbstractAggregateOperator {
           initial_row_offset(init_row_offset),
           key_bytes(init_key_bytes),
           normalized_keys(init_normalized_keys),
-          groupby_strings(init_groupby_strings),
-          group_count(0) {
+          groupby_strings(init_groupby_strings) {
       aggregate_results.resize(init_morsel_operator._aggregates.size());
     }
 
@@ -164,7 +163,7 @@ class AggregateDYOD : public AbstractAggregateOperator {
 
     template <WindowFunction aggregate_function, typename AggregateType>
     void merge_single_aggregate(std::shared_ptr<Morsel>& other, const uint64_t aggregate_index,
-                                 const pmr_vector<MergeStep>& merge_plan);
+                                const pmr_vector<MergeStep>& merge_plan);
 
     template <WindowFunction aggregate_function, typename AggregateType>
     std::shared_ptr<ValueSegment<AggregateType>> to_value_segment(const uint64_t aggregate_index, bool nullable);
@@ -173,8 +172,8 @@ class AggregateDYOD : public AbstractAggregateOperator {
     std::shared_ptr<ValueSegment<int64_t>> distinct_to_value_segment(const uint64_t aggregate_index);
   };
 
-  void _normalize_chunk_groupby(const std::shared_ptr<const Chunk>& input_chunk,
-                                const uint64_t row_offset, uninitialized_vector<NormalizedKey>& key_vector,
+  void _normalize_chunk_groupby(const std::shared_ptr<const Chunk>& input_chunk, const uint64_t row_offset,
+                                uninitialized_vector<NormalizedKey>& key_vector,
                                 uninitialized_vector<uint8_t>& byte_vector, pmr_vector<pmr_string>& groupby_strings);
 
   void _materialize_chunk_aggregates(const std::shared_ptr<const Chunk>& input_chunk, const uint64_t row_offset);
@@ -185,10 +184,10 @@ class AggregateDYOD : public AbstractAggregateOperator {
   void _on_cleanup() override;
 
   template <typename ColumnType, WindowFunction aggregate_function>
-  void create_aggregate_column_definitions(ColumnID column_index);
+  void _create_aggregate_column_definitions(ColumnID column_index);
 
   template <typename ColumnType>
-  void create_aggregate_column_definitions(boost::hana::basic_type<ColumnType> /*type*/, ColumnID column_index,
+  void _create_aggregate_column_definitions(boost::hana::basic_type<ColumnType> /*type*/, ColumnID column_index,
                                             WindowFunction aggregate_function);
 
   uint64_t _groupby_string_count = 0;

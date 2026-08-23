@@ -2,8 +2,9 @@
 
 #include <algorithm>
 #include <cmath>
-#include <cstddef>
 #include <compare>
+#include <concepts>
+#include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <format>
@@ -23,22 +24,22 @@
 #include "all_type_variant.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
+#include "expression/window_function_expression.hpp"
 #include "hyrise.hpp"
 #include "operators/abstract_aggregate_operator.hpp"
 #include "operators/abstract_operator.hpp"
+#include "operators/aggregate/window_function_traits.hpp"
+#include "resolve_type.hpp"
+#include "scheduler/abstract_task.hpp"
+#include "scheduler/job_task.hpp"
 #include "storage/abstract_segment.hpp"
+#include "storage/chunk.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
-#include "types.hpp"
-#include "expression/window_function_expression.hpp"
-#include "utils/assert.hpp"
-#include "storage/chunk.hpp"
-#include "resolve_type.hpp"
-#include "operators/aggregate/window_function_traits.hpp"
-#include "scheduler/abstract_task.hpp"
-#include "scheduler/job_task.hpp"
 #include "storage/value_segment.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
@@ -130,8 +131,7 @@ uint8_t key_data_length_null(const DataType data_type) {
 
 }  // namespace
 
-void AggregateDYOD::_normalize_chunk_groupby(const std::shared_ptr<const Chunk>& input_chunk,
-                                             const uint64_t row_offset,
+void AggregateDYOD::_normalize_chunk_groupby(const std::shared_ptr<const Chunk>& input_chunk, const uint64_t row_offset,
                                              uninitialized_vector<AggregateDYOD::NormalizedKey>& key_vector,
                                              uninitialized_vector<uint8_t>& byte_vector,
                                              pmr_vector<pmr_string>& groupby_strings) {
@@ -249,7 +249,7 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
     const auto data_type = column_id == INVALID_COLUMN_ID ? DataType::Long : input_table->column_data_type(column_id);
 
     resolve_data_type(data_type, [&, aggregate_index](auto type) {
-      create_aggregate_column_definitions(type, aggregate_index, aggregate->window_function);
+      _create_aggregate_column_definitions(type, aggregate_index, aggregate->window_function);
     });
 
     ++aggregate_index;
@@ -334,173 +334,172 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
    *      When all morsels have finished, we binary merge the morsels together.
    *      We then write the group and aggregate values into the result table and return.
   */
-    auto key_bytes = uninitialized_vector<uint8_t>(row_count * (_normalized_key_size + _groupby_string_count * 8));
-    auto normalized_keys = uninitialized_vector<NormalizedKey>(row_count);
-    auto groupby_strings = pmr_vector<pmr_string>(row_count * _groupby_string_count);
+  auto key_bytes = uninitialized_vector<uint8_t>(row_count * (_normalized_key_size + _groupby_string_count * 8));
+  auto normalized_keys = uninitialized_vector<NormalizedKey>(row_count);
+  auto groupby_strings = pmr_vector<pmr_string>(row_count * _groupby_string_count);
 
-    const auto chunk_count = input_table->chunk_count();
-    auto chunk_normalization_tasks = std::vector<std::shared_ptr<AbstractTask>>(chunk_count);
+  const auto chunk_count = input_table->chunk_count();
+  auto chunk_normalization_tasks = std::vector<std::shared_ptr<AbstractTask>>(chunk_count);
 
-    auto row_offset = uint64_t{0};
-    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-      chunk_normalization_tasks[chunk_id] = std::make_shared<JobTask>([&, chunk_id, row_offset]() {
-        const auto chunk = input_table->get_chunk(chunk_id);
-        _normalize_chunk_groupby(chunk, row_offset, normalized_keys, key_bytes, groupby_strings);
-        _materialize_chunk_aggregates(chunk, row_offset);
-      });
-      row_offset += input_table->get_chunk(chunk_id)->size();
-    }
+  auto row_offset = uint64_t{0};
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+    chunk_normalization_tasks[chunk_id] = std::make_shared<JobTask>([&, chunk_id, row_offset]() {
+      const auto chunk = input_table->get_chunk(chunk_id);
+      _normalize_chunk_groupby(chunk, row_offset, normalized_keys, key_bytes, groupby_strings);
+      _materialize_chunk_aggregates(chunk, row_offset);
+    });
+    row_offset += input_table->get_chunk(chunk_id)->size();
+  }
 
-    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(chunk_normalization_tasks);
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(chunk_normalization_tasks);
 
-    const auto is_multi_threaded = Hyrise::get().is_multi_threaded();
-    // If we run on a single thread we avoid the overhead of splitting everything up into chunks and
-    // still processing them sequentially and perform aggregation over the entire table in one go.
-    // This avoids merging as well, which can be quite expensive with our implementation.
-    const auto desired_morsel_size = is_multi_threaded ? ChunkOffset{10'000} : row_count;
-    const auto morsel_count =
-        is_multi_threaded ? (row_count + desired_morsel_size - 1) / desired_morsel_size : 1;
+  const auto is_multi_threaded = Hyrise::get().is_multi_threaded();
+  // If we run on a single thread we avoid the overhead of splitting everything up into chunks and
+  // still processing them sequentially and perform aggregation over the entire table in one go.
+  // This avoids merging as well, which can be quite expensive with our implementation.
+  const auto desired_morsel_size = is_multi_threaded ? ChunkOffset{10'000} : row_count;
+  const auto morsel_count = is_multi_threaded ? (row_count + desired_morsel_size - 1) / desired_morsel_size : 1;
 
-    auto morsels = std::vector<std::shared_ptr<Morsel>>(morsel_count);
-    auto aggregation_tasks = std::vector<std::shared_ptr<AbstractTask>>{};
-    aggregation_tasks.reserve(morsel_count);
-    auto morsel_range_start = uint64_t{0};
+  auto morsels = std::vector<std::shared_ptr<Morsel>>(morsel_count);
+  auto aggregation_tasks = std::vector<std::shared_ptr<AbstractTask>>{};
+  aggregation_tasks.reserve(morsel_count);
+  auto morsel_range_start = uint64_t{0};
 
-    for (auto& morsel : morsels) {
-      const auto morsel_range_end = std::min(morsel_range_start + desired_morsel_size, input_table->row_count()) - 1;
-      const auto morsel_size = morsel_range_end - morsel_range_start + 1;
-      auto normalized_key_span = std::span<NormalizedKey>(normalized_keys.begin() + morsel_range_start, morsel_size);
+  for (auto& morsel : morsels) {
+    const auto morsel_range_end = std::min(morsel_range_start + desired_morsel_size, input_table->row_count()) - 1;
+    const auto morsel_size = morsel_range_end - morsel_range_start + 1;
+    auto normalized_key_span = std::span<NormalizedKey>(normalized_keys.begin() + morsel_range_start, morsel_size);
 
-      morsel = std::make_shared<Morsel>(*this, morsel_size, morsel_range_start, key_bytes, normalized_key_span,
-                                        groupby_strings);
-      morsel_range_start += desired_morsel_size;
+    morsel = std::make_shared<Morsel>(*this, morsel_size, morsel_range_start, key_bytes, normalized_key_span,
+                                      groupby_strings);
+    morsel_range_start += desired_morsel_size;
 
-      aggregation_tasks.push_back(std::make_shared<JobTask>([&]() {
-        morsel->sort_morsel_range();
+    aggregation_tasks.push_back(std::make_shared<JobTask>([&]() {
+      morsel->sort_morsel_range();
 
-        auto aggregate_index = uint64_t{0};
-        for (const auto& aggregate : _aggregates) {
-          const auto& pqp_expression = static_cast<const PQPColumnExpression&>(*aggregate->argument());
-          const auto pqp_column_id = pqp_expression.column_id;
+      auto aggregate_index = uint64_t{0};
+      for (const auto& aggregate : _aggregates) {
+        const auto& pqp_expression = static_cast<const PQPColumnExpression&>(*aggregate->argument());
+        const auto pqp_column_id = pqp_expression.column_id;
 
-          const auto data_type =
-              pqp_column_id == INVALID_COLUMN_ID ? DataType::Long : input_table->column_data_type(pqp_column_id);
-          resolve_data_type(data_type, [&](auto type) {
-            using ColumnDataType = typename decltype(type)::type;
+        const auto data_type =
+            pqp_column_id == INVALID_COLUMN_ID ? DataType::Long : input_table->column_data_type(pqp_column_id);
+        resolve_data_type(data_type, [&](auto type) {
+          using ColumnDataType = typename decltype(type)::type;
 
-            resolve_window_function(aggregate->window_function, [&](auto window_function_constant) {
-              constexpr auto AGGREGATE_FUNCTION = decltype(window_function_constant)::value;
-              using AggregateType = typename WindowFunctionTraits<ColumnDataType, AGGREGATE_FUNCTION>::ReturnType;
+          resolve_window_function(aggregate->window_function, [&](auto window_function_constant) {
+            constexpr auto AGGREGATE_FUNCTION = decltype(window_function_constant)::value;
+            using AggregateType = typename WindowFunctionTraits<ColumnDataType, AGGREGATE_FUNCTION>::ReturnType;
 
-              morsel->aggregate_morsel<ColumnDataType, AGGREGATE_FUNCTION, AggregateType>(aggregate_index);
-            });
+            morsel->aggregate_morsel<ColumnDataType, AGGREGATE_FUNCTION, AggregateType>(aggregate_index);
           });
-          ++aggregate_index;
-        }
+        });
+        ++aggregate_index;
+      }
+    }));
+  }
+
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(aggregation_tasks);
+
+  // We merge the morsel results with a binary strategy. For this we start with a merge distance
+  // of one, where a morsel is merged with the next. We now double the distance, so a morsel gets merged
+  // with one distance two away, and thus contains the merged results of 4 consecutive morsels. We repeat this
+  // process until the first morsel contains all information.
+  for (auto merge_distance = size_t{1}; merge_distance < morsel_count; merge_distance *= 2) {
+    auto merge_tasks = std::vector<std::shared_ptr<AbstractTask>>{};
+    merge_tasks.reserve((morsel_count + merge_distance - 1) / (2 * merge_distance));
+    for (auto morsel_id = size_t{0}; morsel_id + merge_distance < morsel_count; morsel_id += 2 * merge_distance) {
+      merge_tasks.push_back(std::make_shared<JobTask>([&, morsel_id, merge_distance]() {
+        const auto& morsel1 = morsels[morsel_id];
+        auto morsel2 = morsels[morsel_id + merge_distance];
+
+        morsel1->merge_morsel(morsel2);
       }));
     }
 
-    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(aggregation_tasks);
+    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(merge_tasks);
+  }
 
-    // We merge the morsel results with a binary strategy. For this we start with a merge distance
-    // of one, where a morsel is merged with the next. We now double the distance, so a morsel gets merged
-    // with one distance two away, and thus contains the merged results of 4 consecutive morsels. We repeat this
-    // process until the first morsel contains all information.
-    for (auto merge_distance = size_t{1}; merge_distance < morsel_count; merge_distance *= 2) {
-      auto merge_tasks = std::vector<std::shared_ptr<AbstractTask>>{};
-      merge_tasks.reserve((morsel_count + merge_distance - 1) / (2 * merge_distance));
-      for (auto morsel_id = size_t{0}; morsel_id + merge_distance < morsel_count; morsel_id += 2 * merge_distance) {
-        merge_tasks.push_back(std::make_shared<JobTask>([&, morsel_id, merge_distance]() {
-          const auto& morsel1 = morsels[morsel_id];
-          auto morsel2 = morsels[morsel_id + merge_distance];
+  // Our binary merge strategy guarantees that the final results are in the first morsel.
+  const auto final_morsel = morsels[0];
+  const auto value_count = final_morsel->group_count;
 
-          morsel1->merge_morsel(morsel2);
-        }));
+  // Writing the group values to the table
+  // Since we store everything except strings directly in its byte representation in the keys
+  // we simply decode it from there. For strings we decode the index into the global string
+  // buffer and get the string from there.
+  auto group_key_offset = uint64_t{0};
+  auto group_string_offset = uint64_t{0};
+  for (const auto& column_id : _groupby_column_ids) {
+    const auto column_is_nullable = left_input_table()->column_is_nullable(column_id);
+    const auto data_type = left_input_table()->column_data_type(column_id);
+    const auto data_length = key_data_length(data_type);
+    auto value_index = uint64_t{0};
+    resolve_data_type(data_type, [&](auto type) {
+      using ColumnDataType = typename decltype(type)::type;
+
+      auto values = pmr_vector<ColumnDataType>(value_count);
+      auto null_values = pmr_vector<bool>(value_count);
+
+      for (const auto& key : final_morsel->group_keys) {
+        if constexpr (std::is_arithmetic_v<ColumnDataType>) {
+          std::memcpy(&values[value_index], key_bytes.data() + key + group_key_offset, data_length);
+        } else {
+          auto string_index = uint64_t{0};
+          std::memcpy(&string_index, key_bytes.data() + key + _normalized_key_size + (group_string_offset * 8), 8);
+          values[value_index] = groupby_strings[string_index];
+        }
+        null_values[value_index] = key_bytes[key + group_key_offset + data_length] == 0;
+        ++value_index;
       }
 
-      Hyrise::get().scheduler()->schedule_and_wait_for_tasks(merge_tasks);
-    }
+      if (column_is_nullable) {
+        _output_segments.push_back(
+            std::make_shared<ValueSegment<ColumnDataType>>(std::move(values), std::move(null_values)));
+      } else {
+        _output_segments.push_back(std::make_shared<ValueSegment<ColumnDataType>>(std::move(values)));
+      }
+      group_key_offset += key_data_length_null(data_type);
+      if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
+        ++group_string_offset;
+      }
+    });
+  }
 
-    // Our binary merge strategy guarantees that the final results are in the first morsel.
-    const auto final_morsel = morsels[0];
-    const auto value_count = final_morsel->group_count;
+  aggregate_index = uint64_t{0};
+  for (const auto& aggregate : _aggregates) {
+    const auto& pqp_expression = static_cast<const PQPColumnExpression&>(*aggregate->argument());
+    const auto pqp_column_id = pqp_expression.column_id;
+    const auto data_type =
+        pqp_column_id == INVALID_COLUMN_ID ? DataType::Long : input_table->column_data_type(pqp_column_id);
+    resolve_data_type(data_type, [&](auto type) {
+      using ColumnDataType = typename decltype(type)::type;
+      resolve_window_function(aggregate->window_function, [&](auto window_function_constant) {
+        constexpr auto AGGREGATE_FUNCTION = decltype(window_function_constant)::value;
+        using AggregateType = typename WindowFunctionTraits<ColumnDataType, AGGREGATE_FUNCTION>::ReturnType;
+        const auto nullable =
+            (AGGREGATE_FUNCTION != WindowFunction::Count && AGGREGATE_FUNCTION != WindowFunction::CountDistinct &&
+             AGGREGATE_FUNCTION != WindowFunction::Any) ||
+            (AGGREGATE_FUNCTION == WindowFunction::Any && left_input_table()->column_is_nullable(pqp_column_id));
 
-    // Writing the group values to the table
-    // Since we store everything except strings directly in its byte representation in the keys
-    // we simply decode it from there. For strings we decode the index into the global string
-    // buffer and get the string from there.
-    auto group_key_offset = uint64_t{0};
-    auto group_string_offset = uint64_t{0};
-    for (const auto& column_id : _groupby_column_ids) {
-      const auto column_is_nullable = left_input_table()->column_is_nullable(column_id);
-      const auto data_type = left_input_table()->column_data_type(column_id);
-      const auto data_length = key_data_length(data_type);
-      auto value_index = uint64_t{0};
-      resolve_data_type(data_type, [&](auto type) {
-        using ColumnDataType = typename decltype(type)::type;
-
-        auto values = pmr_vector<ColumnDataType>(value_count);
-        auto null_values = pmr_vector<bool>(value_count);
-
-        for (const auto& key : final_morsel->group_keys) {
-          if constexpr (std::is_arithmetic_v<ColumnDataType>) {
-            std::memcpy(&values[value_index], key_bytes.data() + key + group_key_offset, data_length);
-          } else {
-            auto string_index = uint64_t{0};
-            std::memcpy(&string_index, key_bytes.data() + key + _normalized_key_size + (group_string_offset * 8), 8);
-            values[value_index] = groupby_strings[string_index];
-          }
-          null_values[value_index] = key_bytes[key + group_key_offset + data_length] == 0;
-          ++value_index;
-        }
-
-        if (column_is_nullable) {
-          _output_segments.push_back(
-              std::make_shared<ValueSegment<ColumnDataType>>(std::move(values), std::move(null_values)));
+        // This case is needed here to tell the compiler that to_value_segment will not
+        // be instantiated with StandardDeviationSample and a non-arithmetic type.
+        if constexpr (AGGREGATE_FUNCTION == WindowFunction::StandardDeviationSample &&
+                      !std::is_arithmetic_v<ColumnDataType>) {
+          Fail("Standard Deviation sampling is not supported on non-arithmetic types.");
+        } else if constexpr (AGGREGATE_FUNCTION == WindowFunction::CountDistinct) {
+          _output_segments.push_back(final_morsel->distinct_to_value_segment<ColumnDataType>(aggregate_index));
         } else {
-          _output_segments.push_back(std::make_shared<ValueSegment<ColumnDataType>>(std::move(values)));
-        }
-        group_key_offset += key_data_length_null(data_type);
-        if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
-          ++group_string_offset;
+          _output_segments.push_back(
+              final_morsel->to_value_segment<AGGREGATE_FUNCTION, AggregateType>(aggregate_index, nullable));
         }
       });
-    }
+    });
+    ++aggregate_index;
+  }
 
-    aggregate_index = uint64_t{0};
-    for (const auto& aggregate : _aggregates) {
-      const auto& pqp_expression = static_cast<const PQPColumnExpression&>(*aggregate->argument());
-      const auto pqp_column_id = pqp_expression.column_id;
-      const auto data_type =
-          pqp_column_id == INVALID_COLUMN_ID ? DataType::Long : input_table->column_data_type(pqp_column_id);
-      resolve_data_type(data_type, [&](auto type) {
-        using ColumnDataType = typename decltype(type)::type;
-        resolve_window_function(aggregate->window_function, [&](auto window_function_constant) {
-          constexpr auto AGGREGATE_FUNCTION = decltype(window_function_constant)::value;
-          using AggregateType = typename WindowFunctionTraits<ColumnDataType, AGGREGATE_FUNCTION>::ReturnType;
-          const auto nullable =
-              (AGGREGATE_FUNCTION != WindowFunction::Count && AGGREGATE_FUNCTION != WindowFunction::CountDistinct &&
-               AGGREGATE_FUNCTION != WindowFunction::Any) ||
-              (AGGREGATE_FUNCTION == WindowFunction::Any && left_input_table()->column_is_nullable(pqp_column_id));
-
-          // This case is needed here to tell the compiler that to_value_segment will not
-          // be instantiated with StandardDeviationSample and a non-arithmetic type.
-          if constexpr (AGGREGATE_FUNCTION == WindowFunction::StandardDeviationSample &&
-                        !std::is_arithmetic_v<ColumnDataType>) {
-            Fail("Standard Deviation sampling is not supported on non-arithmetic types.");
-          } else if constexpr (AGGREGATE_FUNCTION == WindowFunction::CountDistinct) {
-            _output_segments.push_back(final_morsel->distinct_to_value_segment<ColumnDataType>(aggregate_index));
-          } else {
-            _output_segments.push_back(
-                final_morsel->to_value_segment<AGGREGATE_FUNCTION, AggregateType>(aggregate_index, nullable));
-          }
-        });
-      });
-      ++aggregate_index;
-    }
-
-    result_table->append_chunk(_output_segments);
-    return result_table;
+  result_table->append_chunk(_output_segments);
+  return result_table;
 }
 
 std::shared_ptr<AbstractOperator> AggregateDYOD::_on_deep_copy(
@@ -516,7 +515,8 @@ std::weak_ordering AggregateDYOD::Morsel::compare_keys(const NormalizedKey& firs
 
   if (memcmp_result < 0) {
     return std::weak_ordering::less;
-  } else if (memcmp_result > 0) {
+  }
+  if (memcmp_result > 0) {
     return std::weak_ordering::greater;
   }
 
@@ -770,7 +770,7 @@ void AggregateDYOD::Morsel::merge_morsel(std::shared_ptr<Morsel>& other) {
 
 template <WindowFunction aggregate_function, typename AggregateType>
 void AggregateDYOD::Morsel::merge_single_aggregate(std::shared_ptr<Morsel>& other, const uint64_t aggregate_index,
-                                                    const pmr_vector<MergeStep>& merge_plan) {
+                                                   const pmr_vector<MergeStep>& merge_plan) {
   using Results = AggregateResults<aggregate_function, AggregateType>;
   auto aggregator = WindowFunctionBuilder<AggregateType, AggregateType, aggregate_function>().get_aggregate_function();
 
@@ -846,7 +846,7 @@ void AggregateDYOD::Morsel::merge_single_aggregate(std::shared_ptr<Morsel>& othe
 
 template <WindowFunction aggregate_function, typename AggregateType>
 std::shared_ptr<ValueSegment<AggregateType>> AggregateDYOD::Morsel::to_value_segment(uint64_t aggregate_index,
-                                                                                      bool nullable) {
+                                                                                     bool nullable) {
   /*
    * To convert the accumulated values to output values we have to distinguish the aggregate_functions
    * as in some cases the values cannot be read straight out of the accumulator, e.g. for AVG, we have to divide the
@@ -996,22 +996,22 @@ std::shared_ptr<ValueSegment<AggregateType>> AggregateDYOD::_aggregate_values_wi
 }
 
 template <typename ColumnType>
-void AggregateDYOD::create_aggregate_column_definitions(boost::hana::basic_type<ColumnType> /*type*/,
+void AggregateDYOD::_create_aggregate_column_definitions(boost::hana::basic_type<ColumnType> /*type*/,
                                                          ColumnID column_index, WindowFunction aggregate_function) {
   /*
    * We are aware that the switch looks very repetitive, but we could not find a dynamic solution.
    * There is a similar switch statement in _on_execute for calling _aggregate_values.
    * See the comment there for reasoning.
    */
-    resolve_window_function(aggregate_function, [&](auto window_function_constant) {
-      constexpr auto AGGREGATE_FUNCTION = decltype(window_function_constant)::value;
+  resolve_window_function(aggregate_function, [&](auto window_function_constant) {
+    constexpr auto AGGREGATE_FUNCTION = decltype(window_function_constant)::value;
 
-      create_aggregate_column_definitions<ColumnType, AGGREGATE_FUNCTION>(column_index);
-    });
+    _create_aggregate_column_definitions<ColumnType, AGGREGATE_FUNCTION>(column_index);
+  });
 }
 
 template <typename ColumnType, WindowFunction aggregate_function>
-void AggregateDYOD::create_aggregate_column_definitions(ColumnID column_index) {
+void AggregateDYOD::_create_aggregate_column_definitions(ColumnID column_index) {
   // retrieve type information from the aggregation traits
   auto result_type = WindowFunctionTraits<ColumnType, aggregate_function>::RESULT_TYPE;
 
