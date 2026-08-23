@@ -1,15 +1,14 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
-#include <cstring>
 #include <memory>
 #include <span>
 #include <vector>
 
 #include "all_type_variant.hpp"
 #include "base_test.hpp"
-#include "expression/expression_functional.hpp"
 #include "expression/window_function_expression.hpp"
+#include "lib/operators/aggregate_dyod/aggregate_dyod_test_utils.hpp"
 #include "operators/aggregate_dyod/aggregate_dyod_config.hpp"
 #include "operators/aggregate_dyod/aggregate_schema.hpp"
 #include "operators/aggregate_dyod/key_schema.hpp"
@@ -21,8 +20,6 @@
 #include "types.hpp"
 
 namespace hyrise {
-
-using namespace expression_functional;
 
 namespace {
 
@@ -67,22 +64,6 @@ std::vector<std::byte> pack_key_tile(const KeySchema& schema, const MergeInput& 
     schema.pack(scratch, ChunkOffset{row}, tile.data() + row * width, spill_buffer);
   }
   return tile;
-}
-
-std::shared_ptr<WindowFunctionExpression> make_aggregate(const WindowFunction function, const Table& table,
-                                                         const ColumnID column_id) {
-  if (column_id == INVALID_COLUMN_ID) {
-    return std::make_shared<WindowFunctionExpression>(function, pqp_column_(column_id, DataType::Long, "*"));
-  }
-  return std::make_shared<WindowFunctionExpression>(
-      function, pqp_column_(column_id, table.column_data_type(column_id), table.column_name(column_id)));
-}
-
-template <typename T>
-std::vector<std::byte> pack_values(const std::vector<T>& values) {
-  auto bytes = std::vector<std::byte>(values.size() * sizeof(T));
-  std::memcpy(bytes.data(), values.data(), bytes.size());
-  return bytes;
 }
 
 std::vector<AllTypeVariant> column_values(OutputColumns& output, const size_t column_index, const size_t row_count) {

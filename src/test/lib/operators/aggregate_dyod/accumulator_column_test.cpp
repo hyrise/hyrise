@@ -12,6 +12,7 @@
 #include "expression/expression_functional.hpp"
 #include "expression/window_expression.hpp"
 #include "expression/window_function_expression.hpp"
+#include "lib/operators/aggregate_dyod/aggregate_dyod_test_utils.hpp"
 #include "null_value.hpp"
 #include "operators/aggregate_dyod/accumulator_column.hpp"
 #include "operators/aggregate_dyod/aggregate_schema.hpp"
@@ -37,22 +38,6 @@ std::shared_ptr<Table> make_input_table(const TableColumnDefinitions& definition
     table->append(row);
   }
   return table;
-}
-
-std::shared_ptr<WindowFunctionExpression> make_aggregate(const WindowFunction function, const Table& table,
-                                                         const ColumnID column_id) {
-  if (column_id == INVALID_COLUMN_ID) {
-    return std::make_shared<WindowFunctionExpression>(function, pqp_column_(column_id, DataType::Long, "*"));
-  }
-  return std::make_shared<WindowFunctionExpression>(
-      function, pqp_column_(column_id, table.column_data_type(column_id), table.column_name(column_id)));
-}
-
-template <typename T>
-std::vector<std::byte> pack_values(const std::vector<T>& values) {
-  auto bytes = std::vector<std::byte>(values.size() * sizeof(T));
-  std::memcpy(bytes.data(), values.data(), bytes.size());
-  return bytes;
 }
 
 std::vector<AllTypeVariant> finalize_slots(const AbstractAccumulatorColumn& column, const size_t first_slot,
