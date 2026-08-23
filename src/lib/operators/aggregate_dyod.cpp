@@ -353,13 +353,13 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
 
     Hyrise::get().scheduler()->schedule_and_wait_for_tasks(chunk_normalization_tasks);
 
-    constexpr auto DESIRED_MORSEL_SIZE = ChunkOffset{2};
     const auto is_multi_threaded = Hyrise::get().is_multi_threaded();
     // If we run on a single thread we avoid the overhead of splitting everything up into chunks and
     // still processing them sequentially and perform aggregation over the entire table in one go.
     // This avoids merging as well, which can be quite expensive with our implementation.
+    const auto desired_morsel_size = is_multi_threaded ? ChunkOffset{10'000} : row_count;
     const auto morsel_count =
-        is_multi_threaded ? (normalized_keys.size() + DESIRED_MORSEL_SIZE - 1) / DESIRED_MORSEL_SIZE : 1;
+        is_multi_threaded ? (row_count + desired_morsel_size - 1) / desired_morsel_size : 1;
 
     auto morsels = std::vector<std::shared_ptr<Morsel>>(morsel_count);
     auto aggregation_tasks = std::vector<std::shared_ptr<AbstractTask>>{};
@@ -367,13 +367,13 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
     auto morsel_range_start = uint64_t{0};
 
     for (auto& morsel : morsels) {
-      const auto morsel_range_end = std::min(morsel_range_start + DESIRED_MORSEL_SIZE, input_table->row_count()) - 1;
+      const auto morsel_range_end = std::min(morsel_range_start + desired_morsel_size, input_table->row_count()) - 1;
       const auto morsel_size = morsel_range_end - morsel_range_start + 1;
       auto normalized_key_span = std::span<NormalizedKey>(normalized_keys.begin() + morsel_range_start, morsel_size);
 
       morsel = std::make_shared<Morsel>(*this, morsel_size, morsel_range_start, key_bytes, normalized_key_span,
                                         groupby_strings);
-      morsel_range_start += DESIRED_MORSEL_SIZE;
+      morsel_range_start += desired_morsel_size;
 
       aggregation_tasks.push_back(std::make_shared<JobTask>([&]() {
         morsel->sort_morsel_range();
@@ -1004,9 +1004,9 @@ void AggregateDYOD::create_aggregate_column_definitions(boost::hana::basic_type<
    * See the comment there for reasoning.
    */
     resolve_window_function(aggregate_function, [&](auto window_function_constant) {
-      constexpr auto AggregateFunction = decltype(window_function_constant)::value;
+      constexpr auto AGGREGATE_FUNCTION = decltype(window_function_constant)::value;
 
-      create_aggregate_column_definitions<ColumnType, AggregateFunction>(column_index);
+      create_aggregate_column_definitions<ColumnType, AGGREGATE_FUNCTION>(column_index);
     });
 }
 
