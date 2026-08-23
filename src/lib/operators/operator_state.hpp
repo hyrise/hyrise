@@ -64,6 +64,7 @@ class OperatorSharedState : public Noncopyable {
   // Initializes a wrapper that is able to hold state for each worker.
   template <typename... Args>
   explicit OperatorSharedState(Args&&... args) {
+    // NOLINTNEXTLINE(cppcoreguidelines-prefer-member-initializer)
     _factory = [args_tuple = std::make_tuple(std::forward<Args>(args)...)]() {
       return std::apply(
           [](const auto&... args) {
