@@ -52,15 +52,16 @@ inline HllSketch::HllSketch() : _registers(REGISTER_COUNT, uint8_t{0}) {}
 
 // MurmurHash3's 64-bit finalizer
 inline uint64_t mix64(uint64_t hash) {
-  hash ^= hash >> 33;
+  constexpr auto SHIFT = uint64_t{33};
+  hash ^= hash >> SHIFT;
   hash *= 0xff51afd7ed558ccdull;
-  hash ^= hash >> 33;
+  hash ^= hash >> SHIFT;
   hash *= 0xc4ceb9fe1a85ec53ull;
-  return hash ^ (hash >> 33);
+  return hash ^ (hash >> SHIFT);
 }
 
 inline void HllSketch::add(const uint64_t key_hash) {
-  constexpr auto REMAINING_BIT_COUNT = 64 - HLL_PRECISION;
+  constexpr auto REMAINING_BIT_COUNT = size_t{64} - HLL_PRECISION;
 
   const auto mixed_hash = mix64(key_hash);
   const auto register_index = static_cast<size_t>(mixed_hash >> REMAINING_BIT_COUNT);
@@ -88,8 +89,8 @@ inline size_t HllSketch::estimate() const {
     }
   }
 
-  constexpr auto register_count = static_cast<double>(REGISTER_COUNT);
-  constexpr auto alpha = 0.7213 / (1.0 + 1.079 / register_count);
+  const auto register_count = static_cast<double>(REGISTER_COUNT);
+  const auto alpha = 0.7213 / (1.0 + 1.079 / register_count);
   const auto raw_estimate = alpha * register_count * register_count / inverse_sum;
 
   if (raw_estimate <= 2.5 * register_count && zero_register_count > 0) {

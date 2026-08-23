@@ -4,9 +4,9 @@
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
-#include <cstdlib>
 #include <cstring>
 #include <memory>
+#include <new>
 #include <span>
 #include <vector>
 
@@ -14,17 +14,14 @@
 #include "operators/aggregate_dyod/key_primitives.hpp"
 #include "utils/assert.hpp"
 
-#if defined(__SSE2__) || defined(_M_X64) || (defined(_M_IX86_FP) && _M_IX86_FP >= 2)
+#ifdef __SSE2__
 #include <emmintrin.h>
-#define REGION_STREAM_SSE2 1
-#else
-#define REGION_STREAM_SSE2 0
 #endif
 
 namespace hyrise {
 
 inline void sfence() noexcept {
-#if REGION_STREAM_SSE2
+#ifdef __SSE2__
   _mm_sfence();
 #else
   std::atomic_thread_fence(std::memory_order_release);
@@ -32,7 +29,7 @@ inline void sfence() noexcept {
 }
 
 inline void copy_line(std::byte* destination, const std::byte* source) {
-#if REGION_STREAM_SSE2
+#ifdef __SSE2__
   static_assert(SWWC_LINE_BYTES % 16 == 0, "line must be a whole number of 128-bit stores");
 
   for (auto offset = size_t{0}; offset < SWWC_LINE_BYTES; offset += 16) {
@@ -46,7 +43,7 @@ inline void copy_line(std::byte* destination, const std::byte* source) {
 
 struct AlignedFree {
   void operator()(std::byte* ptr) const noexcept {
-    std::free(ptr);
+    ::operator delete(ptr, std::align_val_t{64});
   }
 };
 
@@ -88,15 +85,15 @@ class Region : private Noncopyable {
   static constexpr size_t INITIAL_LINES = 16;
   static constexpr size_t INITIAL_CAPACITY = INITIAL_LINES * SWWC_LINE_BYTES;
 
-  void grow();
+  void _grow();
 
-  std::unique_ptr<std::byte[], AlignedFree> _data;
+  std::unique_ptr<std::byte, AlignedFree> _data;
   size_t _size{0};
   size_t _capacity{0};
 };
 
-inline void Region::grow() {
-  constexpr auto round_up_to_lines = [](const size_t size) noexcept {
+inline void Region::_grow() {
+  const auto round_up_to_lines = [](const size_t size) noexcept {
     return (size + SWWC_LINE_BYTES - 1) / SWWC_LINE_BYTES * SWWC_LINE_BYTES;
   };
 
@@ -104,12 +101,7 @@ inline void Region::grow() {
   const auto doubled = size_t{_capacity * 2};
   const auto new_capacity = round_up_to_lines(std::max({required, doubled, INITIAL_CAPACITY}));
 
-  auto* block = std::aligned_alloc(64, new_capacity);
-  if (!block) {
-    Fail("Allocation failed");
-  }
-
-  auto* new_data = static_cast<std::byte*>(block);
+  auto* new_data = static_cast<std::byte*>(::operator new(new_capacity, std::align_val_t{64}));
 
   if (_size > 0) {
     std::memcpy(new_data, _data.get(), _size);
@@ -123,7 +115,7 @@ inline void Region::push_line(const std::byte* line) {
   DebugAssert(_size % SWWC_LINE_BYTES == 0, "_size has to be line aligned before push_line is called");
 
   if (_size + SWWC_LINE_BYTES > _capacity) {
-    grow();
+    _grow();
   }
 
   auto* destination = _data.get() + _size;
@@ -139,7 +131,7 @@ inline void Region::drain_partial(const std::byte* bytes, const size_t length) {
     return;
   }
   if (_size + length > _capacity) {
-    grow();
+    _grow();
   }
 
   std::memcpy(_data.get() + _size, bytes, length);
@@ -244,7 +236,7 @@ inline Region& ScatterStore::value_region(const PartitionId partition, const siz
   DebugAssert(static_cast<size_t>(partition) < static_cast<size_t>(_partition_count), "partition id out of range");
   DebugAssert(value_stream_index < _value_stream_count, "value stream index out of range");
 
-  const auto index = static_cast<size_t>(partition) * _value_stream_count + value_stream_index;
+  const auto index = (static_cast<size_t>(partition) * _value_stream_count) + value_stream_index;
 
   return _value_regions[index];
 }
@@ -397,7 +389,7 @@ inline void ScatterHeads::push(ScatterStore& store, const size_t stream, const P
   DebugAssert(width == _stream_widths[stream], "field width must match the stream's per-row width");
 
   const auto line_offset = _line_offset(stream, partition);
-  auto& fill = _fill[stream * _partition_count + static_cast<size_t>(partition)];
+  auto& fill = _fill[(stream * _partition_count) + static_cast<size_t>(partition)];
 
   std::memcpy(_staging.data() + line_offset + fill, bytes, width);
   fill += width;
@@ -411,7 +403,7 @@ inline void ScatterHeads::push(ScatterStore& store, const size_t stream, const P
 inline void ScatterHeads::finish(ScatterStore& store) {
   for (auto stream = size_t{0}; stream < _stream_count; ++stream) {
     for (auto partition = size_t{0}; partition < _partition_count; ++partition) {
-      if (auto& fill = _fill[stream * _partition_count + partition]; fill > 0) {
+      if (auto& fill = _fill[(stream * _partition_count) + partition]; fill > 0) {
         _store_line_flush(store, stream, static_cast<PartitionId>(partition), _line_offset(stream, partition), fill);
         fill = 0;
       }

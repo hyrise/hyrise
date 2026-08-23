@@ -101,7 +101,7 @@ void NumericValueScatterColumn<T>::scatter(const AbstractSegment& segment, const
       value = *source;
     } else {
       DebugAssert(_nullable, "NULL in a non-nullable value column.");
-      set_null_bit(null_bitmap + row * null_bitmap_width, null_bit_index);
+      set_null_bit(null_bitmap + (row * null_bitmap_width), null_bit_index);
     }
     heads.push(store, stream, row_partitions[row], reinterpret_cast<const std::byte*>(&value), sizeof(value));
   });
@@ -155,7 +155,7 @@ inline void StringValueScatterColumn::scatter(const AbstractSegment& segment, co
       reference.length = value->size();
     } else {
       DebugAssert(_nullable, "NULL in a non-nullable value column.");
-      set_null_bit(null_bitmap + row * null_bitmap_width, null_bit_index);
+      set_null_bit(null_bitmap + (row * null_bitmap_width), null_bit_index);
     }
     heads.push(store, stream, partition, reinterpret_cast<const std::byte*>(&reference), sizeof(reference));
   });

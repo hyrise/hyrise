@@ -165,7 +165,7 @@ void DistinctSet<ColumnType>::split_into(std::vector<DistinctSet>& targets) cons
     return;
   }
 
-  const auto shift = 64 - std::countr_zero(target_count);
+  const auto shift = 64 - static_cast<size_t>(std::countr_zero(target_count));
   for (const auto& entry : _entries) {
     auto& target = targets[mix64(_entry_hash(entry)) >> shift];
     if constexpr (std::is_same_v<ColumnType, pmr_string>) {
@@ -184,7 +184,7 @@ size_t DistinctSet<ColumnType>::size() const {
 template <typename ColumnType>
 void DistinctSet<ColumnType>::clear() {
   _entries.clear();
-  std::fill(_table.begin(), _table.end(), uint32_t{0});
+  std::ranges::fill(_table, uint32_t{0});
   _content.clear();
 }
 

@@ -20,7 +20,7 @@ namespace hyrise {
  * Group-by key schema for a mix of at least one string and at least one non-string column.
  *
  * Layout: a runtime-width fixed part (null bitmap + numeric prefix + inline string blob) followed by an 8-byte spill
- * pointer. LenWidth in {1,2,4,8} is the per-string length-prefix field width; the fixed-part width is a runtime value.
+ * pointer. len_width in {1,2,4,8} is the per-string length-prefix field width; the fixed-part width is a runtime value.
  *
  * Equality:
  *   1. If the two keys disagree on spill mode (one pointer null, the other not) they are not equal and never fall
@@ -32,15 +32,15 @@ namespace hyrise {
  * hash() reuses whatever the inline field holds (raw bytes hashed, or the stored content-hash reused). Equal keys are
  * always same-mode, so equal keys always hash equal.
  */
-template <size_t LenWidth>
+template <size_t len_width>
 class MixedKeySchema {
  public:
-  static_assert(LenWidth == 1 || LenWidth == 2 || LenWidth == 4 || LenWidth == 8,
-                "LenWidth is the byte width of each string's length prefix and must be 1, 2, 4, or 8.");
+  static_assert(len_width == 1 || len_width == 2 || len_width == 4 || len_width == 8,
+                "len_width is the byte width of each string's length prefix and must be 1, 2, 4, or 8.");
 
   static constexpr KeyComposition COMPOSITION = KeyComposition::Mixed;
   static constexpr bool HAS_STRINGS = true;
-  static constexpr size_t LENGTH_FIELD_WIDTH = LenWidth;
+  static constexpr size_t LENGTH_FIELD_WIDTH = len_width;
 
   /**
    * Build the schema: resolve numeric lanes and string columns, lay out the fixed part, and record its width.
@@ -66,7 +66,7 @@ class MixedKeySchema {
             StringSpillBuffer& spill_buffer) const;
   void unpack(const std::byte* key, OutputColumns& output, size_t output_row) const;
   uint64_t hash(const std::byte* key) const;
-  bool equals(const std::byte* a, const std::byte* b) const;
+  bool equals(const std::byte* lhs, const std::byte* rhs) const;
   /**
    * Re-intern a spilled key's string content into `spill_buffer` and repoint the key's spill pointer there.
    */
@@ -80,11 +80,11 @@ class MixedKeySchema {
   uint32_t _fixed_part_width{0};
 };
 
-template <size_t LenWidth>
-MixedKeySchema<LenWidth> MixedKeySchema<LenWidth>::build(const std::vector<ColumnID>& group_by_column_ids,
-                                                         const Table& input_table,
-                                                         const std::optional<size_t> string_blob_bytes) {
-  const auto layout = compute_key_layout(group_by_column_ids, input_table, LenWidth, string_blob_bytes);
+template <size_t len_width>
+MixedKeySchema<len_width> MixedKeySchema<len_width>::build(const std::vector<ColumnID>& group_by_column_ids,
+                                                           const Table& input_table,
+                                                           const std::optional<size_t> string_blob_bytes) {
+  const auto layout = compute_key_layout(group_by_column_ids, input_table, len_width, string_blob_bytes);
   Assert(layout.string_count > 0 && layout.string_count < group_by_column_ids.size(),
          "MixedKeySchema requires at least one string and at least one non-string group-by column.");
 
@@ -95,8 +95,10 @@ MixedKeySchema<LenWidth> MixedKeySchema<LenWidth>::build(const std::vector<Colum
   for (auto index = size_t{0}; index < column_count; ++index) {
     const auto& column = layout.columns[index];
     if (column.is_string) {
-      schema._string_columns.emplace_back(StringKeyColumn{group_by_column_ids[index], static_cast<uint32_t>(index),
-                                                          column.field_offset, column.null_bit_index});
+      schema._string_columns.emplace_back(StringKeyColumn{.column_id = group_by_column_ids[index],
+                                                          .tuple_index = static_cast<uint32_t>(index),
+                                                          .length_field_offset = column.field_offset,
+                                                          .null_bit_index = column.null_bit_index});
     } else {
       schema._numeric_lanes.emplace_back(
           make_numeric_lane(column.data_type, group_by_column_ids[index], column.field_offset, column.null_bit_index));
@@ -106,9 +108,9 @@ MixedKeySchema<LenWidth> MixedKeySchema<LenWidth>::build(const std::vector<Colum
   return schema;
 }
 
-template <size_t LenWidth>
-void MixedKeySchema<LenWidth>::decode(const std::span<const AbstractSegment* const> group_by_segments,
-                                      const size_t row_begin, const size_t row_end, KeyDecodeScratch& scratch) const {
+template <size_t len_width>
+void MixedKeySchema<len_width>::decode(const std::span<const AbstractSegment* const> group_by_segments,
+                                       const size_t row_begin, const size_t row_end, KeyDecodeScratch& scratch) const {
   const auto lane_count = _numeric_lanes.size();
   scratch.numeric_lanes.resize(lane_count);
   for (auto index = size_t{0}; index < lane_count; ++index) {
@@ -118,58 +120,58 @@ void MixedKeySchema<LenWidth>::decode(const std::span<const AbstractSegment* con
   decode_string_key_columns(_string_columns, group_by_segments, row_begin, row_end, scratch);
 }
 
-template <size_t LenWidth>
-void MixedKeySchema<LenWidth>::decode(const std::span<const AbstractSegment* const> group_by_segments,
-                                      KeyDecodeScratch& scratch) const {
+template <size_t len_width>
+void MixedKeySchema<len_width>::decode(const std::span<const AbstractSegment* const> group_by_segments,
+                                       KeyDecodeScratch& scratch) const {
   decode(group_by_segments, 0, group_by_segments.front()->size(), scratch);
 }
 
-template <size_t LenWidth>
-void MixedKeySchema<LenWidth>::unpack(const std::byte* key, OutputColumns& output, const size_t output_row) const {
+template <size_t len_width>
+void MixedKeySchema<len_width>::unpack(const std::byte* key, OutputColumns& output, const size_t output_row) const {
   const auto lane_count = _numeric_lanes.size();
   for (auto index = size_t{0}; index < lane_count; ++index) {
     _numeric_lanes[index].lane->unpack(key, key, output, _numeric_tuple_indices[index], output_row);
   }
-  unpack_string_columns(_string_columns, LenWidth, _blob_offset, _fixed_part_width, key, output);
+  unpack_string_columns(_string_columns, len_width, _blob_offset, _fixed_part_width, key, output);
 }
 
-template <size_t LenWidth>
-void MixedKeySchema<LenWidth>::reintern_spill(std::byte* key, StringSpillBuffer& spill_buffer) const {
-  reintern_spilled_key(_string_columns, LenWidth, _fixed_part_width, key, spill_buffer);
+template <size_t len_width>
+void MixedKeySchema<len_width>::reintern_spill(std::byte* key, StringSpillBuffer& spill_buffer) const {
+  reintern_spilled_key(_string_columns, len_width, _fixed_part_width, key, spill_buffer);
 }
 
-template <size_t LenWidth>
-size_t MixedKeySchema<LenWidth>::packed_width() const {
+template <size_t len_width>
+size_t MixedKeySchema<len_width>::packed_width() const {
   return _fixed_part_width + sizeof(uintptr_t);
 }
 
-template <size_t LenWidth>
-size_t MixedKeySchema<LenWidth>::fixed_part_width() const {
+template <size_t len_width>
+size_t MixedKeySchema<len_width>::fixed_part_width() const {
   return _fixed_part_width;
 }
 
-template <size_t LenWidth>
-size_t MixedKeySchema<LenWidth>::column_count() const {
+template <size_t len_width>
+size_t MixedKeySchema<len_width>::column_count() const {
   return _numeric_lanes.size() + _string_columns.size();
 }
 
-template <size_t LenWidth>
-void MixedKeySchema<LenWidth>::pack(const KeyDecodeScratch& scratch, const ChunkOffset chunk_offset, std::byte* key_out,
-                                    StringSpillBuffer& spill_buffer) const {
+template <size_t len_width>
+void MixedKeySchema<len_width>::pack(const KeyDecodeScratch& scratch, const ChunkOffset chunk_offset,
+                                     std::byte* key_out, StringSpillBuffer& spill_buffer) const {
   std::memset(key_out, 0, packed_width());
   pack_numeric_lanes(_numeric_lanes, scratch, chunk_offset, key_out);
-  pack_string_columns(_string_columns, LenWidth, _blob_offset, _fixed_part_width, scratch, chunk_offset, key_out,
+  pack_string_columns(_string_columns, len_width, _blob_offset, _fixed_part_width, scratch, chunk_offset, key_out,
                       spill_buffer);
 }
 
-template <size_t LenWidth>
-uint64_t MixedKeySchema<LenWidth>::hash(const std::byte* key) const {
+template <size_t len_width>
+uint64_t MixedKeySchema<len_width>::hash(const std::byte* key) const {
   return mix64(hash_bytes(key, _fixed_part_width));
 }
 
-template <size_t LenWidth>
-bool MixedKeySchema<LenWidth>::equals(const std::byte* a, const std::byte* b) const {
-  return equals_string_keys(_string_columns, LenWidth, _fixed_part_width, a, b);
+template <size_t len_width>
+bool MixedKeySchema<len_width>::equals(const std::byte* lhs, const std::byte* rhs) const {
+  return equals_string_keys(_string_columns, len_width, _fixed_part_width, lhs, rhs);
 }
 
 }  // namespace hyrise

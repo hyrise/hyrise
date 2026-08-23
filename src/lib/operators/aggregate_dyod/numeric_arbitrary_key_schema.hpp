@@ -43,7 +43,7 @@ class NumericArbitraryKeySchema {
             StringSpillBuffer& spill_buffer) const;
   void unpack(const std::byte* key, OutputColumns& output, size_t output_row) const;
   uint64_t hash(const std::byte* key) const;
-  bool equals(const std::byte* a, const std::byte* b) const;
+  bool equals(const std::byte* lhs, const std::byte* rhs) const;
 
  private:
   NumericKeyLanes _lanes;
@@ -103,8 +103,8 @@ inline uint64_t NumericArbitraryKeySchema::hash(const std::byte* key) const {
   return mix64(hash_bytes(key, _packed_width));
 }
 
-inline bool NumericArbitraryKeySchema::equals(const std::byte* a, const std::byte* b) const {
-  return std::memcmp(a, b, _packed_width) == 0;
+inline bool NumericArbitraryKeySchema::equals(const std::byte* lhs, const std::byte* rhs) const {
+  return std::memcmp(lhs, rhs, _packed_width) == 0;
 }
 
 }  // namespace hyrise

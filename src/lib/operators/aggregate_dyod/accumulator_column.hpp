@@ -69,7 +69,7 @@ class AbstractAccumulatorColumn {
 /**
  * Concrete accumulator column, monomorphized over the input column type and the window function.
  */
-template <typename ColumnType, WindowFunction Function>
+template <typename ColumnType, WindowFunction function>
 class TypedAccumulatorColumn : public AbstractAccumulatorColumn {
  public:
   TypedAccumulatorColumn();
@@ -84,38 +84,38 @@ class TypedAccumulatorColumn : public AbstractAccumulatorColumn {
                      OutputColumns& output) const override;
 
  private:
-  using AccumulatorType = typename WindowFunctionTraits<ColumnType, Function>::ReturnType;
+  using AccumulatorType = typename WindowFunctionTraits<ColumnType, function>::ReturnType;
 
   std::vector<AccumulatorType> _accumulators;
   std::vector<uint32_t> _non_null_counts;
 };
 
-template <typename ColumnType, WindowFunction Function>
-TypedAccumulatorColumn<ColumnType, Function>::TypedAccumulatorColumn() = default;
+template <typename ColumnType, WindowFunction function>
+TypedAccumulatorColumn<ColumnType, function>::TypedAccumulatorColumn() = default;
 
-template <typename ColumnType, WindowFunction Function>
-void TypedAccumulatorColumn<ColumnType, Function>::grow_to(const size_t slot_count) {
+template <typename ColumnType, WindowFunction function>
+void TypedAccumulatorColumn<ColumnType, function>::grow_to(const size_t slot_count) {
   DebugAssert(slot_count >= _accumulators.size(), "Dense accumulator state only grows.");
   _accumulators.resize(slot_count);
-  if constexpr (Function != WindowFunction::Count) {
+  if constexpr (function != WindowFunction::Count) {
     _non_null_counts.resize(slot_count, 0);
   }
 }
 
-template <typename ColumnType, WindowFunction Function>
-void TypedAccumulatorColumn<ColumnType, Function>::fold(std::span<const uint32_t> slots,
+template <typename ColumnType, WindowFunction function>
+void TypedAccumulatorColumn<ColumnType, function>::fold(std::span<const uint32_t> slots,
                                                         std::span<const std::byte> value_bytes,
                                                         std::span<const std::byte> value_null_bitmap) {
   const auto row_count = slots.size();
   DebugAssert(value_null_bitmap.empty() || value_null_bitmap.size() * 8 >= row_count,
               "Value-null bitmap does not cover the tile.");
-  if constexpr (Function != WindowFunction::Count) {
+  if constexpr (function != WindowFunction::Count) {
     [[maybe_unused]] constexpr auto VALUE_WIDTH =
         std::is_same_v<ColumnType, pmr_string> ? sizeof(StringValueReference) : sizeof(ColumnType);
     DebugAssert(value_bytes.size() == row_count * VALUE_WIDTH, "Value tile does not match the slot tile.");
   }
 
-  if constexpr (Function == WindowFunction::Count) {
+  if constexpr (function == WindowFunction::Count) {
     if (value_bytes.empty()) {
       for (auto row = size_t{0}; row < row_count; ++row) {
         ++_accumulators[slots[row]];
@@ -129,19 +129,19 @@ void TypedAccumulatorColumn<ColumnType, Function>::fold(std::span<const uint32_t
       continue;
     }
     const auto slot = slots[row];
-    if constexpr (Function == WindowFunction::Count) {
+    if constexpr (function == WindowFunction::Count) {
       ++_accumulators[slot];
     } else if constexpr (std::is_same_v<ColumnType, pmr_string>) {
       auto reference = StringValueReference{};
-      std::memcpy(&reference, value_bytes.data() + row * sizeof(reference), sizeof(reference));
+      std::memcpy(&reference, value_bytes.data() + (row * sizeof(reference)), sizeof(reference));
       const auto value = std::string_view{reinterpret_cast<const char*>(reference.data), reference.length};
       auto& count = _non_null_counts[slot];
       auto& current = _accumulators[slot];
-      if constexpr (Function == WindowFunction::Min) {
+      if constexpr (function == WindowFunction::Min) {
         if (count == 0 || value < current) {
           current = pmr_string{value};
         }
-      } else if constexpr (Function == WindowFunction::Max) {
+      } else if constexpr (function == WindowFunction::Max) {
         if (count == 0 || value > current) {
           current = pmr_string{value};
         }
@@ -151,17 +151,17 @@ void TypedAccumulatorColumn<ColumnType, Function>::fold(std::span<const uint32_t
       ++count;
     } else {
       auto value = ColumnType{};
-      std::memcpy(&value, value_bytes.data() + row * sizeof(value), sizeof(value));
+      std::memcpy(&value, value_bytes.data() + (row * sizeof(value)), sizeof(value));
       auto& count = _non_null_counts[slot];
-      if constexpr (Function == WindowFunction::Min) {
+      if constexpr (function == WindowFunction::Min) {
         if (count == 0 || value < _accumulators[slot]) {
           _accumulators[slot] = value;
         }
-      } else if constexpr (Function == WindowFunction::Max) {
+      } else if constexpr (function == WindowFunction::Max) {
         if (count == 0 || value > _accumulators[slot]) {
           _accumulators[slot] = value;
         }
-      } else if constexpr (Function == WindowFunction::Sum || Function == WindowFunction::Avg) {
+      } else if constexpr (function == WindowFunction::Sum || function == WindowFunction::Avg) {
         _accumulators[slot] += static_cast<AccumulatorType>(value);
       } else {
         Fail("Unsupported aggregate function.");
@@ -171,14 +171,14 @@ void TypedAccumulatorColumn<ColumnType, Function>::fold(std::span<const uint32_t
   }
 }
 
-template <typename ColumnType, WindowFunction Function>
-void TypedAccumulatorColumn<ColumnType, Function>::clear() {
+template <typename ColumnType, WindowFunction function>
+void TypedAccumulatorColumn<ColumnType, function>::clear() {
   _accumulators.clear();
   _non_null_counts.clear();
 }
 
-template <typename ColumnType, WindowFunction Function>
-void TypedAccumulatorColumn<ColumnType, Function>::combine_from(const AbstractAccumulatorColumn& other_base,
+template <typename ColumnType, WindowFunction function>
+void TypedAccumulatorColumn<ColumnType, function>::combine_from(const AbstractAccumulatorColumn& other_base,
                                                                 const size_t other_first_slot,
                                                                 const std::span<const uint32_t> destination_slots) {
   const auto& other = static_cast<const TypedAccumulatorColumn&>(other_base);
@@ -186,17 +186,17 @@ void TypedAccumulatorColumn<ColumnType, Function>::combine_from(const AbstractAc
   for (auto row = size_t{0}; row < row_count; ++row) {
     const auto source_slot = other_first_slot + row;
     const auto slot = destination_slots[row];
-    if constexpr (Function == WindowFunction::Count) {
+    if constexpr (function == WindowFunction::Count) {
       _accumulators[slot] += other._accumulators[source_slot];
-    } else if constexpr (Function == WindowFunction::Sum || Function == WindowFunction::Avg) {
+    } else if constexpr (function == WindowFunction::Sum || function == WindowFunction::Avg) {
       _accumulators[slot] += other._accumulators[source_slot];
       _non_null_counts[slot] += other._non_null_counts[source_slot];
-    } else if constexpr (Function == WindowFunction::Min || Function == WindowFunction::Max) {
+    } else if constexpr (function == WindowFunction::Min || function == WindowFunction::Max) {
       const auto source_count = other._non_null_counts[source_slot];
       if (source_count > 0) {
         if (_non_null_counts[slot] == 0) {
           _accumulators[slot] = other._accumulators[source_slot];
-        } else if constexpr (Function == WindowFunction::Min) {
+        } else if constexpr (function == WindowFunction::Min) {
           if (other._accumulators[source_slot] < _accumulators[slot]) {
             _accumulators[slot] = other._accumulators[source_slot];
           }
@@ -213,17 +213,17 @@ void TypedAccumulatorColumn<ColumnType, Function>::combine_from(const AbstractAc
   }
 }
 
-template <typename ColumnType, WindowFunction Function>
-void TypedAccumulatorColumn<ColumnType, Function>::finalize_into(const size_t first_slot, const size_t last_slot,
+template <typename ColumnType, WindowFunction function>
+void TypedAccumulatorColumn<ColumnType, function>::finalize_into(const size_t first_slot, const size_t last_slot,
                                                                  const size_t output_column_index,
                                                                  OutputColumns& output) const {
   constexpr auto IS_MIN_MAX_OR_SUM =
-      Function == WindowFunction::Min || Function == WindowFunction::Max || Function == WindowFunction::Sum;
+      function == WindowFunction::Min || function == WindowFunction::Max || function == WindowFunction::Sum;
   auto& output_column = static_cast<TypedOutputColumn<AccumulatorType>&>(output.column(output_column_index));
   for (auto slot = first_slot; slot < last_slot; ++slot) {
-    if constexpr (Function == WindowFunction::Count) {
+    if constexpr (function == WindowFunction::Count) {
       output_column.append(_accumulators[slot]);
-    } else if constexpr (Function == WindowFunction::Avg) {
+    } else if constexpr (function == WindowFunction::Avg) {
       if (_non_null_counts[slot] == 0) {
         output_column.append_null();
       } else {
@@ -285,7 +285,7 @@ void AnyAccumulatorColumn<ColumnType>::fold(std::span<const uint32_t> slots, std
   for (auto row = size_t{0}; row < row_count; ++row) {
     auto& row_id = _row_ids[slots[row]];
     if (row_id.is_null()) {
-      std::memcpy(&row_id, value_bytes.data() + row * sizeof(RowID), sizeof(RowID));
+      std::memcpy(&row_id, value_bytes.data() + (row * sizeof(RowID)), sizeof(RowID));
     }
   }
 }
@@ -377,12 +377,12 @@ void DistinctAccumulatorColumn<ColumnType>::fold(std::span<const uint32_t> slots
     const auto slot = slots[row];
     if constexpr (std::is_same_v<ColumnType, pmr_string>) {
       auto reference = StringValueReference{};
-      std::memcpy(&reference, value_bytes.data() + row * sizeof(reference), sizeof(reference));
+      std::memcpy(&reference, value_bytes.data() + (row * sizeof(reference)), sizeof(reference));
       const auto value = std::string_view{reinterpret_cast<const char*>(reference.data), reference.length};
       _counts[slot] += _distinct.insert(slot, value) ? 1 : 0;
     } else {
       auto value = ColumnType{};
-      std::memcpy(&value, value_bytes.data() + row * sizeof(value), sizeof(value));
+      std::memcpy(&value, value_bytes.data() + (row * sizeof(value)), sizeof(value));
       _counts[slot] += _distinct.insert(slot, value) ? 1 : 0;
     }
   }

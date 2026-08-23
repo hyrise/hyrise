@@ -23,7 +23,10 @@ struct CacheSizes {
 /**
  * Values assumed when the OS reports none: 32 KiB L1d, 512 KiB L2, 16 MiB L3 shared by 4 CPUs.
  */
-constexpr CacheSizes FALLBACK_CACHE_SIZES = {32 * 1024, 512 * 1024, 16 * 1024 * 1024, 4};
+constexpr CacheSizes FALLBACK_CACHE_SIZES = {.l1d_bytes = size_t{32} * 1024,
+                                             .l2_bytes = size_t{512} * 1024,
+                                             .l3_bytes = size_t{16} * 1024 * 1024,
+                                             .llc_sharing_cpus = 4};
 
 /**
  * Number of CPUs named by a sysfs cpu list such as "0-3" or "0-3,64-67".

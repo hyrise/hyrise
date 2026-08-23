@@ -17,17 +17,17 @@
 namespace hyrise {
 
 /**
- * Numeric-only group-by key schema whose total packed width is the compile-time constant PackedWidth.
+ * Numeric-only group-by key schema whose total packed width is the compile-time constant width.
  *
  * Selected by resolve_key_schema when every group-by column is numeric and the packed width (null bitmap + numeric
  * prefix) is one of {4,8,12,16,20,24} bytes; one instantiation per bucket. Because the width is known at compile
  * time, hash() and equals() are fixed-size and branch-free, while pack()/unpack() loop the resolved lanes.
  */
-template <size_t PackedWidth>
+template <size_t width>
 class NumericShortKeySchema {
  public:
   static constexpr KeyComposition COMPOSITION = KeyComposition::NumericOnly;
-  static constexpr size_t WIDTH = PackedWidth;
+  static constexpr size_t WIDTH = width;
   static constexpr bool HAS_STRINGS = false;
 
   /**
@@ -64,18 +64,18 @@ class NumericShortKeySchema {
   /**
    * Test two packed keys for equality by comparing their full fixed width.
    */
-  bool equals(const std::byte* a, const std::byte* b) const;
+  bool equals(const std::byte* lhs, const std::byte* rhs) const;
 
  private:
   NumericKeyLanes _lanes;
 };
 
-template <size_t PackedWidth>
-NumericShortKeySchema<PackedWidth> NumericShortKeySchema<PackedWidth>::build(
-    const std::vector<ColumnID>& group_by_column_ids, const Table& input_table) {
+template <size_t width>
+NumericShortKeySchema<width> NumericShortKeySchema<width>::build(const std::vector<ColumnID>& group_by_column_ids,
+                                                                 const Table& input_table) {
   const auto layout = compute_key_layout(group_by_column_ids, input_table, 0);
   Assert(layout.string_count == 0, "NumericShortKeySchema requires numeric-only group-by columns.");
-  Assert(layout.fixed_part_width == PackedWidth, "Resolved packed width does not match the schema's template width.");
+  Assert(layout.fixed_part_width == width, "Resolved packed width does not match the schema's template width.");
 
   auto schema = NumericShortKeySchema{};
   const auto column_count = group_by_column_ids.size();
@@ -87,57 +87,56 @@ NumericShortKeySchema<PackedWidth> NumericShortKeySchema<PackedWidth>::build(
   return schema;
 }
 
-template <size_t PackedWidth>
-size_t NumericShortKeySchema<PackedWidth>::packed_width() const {
-  return PackedWidth;
+template <size_t width>
+size_t NumericShortKeySchema<width>::packed_width() const {
+  return width;
 }
 
-template <size_t PackedWidth>
-size_t NumericShortKeySchema<PackedWidth>::column_count() const {
+template <size_t width>
+size_t NumericShortKeySchema<width>::column_count() const {
   return _lanes.size();
 }
 
-template <size_t PackedWidth>
-void NumericShortKeySchema<PackedWidth>::decode(const std::span<const AbstractSegment* const> group_by_segments,
-                                                const size_t row_begin, const size_t row_end,
-                                                KeyDecodeScratch& scratch) const {
+template <size_t width>
+void NumericShortKeySchema<width>::decode(const std::span<const AbstractSegment* const> group_by_segments,
+                                          const size_t row_begin, const size_t row_end,
+                                          KeyDecodeScratch& scratch) const {
   decode_numeric_lanes(_lanes, group_by_segments, row_begin, row_end, scratch);
 }
 
-template <size_t PackedWidth>
-void NumericShortKeySchema<PackedWidth>::decode(const std::span<const AbstractSegment* const> group_by_segments,
-                                                KeyDecodeScratch& scratch) const {
+template <size_t width>
+void NumericShortKeySchema<width>::decode(const std::span<const AbstractSegment* const> group_by_segments,
+                                          KeyDecodeScratch& scratch) const {
   decode(group_by_segments, 0, group_by_segments.front()->size(), scratch);
 }
 
-template <size_t PackedWidth>
-void NumericShortKeySchema<PackedWidth>::unpack(const std::byte* key, OutputColumns& output,
-                                                const size_t output_row) const {
+template <size_t width>
+void NumericShortKeySchema<width>::unpack(const std::byte* key, OutputColumns& output, const size_t output_row) const {
   const auto lane_count = _lanes.size();
   for (auto index = size_t{0}; index < lane_count; ++index) {
     _lanes[index].lane->unpack(key, key, output, index, output_row);
   }
 }
 
-template <size_t PackedWidth>
-void NumericShortKeySchema<PackedWidth>::pack(const KeyDecodeScratch& scratch, const ChunkOffset chunk_offset,
-                                              std::byte* key_out, StringSpillBuffer& /*spill_buffer*/) const {
-  std::memset(key_out, 0, PackedWidth);
-  pack_numeric_lanes<std::min(PackedWidth, size_t{8})>(_lanes, scratch, chunk_offset, key_out);
+template <size_t width>
+void NumericShortKeySchema<width>::pack(const KeyDecodeScratch& scratch, const ChunkOffset chunk_offset,
+                                        std::byte* key_out, StringSpillBuffer& /*spill_buffer*/) const {
+  std::memset(key_out, 0, width);
+  pack_numeric_lanes<std::min(width, size_t{8})>(_lanes, scratch, chunk_offset, key_out);
 }
 
-template <size_t PackedWidth>
-uint64_t NumericShortKeySchema<PackedWidth>::hash(const std::byte* key) const {
+template <size_t width>
+uint64_t NumericShortKeySchema<width>::hash(const std::byte* key) const {
   // One multiply-mix round per word beats byte-wise FNV-1a; the hash runs up to three times per row (estimate,
   // scatter routing, merge probing), and its low bits pick the partition.
   auto hash = uint64_t{0};
   auto offset = size_t{0};
-  for (; offset + 8 <= PackedWidth; offset += 8) {
+  for (; offset + 8 <= width; offset += 8) {
     auto word = uint64_t{};
     std::memcpy(&word, key + offset, 8);
     hash = mix64(hash ^ word);
   }
-  if constexpr (PackedWidth % 8 != 0) {
+  if constexpr (width % 8 != 0) {
     auto word = uint32_t{};
     std::memcpy(&word, key + offset, 4);
     hash = mix64(hash ^ word);
@@ -145,9 +144,9 @@ uint64_t NumericShortKeySchema<PackedWidth>::hash(const std::byte* key) const {
   return hash;
 }
 
-template <size_t PackedWidth>
-bool NumericShortKeySchema<PackedWidth>::equals(const std::byte* a, const std::byte* b) const {
-  return std::memcmp(a, b, PackedWidth) == 0;
+template <size_t width>
+bool NumericShortKeySchema<width>::equals(const std::byte* lhs, const std::byte* rhs) const {
+  return std::memcmp(lhs, rhs, width) == 0;
 }
 
 }  // namespace hyrise

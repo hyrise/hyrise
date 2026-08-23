@@ -1,20 +1,13 @@
 #include "aggregate_dyod.hpp"
 
 #include <algorithm>
-#include <array>
 #include <atomic>
 #include <bit>
-#include <chrono>
-#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
-#include <format>
-#include <functional>
 #include <limits>
 #include <memory>
-#include <memory_resource>
-#include <numeric>
 #include <span>
 #include <string>
 #include <type_traits>
@@ -25,18 +18,23 @@
 #include "all_type_variant.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
+#include "expression/window_function_expression.hpp"
 #include "hyrise.hpp"
 #include "operators/abstract_aggregate_operator.hpp"
 #include "operators/abstract_operator.hpp"
+#include "operators/aggregate/window_function_traits.hpp"
 #include "operators/aggregate_dyod/aggregate_dyod_config.hpp"
 #include "operators/aggregate_dyod/aggregate_schema.hpp"
 #include "operators/aggregate_dyod/distinct_set.hpp"
 #include "operators/aggregate_dyod/hyperloglog.hpp"
+#include "operators/aggregate_dyod/key_primitives.hpp"
 #include "operators/aggregate_dyod/key_schema.hpp"
 #include "operators/aggregate_dyod/merge_map.hpp"
 #include "operators/aggregate_dyod/output_columns.hpp"
 #include "operators/aggregate_dyod/scatter_store.hpp"
+#include "operators/aggregate_dyod/value_scatter_column.hpp"
 #include "operators/operator_performance_data.hpp"
+#include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 #include "statistics/attribute_statistics.hpp"
@@ -45,6 +43,7 @@
 #include "storage/segment_iterate.hpp"
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
+#include "storage/value_segment.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/timer.hpp"
@@ -114,8 +113,9 @@ std::vector<MorselJob> build_morsel_jobs(const Table& input_table, const size_t 
     for (auto morsel = size_t{0}; morsel < morsel_count; ++morsel) {
       const auto row_begin = morsel * rows_per_morsel;
       const auto row_end = std::min(row_begin + rows_per_morsel, row_count);
-      jobs.emplace_back(MorselJob{chunk_id, ChunkOffset{static_cast<ChunkOffset::base_type>(row_begin)},
-                                  ChunkOffset{static_cast<ChunkOffset::base_type>(row_end)}});
+      jobs.emplace_back(MorselJob{.chunk_id = chunk_id,
+                                  .row_begin = ChunkOffset{static_cast<ChunkOffset::base_type>(row_begin)},
+                                  .row_end = ChunkOffset{static_cast<ChunkOffset::base_type>(row_end)}});
     }
   }
   return jobs;
@@ -190,7 +190,7 @@ class StandardAggregator : public AbstractAggregator {
       auto count = state.count;
       const auto row_count = decoded.values.size();
       for (auto row = size_t{0}; row < row_count; ++row) {
-        if (decoded.nulls[row]) {
+        if (decoded.nulls[row] != 0) {
           continue;
         }
         const auto value = decoded.values[row];
@@ -444,7 +444,7 @@ class CountDistinctAggregator : public AbstractAggregator {
       decode_string_column(*chunk.get_segment(_column_id), decoded);
       const auto row_count = decoded.values.size();
       for (auto row = size_t{0}; row < row_count; ++row) {
-        if (!decoded.nulls[row]) {
+        if (decoded.nulls[row] == 0) {
           set.insert(0, decoded.values[row]);
         }
       }
@@ -574,20 +574,24 @@ void gather_value_column(const AbstractSegment& segment, const DataType type, co
   const auto row_count = row_end - row_begin;
   resolve_data_type(type, [&](const auto data_type) {
     using ColumnDataType = typename decltype(data_type)::type;
-    out_bytes.assign(row_count * sizeof(ColumnDataType), std::byte{0});
-    if (nullable) {
-      out_null.assign((row_count + 7) / 8, std::byte{0});
-    }
-    iterate_segment_window<ColumnDataType>(
-        segment, row_begin, row_end, [&](const size_t row, const ColumnDataType* value) {
-          if (!value) {
-            if (nullable) {
-              out_null[row / 8] |= std::byte{1} << (row % 8);
+    if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
+      Fail("Unexpected string column.");
+    } else {
+      out_bytes.assign(row_count * sizeof(ColumnDataType), std::byte{0});
+      if (nullable) {
+        out_null.assign((row_count + 7) / 8, std::byte{0});
+      }
+      iterate_segment_window<ColumnDataType>(
+          segment, row_begin, row_end, [&](const size_t row, const ColumnDataType* value) {
+            if (!value) {
+              if (nullable) {
+                out_null[row / 8] |= std::byte{1} << (row % 8);
+              }
+              return;
             }
-            return;
-          }
-          std::memcpy(out_bytes.data() + row * sizeof(ColumnDataType), value, sizeof(ColumnDataType));
-        });
+            std::memcpy(out_bytes.data() + (row * sizeof(ColumnDataType)), value, sizeof(ColumnDataType));
+          });
+    }
   });
 }
 
@@ -610,8 +614,9 @@ void gather_string_value_column(const AbstractSegment& segment, const bool nulla
     }
     auto& value = values[row];
     value = *source;
-    const auto reference = StringValueReference{reinterpret_cast<const std::byte*>(value.data()), value.size()};
-    std::memcpy(out_bytes.data() + row * sizeof(reference), &reference, sizeof(reference));
+    const auto reference =
+        StringValueReference{.data = reinterpret_cast<const std::byte*>(value.data()), .length = value.size()};
+    std::memcpy(out_bytes.data() + (row * sizeof(reference)), &reference, sizeof(reference));
   });
 }
 
@@ -839,7 +844,7 @@ void run_scatter_phase(const KeySchema& key_schema, const AggregateSchema& aggre
       }
 
       if (layout.has_value_null_bitmap) {
-        bitmap_scratch.assign(row_count * layout.value_null_bitmap_width, std::byte{0});
+        bitmap_scratch.assign(size_t{row_count} * layout.value_null_bitmap_width, std::byte{0});
       }
       for (auto stream_index = size_t{0}; stream_index < layout.value_stream_count; ++stream_index) {
         aggregate_schema.value_stream(stream_index)
@@ -856,7 +861,7 @@ void run_scatter_phase(const KeySchema& key_schema, const AggregateSchema& aggre
       }
       if (layout.has_value_null_bitmap) {
         for (auto morsel_offset = ChunkOffset{0}; morsel_offset < row_count; ++morsel_offset) {
-          const auto* row_bitmap = bitmap_scratch.data() + size_t{morsel_offset} * layout.value_null_bitmap_width;
+          const auto* row_bitmap = bitmap_scratch.data() + (size_t{morsel_offset} * layout.value_null_bitmap_width);
           for (auto byte_index = size_t{0}; byte_index < layout.value_null_bitmap_width; ++byte_index) {
             heads.push(store, layout.value_null_bitmap_stream_index, row_partitions[morsel_offset],
                        row_bitmap + byte_index, 1);
@@ -935,7 +940,7 @@ std::vector<OutputColumns> run_merge_phase(const KeySchema& key_schema, const Ag
     per_worker_outputs.emplace_back(output_column_definitions, Chunk::DEFAULT_SIZE);
   }
   {
-    const auto partition_hint = cardinality_estimate / partition_count + 1;
+    const auto partition_hint = (cardinality_estimate / partition_count) + 1;
     auto job_cursor = std::atomic<size_t>{0};
     run_workers(merge_worker_count, [&](const size_t worker_id) {
       auto merge_map = MergeMap<KeySchema>{key_schema, shift, aggregate_schema.make_accumulator_columns()};
@@ -953,14 +958,14 @@ std::vector<OutputColumns> run_merge_phase(const KeySchema& key_schema, const Ag
           for (auto tile_start = size_t{0}; tile_start < row_count; tile_start += max_tile_rows) {
             const auto tile_rows = std::min(max_tile_rows, row_count - tile_start);
             slots.clear();
-            map.resolve({key_region.data() + tile_start * key_width, tile_rows * key_width}, slots);
+            map.resolve({key_region.data() + (tile_start * key_width), tile_rows * key_width}, slots);
             for (auto aggregate_index = size_t{0}; aggregate_index < aggregate_count; ++aggregate_index) {
               const auto stream_index = aggregate_schema.aggregate_value_stream(aggregate_index);
               if (stream_index == AggregateSchema::NO_VALUE_STREAM) {
                 if (aggregate_schema.function(aggregate_index) == WindowFunction::Any) {
                   const auto& row_id_region = store.value_region(job.partition, layout.row_id_stream_index);
                   map.fold(aggregate_index, slots,
-                           {row_id_region.data() + tile_start * sizeof(RowID), tile_rows * sizeof(RowID)}, {});
+                           {row_id_region.data() + (tile_start * sizeof(RowID)), tile_rows * sizeof(RowID)}, {});
                 } else {
                   map.fold(aggregate_index, slots, {}, {});
                 }
@@ -969,7 +974,7 @@ std::vector<OutputColumns> run_merge_phase(const KeySchema& key_schema, const Ag
               const auto width = layout.value_stream_widths[stream_index];
               const auto& value_region = store.value_region(job.partition, stream_index);
               const auto value_bytes =
-                  std::span<const std::byte>{value_region.data() + tile_start * width, tile_rows * width};
+                  std::span<const std::byte>{value_region.data() + (tile_start * width), tile_rows * width};
               auto value_null_bitmap = std::span<const std::byte>{};
               if (aggregate_schema.value_stream(stream_index).is_nullable()) {
                 // Gather this stream's bits from the per-row bitmap fields into the bit-per-row tile form.
@@ -977,7 +982,7 @@ std::vector<OutputColumns> run_merge_phase(const KeySchema& key_schema, const Ag
                 const auto stream_bit = layout.value_stream_null_bits[stream_index];
                 std::memset(bitmap_tile.data(), 0, bitmap_tile.size());
                 for (auto row = size_t{0}; row < tile_rows; ++row) {
-                  const auto* row_bitmap = row_bitmaps + (tile_start + row) * layout.value_null_bitmap_width;
+                  const auto* row_bitmap = row_bitmaps + ((tile_start + row) * layout.value_null_bitmap_width);
                   if ((row_bitmap[stream_bit / 8] & (std::byte{1} << (stream_bit % 8))) != std::byte{0}) {
                     bitmap_tile[row / 8] |= std::byte{1} << (row % 8);
                   }
@@ -1068,7 +1073,7 @@ void accumulate_private_maps(const KeySchema& key_schema, const AggregateSchema&
       key_schema.decode(segments, job.row_begin, job.row_end, decode_scratch);
       key_buffer.resize(size_t{row_count} * key_width);
       for (auto offset = ChunkOffset{0}; offset < row_count; ++offset) {
-        key_schema.pack(decode_scratch, offset, key_buffer.data() + size_t{offset} * key_width, spill_scratch);
+        key_schema.pack(decode_scratch, offset, key_buffer.data() + (size_t{offset} * key_width), spill_scratch);
       }
 
       for (auto aggregate_index = size_t{0}; aggregate_index < aggregate_count; ++aggregate_index) {
@@ -1093,7 +1098,7 @@ void accumulate_private_maps(const KeySchema& key_schema, const AggregateSchema&
       for (auto tile_start = size_t{0}; tile_start < row_count; tile_start += max_tile_rows) {
         const auto tile_rows = std::min(max_tile_rows, size_t{row_count} - tile_start);
         slots.clear();
-        merge_map.resolve({key_buffer.data() + tile_start * key_width, tile_rows * key_width}, slots);
+        merge_map.resolve({key_buffer.data() + (tile_start * key_width), tile_rows * key_width}, slots);
 
         for (auto aggregate_index = size_t{0}; aggregate_index < aggregate_count; ++aggregate_index) {
           const auto stream = aggregate_schema.aggregate_value_stream(aggregate_index);
@@ -1103,11 +1108,11 @@ void accumulate_private_maps(const KeySchema& key_schema, const AggregateSchema&
           }
           const auto width = aggregate_schema.value_stream(stream).element_width();
           const auto nullable = aggregate_schema.value_stream(stream).is_nullable();
-          const auto value_span =
-              std::span<const std::byte>{value_buffers[aggregate_index].data() + tile_start * width, tile_rows * width};
+          const auto value_span = std::span<const std::byte>{
+              value_buffers[aggregate_index].data() + (tile_start * width), tile_rows * width};
           auto null_span = std::span<const std::byte>{};
           if (nullable) {
-            null_span = {null_buffers[aggregate_index].data() + tile_start / 8, (tile_rows + 7) / 8};
+            null_span = {null_buffers[aggregate_index].data() + (tile_start / 8), (tile_rows + 7) / 8};
           }
           merge_map.fold(aggregate_index, slots, value_span, null_span);
         }

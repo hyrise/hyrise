@@ -27,7 +27,7 @@ namespace hyrise {
 //
 //   NumericShortKeySchema<Width>: Width in {4,8,12,16,20,24} bytes (numeric-only group-by. hash/equals fixed-size).
 //   NumericArbitraryKeySchema: numeric-only group-by wider than 24 bytes; runtime-length hash/equals.
-//   MixedKeySchema<LenWidth>: at least one string and at least one non-string column. LenWidth in {1,2,4,8} is the
+//   MixedKeySchema<len_width>: at least one string and at least one non-string column. len_width in {1,2,4,8} is the
 //                             per-string length-prefix field width.
 //   StringOnlyKeySchema<LenWidth>: all columns are strings; a MixedKeySchema with a zero-width numeric prefix.
 
@@ -37,7 +37,7 @@ namespace hyrise {
  */
 struct StringKeyBudget {
   size_t length_field_width{4};
-  std::optional<size_t> blob_bytes{};
+  std::optional<size_t> blob_bytes;
 };
 
 /**
@@ -90,7 +90,8 @@ inline StringKeyBudget choose_string_key_budget(const std::vector<ColumnID>& gro
     }
     blob_bytes += max_length;
   }
-  return {1, std::min(blob_bytes, STRING_BLOB_BYTES_PER_COLUMN * string_column_count)};
+  return {.length_field_width = 1,
+          .blob_bytes = std::min(blob_bytes, STRING_BLOB_BYTES_PER_COLUMN * string_column_count)};
 }
 
 /**
@@ -121,10 +122,11 @@ inline KeySchemaChoice choose_key_schema(const std::vector<ColumnID>& group_by_c
   if (!has_string) {
     const auto layout = compute_key_layout(group_by_column_ids, input_table, 0);
     const auto width = layout.fixed_part_width;
-    return {KeyComposition::NumericOnly, width <= 24 ? width : size_t{0}};
+    return {.composition = KeyComposition::NumericOnly, .short_packed_width = width <= 24 ? width : size_t{0}};
   }
-  return {has_numeric ? KeyComposition::Mixed : KeyComposition::StringOnly, 0,
-          choose_string_key_budget(group_by_column_ids, input_table, DICTIONARY_BOUND_SCAN_LIMIT)};
+  return {.composition = has_numeric ? KeyComposition::Mixed : KeyComposition::StringOnly,
+          .short_packed_width = 0,
+          .string_budget = choose_string_key_budget(group_by_column_ids, input_table, DICTIONARY_BOUND_SCAN_LIMIT)};
 }
 
 /**

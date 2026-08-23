@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <array>
 #include <bit>
 #include <cmath>
 #include <cstddef>
@@ -128,12 +129,12 @@ class StringSpillBuffer : private Noncopyable {
 
  private:
   struct Block {
-    std::unique_ptr<std::byte[]> data;
+    std::vector<std::byte> data;
     size_t capacity{0};
     size_t used{0};
   };
 
-  static constexpr size_t MIN_BLOCK_BYTES = 16 * 1024;
+  static constexpr size_t MIN_BLOCK_BYTES = size_t{16} * 1024;
 
   std::vector<Block> _blocks;
   size_t _current_block{0};
@@ -146,12 +147,12 @@ inline const std::byte* StringSpillBuffer::append(const std::byte* content, cons
   if (_current_block == _blocks.size()) {
     auto block = Block{};
     block.capacity = std::max(MIN_BLOCK_BYTES, length);
-    block.data = std::make_unique<std::byte[]>(block.capacity);
+    block.data = std::vector<std::byte>(block.capacity);
     _blocks.emplace_back(std::move(block));
   }
 
   auto& block = _blocks[_current_block];
-  auto* destination = block.data.get() + block.used;
+  auto* destination = block.data.data() + block.used;
   std::memcpy(destination, content, length);
   block.used += length;
   return destination;
@@ -263,9 +264,9 @@ class NumericKeyLane : public AbstractNumericKeyLane {
  */
 struct StringKeyColumn {
   ColumnID column_id;
-  uint32_t tuple_index;
-  uint32_t length_field_offset;
-  uint32_t null_bit_index;
+  uint32_t tuple_index{0};
+  uint32_t length_field_offset{0};
+  uint32_t null_bit_index{NO_NULL_BIT};
 };
 
 struct NumericLaneField {
@@ -308,11 +309,11 @@ inline size_t numeric_lane_width(const DataType data_type) {
 }
 
 inline uint32_t encode_lane_value(const int32_t value) {
-  return static_cast<uint32_t>(value) ^ (uint32_t{1} << 31);
+  return static_cast<uint32_t>(value) ^ uint32_t { 0x80000000 };
 }
 
 inline uint64_t encode_lane_value(const int64_t value) {
-  return static_cast<uint64_t>(value) ^ (uint64_t{1} << 63);
+  return static_cast<uint64_t>(value) ^ uint64_t { 0x8000000000000000 };
 }
 
 inline uint32_t encode_lane_value(const float value) {
@@ -328,11 +329,11 @@ T decode_lane_value(const std::byte* field) {
   if constexpr (std::is_same_v<T, int32_t>) {
     auto encoded = uint32_t{};
     std::memcpy(&encoded, field, sizeof(encoded));
-    return static_cast<int32_t>(encoded ^ (uint32_t{1} << 31));
+    return static_cast<int32_t>(encoded ^ uint32_t{0x80000000});
   } else if constexpr (std::is_same_v<T, int64_t>) {
     auto encoded = uint64_t{};
     std::memcpy(&encoded, field, sizeof(encoded));
-    return static_cast<int64_t>(encoded ^ (uint64_t{1} << 63));
+    return static_cast<int64_t>(encoded ^ uint64_t{0x8000000000000000});
   } else {
     auto value = T{};
     std::memcpy(&value, field, sizeof(value));
@@ -356,10 +357,17 @@ inline size_t read_length_field(const std::byte* key, const uint32_t field_offse
   return static_cast<size_t>(value);
 }
 
-inline uintptr_t read_spill_pointer(const std::byte* key, const size_t fixed_part_width) {
-  auto pointer_value = uintptr_t{0};
-  std::memcpy(&pointer_value, key + fixed_part_width, sizeof(pointer_value));
-  return pointer_value;
+using SpillPointerBytes = std::array<std::byte, sizeof(const std::byte*)>;
+
+inline const std::byte* read_spill_pointer(const std::byte* key, const size_t fixed_part_width) {
+  auto bytes = SpillPointerBytes{};
+  std::memcpy(bytes.data(), key + fixed_part_width, bytes.size());
+  return std::bit_cast<const std::byte*>(bytes);
+}
+
+inline void write_spill_pointer(std::byte* key, const size_t fixed_part_width, const std::byte* spill) {
+  const auto bytes = std::bit_cast<SpillPointerBytes>(spill);
+  std::memcpy(key + fixed_part_width, bytes.data(), bytes.size());
 }
 
 template <size_t max_lane_width = 8>
@@ -374,13 +382,13 @@ void pack_numeric_lanes(const NumericKeyLanes& lanes, const KeyDecodeScratch& sc
       continue;
     }
     const auto* source = lane.values.data() + (size_t{chunk_offset} * field.width);
-    if constexpr (max_lane_width < 8) {
-      std::memcpy(key_out + field.field_offset, source, 4);
-    } else if (field.width == 4) {
-      std::memcpy(key_out + field.field_offset, source, 4);
-    } else {
-      std::memcpy(key_out + field.field_offset, source, 8);
+    if constexpr (max_lane_width >= 8) {
+      if (field.width == 8) {
+        std::memcpy(key_out + field.field_offset, source, 8);
+        continue;
+      }
     }
+    std::memcpy(key_out + field.field_offset, source, 4);
   }
 }
 
@@ -393,7 +401,7 @@ inline void pack_string_columns(const StringKeyColumns& string_columns, const si
   for (auto index = size_t{0}; index < column_count; ++index) {
     const auto& column = string_columns[index];
     const auto& decoded = scratch.string_columns[index];
-    if (decoded.nulls[chunk_offset]) {
+    if (decoded.nulls[chunk_offset] != 0) {
       DebugAssert(column.null_bit_index != NO_NULL_BIT, "NULL in a non-nullable group-by column.");
       set_null_bit(key_out, column.null_bit_index);
       continue;
@@ -408,7 +416,7 @@ inline void pack_string_columns(const StringKeyColumns& string_columns, const si
   if (total_length <= blob_capacity) {
     auto* cursor = key_out + blob_offset;
     for (auto index = size_t{0}; index < column_count; ++index) {
-      if (scratch.string_columns[index].nulls[chunk_offset]) {
+      if (scratch.string_columns[index].nulls[chunk_offset] != 0) {
         continue;
       }
       const auto& value = scratch.string_columns[index].values[chunk_offset];
@@ -421,7 +429,7 @@ inline void pack_string_columns(const StringKeyColumns& string_columns, const si
   auto content = std::vector<std::byte>{};
   content.reserve(total_length);
   for (auto index = size_t{0}; index < column_count; ++index) {
-    if (scratch.string_columns[index].nulls[chunk_offset]) {
+    if (scratch.string_columns[index].nulls[chunk_offset] != 0) {
       continue;
     }
     const auto& value = scratch.string_columns[index].values[chunk_offset];
@@ -431,30 +439,28 @@ inline void pack_string_columns(const StringKeyColumns& string_columns, const si
   const auto* interned = spill_buffer.append(content.data(), content.size());
   const auto content_hash = hash_bytes(content.data(), content.size());
   std::memcpy(key_out + blob_offset, &content_hash, sizeof(content_hash));
-  const auto pointer_value = reinterpret_cast<uintptr_t>(interned);
-  std::memcpy(key_out + fixed_part_width, &pointer_value, sizeof(pointer_value));
+  write_spill_pointer(key_out, fixed_part_width, interned);
 }
 
 inline bool equals_string_keys(const StringKeyColumns& string_columns, const size_t length_field_width,
-                               const size_t fixed_part_width, const std::byte* a, const std::byte* b) {
-  const auto pointer_a = read_spill_pointer(a, fixed_part_width);
-  const auto pointer_b = read_spill_pointer(b, fixed_part_width);
-  if ((pointer_a != 0) != (pointer_b != 0)) {
+                               const size_t fixed_part_width, const std::byte* lhs, const std::byte* rhs) {
+  const auto* lhs_spill = read_spill_pointer(lhs, fixed_part_width);
+  const auto* rhs_spill = read_spill_pointer(rhs, fixed_part_width);
+  if ((lhs_spill != nullptr) != (rhs_spill != nullptr)) {
     return false;
   }
-  if (std::memcmp(a, b, fixed_part_width) != 0) {
+  if (std::memcmp(lhs, rhs, fixed_part_width) != 0) {
     return false;
   }
-  if (pointer_a == 0) {
+  if (lhs_spill == nullptr) {
     return true;
   }
 
   auto total_length = size_t{0};
   for (const auto& column : string_columns) {
-    total_length += read_length_field(a, column.length_field_offset, length_field_width);
+    total_length += read_length_field(lhs, column.length_field_offset, length_field_width);
   }
-  return std::memcmp(reinterpret_cast<const std::byte*>(pointer_a), reinterpret_cast<const std::byte*>(pointer_b),
-                     total_length) == 0;
+  return std::memcmp(lhs_spill, rhs_spill, total_length) == 0;
 }
 
 struct KeyLayout {
@@ -499,7 +505,7 @@ inline KeyLayout compute_key_layout(const std::vector<ColumnID>& group_by_column
   }
 
   // The null bitmap region is padded to a multiple of 4 bytes.
-  const auto bitmap_region = nullable_count > 0 ? ((nullable_count + 7) / 8 + 3) / 4 * 4 : size_t{0};
+  const auto bitmap_region = nullable_count > 0 ? ((size_t{nullable_count} + 7) / 8 + 3) / 4 * 4 : size_t{0};
 
   auto numeric_cursor = bitmap_region;
   auto length_field_cursor = bitmap_region + numeric_width;
@@ -543,8 +549,10 @@ inline NumericKeyLaneEntry make_numeric_lane(const DataType data_type, const Col
     default:
       Fail("Not a numeric group-by column.");
   }
-  return {std::move(lane),
-          NumericLaneField{field_offset, static_cast<uint32_t>(numeric_lane_width(data_type)), null_bit_index}};
+  return {.lane = std::move(lane),
+          .field = NumericLaneField{.field_offset = field_offset,
+                                    .width = static_cast<uint32_t>(numeric_lane_width(data_type)),
+                                    .null_bit_index = null_bit_index}};
 }
 
 /**
@@ -715,8 +723,8 @@ inline void decode_string_key_columns(const StringKeyColumns& string_columns,
 inline void unpack_string_columns(const StringKeyColumns& string_columns, const size_t length_field_width,
                                   const size_t blob_offset, const size_t fixed_part_width, const std::byte* key,
                                   OutputColumns& output) {
-  const auto pointer_value = read_spill_pointer(key, fixed_part_width);
-  const auto* cursor = pointer_value != 0 ? reinterpret_cast<const std::byte*>(pointer_value) : key + blob_offset;
+  const auto* spill = read_spill_pointer(key, fixed_part_width);
+  const auto* cursor = spill != nullptr ? spill : key + blob_offset;
 
   for (const auto& column : string_columns) {
     auto& output_column = static_cast<TypedOutputColumn<pmr_string>&>(output.column(column.tuple_index));
@@ -732,8 +740,8 @@ inline void unpack_string_columns(const StringKeyColumns& string_columns, const 
 
 inline void reintern_spilled_key(const StringKeyColumns& string_columns, const size_t length_field_width,
                                  const size_t fixed_part_width, std::byte* key, StringSpillBuffer& spill_buffer) {
-  const auto pointer_value = read_spill_pointer(key, fixed_part_width);
-  if (pointer_value == 0) {
+  const auto* spill = read_spill_pointer(key, fixed_part_width);
+  if (spill == nullptr) {
     return;
   }
 
@@ -741,9 +749,8 @@ inline void reintern_spilled_key(const StringKeyColumns& string_columns, const s
   for (const auto& column : string_columns) {
     total_length += read_length_field(key, column.length_field_offset, length_field_width);
   }
-  const auto* interned = spill_buffer.append(reinterpret_cast<const std::byte*>(pointer_value), total_length);
-  const auto new_pointer = reinterpret_cast<uintptr_t>(interned);
-  std::memcpy(key + fixed_part_width, &new_pointer, sizeof(new_pointer));
+  const auto* interned = spill_buffer.append(spill, total_length);
+  write_spill_pointer(key, fixed_part_width, interned);
 }
 
 template <typename T>
@@ -767,7 +774,7 @@ void NumericKeyLane<T>::decode(const AbstractSegment& segment, const size_t row_
       DebugAssert(_null_bit_index != NO_NULL_BIT, "NULL in a non-nullable group-by column.");
       lane.nulls[row] = 1;
     }
-    std::memcpy(values + row * sizeof(Encoded), &encoded, sizeof(encoded));
+    std::memcpy(values + (row * sizeof(Encoded)), &encoded, sizeof(encoded));
   });
 }
 

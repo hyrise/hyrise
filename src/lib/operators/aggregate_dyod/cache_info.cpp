@@ -9,6 +9,7 @@
 #include <fstream>
 #include <string>
 #include <string_view>
+#include <system_error>
 
 namespace hyrise {
 
@@ -61,9 +62,10 @@ CacheSizes sanitize_cache_sizes(const int64_t l1d_bytes, const int64_t l2_bytes,
   };
 
   auto sizes = CacheSizes{};
-  sizes.l1d_bytes = sanitize_level(l1d_bytes, FALLBACK_CACHE_SIZES.l1d_bytes, 4 * 1024, 1024 * 1024);
-  sizes.l2_bytes = sanitize_level(l2_bytes, FALLBACK_CACHE_SIZES.l2_bytes, 64 * 1024, 64 * 1024 * 1024);
-  sizes.l3_bytes = sanitize_level(l3_bytes, FALLBACK_CACHE_SIZES.l3_bytes, 1024 * 1024, 1024 * 1024 * 1024);
+  sizes.l1d_bytes = sanitize_level(l1d_bytes, FALLBACK_CACHE_SIZES.l1d_bytes, size_t{4} * 1024, size_t{1024} * 1024);
+  sizes.l2_bytes = sanitize_level(l2_bytes, FALLBACK_CACHE_SIZES.l2_bytes, size_t{64} * 1024, size_t{64} * 1024 * 1024);
+  sizes.l3_bytes =
+      sanitize_level(l3_bytes, FALLBACK_CACHE_SIZES.l3_bytes, size_t{1024} * 1024, size_t{1024} * 1024 * 1024);
   sizes.l2_bytes = std::max(sizes.l2_bytes, sizes.l1d_bytes);
   sizes.l3_bytes = std::max(sizes.l3_bytes, sizes.l2_bytes);
   sizes.llc_sharing_cpus =

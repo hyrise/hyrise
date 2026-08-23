@@ -61,10 +61,10 @@ class AggregateSchema {
 
   struct AggregateEntry {
     ColumnID source_column;
-    WindowFunction function;
-    DataType input_type;
-    DataType result_type;
-    size_t value_stream_index;
+    WindowFunction function{WindowFunction::Count};
+    DataType input_type{DataType::Null};
+    DataType result_type{DataType::Null};
+    size_t value_stream_index{NO_VALUE_STREAM};
   };
 
   // One AggregateEntry per aggregate, index-aligned with aggregate indices.

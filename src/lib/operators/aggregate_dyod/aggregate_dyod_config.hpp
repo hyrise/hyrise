@@ -148,7 +148,7 @@ constexpr size_t STRING_BLOB_BYTES_PER_COLUMN = 8;
  * Raising it lets wider dictionaries be bounded at more resolve-time work; lowering it settles resolve faster but
  * leaves more group-bys on the default layout.
  */
-constexpr size_t DICTIONARY_BOUND_SCAN_LIMIT = size_t{1} << 20;
+constexpr size_t DICTIONARY_BOUND_SCAN_LIMIT = size_t{1024} * 1024;
 
 /**
  * Number of distinct output groups where the low-cardinality path is taken

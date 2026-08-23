@@ -832,7 +832,7 @@ TEST_F(AggregateDYODKeySchemaTest, ContentFillingTheNarrowBlobStaysInline) {
   auto spill = StringSpillBuffer{};
   const auto keys = pack_all_keys(schema, input, spill);
 
-  EXPECT_EQ(read_spill_pointer(keys[0].data(), schema.fixed_part_width()), uintptr_t{0});
+  EXPECT_EQ(read_spill_pointer(keys[0].data(), schema.fixed_part_width()), nullptr);
   expect_keys_not_equal(schema, keys[0], keys[1]);
   expect_unpack_round_trip(schema, definitions, keys, rows);
 }
