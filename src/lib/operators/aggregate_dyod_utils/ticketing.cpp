@@ -4,6 +4,7 @@
 #include <atomic>
 #include <cstdint>
 #include <cstring>
+#include <limits>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -30,6 +31,23 @@ namespace {
 
 constexpr uint64_t align(const uint64_t offset, const uint64_t alignment) {
   return (offset % alignment == 0) ? offset : (offset + (alignment - (offset % alignment)));
+}
+
+// TODO(anyone): Remove this once SQLiteTestRunner.CompareToSQLite/Line269WithUnencoded is adjusted.
+// Old-ticket -> new-ticket mapping that orders groups by first-occurrence row order instead of thread-discovery order.
+std::vector<uint64_t> first_occurrence_ticket_remap(const GroupKeyDataBase& group_key_data, const size_t row_count) {
+  constexpr auto UNSEEN = std::numeric_limits<uint64_t>::max();
+  auto remap = std::vector<uint64_t>(group_key_data.group_count, UNSEEN);
+  auto next_ticket = uint64_t{0};
+  const auto* const tickets = group_key_data.tickets.get();
+
+  for (auto row = size_t{0}; row < row_count; ++row) {
+    auto& remapped = remap[tickets[row]];
+    if (remapped == UNSEEN) {
+      remapped = next_ticket++;
+    }
+  }
+  return remap;
 }
 
 // Materializes one string group-by column of a chunk into the packed rows. Dispatches on the
@@ -521,12 +539,29 @@ std::shared_ptr<GroupKeyData> compute_groups(const std::vector<ColumnID>& groupb
                                              const std::shared_ptr<const Table>& input_table) {
   // We do not support non-trivial types in the concurrent HashMap, so we fall back to the multi-column path for
   // single-column group-bys on strings.
-  if (groupby_column_ids.size() == 1 && input_table->column_data_type(groupby_column_ids[0]) != DataType::String) {
-    // For a single column, we can use the concurrent ticketing path, which is faster than the multi-column path.
-    const auto column_id = groupby_column_ids[0];
-    return compute_groups_single_column(column_id, input_table);
+  const auto group_key_data =
+      groupby_column_ids.size() == 1 && input_table->column_data_type(groupby_column_ids[0]) != DataType::String
+          // For a single column, we can use the concurrent ticketing path, which is faster than the multi-column path.
+          ? compute_groups_single_column(groupby_column_ids[0], input_table)
+          : compute_groups_multi_column(groupby_column_ids, input_table);
+
+  // @TODO(anyone): Remove this unneccassary step once the test is adjusted. Normally, aggregate operators
+  // do not make guarantees about the order of the output rows. However, the test
+  // SQLiteTestRunnerUnencoded/SQLiteTestRunner.CompareToSQLite/Line269WithUnencoded implicitly
+  // expects the output to be sorted by first occurence and adjusting the SQLite test suite is out of scope for this PR.
+  const auto row_count = input_table->row_count();
+  const auto remap = first_occurrence_ticket_remap(*group_key_data, row_count);
+  auto* const tickets = group_key_data->tickets.get();
+  for (auto row = size_t{0}; row < row_count; ++row) {
+    tickets[row] = remap[tickets[row]];
   }
-  return compute_groups_multi_column(groupby_column_ids, input_table);
+  // `build_groupby_output_columns` uses tickets directly from the hash table for low-cardinality group-bys.
+  if (group_key_data->has_hash_table) {
+    group_key_data->global_hash_table.remap_tickets([&remap](const uint64_t ticket) {
+      return remap[ticket];
+    });
+  }
+  return group_key_data;
 }
 
 }  // namespace hyrise
