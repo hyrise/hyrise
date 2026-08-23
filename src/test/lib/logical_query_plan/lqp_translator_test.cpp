@@ -39,7 +39,7 @@
 #include "logical_query_plan/validate_node.hpp"
 #include "logical_query_plan/window_node.hpp"
 #include "operators/abstract_operator.hpp"
-#include "operators/aggregate_hash.hpp"
+#include "operators/aggregate_dyod.hpp"
 #include "operators/change_meta_table.hpp"
 #include "operators/export.hpp"
 #include "operators/get_table.hpp"
@@ -717,7 +717,7 @@ TEST_F(LQPTranslatorTest, AggregateNodeSimple) {
   /**
    * Check PQP.
    */
-  const auto aggregate_op = std::dynamic_pointer_cast<AggregateHash>(op);
+  const auto aggregate_op = std::dynamic_pointer_cast<AggregateDYOD>(op);
   ASSERT_TRUE(aggregate_op);
   ASSERT_EQ(aggregate_op->aggregates().size(), 2);
   ASSERT_EQ(aggregate_op->groupby_column_ids().size(), 1);
