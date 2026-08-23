@@ -2,12 +2,13 @@
 
 #include <algorithm>
 #include <atomic>
+#include <array>
+#include <bit>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <limits>
 #include <memory>
-#include <memory_resource>
 #include <mutex>
 #include <optional>
 #include <ranges>
@@ -24,21 +25,30 @@
 #include "aggregate/aggregate_vector.hpp"
 #include "aggregate/resolve_window_function.hpp"
 #include "aggregate/serialize.hpp"
+#include "aggregate/window_function_traits.hpp"
 #include "aggregate/types.hpp"
 #include "all_type_variant.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
+#include "expression/window_function_expression.hpp"
 #include "hyrise.hpp"
 #include "operator_state.hpp"
 #include "operators/abstract_aggregate_operator.hpp"
 #include "operators/abstract_operator.hpp"
+#include "resolve_type.hpp"
+#include "scheduler/abstract_task.hpp"
+#include "scheduler/job_task.hpp"
 #include "storage/abstract_segment.hpp"
+#include "storage/chunk.hpp"
 #include "storage/pos_lists/entire_chunk_pos_list.hpp"
 #include "storage/pos_lists/row_id_pos_list.hpp"
+#include "storage/reference_segment.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
+#include "storage/value_segment.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
