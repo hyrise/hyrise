@@ -106,7 +106,7 @@ void materialize_string_column(const RowFormat& format, const std::shared_ptr<Ab
       return;
     }
 
-    if constexpr (std::is_same_v<decltype(needs_copy), std::true_type>) {
+    if constexpr (decltype(needs_copy)::value) {
       write_volatile_string(row, str_value);
     } else {
       write_stable_string(row, str_value);

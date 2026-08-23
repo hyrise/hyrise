@@ -6,7 +6,6 @@
 #include <cstdint>
 #include <memory>
 #include <optional>
-#include <utility>
 #include <vector>
 
 #include "hyrise.hpp"
@@ -18,7 +17,7 @@ namespace hyrise {
 
 /** Runs a callback over all chunks using scheduler jobs and a shared chunk counter. */
 template <typename Function>
-void run_jobs_over_chunks(const size_t chunk_count, const size_t requested_job_count, Function&& function) {
+void run_jobs_over_chunks(const size_t chunk_count, const size_t requested_job_count, const Function& function) {
   const auto job_count = std::min(requested_job_count, chunk_count);
   auto next_chunk_id = std::atomic<uint32_t>{0};
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
