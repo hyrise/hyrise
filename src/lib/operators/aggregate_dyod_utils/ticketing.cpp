@@ -13,6 +13,7 @@
 #include "all_type_variant.hpp"
 #include "cardinality_estimation.hpp"
 #include "hyrise.hpp"
+#include "operators/aggregate_dyod_utils/chunk_job_runner.hpp"
 #include "operators/aggregate_dyod_utils/concurrent_ticket_map.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
