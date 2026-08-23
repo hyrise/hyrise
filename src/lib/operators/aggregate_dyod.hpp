@@ -23,6 +23,16 @@
 
 namespace hyrise {
 
+/*
+  Our Aggregation operator is sorting based. For the GROUP-BY columns, we create a byte
+  representation per row so that we may compare these bytes to compare two rows. For strings
+  we copy a prefix of the string into these bytes and store the whole string in a global buffer.
+  After this, we materialize all values of the required aggregate columns into continguous, unencoded
+  vectors. We then divide these vectors into blocks called morsels. Each morsel sorts its assigned rows
+  and performs all aggregations on them. When all morsels have finished, their results are merged.
+  Finally the results are written into a single chunk of the output table.
+*/
+
 class AggregateDYOD : public AbstractAggregateOperator {
  public:
   AggregateDYOD(const std::shared_ptr<AbstractOperator>& input_operator,
@@ -106,7 +116,7 @@ class AggregateDYOD : public AbstractAggregateOperator {
   */
   struct Morsel : public hyrise::Noncopyable {
     // We use a reference to the operator to avoid passing more fields
-    // like the Table, AggregateColumns, UniqueAggregtaeColumns etc.
+    // like the Table, AggregateColumns, UniqueAggregateColumns etc.
     const AggregateDYOD& morsel_operator;
     const uint64_t row_count;
     const uint64_t initial_row_offset;
@@ -118,7 +128,7 @@ class AggregateDYOD : public AbstractAggregateOperator {
     uint64_t group_count;
     std::vector<uint64_t> group_sizes;
 
-    Morsel(AggregateDYOD& init_morsel_operator, uint64_t init_row_count, uint64_t init_row_offset,
+    Morsel(const AggregateDYOD& init_morsel_operator, const uint64_t init_row_count, const uint64_t init_row_offset,
            std::span<const uint8_t> init_key_bytes, std::span<NormalizedKey> init_normalized_keys,
            std::span<pmr_string> init_groupby_strings)
         : morsel_operator(init_morsel_operator),
@@ -126,20 +136,21 @@ class AggregateDYOD : public AbstractAggregateOperator {
           initial_row_offset(init_row_offset),
           key_bytes(init_key_bytes),
           normalized_keys(init_normalized_keys),
-          groupby_strings(init_groupby_strings) {
+          groupby_strings(init_groupby_strings),
+          group_count(0) {
       aggregate_results.resize(init_morsel_operator._aggregates.size());
     }
 
     pmr_vector<NormalizedKey> group_keys;
 
-    // Contains the aggregation results. Is filled by _aggregate_morsel().
+    // Contains the aggregation results. Is filled by aggregate_morsel().
     pmr_vector<std::shared_ptr<BaseAggregateResults>> aggregate_results;
 
-    void _sort_morsel_range();
-    std::weak_ordering _compare_keys(const NormalizedKey& first, const NormalizedKey& second);
+    void sort_morsel_range();
+    std::weak_ordering compare_keys(const NormalizedKey& first, const NormalizedKey& second) const;
 
     template <typename ColumnType, WindowFunction aggregate_function, typename AggregateType>
-    void _aggregate_morsel(const uint64_t aggregate_index);
+    void aggregate_morsel(const uint64_t aggregate_index);
 
     // Used for the merging of another morsel.
     // If one of these indices is -1 then there is no element referring to the same group as the other,
@@ -149,27 +160,27 @@ class AggregateDYOD : public AbstractAggregateOperator {
       int64_t other_index;
     };
 
-    void _merge_morsel(std::shared_ptr<Morsel>& other);
+    void merge_morsel(std::shared_ptr<Morsel>& other);
 
     template <WindowFunction aggregate_function, typename AggregateType>
-    void _merge_single_aggregate(std::shared_ptr<Morsel>& other, const uint64_t aggregate_index,
+    void merge_single_aggregate(std::shared_ptr<Morsel>& other, const uint64_t aggregate_index,
                                  const pmr_vector<MergeStep>& merge_plan);
 
     template <WindowFunction aggregate_function, typename AggregateType>
-    std::shared_ptr<ValueSegment<AggregateType>> _to_value_segment(uint64_t aggregte_index, bool nullable);
+    std::shared_ptr<ValueSegment<AggregateType>> to_value_segment(const uint64_t aggregate_index, bool nullable);
 
     template <typename ColumnType>
-    std::shared_ptr<ValueSegment<int64_t>> _distinct_to_value_segment(uint64_t aggregate_index);
+    std::shared_ptr<ValueSegment<int64_t>> distinct_to_value_segment(const uint64_t aggregate_index);
   };
 
-  void _normalize_chunk_groupby(const std::shared_ptr<const Chunk>& input_chunk, const ChunkID chunk_id,
+  void _normalize_chunk_groupby(const std::shared_ptr<const Chunk>& input_chunk,
                                 const uint64_t row_offset, uninitialized_vector<NormalizedKey>& key_vector,
                                 uninitialized_vector<uint8_t>& byte_vector, pmr_vector<pmr_string>& groupby_strings);
 
   void _materialize_chunk_aggregates(const std::shared_ptr<const Chunk>& input_chunk, const uint64_t row_offset);
 
   template <typename ColumnType, typename AggregateType, WindowFunction aggregate_function>
-  std::shared_ptr<ValueSegment<AggregateType>> _aggregate_values_without_groups(uint64_t aggregate_index);
+  std::shared_ptr<ValueSegment<AggregateType>> _aggregate_values_without_groups(const uint64_t aggregate_index);
 
   void _on_cleanup() override;
 
@@ -177,7 +188,7 @@ class AggregateDYOD : public AbstractAggregateOperator {
   void create_aggregate_column_definitions(ColumnID column_index);
 
   template <typename ColumnType>
-  void _create_aggregate_column_definitions(boost::hana::basic_type<ColumnType> /*type*/, ColumnID column_index,
+  void create_aggregate_column_definitions(boost::hana::basic_type<ColumnType> /*type*/, ColumnID column_index,
                                             WindowFunction aggregate_function);
 
   uint64_t _groupby_string_count = 0;
