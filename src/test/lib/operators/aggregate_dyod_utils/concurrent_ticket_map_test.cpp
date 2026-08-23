@@ -49,7 +49,7 @@ constexpr auto JOB_COUNT = uint64_t{8};
 }  // namespace
 
 TEST_F(ConcurrentTicketMapTest, KeyKeepsTicket) {
-  auto map = TestMap{KEY_COUNT};
+  auto map = TestMap{KEY_COUNT, KEY_COUNT};
   map.register_prober();
 
   for (auto key = uint64_t{0}; key < KEY_COUNT; ++key) {
@@ -67,7 +67,8 @@ TEST_F(ConcurrentTicketMapTest, KeyKeepsTicket) {
 }
 
 TEST_F(ConcurrentTicketMapTest, ResizeKeepsEntriesAndLookups) {
-  auto map = TestMap{KEY_COUNT};
+  // The ceiling leaves room above `KEY_COUNT`, so that the explicit `resize` below is not skipped.
+  auto map = TestMap{KEY_COUNT, KEY_COUNT * 4};
   map.register_prober();
 
   for (auto key = uint64_t{0}; key < KEY_COUNT; ++key) {
@@ -87,7 +88,7 @@ TEST_F(ConcurrentTicketMapTest, ResizeKeepsEntriesAndLookups) {
 
 TEST_F(ConcurrentTicketMapTest, InsertWithBadSizeEstimate) {
   // We only reserve 1/10 of the keys, so during the insertions the map will have to grow.
-  auto map = TestMap{KEY_COUNT / 10};
+  auto map = TestMap{KEY_COUNT / 10, KEY_COUNT};
   map.register_prober();
 
   for (auto key = uint64_t{0}; key < KEY_COUNT; ++key) {
@@ -106,7 +107,7 @@ TEST_F(ConcurrentTicketMapTest, InsertWithBadSizeEstimate) {
 TEST_F(ConcurrentTicketMapTest, ConcurrentInsertsAssignOneTicketPerKey) {
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 
-  auto map = TestMap{KEY_COUNT};
+  auto map = TestMap{KEY_COUNT, KEY_COUNT};
   auto returned_tickets = std::vector<std::vector<uint64_t>>(JOB_COUNT, std::vector<uint64_t>(KEY_COUNT));
 
   // Every job inserts the full range, so all but one job see each key as already present.
