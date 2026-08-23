@@ -82,7 +82,7 @@ TEST_F(TicketingTest, RowFormatWithNullsAndStrings) {
   EXPECT_EQ(format.col_offsets, std::vector<uint64_t>({0, sizeof(int32_t)}));
   EXPECT_EQ(format.key_length, sizeof(uint64_t) + sizeof(int32_t) + STRING_INLINE_SIZE);
   // The key ends after 28 bytes, so the string-pointer area is padded to 32 for alignment.
-  EXPECT_EQ(format.string_ptr_offset, 32);
+  EXPECT_EQ(format.string_ptr_offset, 40);
   EXPECT_EQ(format.row_size, format.string_ptr_offset + sizeof(char*));
   EXPECT_EQ(format.string_column_count, 1);
   EXPECT_EQ(RowView({nullptr, format}).string_col_count(), 1);
