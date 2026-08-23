@@ -7,6 +7,7 @@
 #include <memory>
 #include <optional>
 #include <vector>
+#include <utility>
 
 #include "hyrise.hpp"
 #include "scheduler/abstract_task.hpp"
