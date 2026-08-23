@@ -56,3 +56,9 @@
 [submodule "third_party/zstd"]
 	path = third_party/zstd
 	url = https://github.com/facebook/zstd.git
+[submodule "third_party/perf-cpp"]
+	path = third_party/perf-cpp
+	url = https://github.com/jmuehlig/perf-cpp.git
+[submodule "third_party/perfetto"]
+	path = third_party/perfetto
+	url = https://github.com/google/perfetto
