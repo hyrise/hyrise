@@ -23,8 +23,8 @@ struct GroupKeyHash {
 };
 
 struct GroupKeyEqual {
-  bool operator()(const GroupKey& a, const GroupKey& b) const {
-    return std::ranges::equal(a, b);
+  bool operator()(const GroupKey& lhs, const GroupKey& rhs) const {
+    return std::ranges::equal(lhs, rhs);
   }
 };
 

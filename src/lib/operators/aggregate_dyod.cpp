@@ -43,11 +43,11 @@
 namespace hyrise {
 
 WorkerState::WorkerState(const std::vector<std::shared_ptr<WindowFunctionExpression>>& aggregates,
-                         const std::function<std::pair<GroupID, GroupID>()> reserve_new_group_id_range) {
-  const auto [initial_next_group_id, initial_max_group_id] = reserve_new_group_id_range();
+                         const std::function<std::pair<GroupID, GroupID>()>& reserve_new_group_id_range)
+    : _reserve_new_group_id_range{reserve_new_group_id_range} {
+  const auto [initial_next_group_id, initial_max_group_id] = _reserve_new_group_id_range();
   _next_group_id = initial_next_group_id;
   _max_group_id = initial_max_group_id;
-  _reserve_new_group_id_range = reserve_new_group_id_range;
 
   const auto aggregate_count = aggregates.size();
   _vectors.resize(aggregate_count);
@@ -62,8 +62,8 @@ WorkerState::WorkerState(const std::vector<std::shared_ptr<WindowFunctionExpress
       using ColumnDataType = typename decltype(type)::type;
 
       resolve_window_function(aggregate->window_function, [&](auto type) {
-        constexpr auto aggregate_function = decltype(type)::value;
-        _vectors[aggregate_index] = std::make_unique<TypedAggregateVector<ColumnDataType, aggregate_function>>();
+        constexpr auto AGGREGATE_FUNCTION = decltype(type)::value;
+        _vectors[aggregate_index] = std::make_unique<TypedAggregateVector<ColumnDataType, AGGREGATE_FUNCTION>>();
       });
     });
   }
@@ -262,8 +262,8 @@ TableColumnDefinitions AggregateDYOD::_aggregate_column_definitions() const {
       using ColumnDataType = typename decltype(type)::type;
 
       resolve_window_function(aggregate->window_function, [&](auto type) {
-        constexpr auto aggregate_function = decltype(type)::value;
-        const auto data_type = WindowFunctionTraits<ColumnDataType, aggregate_function>::RESULT_TYPE;
+        constexpr auto AGGREGATE_FUNCTION = decltype(type)::value;
+        const auto data_type = WindowFunctionTraits<ColumnDataType, AGGREGATE_FUNCTION>::RESULT_TYPE;
 
         // The expected name of `ANY(my_col)` is `any` and not `ANY(my_col)` as for all other aggregates.
         const auto name = aggregate->window_function == WindowFunction::Any ? _aggregate_column_name(aggregate_index)
@@ -291,10 +291,10 @@ std::shared_ptr<Chunk> AggregateDYOD::_write_aggregate_output_chunk(WorkerState&
       using ColumnDataType = typename decltype(type)::type;
 
       resolve_window_function(aggregate->window_function, [&](auto type) {
-        constexpr auto aggregate_function = decltype(type)::value;
-        auto& aggregate_vector = static_cast<TypedAggregateVector<ColumnDataType, aggregate_function>&>(
+        constexpr auto AGGREGATE_FUNCTION = decltype(type)::value;
+        auto& aggregate_vector = static_cast<TypedAggregateVector<ColumnDataType, AGGREGATE_FUNCTION>&>(
             worker_state.aggregate_vector(aggregate_index));
-        segments.emplace_back(_write_aggregate_segment<ColumnDataType, aggregate_function>(
+        segments.emplace_back(_write_aggregate_segment<ColumnDataType, AGGREGATE_FUNCTION>(
             aggregate_vector, _aggregate_is_nullable(aggregate_index), occupied_group_ids, start_index, end_index));
       });
     });
@@ -514,7 +514,7 @@ std::pair<GroupID, GroupID> AggregateDYOD::_reserve_new_group_id_range(MultiThre
     // TODO(anyone): Figure out how to avoid this lock. The two parallel vectors need to be resized
     // synchronously. Using a single vector where each element stores row IDs and and occupied flag
     // has worse performance.
-    std::lock_guard<std::mutex> lock(state.lock);
+    const std::lock_guard<std::mutex> lock(state.lock);
     state.row_ids.grow_to_at_least(max_group_id + 1);
     state.occupied_group_ids.grow_to_at_least(max_group_id + 1);
   }
@@ -561,10 +561,10 @@ void AggregateDYOD::_aggregate_chunk(WorkerState& worker_state, ChunkID chunk_id
     resolve_data_type(pqp_column.data_type(), [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
       resolve_window_function(aggregate->window_function, [&](auto type) {
-        constexpr auto aggregate_function = decltype(type)::value;
-        auto& aggregate_vector = static_cast<TypedAggregateVector<ColumnDataType, aggregate_function>&>(
+        constexpr auto AGGREGATE_FUNCTION = decltype(type)::value;
+        auto& aggregate_vector = static_cast<TypedAggregateVector<ColumnDataType, AGGREGATE_FUNCTION>&>(
             worker_state.aggregate_vector(aggregate_index));
-        _aggregate_segment<ColumnDataType, aggregate_function>(aggregate_vector, *segment, group_ids);
+        _aggregate_segment<ColumnDataType, AGGREGATE_FUNCTION>(aggregate_vector, *segment, group_ids);
       });
     });
   }
@@ -630,7 +630,7 @@ std::pair<std::vector<GroupID>, GroupID> AggregateDYOD::_group_ids_for_chunk(Chu
         auto row_ids = std::vector<RowID>(row_count);
         auto chunk_offset = ChunkOffset{0};
 
-        resolve_pos_list_type(reference_segment->pos_list(), [&](auto pos_list) {
+        resolve_pos_list_type(reference_segment->pos_list(), [&](const auto& pos_list) {
           for (const auto row_id : *pos_list) {
             row_ids[chunk_offset++] = row_id;
           }
@@ -788,7 +788,7 @@ DataType AggregateDYOD::_aggregate_column_data_type(const size_t aggregate_index
   return pqp_column.data_type();
 }
 
-const std::string AggregateDYOD::_aggregate_column_name(const size_t aggregate_index) const {
+std::string AggregateDYOD::_aggregate_column_name(const size_t aggregate_index) const {
   const auto input_table = left_input_table();
   const auto& aggregate = _aggregates[aggregate_index];
   const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());

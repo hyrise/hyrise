@@ -30,7 +30,7 @@ namespace hyrise {
 class WorkerState : public Noncopyable {
  public:
   explicit WorkerState(const std::vector<std::shared_ptr<WindowFunctionExpression>>& aggregates,
-                       std::function<std::pair<GroupID, GroupID>()> init_group_id_range);
+                       const std::function<std::pair<GroupID, GroupID>()>& reserve_new_group_id_range);
 
   // Merge another worker state into this instance.
   void merge(WorkerState& other);
@@ -204,8 +204,8 @@ class AggregateDYOD : public AbstractAggregateOperator {
 
   // Reserve a new range of group IDs. Returns the inclusive start and inclusive end of the new range.
   std::pair<GroupID, GroupID> _reserve_new_group_id_range();
-  std::pair<GroupID, GroupID> _reserve_new_group_id_range(SingleThreadedState& state);
-  std::pair<GroupID, GroupID> _reserve_new_group_id_range(MultiThreadedState& state);
+  static std::pair<GroupID, GroupID> _reserve_new_group_id_range(SingleThreadedState& state);
+  static std::pair<GroupID, GroupID> _reserve_new_group_id_range(MultiThreadedState& state);
 
   // Due to fuzzy ticketing, some group IDs may have been reserved, but never used. Returns a vector
   // of occupied (i.e., used) group IDs.
@@ -227,9 +227,9 @@ class AggregateDYOD : public AbstractAggregateOperator {
   void _aggregate_segment(TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector,
                           const AbstractSegment& segment, const std::vector<GroupID>& group_ids);
 
-  void _aggregate_count_star(AbstractAggregateVector& state, const std::vector<GroupID>& group_ids);
+  static void _aggregate_count_star(AbstractAggregateVector& state, const std::vector<GroupID>& group_ids);
 
-  const std::string _aggregate_column_name(const size_t aggregate_index) const;
+  std::string _aggregate_column_name(const size_t aggregate_index) const;
 
   bool _aggregate_is_nullable(const size_t aggregate_index) const;
 

@@ -17,7 +17,7 @@ void serialize_value(std::vector<std::byte>& buffer, const T& value) {
 }
 
 // Write the byte representation of the string into the byte buffer.
-void serialize_value(std::vector<std::byte>& buffer, const pmr_string& value) {
+inline void serialize_value(std::vector<std::byte>& buffer, const pmr_string& value) {
   const auto offset = buffer.size();
   buffer.resize(offset + value.size());
   std::memcpy(buffer.data() + offset, value.data(), value.size());
@@ -40,7 +40,7 @@ void serialize_value(std::vector<std::byte>& buffer, const T& value, const bool 
 
 // If `is_null` is true, write a single 0x00 byte into the buffer. If `is_null` is false
 // write a single 0x01 byte into the buffer followed by the byte representation of the string.
-void serialize_value(std::vector<std::byte>& buffer, const pmr_string& value, const bool is_null) {
+inline void serialize_value(std::vector<std::byte>& buffer, const pmr_string& value, const bool is_null) {
   if (is_null) {
     buffer.push_back(std::byte{0x01});
     return;
