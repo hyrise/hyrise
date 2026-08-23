@@ -175,7 +175,7 @@ bool with_string_segment_iterate(const std::shared_ptr<AbstractSegment>& segment
 }
 
 // Number of leading string bytes stored inline in a row.
-constexpr uint64_t PREFIX_LENGTH = 8;
+constexpr uint64_t PREFIX_LENGTH = 16;
 
 // Alignment of a materialized row.
 constexpr uint64_t ROW_ALIGNMENT = alignof(uint64_t);
