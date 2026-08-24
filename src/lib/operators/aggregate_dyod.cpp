@@ -140,10 +140,10 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
   // Initialize a byte buffer for every chunk
   _group_key_buffers.resize(chunk_count);
 
-  const auto get_new_group_id_range = [&]() {
+  const auto reserve_new_group_id_range = [&]() {
     return _reserve_new_group_id_range();
   };
-  auto state = OperatorSharedState<WorkerState>{_aggregates, get_new_group_id_range};
+  auto state = OperatorSharedState<WorkerState>{_aggregates, reserve_new_group_id_range};
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>(chunk_count);
 
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
@@ -158,7 +158,7 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
 
   // If we haven't run any jobs, attempting to merge the worker states would fail
   auto merged_worker_states = [&]() {
-    return jobs.empty() ? WorkerState(_aggregates, get_new_group_id_range) : std::move(state.merge_worker_states());
+    return jobs.empty() ? WorkerState(_aggregates, reserve_new_group_id_range) : std::move(state.merge_worker_states());
   }();
 
   // SQL requires a single output row if the input table is empty and there is no GROUP BY clause.
