@@ -123,17 +123,10 @@ std::shared_ptr<const Table> AggregateDYOD::_on_execute() {
 
   // Initialize state depending on scheduler type
   if (Hyrise::get().is_multi_threaded()) {
-    _state.emplace<MultiThreadedState>();
+    _state.emplace<MultiThreadedState>(GROUP_ID_INITIAL_CARDINALITY);
   } else {
-    _state.emplace<SingleThreadedState>();
+    _state.emplace<SingleThreadedState>(GROUP_ID_INITIAL_CARDINALITY);
   }
-
-  // clang-format off
-  std::visit([&](auto& state) {
-    state.row_ids.reserve(GROUP_ID_INITIAL_CARDINALITY);
-    state.occupied_group_ids.reserve(GROUP_ID_INITIAL_CARDINALITY);
-  }, _state);
-  // clang-format on
 
   const auto chunk_count = input_table->chunk_count();
 

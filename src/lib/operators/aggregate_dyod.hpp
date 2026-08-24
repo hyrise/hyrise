@@ -59,6 +59,11 @@ class WorkerState : public Noncopyable {
 
 // Operator state for single-threaded execution. Uses (faster) non-concurrent data structures.
 struct SingleThreadedState {
+  explicit SingleThreadedState(const GroupID group_id_initial_cardinality = 0) {
+    row_ids.reserve(group_id_initial_cardinality);
+    occupied_group_ids.reserve(group_id_initial_cardinality);
+  }
+
   boost::unordered_flat_map<GroupKey, GroupID, GroupKeyHash, GroupKeyEqual> group_id_map;
   GroupID next_group_id{0};
 
@@ -70,6 +75,11 @@ struct SingleThreadedState {
 
 // Operator state for multi-threaded execution. Uses concurrency-safe data structures.
 struct MultiThreadedState {
+  explicit MultiThreadedState(const GroupID group_id_initial_cardinality = 0) {
+    row_ids.reserve(group_id_initial_cardinality);
+    occupied_group_ids.reserve(group_id_initial_cardinality);
+  }
+
   tbb::concurrent_unordered_map<GroupKey, GroupID, GroupKeyHash, GroupKeyEqual> group_id_map;
   std::atomic<GroupID> next_group_id{0};
 
