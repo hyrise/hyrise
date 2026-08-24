@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "operators/aggregate_dyod/aggregate_dyod_config.hpp"
+#include "operators/aggregate_dyod/key_primitives.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -50,16 +51,6 @@ class HllSketch : private Noncopyable {
 };
 
 inline HllSketch::HllSketch() : _registers(REGISTER_COUNT, uint8_t{0}) {}
-
-// MurmurHash3's 64-bit finalizer
-inline uint64_t mix64(uint64_t hash) {
-  constexpr auto SHIFT = uint64_t{33};
-  hash ^= hash >> SHIFT;
-  hash *= 0xff51afd7ed558ccdull;
-  hash ^= hash >> SHIFT;
-  hash *= 0xc4ceb9fe1a85ec53ull;
-  return hash ^ (hash >> SHIFT);
-}
 
 inline void HllSketch::add(const uint64_t key_hash) {
   constexpr auto REMAINING_BIT_COUNT = size_t{64} - HLL_PRECISION;

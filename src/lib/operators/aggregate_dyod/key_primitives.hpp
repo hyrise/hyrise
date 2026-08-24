@@ -100,6 +100,16 @@ inline uint64_t hash_bytes(const std::byte* data, const size_t length) {
   return hash_bytes(data, length, FNV_OFFSET_BASIS);
 }
 
+// MurmurHash3's 64-bit finalizer
+inline uint64_t mix64(uint64_t hash) {
+  constexpr auto SHIFT = uint64_t{33};
+  hash ^= hash >> SHIFT;
+  hash *= 0xff51afd7ed558ccdull;
+  hash ^= hash >> SHIFT;
+  hash *= 0xc4ceb9fe1a85ec53ull;
+  return hash ^ (hash >> SHIFT);
+}
+
 /**
  * Overflow storage for string key content that does not fit a key's inline string blob.
  *

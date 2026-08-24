@@ -9,7 +9,6 @@
 #include <type_traits>
 #include <vector>
 
-#include "operators/aggregate_dyod/hyperloglog.hpp"
 #include "operators/aggregate_dyod/key_primitives.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
