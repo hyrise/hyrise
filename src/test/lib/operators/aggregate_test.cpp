@@ -20,6 +20,7 @@
 #include "operators/join_nested_loop.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
+#include "scheduler/node_queue_scheduler.hpp"
 #include "operators/validate.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/mvcc_data.hpp"
@@ -918,6 +919,30 @@ TYPED_TEST(OperatorsAggregateTest, StringVariations) {
   EXPECT_EQ(values_sorted, result_values_sorted);
 }
 
+TYPED_TEST(OperatorsAggregateTest, MultiThreadingMin) {
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+  test_output<TypeParam>(this->_table_wrapper_1_1, {{ColumnID{1}, WindowFunction::Min}}, {ColumnID{0}},
+                         "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/min.tbl");
+}
+
+TYPED_TEST(OperatorsAggregateTest, MultiThreadingAny) {
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+  test_output<TypeParam>(this->_table_wrapper_1_0_null, {{ColumnID{0}, WindowFunction::Any}}, {ColumnID{1}},
+                         "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_0agg/result_any_null.tbl", false);
+}
+
+TYPED_TEST(OperatorsAggregateTest, MultiThreadingCount) {
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+  test_output<TypeParam>(this->_table_wrapper_1_1, {{ColumnID{1}, WindowFunction::Count}}, {ColumnID{0}},
+                         "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/count.tbl");
+}
+
+TYPED_TEST(OperatorsAggregateTest, MultiThreadingCountDistinct) {
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+  test_output<TypeParam>(this->_table_wrapper_1_1, {{ColumnID{1}, WindowFunction::CountDistinct}}, {ColumnID{0}},
+                         "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/count_distinct.tbl");
+}
+
 TYPED_TEST(OperatorsAggregateTest, FilteredDictionary) {
   const auto table =
       std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}, {"b", DataType::Int, false}},
@@ -978,5 +1003,4 @@ TYPED_TEST(OperatorsAggregateTest, FilteredDictionary) {
     EXPECT_TABLE_EQ_UNORDERED(aggregate->get_output(), expected_result);
   }
 }
-
 }  // namespace hyrise

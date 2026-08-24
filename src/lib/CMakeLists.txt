@@ -219,6 +219,10 @@ set(
     operators/abstract_read_only_operator.hpp
     operators/abstract_read_write_operator.cpp
     operators/abstract_read_write_operator.hpp
+    operators/aggregate/aggregate_vector.hpp
+    operators/aggregate/resolve_window_function.hpp
+    operators/aggregate/serialize.hpp
+    operators/aggregate/types.hpp
     operators/aggregate/window_function_traits.hpp
     operators/aggregate_dyod.cpp
     operators/aggregate_dyod.hpp
