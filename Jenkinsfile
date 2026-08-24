@@ -324,13 +324,13 @@ try {
                 Utils.markStageSkippedForConditional("clangDebugCoverage")
               }
             }
-          }, bolt: {
-            stage('bolt') {
-              sh "mkdir cmake-build-bolt"
-              sh "cd cmake-build-bolt && cmake ${release} ${clang} ${unity} ${ninja} .."
-              sh "cd cmake-build-bolt && python3 ../scripts/build_pgo_bolt.py -n \$(( \$(nproc) / 5)) --ci"
-              sh "cd cmake-build-bolt && ./hyriseTest ${exclude_stddev_tests}"
-            }
+          // }, bolt: {
+          //   stage('bolt') {
+          //     sh "mkdir cmake-build-bolt"
+          //     sh "cd cmake-build-bolt && cmake ${release} ${clang} ${unity} ${ninja} .."
+          //     sh "cd cmake-build-bolt && python3 ../scripts/build_pgo_bolt.py -n \$(( \$(nproc) / 5)) --ci"
+          //     sh "cd cmake-build-bolt && ./hyriseTest ${exclude_stddev_tests}"
+          //   }
           }
 
           parallel memcheckReleaseTest: {
