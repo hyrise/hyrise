@@ -1320,7 +1320,7 @@ std::shared_ptr<AbstractOperator> AggregateDYOD::_on_deep_copy(
   return std::make_shared<AggregateDYOD>(copied_left_input, _aggregates, _groupby_column_ids);
 }
 
-void AggregateDYOD::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
+void AggregateDYOD::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& /*parameters*/) {}
 
 void AggregateDYOD::_on_cleanup() {}
 
