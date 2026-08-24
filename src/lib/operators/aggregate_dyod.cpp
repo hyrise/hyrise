@@ -180,12 +180,13 @@ class StandardAggregator : public AbstractAggregator {
       }
     }
 
-    const auto& segment = *chunk.get_segment(_column_id);
+    // Hold the shared_ptr while scanning; a concurrent ChunkEncoder may swap the segment out.
+    const auto segment = chunk.get_segment(_column_id);
     if constexpr (std::is_same_v<ColumnDataType, pmr_string> &&
                   (window_function == WindowFunction::Min || window_function == WindowFunction::Max)) {
       // segment_iterate materializes every string by value; decoded views skip the per-row copies.
       auto& decoded = _decode_scratch[worker_id];
-      decode_string_column(segment, decoded);
+      decode_string_column(*segment, decoded);
       auto accumulator = std::move(state.accumulator);
       auto count = state.count;
       const auto row_count = decoded.values.size();
@@ -206,7 +207,7 @@ class StandardAggregator : public AbstractAggregator {
 
     auto accumulator = state.accumulator;
     auto count = state.count;
-    segment_iterate<ColumnDataType>(segment, [&](const auto& position) {
+    segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
       if (position.is_null()) {
         return;
       }
@@ -441,7 +442,8 @@ class CountDistinctAggregator : public AbstractAggregator {
     auto& set = _states[worker_id].set;
     if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
       auto& decoded = _decode_scratch[worker_id];
-      decode_string_column(*chunk.get_segment(_column_id), decoded);
+      const auto segment = chunk.get_segment(_column_id);
+      decode_string_column(*segment, decoded);
       const auto row_count = decoded.values.size();
       for (auto row = size_t{0}; row < row_count; ++row) {
         if (decoded.nulls[row] == 0) {
