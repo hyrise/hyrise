@@ -10,6 +10,7 @@
 
 #include "operators/aggregate_dyod/aggregate_dyod_config.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
@@ -114,7 +115,9 @@ inline PartitionCount choose_partition_count(const size_t cardinality_estimate, 
     return (dividend / divisor) + (dividend % divisor == 0 ? 0 : 1);
   };
 
+  // max_partition_count() returns a power of two, so neither bit_ceil below can exceed it.
   const auto maximum_partition_count = static_cast<size_t>(max_partition_count(stream_count));
+  DebugAssert(std::has_single_bit(maximum_partition_count), "max_partition_count() must return a power of two.");
   const auto minimum_partition_count =
       std::bit_ceil(std::min(std::max(size_t{1}, worker_count), maximum_partition_count));
   const auto target_partition_count =
