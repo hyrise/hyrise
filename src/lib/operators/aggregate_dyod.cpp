@@ -899,8 +899,8 @@ std::vector<OutputColumns> run_merge_phase(const KeySchema& key_schema, const Ag
     PartitionId partition;
     size_t first_store;
     size_t last_store;
-    size_t split_index;  // index into split_partitions, or NO_SPLIT for a job covering every store
-    size_t split_way;    // this job's slot among its partition's sub-jobs
+    size_t split_index;  // Index into split_partitions, or NO_SPLIT for a job covering every store.
+    size_t split_way;    // This job's slot among its partition's sub-jobs.
   };
 
   // A split partition's sub-jobs publish their maps here and count down; the last one combines them and emits.

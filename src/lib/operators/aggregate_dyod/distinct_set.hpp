@@ -48,7 +48,7 @@ class DistinctSet : private Noncopyable {
   using ValueView = std::conditional_t<std::is_same_v<ColumnType, pmr_string>, std::string_view, ColumnType>;
 
   /**
-   * returns true iff no equal value was recorded for this slot since the last clear().
+   * Returns true iff no equal value was recorded for this slot since the last clear().
    */
   bool insert(uint32_t slot, ValueView value);
 

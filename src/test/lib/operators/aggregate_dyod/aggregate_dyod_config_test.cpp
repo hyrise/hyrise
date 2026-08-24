@@ -108,8 +108,6 @@ TEST_F(AggregateDYODConfigTest, MaxPartitionCountRespectsAbsoluteCeiling) {
   EXPECT_EQ(max_partition_count_for(sizes, 1), MAX_PARTITION_COUNT);
 }
 
-
-
 TEST_F(AggregateDYODConfigTest, MorselRowsQuartersADefaultChunk) {
   EXPECT_EQ(MORSEL_ROWS, 16384);
 }

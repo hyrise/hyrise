@@ -25,11 +25,11 @@ namespace hyrise {
 // dispatches to one of a bounded set of concrete schema types; the scatter and merge pipelines are then instantiated
 // over that one concrete type. The types (each in its own header, all built on the primitives in key_primitives.hpp):
 //
-//   NumericShortKeySchema<Width>: Width in {4,8,12,16,20,24} bytes (numeric-only group-by. hash/equals fixed-size).
+//   NumericShortKeySchema<width>: width in {4,8,12,16,20,24} bytes (numeric-only group-by. hash/equals fixed-size).
 //   NumericArbitraryKeySchema: numeric-only group-by wider than 24 bytes; runtime-length hash/equals.
 //   MixedKeySchema<len_width>: at least one string and at least one non-string column. len_width in {1,2,4,8} is the
 //                             per-string length-prefix field width.
-//   StringOnlyKeySchema<LenWidth>: all columns are strings; a MixedKeySchema with a zero-width numeric prefix.
+//   StringOnlyKeySchema<len_width>: all columns are strings; a MixedKeySchema with a zero-width numeric prefix.
 
 /**
  * How a query's string key fields are sized: the per-string length-prefix field width and the total inline blob

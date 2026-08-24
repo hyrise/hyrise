@@ -36,7 +36,7 @@ class AggregateSchema {
   ColumnID source_column(size_t aggregate_index) const;
 
   /**
-   * returns the number of distinct scattered source columns (COUNT(*) contributes none).
+   * Returns the number of distinct scattered source columns (COUNT(*) contributes none).
    */
   size_t value_stream_count() const;
   const AbstractValueScatterColumn& value_stream(size_t stream_index) const;

@@ -151,8 +151,8 @@ constexpr size_t STRING_BLOB_BYTES_PER_COLUMN = 8;
 constexpr size_t DICTIONARY_BOUND_SCAN_LIMIT = size_t{1024} * 1024;
 
 /**
- * Number of distinct output groups where the low-cardinality path is taken
-*/
+ * Number of distinct output groups where the low-cardinality path is taken.
+ */
 size_t low_cardinality_threshold();
 
 /**
