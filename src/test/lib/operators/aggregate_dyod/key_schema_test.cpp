@@ -180,7 +180,7 @@ void expect_unpack_round_trip(const KeySchema& schema, const TableColumnDefiniti
                               const std::vector<std::vector<AllTypeVariant>>& expected_rows) {
   auto output = OutputColumns{definitions, /*seal_threshold=*/1024};
   for (auto row = size_t{0}; row < keys.size(); ++row) {
-    schema.unpack(keys[row].data(), output, row);
+    schema.unpack(keys[row].data(), output);
   }
   output.seal_all();
 

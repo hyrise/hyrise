@@ -221,7 +221,7 @@ void MergeMap<KeySchema>::flush_into(OutputColumns& output) const {
   const auto width = _key_schema->packed_width();
   const auto slot_count = size();
   for (auto slot = size_t{0}; slot < slot_count; ++slot) {
-    _key_schema->unpack(_keys.data() + (slot * width), output, slot);
+    _key_schema->unpack(_keys.data() + (slot * width), output);
   }
 
   const auto group_by_count = _key_schema->column_count();

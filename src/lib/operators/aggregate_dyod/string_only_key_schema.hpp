@@ -51,7 +51,7 @@ class StringOnlyKeySchema {
   void decode(std::span<const AbstractSegment* const> group_by_segments, KeyDecodeScratch& scratch) const;
   void pack(const KeyDecodeScratch& scratch, ChunkOffset chunk_offset, std::byte* key_out,
             StringSpillBuffer& spill_buffer) const;
-  void unpack(const std::byte* key, OutputColumns& output, size_t output_row) const;
+  void unpack(const std::byte* key, OutputColumns& output) const;
   uint64_t hash(const std::byte* key) const;
   bool equals(const std::byte* lhs, const std::byte* rhs) const;
   void reintern_spill(std::byte* key, StringSpillBuffer& spill_buffer) const;
@@ -98,8 +98,7 @@ void StringOnlyKeySchema<len_width>::decode(const std::span<const AbstractSegmen
 }
 
 template <size_t len_width>
-void StringOnlyKeySchema<len_width>::unpack(const std::byte* key, OutputColumns& output,
-                                            const size_t /*output_row*/) const {
+void StringOnlyKeySchema<len_width>::unpack(const std::byte* key, OutputColumns& output) const {
   unpack_string_columns(_string_columns, len_width, _blob_offset, _fixed_part_width, key, output);
 }
 

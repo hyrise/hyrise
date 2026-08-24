@@ -241,7 +241,7 @@ class BaseNumericKeyLane {
    * Reverse of pack(): decode this lane's value and append it (or a NULL) to its output column.
    */
   virtual void unpack(const std::byte* key, const std::byte* null_bitmap, OutputColumns& output,
-                      size_t output_column_index, size_t output_row) const = 0;
+                      size_t output_column_index) const = 0;
 };
 
 /**
@@ -257,8 +257,8 @@ class NumericKeyLane : public BaseNumericKeyLane {
 
   void decode(const AbstractSegment& segment, size_t row_begin, size_t row_end,
               KeyDecodeScratch::NumericLane& lane) const override;
-  void unpack(const std::byte* key, const std::byte* null_bitmap, OutputColumns& output, size_t output_column_index,
-              size_t output_row) const override;
+  void unpack(const std::byte* key, const std::byte* null_bitmap, OutputColumns& output,
+              size_t output_column_index) const override;
 
  private:
   ColumnID _column_id;
@@ -790,7 +790,7 @@ void NumericKeyLane<T>::decode(const AbstractSegment& segment, const size_t row_
 
 template <typename T>
 void NumericKeyLane<T>::unpack(const std::byte* key, const std::byte* null_bitmap, OutputColumns& output,
-                               const size_t output_column_index, const size_t /*output_row*/) const {
+                               const size_t output_column_index) const {
   auto& output_column = static_cast<TypedOutputColumn<T>&>(output.column(output_column_index));
   if (_null_bit_index != NO_NULL_BIT && null_bit_set(null_bitmap, _null_bit_index)) {
     output_column.append_null();

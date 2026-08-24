@@ -56,7 +56,7 @@ class NumericShortKeySchema {
   /**
    * Unpack a packed key back into typed output values, one appended cell per group-by column.
    */
-  void unpack(const std::byte* key, OutputColumns& output, size_t output_row) const;
+  void unpack(const std::byte* key, OutputColumns& output) const;
   /**
    * Hash a packed key over its full fixed width.
    */
@@ -111,10 +111,10 @@ void NumericShortKeySchema<width>::decode(const std::span<const AbstractSegment*
 }
 
 template <size_t width>
-void NumericShortKeySchema<width>::unpack(const std::byte* key, OutputColumns& output, const size_t output_row) const {
+void NumericShortKeySchema<width>::unpack(const std::byte* key, OutputColumns& output) const {
   const auto lane_count = _lanes.size();
   for (auto index = size_t{0}; index < lane_count; ++index) {
-    _lanes[index].lane->unpack(key, key, output, index, output_row);
+    _lanes[index].lane->unpack(key, key, output, index);
   }
 }
 

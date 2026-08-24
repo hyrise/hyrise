@@ -41,7 +41,7 @@ class NumericArbitraryKeySchema {
   void decode(std::span<const AbstractSegment* const> group_by_segments, KeyDecodeScratch& scratch) const;
   void pack(const KeyDecodeScratch& scratch, ChunkOffset chunk_offset, std::byte* key_out,
             StringSpillBuffer& spill_buffer) const;
-  void unpack(const std::byte* key, OutputColumns& output, size_t output_row) const;
+  void unpack(const std::byte* key, OutputColumns& output) const;
   uint64_t hash(const std::byte* key) const;
   bool equals(const std::byte* lhs, const std::byte* rhs) const;
 
@@ -85,11 +85,10 @@ inline void NumericArbitraryKeySchema::decode(const std::span<const AbstractSegm
   decode(group_by_segments, 0, group_by_segments.front()->size(), scratch);
 }
 
-inline void NumericArbitraryKeySchema::unpack(const std::byte* key, OutputColumns& output,
-                                              const size_t output_row) const {
+inline void NumericArbitraryKeySchema::unpack(const std::byte* key, OutputColumns& output) const {
   const auto lane_count = _lanes.size();
   for (auto index = size_t{0}; index < lane_count; ++index) {
-    _lanes[index].lane->unpack(key, key, output, index, output_row);
+    _lanes[index].lane->unpack(key, key, output, index);
   }
 }
 

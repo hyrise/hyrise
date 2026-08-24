@@ -64,7 +64,7 @@ class MixedKeySchema {
   void decode(std::span<const AbstractSegment* const> group_by_segments, KeyDecodeScratch& scratch) const;
   void pack(const KeyDecodeScratch& scratch, ChunkOffset chunk_offset, std::byte* key_out,
             StringSpillBuffer& spill_buffer) const;
-  void unpack(const std::byte* key, OutputColumns& output, size_t output_row) const;
+  void unpack(const std::byte* key, OutputColumns& output) const;
   uint64_t hash(const std::byte* key) const;
   bool equals(const std::byte* lhs, const std::byte* rhs) const;
   /**
@@ -127,10 +127,10 @@ void MixedKeySchema<len_width>::decode(const std::span<const AbstractSegment* co
 }
 
 template <size_t len_width>
-void MixedKeySchema<len_width>::unpack(const std::byte* key, OutputColumns& output, const size_t output_row) const {
+void MixedKeySchema<len_width>::unpack(const std::byte* key, OutputColumns& output) const {
   const auto lane_count = _numeric_lanes.size();
   for (auto index = size_t{0}; index < lane_count; ++index) {
-    _numeric_lanes[index].lane->unpack(key, key, output, _numeric_tuple_indices[index], output_row);
+    _numeric_lanes[index].lane->unpack(key, key, output, _numeric_tuple_indices[index]);
   }
   unpack_string_columns(_string_columns, len_width, _blob_offset, _fixed_part_width, key, output);
 }
