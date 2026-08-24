@@ -50,6 +50,8 @@
 
 namespace hyrise {
 
+namespace {
+
 class AbstractAggregator {
  public:
   virtual ~AbstractAggregator() = default;
@@ -60,7 +62,6 @@ class AbstractAggregator {
   virtual TableColumnDefinition output_column_definition() const = 0;
 };
 
-namespace {
 template <typename Worker>
 void run_workers(const size_t worker_count, const Worker& worker) {
   // The immediate scheduler executes JobTasks sequentially; direct calls avoid their setup overhead.

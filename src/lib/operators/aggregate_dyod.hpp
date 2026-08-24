@@ -15,8 +15,6 @@
 
 namespace hyrise {
 
-class AbstractAggregator;
-
 /**
  * Parallel, radix-partitioned hash aggregation operator.
  *
@@ -58,9 +56,6 @@ class AggregateDYOD : public AbstractAggregateOperator {
    * pipeline (_aggregate).
    */
   std::shared_ptr<const Table> _on_execute() override;
-
-  std::vector<std::unique_ptr<AbstractAggregator>> _build_aggregators(
-      const std::shared_ptr<const Table>& input_table) const;
 
   std::shared_ptr<AbstractOperator> _on_deep_copy(
       const std::shared_ptr<AbstractOperator>& copied_left_input,
