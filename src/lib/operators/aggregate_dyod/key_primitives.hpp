@@ -223,9 +223,9 @@ struct KeyDecodeScratch {
  * One instance is resolved per numeric group-by column at schema build (concrete subclass NumericKeyLane<T> per
  * DataType) and held by the schema; decode() is then called once per chunk and unpack() once per output row.
  */
-class AbstractNumericKeyLane {
+class BaseNumericKeyLane {
  public:
-  virtual ~AbstractNumericKeyLane() = default;
+  virtual ~BaseNumericKeyLane() = default;
 
   /**
    * Decode rows [row_begin, row_end) of one chunk's column into the lane's flat scratch buffer.
@@ -247,11 +247,11 @@ class AbstractNumericKeyLane {
 /**
  * Concrete numeric lane, monomorphized over the column's type T (int32_t/int64_t/float/double).
  *
- * Implements AbstractNumericKeyLane: decode() applies the sign-bit-XOR bias for integers or the -0.0/NaN
+ * Implements BaseNumericKeyLane: decode() applies the sign-bit-XOR bias for integers or the -0.0/NaN
  * canonicalization for floats, and unpack() inverts it.
  */
 template <typename T>
-class NumericKeyLane : public AbstractNumericKeyLane {
+class NumericKeyLane : public BaseNumericKeyLane {
  public:
   NumericKeyLane(ColumnID column_id, uint32_t field_offset, uint32_t null_bit_index);
 
@@ -288,7 +288,7 @@ struct NumericLaneField {
 
 // One resolved numeric group-by column: the polymorphic lane plus its layout facts.
 struct NumericKeyLaneEntry {
-  std::unique_ptr<AbstractNumericKeyLane> lane;
+  std::unique_ptr<BaseNumericKeyLane> lane;
   NumericLaneField field;
 };
 
@@ -542,7 +542,7 @@ inline KeyLayout compute_key_layout(const std::vector<ColumnID>& group_by_column
 
 inline NumericKeyLaneEntry make_numeric_lane(const DataType data_type, const ColumnID column_id,
                                              const uint32_t field_offset, const uint32_t null_bit_index) {
-  auto lane = std::unique_ptr<AbstractNumericKeyLane>{};
+  auto lane = std::unique_ptr<BaseNumericKeyLane>{};
   switch (data_type) {
     case DataType::Int:
       lane = std::make_unique<NumericKeyLane<int32_t>>(column_id, field_offset, null_bit_index);

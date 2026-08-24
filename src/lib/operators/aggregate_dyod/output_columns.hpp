@@ -26,9 +26,9 @@ namespace hyrise {
  * builders per output column. append()/append_null() add a single value; the buffer becomes a ValueSegment only when
  * OutputColumns seals all of a worker's columns together at a partition boundary.
  */
-class AbstractOutputColumn {
+class BaseOutputColumn {
  public:
-  virtual ~AbstractOutputColumn() = default;
+  virtual ~BaseOutputColumn() = default;
 
   /**
    * Seal the current in-progress buffer into a ValueSegment (at whatever size it has reached) and start a fresh one.
@@ -45,14 +45,14 @@ class AbstractOutputColumn {
   virtual size_t sealed_chunk_count() const = 0;
 
  protected:
-  AbstractOutputColumn() = default;
+  BaseOutputColumn() = default;
 };
 
 /**
  * Concrete typed output-column builder for element type T.
  */
 template <typename T>
-class TypedOutputColumn : public AbstractOutputColumn {
+class TypedOutputColumn : public BaseOutputColumn {
  public:
   TypedOutputColumn(bool nullable, size_t reserve_hint);
 
@@ -132,7 +132,7 @@ class OutputColumns : private Noncopyable {
  public:
   OutputColumns(const TableColumnDefinitions& output_column_definitions, size_t seal_threshold);
 
-  AbstractOutputColumn& column(size_t output_column_index);
+  BaseOutputColumn& column(size_t output_column_index);
 
   /**
    * At a partition boundary, conditionally cut a chunk: if the in-progress row count has reached seal_threshold, seal
@@ -143,7 +143,7 @@ class OutputColumns : private Noncopyable {
   void seal_all();
 
  private:
-  std::vector<std::unique_ptr<AbstractOutputColumn>> _columns;
+  std::vector<std::unique_ptr<BaseOutputColumn>> _columns;
   size_t _seal_threshold;
 };
 
@@ -159,7 +159,7 @@ inline OutputColumns::OutputColumns(const TableColumnDefinitions& output_column_
   }
 }
 
-inline AbstractOutputColumn& OutputColumns::column(const size_t output_column_index) {
+inline BaseOutputColumn& OutputColumns::column(const size_t output_column_index) {
   return *_columns[output_column_index];
 }
 
