@@ -190,8 +190,8 @@ class AggregateDYOD : public AbstractAggregateOperator {
   void _create_aggregate_column_definitions(boost::hana::basic_type<ColumnType> /*type*/, ColumnID column_index,
                                             WindowFunction aggregate_function);
 
-  uint64_t _groupby_string_count = 0;
-  uint64_t _normalized_key_size = 0;
+  uint64_t _groupby_string_count{0};
+  uint64_t _normalized_key_size{0};
 
   std::unordered_map<ColumnID, uint64_t> _aggregate_column_position;
   std::vector<ColumnID> _unique_aggregate_columns;
