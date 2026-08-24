@@ -20,17 +20,15 @@ Therefore, we partially specialize the whole class and define the get_aggregate_
 template <typename ColumnDataType, typename AggregateType, WindowFunction aggregate_function>
 class WindowFunctionBuilder {
  public:
-  void get_aggregate_function() {
+  constexpr void get_aggregate_function() {
     Fail("Invalid aggregate function");
   }
 };
 
-using StandardDeviationSampleData = std::array<double, 4>;
-
 template <typename ColumnDataType, typename AggregateType>
 class WindowFunctionBuilder<ColumnDataType, AggregateType, WindowFunction::Min> {
  public:
-  auto get_aggregate_function() {
+  constexpr auto get_aggregate_function() {
     return [](const ColumnDataType& new_value, const size_t aggregate_count, AggregateType& accumulator) {
       // We need to check if we have already seen a value before (`aggregate_count > 0`) - otherwise, `accumulator`
       // holds an invalid value. While we might initialize `accumulator` with the smallest possible numerical value,
@@ -46,7 +44,7 @@ class WindowFunctionBuilder<ColumnDataType, AggregateType, WindowFunction::Min> 
 template <typename ColumnDataType, typename AggregateType>
 class WindowFunctionBuilder<ColumnDataType, AggregateType, WindowFunction::Max> {
  public:
-  auto get_aggregate_function() {
+  constexpr auto get_aggregate_function() {
     return [](const ColumnDataType& new_value, const size_t aggregate_count, AggregateType& accumulator) {
       if (aggregate_count == 0 || value_greater(new_value, accumulator)) {
         // New maximum found
@@ -59,7 +57,7 @@ class WindowFunctionBuilder<ColumnDataType, AggregateType, WindowFunction::Max> 
 template <typename ColumnDataType, typename AggregateType>
 class WindowFunctionBuilder<ColumnDataType, AggregateType, WindowFunction::Sum> {
  public:
-  auto get_aggregate_function() {
+  constexpr auto get_aggregate_function() {
     return [](const ColumnDataType& new_value, const size_t /*aggregate_count*/, AggregateType& accumulator) {
       // Add new value to sum - no need to check if this is the first value as `sum` is only defined on numerical values
       // and the accumulator is initialized with 0.
@@ -71,7 +69,7 @@ class WindowFunctionBuilder<ColumnDataType, AggregateType, WindowFunction::Sum> 
 template <typename ColumnDataType, typename AggregateType>
 class WindowFunctionBuilder<ColumnDataType, AggregateType, WindowFunction::Avg> {
  public:
-  auto get_aggregate_function() {
+  constexpr auto get_aggregate_function() {
     // We reuse Sum here, as updating an average value for every row is costly and prone to problems regarding
     // precision. To get the average, the aggregate operator needs to count the number of elements contributing to this
     // sum, and divide the final sum by that number.
@@ -79,10 +77,12 @@ class WindowFunctionBuilder<ColumnDataType, AggregateType, WindowFunction::Avg> 
   }
 };
 
+using StandardDeviationSampleData = std::array<double, 4>;
+
 template <typename ColumnDataType, typename AggregateType>
 class WindowFunctionBuilder<ColumnDataType, AggregateType, WindowFunction::StandardDeviationSample> {
  public:
-  auto get_aggregate_function() {
+  constexpr auto get_aggregate_function() {
     return [](const ColumnDataType& new_value, const size_t /*aggregate_count*/,
               StandardDeviationSampleData& accumulator) {
       if constexpr (std::is_arithmetic_v<ColumnDataType>) {
@@ -119,7 +119,7 @@ class WindowFunctionBuilder<ColumnDataType, AggregateType, WindowFunction::Stand
 template <typename ColumnDataType, typename AggregateType>
 class WindowFunctionBuilder<ColumnDataType, AggregateType, WindowFunction::Count> {
  public:
-  auto get_aggregate_function() {
+  constexpr auto get_aggregate_function() {
     return [](const ColumnDataType&, const size_t aggregate_count, AggregateType& accumulator) {};
   }
 };
@@ -127,7 +127,7 @@ class WindowFunctionBuilder<ColumnDataType, AggregateType, WindowFunction::Count
 template <typename ColumnDataType, typename AggregateType>
 class WindowFunctionBuilder<ColumnDataType, AggregateType, WindowFunction::CountDistinct> {
  public:
-  auto get_aggregate_function() {
+  constexpr auto get_aggregate_function() {
     return [](const ColumnDataType&, const size_t aggregate_count, AggregateType& accumulator) {};
   }
 };
