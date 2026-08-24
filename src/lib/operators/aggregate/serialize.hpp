@@ -7,6 +7,23 @@
 
 namespace hyrise {
 
+// Estimate the serialized value size of values for the given type. This overestimates in case of many null values.
+template <typename T>
+  requires std::is_trivially_copyable_v<T>
+constexpr size_t serialized_value_size(const bool is_nullable) {
+  return is_nullable ? 1 + sizeof(T) : sizeof(T);
+}
+
+// This is just a wild guess.
+static constexpr auto ESTIMATED_AVERAGE_STRING_LENGTH = size_t{3};
+
+// Estimate the serialized value size of string values. This overestimates in case of many null values.
+template <typename T>
+  requires std::is_same_v<T, pmr_string>
+constexpr size_t serialized_value_size(const bool is_nullable) {
+  return is_nullable ? 1 + ESTIMATED_AVERAGE_STRING_LENGTH : ESTIMATED_AVERAGE_STRING_LENGTH;
+}
+
 // Write the byte representation of the value into the byte buffer.
 template <typename T>
   requires std::is_trivially_copyable_v<T>

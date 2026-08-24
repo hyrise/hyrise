@@ -609,11 +609,13 @@ std::pair<std::vector<GroupID>, GroupID> AggregateDYOD::_group_ids_for_chunk(Chu
     const auto groupby_column_id = _groupby_column_ids[groupby_column_index];
     const auto data_type = input_table->column_data_type(groupby_column_id);
     const auto is_nullable = input_table->column_is_nullable(groupby_column_id);
-    auto& column_buffer = column_buffers[groupby_column_index];
-    auto& starts = column_starts[groupby_column_index];
-
     resolve_data_type(data_type, [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
+
+      auto& column_buffer = column_buffers[groupby_column_index];
+      auto& starts = column_starts[groupby_column_index];
+      column_buffer.reserve(row_count * serialized_value_size<ColumnDataType>(is_nullable));
+
       const auto segment = chunk.get_segment(groupby_column_id);
 
       segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
