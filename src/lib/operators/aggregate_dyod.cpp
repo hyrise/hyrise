@@ -153,6 +153,8 @@ class StandardAggregator : public AbstractAggregator {
     if constexpr (window_function == WindowFunction::Min || window_function == WindowFunction::Max) {
       const auto pruning_statistics = chunk.pruning_statistics();
       if (pruning_statistics && static_cast<size_t>(_column_id) < pruning_statistics->size()) {
+        DebugAssert((*pruning_statistics)[_column_id]->data_type() == data_type_from_type<ColumnDataType>(),
+                    "Pruning statistics do not match the column type.");
         const auto& attribute_statistics =
             static_cast<const AttributeStatistics<ColumnDataType>&>(*(*pruning_statistics)[_column_id]);
 
