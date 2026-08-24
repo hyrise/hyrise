@@ -759,11 +759,8 @@ void AggregateDYOD::_aggregate_segment(TypedAggregateVector<ColumnDataType, aggr
   segment_iterate<ColumnDataType>(segment, [&](const auto& position) {
     if (!position.is_null()) {
       const auto group_id = group_ids[position.chunk_offset()];
-
-      if (aggregate_vector.count(group_id) == 0) {
-        aggregate_vector.accumulator(group_id) = position.value();
-        aggregate_vector.increment_count(group_id);
-      }
+      aggregate_vector.accumulator(group_id) = position.value();
+      aggregate_vector.increment_count(group_id);
     }
   });
 }
