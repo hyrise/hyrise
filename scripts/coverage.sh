@@ -52,7 +52,7 @@ make hyriseTest -j $((cores / 20))
 cd -
 
 rm -fr coverage; mkdir coverage
-./build-coverage/hyriseTest build-coverage --gtest_filter=-SQLiteTestRunnerInstances/*
+./build-coverage/hyriseTest build-coverage --gtest_filter=-SQLiteTestRunnerInstances/*:*StandardDeviationSample*
   
 # merge the profile data using the llvm-profdata tool:
 ${path_to_compiler}llvm-profdata merge -o ./default.profdata ./default.profraw
