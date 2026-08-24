@@ -30,7 +30,7 @@ inline void sfence() noexcept {
 
 inline void copy_line(std::byte* destination, const std::byte* source) {
 #ifdef __SSE2__
-  static_assert(SWWC_LINE_BYTES % 16 == 0, "line must be a whole number of 128-bit stores");
+  static_assert(SWWC_LINE_BYTES % 16 == 0, "A line must be a whole number of 128-bit stores.");
 
   for (auto offset = size_t{0}; offset < SWWC_LINE_BYTES; offset += 16) {
     const auto vec = _mm_loadu_si128(reinterpret_cast<const __m128i*>(source + offset));
@@ -112,7 +112,7 @@ inline void Region::_grow() {
 }
 
 inline void Region::push_line(const std::byte* line) {
-  DebugAssert(_size % SWWC_LINE_BYTES == 0, "_size has to be line aligned before push_line is called");
+  DebugAssert(_size % SWWC_LINE_BYTES == 0, "_size has to be line aligned before push_line is called.");
 
   if (_size + SWWC_LINE_BYTES > _capacity) {
     _grow();
@@ -124,8 +124,8 @@ inline void Region::push_line(const std::byte* line) {
 }
 
 inline void Region::drain_partial(const std::byte* bytes, const size_t length) {
-  Assert(length < SWWC_LINE_BYTES, "A full line must use push_line()");
-  Assert(_size % SWWC_LINE_BYTES == 0, "_size has to be line aligned before drain_partial is called");
+  Assert(length < SWWC_LINE_BYTES, "A full line must use push_line().");
+  Assert(_size % SWWC_LINE_BYTES == 0, "_size has to be line aligned before drain_partial is called.");
 
   if (length == 0) {
     return;
@@ -205,12 +205,12 @@ class ScatterStore : private Noncopyable {
 inline ScatterStore::ScatterStore(const PartitionCount partition_count, const size_t key_width,
                                   const std::span<const size_t> value_stream_widths,
                                   const size_t value_null_bitmap_width, const bool needs_value_arena)
-    : _partition_count(partition_count), _value_stream_count(value_stream_widths.size()) {
+    : _partition_count{partition_count}, _value_stream_count{value_stream_widths.size()} {
   const auto partition_count_value = static_cast<size_t>(partition_count);
   Assert(partition_count_value >= 1 && partition_count_value <= MAX_PARTITION_COUNT,
-         "partition count must be in [1, MAX_PARTITION_COUNT]");
-  Assert((partition_count_value & (partition_count_value - 1)) == 0, "partition count must be a power of two");
-  Assert(key_width > 0 && key_width % 4 == 0, "key width must be a positive multiple of 4 bytes");
+         "The partition count must be in [1, MAX_PARTITION_COUNT].");
+  Assert((partition_count_value & (partition_count_value - 1)) == 0, "The partition count must be a power of two.");
+  Assert(key_width > 0 && key_width % 4 == 0, "The key width must be a positive multiple of 4 bytes.");
 
   _key_regions = std::vector<Region>(partition_count_value);
 
@@ -228,13 +228,13 @@ inline ScatterStore::ScatterStore(const PartitionCount partition_count, const si
 }
 
 inline Region& ScatterStore::key_region(const PartitionId partition) {
-  DebugAssert(static_cast<size_t>(partition) < static_cast<size_t>(_partition_count), "partition id out of range");
+  DebugAssert(static_cast<size_t>(partition) < static_cast<size_t>(_partition_count), "Partition id out of range.");
   return _key_regions[partition];
 }
 
 inline Region& ScatterStore::value_region(const PartitionId partition, const size_t value_stream_index) {
-  DebugAssert(static_cast<size_t>(partition) < static_cast<size_t>(_partition_count), "partition id out of range");
-  DebugAssert(value_stream_index < _value_stream_count, "value stream index out of range");
+  DebugAssert(static_cast<size_t>(partition) < static_cast<size_t>(_partition_count), "Partition id out of range.");
+  DebugAssert(value_stream_index < _value_stream_count, "Value stream index out of range.");
 
   const auto index = (static_cast<size_t>(partition) * _value_stream_count) + value_stream_index;
 
@@ -242,21 +242,21 @@ inline Region& ScatterStore::value_region(const PartitionId partition, const siz
 }
 
 inline Region& ScatterStore::value_null_bitmap_region(const PartitionId partition) {
-  DebugAssert(static_cast<size_t>(partition) < static_cast<size_t>(_partition_count), "partition id out of range");
-  DebugAssert(!_value_null_bitmap_regions.empty(), "no value-null-bitmap regions");
+  DebugAssert(static_cast<size_t>(partition) < static_cast<size_t>(_partition_count), "Partition id out of range.");
+  DebugAssert(!_value_null_bitmap_regions.empty(), "No value-null-bitmap regions were allocated.");
 
   return _value_null_bitmap_regions[partition];
 }
 
 inline StringSpillBuffer& ScatterStore::key_spill_buffer(const PartitionId partition) {
-  DebugAssert(static_cast<size_t>(partition) < static_cast<size_t>(_partition_count), "partition id out of range");
+  DebugAssert(static_cast<size_t>(partition) < static_cast<size_t>(_partition_count), "Partition id out of range.");
 
   return _key_spill_buffers[partition];
 }
 
 inline StringSpillBuffer& ScatterStore::value_arena(const PartitionId partition) {
-  DebugAssert(static_cast<size_t>(partition) < static_cast<size_t>(_partition_count), "partition id out of range");
-  DebugAssert(!_value_arenas.empty(), "no value arenas");
+  DebugAssert(static_cast<size_t>(partition) < static_cast<size_t>(_partition_count), "Partition id out of range.");
+  DebugAssert(!_value_arenas.empty(), "No value arenas were allocated.");
 
   return _value_arenas[partition];
 }
@@ -342,19 +342,19 @@ class ScatterHeads : private Noncopyable {
 
 inline ScatterHeads::ScatterHeads(const PartitionCount partition_count, const size_t stream_count,
                                   std::span<const size_t> stream_widths, const bool has_value_null_bitmap)
-    : _partition_count(partition_count),
-      _stream_count(stream_count),
+    : _partition_count{partition_count},
+      _stream_count{stream_count},
       _stream_widths(stream_widths.begin(), stream_widths.end()) {
-  Assert(_partition_count >= 1, "need at least one partition");
-  Assert(stream_widths.size() == stream_count, "one width per stream required");
+  Assert(_partition_count >= 1, "At least one partition is required.");
+  Assert(stream_widths.size() == stream_count, "One width per stream is required.");
 
   const auto non_value_streams = size_t{1} + (has_value_null_bitmap ? 1 : 0);
-  Assert(stream_count >= non_value_streams, "stream_count too small for its schema");
+  Assert(stream_count >= non_value_streams, "stream_count is too small for its schema.");
   _value_stream_count = stream_count - non_value_streams;
 
   for (auto stream = size_t{0}; stream < stream_count; ++stream) {
-    Assert(stream_widths[stream] > 0, "stream width must be positive");
-    Assert(SWWC_LINE_BYTES % stream_widths[stream] == 0, "stream width must evenly divide the SWWC line");
+    Assert(stream_widths[stream] > 0, "The stream width must be positive.");
+    Assert(SWWC_LINE_BYTES % stream_widths[stream] == 0, "The stream width must evenly divide the SWWC line.");
   }
 
   _staging.assign(_stream_count * _partition_count * SWWC_LINE_BYTES, std::byte{0});
@@ -362,7 +362,7 @@ inline ScatterHeads::ScatterHeads(const PartitionCount partition_count, const si
 }
 
 inline Region& ScatterHeads::_region_for(ScatterStore& store, const size_t stream, const PartitionId partition) const {
-  DebugAssert(stream < _stream_count, "stream index out of range");
+  DebugAssert(stream < _stream_count, "Stream index out of range.");
   if (stream == 0) {
     return store.key_region(partition);
   }
@@ -384,9 +384,9 @@ inline void ScatterHeads::_store_line_flush(ScatterStore& store, const size_t st
 
 inline void ScatterHeads::push(ScatterStore& store, const size_t stream, const PartitionId partition,
                                const std::byte* bytes, const size_t width) {
-  DebugAssert(stream < _stream_count, "stream index out of range");
-  DebugAssert(partition < _partition_count, "partition out of range");
-  DebugAssert(width == _stream_widths[stream], "field width must match the stream's per-row width");
+  DebugAssert(stream < _stream_count, "Stream index out of range.");
+  DebugAssert(partition < _partition_count, "Partition id out of range.");
+  DebugAssert(width == _stream_widths[stream], "The field width must match the stream's per-row width.");
 
   const auto line_offset = _line_offset(stream, partition);
   auto& fill = _fill[(stream * _partition_count) + static_cast<size_t>(partition)];
