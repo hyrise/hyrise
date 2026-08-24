@@ -64,15 +64,9 @@ class OperatorSharedState : public Noncopyable {
   // Initializes a wrapper that is able to hold state for each worker.
   template <typename... Args>
   explicit OperatorSharedState(Args&&... args) {
-    const auto args_tuple = std::make_tuple(std::forward<Args>(args)...);
-
     // NOLINTNEXTLINE(cppcoreguidelines-prefer-member-initializer)
-    _factory = [args_tuple]() {
-      return std::apply(
-          [](const auto&... args) {
-            return std::make_unique<WorkerState>(args...);
-          },
-          args_tuple);
+    _factory = [... args = std::forward<Args>(args)]() {
+      return std::make_unique<WorkerState>(args...);
     };
 
     // Reserve one slot for the main thread if the scheduler is used.
