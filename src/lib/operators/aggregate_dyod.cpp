@@ -679,8 +679,10 @@ void AggregateDYOD::Morsel::aggregate_morsel(const uint64_t aggregate_index) {
     }
 
     if constexpr (aggregate_function == WindowFunction::CountDistinct) {
-      accumulators[group_index] = pmr_vector<ColumnType>(distinct_values.begin(), distinct_values.end());
-      counts[group_index] = accumulators[group_index].size();
+      auto group_distinct_values = pmr_vector<ColumnType>(distinct_values.begin(), distinct_values.end());
+      boost::sort::pdqsort(group_distinct_values.begin(), group_distinct_values.end());
+      counts[group_index] = group_distinct_values.size();
+      accumulators[group_index] = std::move(group_distinct_values);
       group_keys[group_index] = normalized_keys[current_group_offset];
     } else {
       accumulators[group_index] = accumulator;
@@ -942,9 +944,12 @@ std::shared_ptr<ValueSegment<AggregateType>> AggregateDYOD::_aggregate_values_wi
   const auto input_table = left_input_table();
   const auto chunk_count = input_table->chunk_count();
 
+  // This is a special case for the count(*): We can simply return the row count.
   if constexpr (aggregate_function == WindowFunction::Count) {
-    accumulated_values.push_back(input_table->row_count());
-    return std::make_shared<ValueSegment<AggregateType>>(std::move(accumulated_values));
+    if (input_column_id == INVALID_COLUMN_ID) {
+      accumulated_values.push_back(static_cast<AggregateType>(input_table->row_count()));
+      return std::make_shared<ValueSegment<AggregateType>>(std::move(accumulated_values));
+    }
   }
 
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
@@ -966,6 +971,10 @@ std::shared_ptr<ValueSegment<AggregateType>> AggregateDYOD::_aggregate_values_wi
     if (value_count > 0) {
       accumulator = accumulator / static_cast<AggregateType>(value_count);
     }
+  }
+
+  if constexpr (aggregate_function == WindowFunction::Count) {
+    accumulator = static_cast<AggregateType>(value_count);
   }
 
   if constexpr (aggregate_function == WindowFunction::CountDistinct && std::is_arithmetic_v<AggregateType>) {
