@@ -227,7 +227,7 @@ class AggregateDYOD : public AbstractAggregateOperator {
   void _aggregate_segment(TypedAggregateVector<ColumnDataType, aggregate_function>& aggregate_vector,
                           const AbstractSegment& segment, const std::vector<GroupID>& group_ids);
 
-  static void _aggregate_count_star(AbstractAggregateVector& state, const std::vector<GroupID>& group_ids);
+  static void _aggregate_count_star(AbstractAggregateVector& aggregate_vector, const std::vector<GroupID>& group_ids);
 
   std::string _aggregate_column_name(const size_t aggregate_index) const;
 
