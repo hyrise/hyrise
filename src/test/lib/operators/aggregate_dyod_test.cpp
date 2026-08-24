@@ -1,6 +1,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
@@ -307,6 +308,15 @@ TEST_F(OperatorsAggregateDYODTest, EmptyInput) {
   const auto input = make_input(0);
   compare_with_aggregate_hash(input, {{ColumnID{2}, WindowFunction::Sum}, {INVALID_COLUMN_ID, WindowFunction::Count}},
                               {ColumnID{0}, ColumnID{1}});
+}
+
+TEST_F(OperatorsAggregateDYODTest, RejectsStddevSamp) {
+  const auto input = make_input(64);
+  const auto table = input->get_output();
+  const auto aggregates = std::vector<std::shared_ptr<WindowFunctionExpression>>{standard_deviation_sample_(
+      pqp_column_(ColumnID{2}, table->column_data_type(ColumnID{2}), table->column_name(ColumnID{2})))};
+  const auto aggregate_dyod = std::make_shared<AggregateDYOD>(input, aggregates, std::vector<ColumnID>{ColumnID{0}});
+  EXPECT_THROW(aggregate_dyod->execute(), std::logic_error);
 }
 
 TEST_F(OperatorsAggregateDYODTest, LowCardinalityPathNumericGroupBy) {
