@@ -87,7 +87,7 @@ class TypedAccumulatorColumn : public AbstractAccumulatorColumn {
   using AccumulatorType = typename WindowFunctionTraits<ColumnType, function>::ReturnType;
 
   std::vector<AccumulatorType> _accumulators;
-  std::vector<uint32_t> _non_null_counts;
+  std::vector<uint64_t> _non_null_counts;
 };
 
 template <typename ColumnType, WindowFunction function>
