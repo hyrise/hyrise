@@ -41,6 +41,15 @@ TEST_F(AggregateDYODConfigTest, MergeTileScratchStaysWithinL1) {
   }
 }
 
+TEST_F(AggregateDYODConfigTest, MergeTileRowsStayByteAligned) {
+  auto sizes = FALLBACK_CACHE_SIZES;
+  for (const auto l1d : {size_t{49'000}, size_t{48} * 1024 + 512, size_t{192} * 1024}) {
+    sizes.l1d_bytes = l1d;
+    EXPECT_EQ(merge_tile_rows_for(sizes) % 8, 0);
+    EXPECT_GE(merge_tile_rows_for(sizes), 64);
+  }
+}
+
 TEST_F(AggregateDYODConfigTest, MergeTileRowsGrowsWithL1) {
   auto small = FALLBACK_CACHE_SIZES;
   auto large = FALLBACK_CACHE_SIZES;

@@ -99,7 +99,8 @@ constexpr size_t MERGE_SCRATCH_L1_DIVISOR = 4;
  * Row tile size for the merge phase's resolve+fold step.
  *
  * A larger tile grows the scratch until it no longer fits in L1 (defeating the tiling); a smaller one shrinks the
- * scratch but pays more virtual fold dispatches per partition.
+ * scratch but pays more virtual fold dispatches per partition. Always a multiple of 8, so per-tile slices of a
+ * bit-per-row null bitmap start on byte boundaries.
  */
 size_t merge_tile_rows_for(const CacheSizes& sizes);
 

@@ -48,7 +48,7 @@ PartitionCount max_partition_count(const size_t stream_count) {
 }
 
 size_t merge_tile_rows_for(const CacheSizes& sizes) {
-  return sizes.l1d_bytes / MERGE_SCRATCH_L1_DIVISOR / sizeof(uint32_t);
+  return sizes.l1d_bytes / MERGE_SCRATCH_L1_DIVISOR / sizeof(uint32_t) / 8 * 8;
 }
 
 size_t merge_tile_rows() {

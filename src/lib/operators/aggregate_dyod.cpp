@@ -1100,6 +1100,7 @@ void accumulate_private_maps(const KeySchema& key_schema, const AggregateSchema&
       }
 
       const auto max_tile_rows = merge_tile_rows();
+      DebugAssert(max_tile_rows % 8 == 0, "Tile boundaries must fall on null-bitmap byte boundaries.");
       for (auto tile_start = size_t{0}; tile_start < row_count; tile_start += max_tile_rows) {
         const auto tile_rows = std::min(max_tile_rows, size_t{row_count} - tile_start);
         slots.clear();
