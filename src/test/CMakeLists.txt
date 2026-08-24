@@ -79,6 +79,7 @@ set(
     lib/null_value_test.cpp
     lib/operators/aggregate_sort_test.cpp
     lib/operators/aggregate_test.cpp
+    lib/operators/aggregate/serialize_test.cpp
     lib/operators/alias_operator_test.cpp
     lib/operators/change_meta_table_test.cpp
     lib/operators/delete_test.cpp
