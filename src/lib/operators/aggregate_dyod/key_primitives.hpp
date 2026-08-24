@@ -107,11 +107,17 @@ inline uint64_t hash_bytes(const std::byte* data, const size_t length) {
  * content-hash in its inline field plus an 8-byte pointer into this buffer. This bounds the fixed part of every key
  * while still supporting arbitrarily long strings, and lets equality short-circuit on the hash before a deep compare.
  *
- * A pointer returned by append() stays valid until clear() or destruction: the buffer chains fresh blocks and never
- * relocates live content, which is what lets a key hold a raw pointer rather than a relocatable offset.
+ * A pointer returned by allocate() or append() stays valid until clear() or destruction: the buffer chains fresh
+ * blocks and never relocates live content, which is what lets a key hold a raw pointer rather than a relocatable
+ * offset.
  */
 class StringSpillBuffer : private Noncopyable {
  public:
+  /**
+   * Reserve `length` contiguous bytes and return a stable pointer for the caller to fill.
+   */
+  std::byte* allocate(size_t length);
+
   /**
    * Copy `length` bytes of string content into the buffer and return a stable pointer to the interned copy.
    */
@@ -140,7 +146,7 @@ class StringSpillBuffer : private Noncopyable {
   size_t _current_block{0};
 };
 
-inline const std::byte* StringSpillBuffer::append(const std::byte* content, const size_t length) {
+inline std::byte* StringSpillBuffer::allocate(const size_t length) {
   while (_current_block < _blocks.size() && _blocks[_current_block].used + length > _blocks[_current_block].capacity) {
     ++_current_block;
   }
@@ -153,8 +159,13 @@ inline const std::byte* StringSpillBuffer::append(const std::byte* content, cons
 
   auto& block = _blocks[_current_block];
   auto* destination = block.data.data() + block.used;
-  std::memcpy(destination, content, length);
   block.used += length;
+  return destination;
+}
+
+inline const std::byte* StringSpillBuffer::append(const std::byte* content, const size_t length) {
+  auto* destination = allocate(length);
+  std::memcpy(destination, content, length);
   return destination;
 }
 
@@ -426,18 +437,17 @@ inline void pack_string_columns(const StringKeyColumns& string_columns, const si
     return;
   }
 
-  auto content = std::vector<std::byte>{};
-  content.reserve(total_length);
+  auto* interned = spill_buffer.allocate(total_length);
+  auto* cursor = interned;
   for (auto index = size_t{0}; index < column_count; ++index) {
     if (scratch.string_columns[index].nulls[chunk_offset] != 0) {
       continue;
     }
     const auto& value = scratch.string_columns[index].values[chunk_offset];
-    const auto* bytes = reinterpret_cast<const std::byte*>(value.data());
-    content.insert(content.end(), bytes, bytes + value.size());
+    std::memcpy(cursor, value.data(), value.size());
+    cursor += value.size();
   }
-  const auto* interned = spill_buffer.append(content.data(), content.size());
-  const auto content_hash = hash_bytes(content.data(), content.size());
+  const auto content_hash = hash_bytes(interned, total_length);
   std::memcpy(key_out + blob_offset, &content_hash, sizeof(content_hash));
   write_spill_pointer(key_out, fixed_part_width, interned);
 }
