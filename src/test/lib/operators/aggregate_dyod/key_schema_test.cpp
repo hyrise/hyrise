@@ -471,8 +471,8 @@ TEST_F(AggregateDYODKeySchemaTest, StringKeyBudgetSumsTheDictionaryMaxima) {
 
 TEST_F(AggregateDYODKeySchemaTest, StringKeyBudgetCapsTheBlobAtTheDefaultCapacity) {
   const auto definitions = TableColumnDefinitions{{"a", DataType::String, false}, {"b", DataType::String, false}};
-  const auto rows = std::vector<std::vector<AllTypeVariant>>{
-      {pmr_string{"A"}, pmr_string(40, 'x')}, {pmr_string{"N"}, pmr_string{"air"}}};
+  const auto rows = std::vector<std::vector<AllTypeVariant>>{{pmr_string{"A"}, pmr_string(40, 'x')},
+                                                             {pmr_string{"N"}, pmr_string{"air"}}};
   const auto input = make_pack_input(definitions, rows, std::nullopt, SegmentEncodingSpec{EncodingType::Dictionary});
 
   const auto budget = choose_string_key_budget(input.column_ids, *input.table, DICTIONARY_BOUND_SCAN_LIMIT);
@@ -984,14 +984,11 @@ TEST_F(AggregateDYODKeySchemaTest, NullRowIdsPackAsNullValues) {
 
 TEST_F(AggregateDYODKeySchemaTest, WindowedDecodeMatchesTheFullDecodeSlice) {
   const auto long_string = pmr_string(3 * STRING_BLOB_BYTES_PER_COLUMN, 'w');
-  const auto definitions = TableColumnDefinitions{
-      {"a", DataType::Int, true}, {"b", DataType::String, true}, {"c", DataType::Double, false}};
-  const auto rows = std::vector<std::vector<AllTypeVariant>>{{1, pmr_string{"abc"}, 1.5},
-                                                             {NullValue{}, pmr_string{""}, -0.5},
-                                                             {2, NullValue{}, 2.5},
-                                                             {3, long_string, 3.5},
-                                                             {4, pmr_string{"abc"}, 4.5},
-                                                             {NullValue{}, NullValue{}, 5.5}};
+  const auto definitions =
+      TableColumnDefinitions{{"a", DataType::Int, true}, {"b", DataType::String, true}, {"c", DataType::Double, false}};
+  const auto rows = std::vector<std::vector<AllTypeVariant>>{
+      {1, pmr_string{"abc"}, 1.5}, {NullValue{}, pmr_string{""}, -0.5}, {2, NullValue{}, 2.5},
+      {3, long_string, 3.5},       {4, pmr_string{"abc"}, 4.5},         {NullValue{}, NullValue{}, 5.5}};
   const auto input = make_pack_input(definitions, rows);
   resolve_key_schema(input.column_ids, *input.table, [&](const auto& schema) {
     expect_window_matches_full_decode(schema, input, 0, rows.size());
@@ -1003,11 +1000,8 @@ TEST_F(AggregateDYODKeySchemaTest, WindowedDecodeMatchesTheFullDecodeSlice) {
 
 TEST_F(AggregateDYODKeySchemaTest, WindowedDecodeMatchesOnDictionarySegments) {
   const auto definitions = TableColumnDefinitions{{"a", DataType::Int, true}, {"b", DataType::Long, false}};
-  const auto rows = std::vector<std::vector<AllTypeVariant>>{{1, int64_t{10}},
-                                                             {NullValue{}, int64_t{20}},
-                                                             {3, int64_t{30}},
-                                                             {4, int64_t{40}},
-                                                             {NullValue{}, int64_t{50}}};
+  const auto rows = std::vector<std::vector<AllTypeVariant>>{
+      {1, int64_t{10}}, {NullValue{}, int64_t{20}}, {3, int64_t{30}}, {4, int64_t{40}}, {NullValue{}, int64_t{50}}};
   const auto input = make_pack_input(definitions, rows, std::nullopt, SegmentEncodingSpec{EncodingType::Dictionary});
   resolve_key_schema(input.column_ids, *input.table, [&](const auto& schema) {
     expect_window_matches_full_decode(schema, input, 1, 4);
@@ -1034,12 +1028,9 @@ TEST_F(AggregateDYODKeySchemaTest, WindowedDecodeMatchesOnSingleChunkReferences)
 
 TEST_F(AggregateDYODKeySchemaTest, WindowedDecodeMatchesOnSegmentsWithoutDirectAccess) {
   const auto definitions = TableColumnDefinitions{{"a", DataType::Int, true}, {"b", DataType::String, true}};
-  const auto rows = std::vector<std::vector<AllTypeVariant>>{{1, pmr_string{"abc"}},
-                                                             {1, pmr_string{"abc"}},
-                                                             {NullValue{}, NullValue{}},
-                                                             {2, pmr_string{"xy"}},
-                                                             {3, pmr_string{"xy"}},
-                                                             {4, pmr_string{"z"}}};
+  const auto rows = std::vector<std::vector<AllTypeVariant>>{{1, pmr_string{"abc"}},     {1, pmr_string{"abc"}},
+                                                             {NullValue{}, NullValue{}}, {2, pmr_string{"xy"}},
+                                                             {3, pmr_string{"xy"}},      {4, pmr_string{"z"}}};
   const auto run_length =
       make_pack_input(definitions, rows, std::nullopt, SegmentEncodingSpec{EncodingType::RunLength});
   const auto reference = to_reference_input(make_pack_input(definitions, rows, ChunkOffset{2}));
