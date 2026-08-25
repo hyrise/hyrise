@@ -145,10 +145,11 @@ std::shared_ptr<const Table> Import::_on_execute() {
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = table->get_chunk(chunk_id);
     existing_table->append_chunk(chunk->segments(), chunk->mvcc_data());
+    existing_table->last_chunk()->set_immutable();
   }
 
-  table->set_table_statistics(TableStatistics::from_table(*table));
-  generate_chunk_pruning_statistics(table);
+  existing_table->set_table_statistics(TableStatistics::from_table(*existing_table));
+  generate_chunk_pruning_statistics(existing_table);
 
   // We must match ImportNode::output_expressions.
   return nullptr;
