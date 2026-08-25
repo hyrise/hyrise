@@ -1210,8 +1210,10 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate_low_cardinality(const KeySchema
     per_worker_private_maps.front().flush_into(per_worker_outputs.front());
     per_worker_outputs.front().seal_all();
   }
-  auto output_table = build_output_table(output_column_definitions, per_worker_outputs);
   step_performance_data.set_step_runtime(OperatorSteps::Merge, timer.lap());
+
+  auto output_table = build_output_table(output_column_definitions, per_worker_outputs);
+  step_performance_data.set_step_runtime(OperatorSteps::OutputWriting, timer.lap());
   return output_table;
 }
 
@@ -1276,6 +1278,9 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate(const KeySchema& key_schema, co
 
 std::shared_ptr<Table> AggregateDYOD::_aggregate_without_group_by(const AggregateSchema& /*aggregate_schema*/,
                                                                   const Table& input_table) {
+  auto& step_performance_data = dynamic_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
+  auto timer = Timer{};
+
   const auto aggregators = build_aggregators(input_table, _aggregates);
 
   const auto morsel_count = static_cast<size_t>(input_table.chunk_count());
@@ -1303,17 +1308,23 @@ std::shared_ptr<Table> AggregateDYOD::_aggregate_without_group_by(const Aggregat
       }
     }
   });
+  step_performance_data.set_step_runtime(OperatorSteps::Scatter, timer.lap());
+
+  for (const auto& aggregator : aggregators) {
+    aggregator->merge();
+  }
+  step_performance_data.set_step_runtime(OperatorSteps::Merge, timer.lap());
 
   _output_column_definitions.reserve(aggregators.size());
   _output_segments.reserve(aggregators.size());
   for (const auto& aggregator : aggregators) {
-    aggregator->merge();
     _output_column_definitions.push_back(aggregator->output_column_definition());
     _output_segments.push_back(aggregator->build_segment());
   }
 
   auto output_table = std::make_shared<Table>(_output_column_definitions, TableType::Data);
   output_table->append_chunk(_output_segments);
+  step_performance_data.set_step_runtime(OperatorSteps::OutputWriting, timer.lap());
   return output_table;
 }
 
