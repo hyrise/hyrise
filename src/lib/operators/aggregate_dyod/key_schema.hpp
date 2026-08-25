@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <memory>
 #include <optional>
 #include <vector>
 
@@ -12,6 +13,7 @@
 #include "operators/aggregate_dyod/numeric_arbitrary_key_schema.hpp"
 #include "operators/aggregate_dyod/numeric_short_key_schema.hpp"
 #include "operators/aggregate_dyod/string_only_key_schema.hpp"
+#include "storage/chunk.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"

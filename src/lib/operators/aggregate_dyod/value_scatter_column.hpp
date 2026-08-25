@@ -4,7 +4,6 @@
 #include <cstdint>
 #include <span>
 
-#include "all_type_variant.hpp"
 #include "operators/aggregate_dyod/aggregate_dyod_config.hpp"
 #include "operators/aggregate_dyod/key_primitives.hpp"
 #include "operators/aggregate_dyod/scatter_store.hpp"

@@ -12,6 +12,7 @@
 
 #include "operators/aggregate_dyod/aggregate_dyod_config.hpp"
 #include "operators/aggregate_dyod/key_primitives.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 #ifdef __SSE2__

@@ -8,6 +8,8 @@
 
 #include "all_type_variant.hpp"
 #include "operators/aggregate_dyod/key_primitives.hpp"
+#include "operators/aggregate_dyod/output_columns.hpp"
+#include "storage/abstract_segment.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"

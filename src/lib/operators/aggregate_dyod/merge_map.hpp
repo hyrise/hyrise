@@ -14,6 +14,7 @@
 #include "operators/aggregate_dyod/aggregate_dyod_config.hpp"
 #include "operators/aggregate_dyod/key_primitives.hpp"
 #include "operators/aggregate_dyod/output_columns.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {

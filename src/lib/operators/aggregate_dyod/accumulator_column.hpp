@@ -9,7 +9,7 @@
 #include <type_traits>
 #include <vector>
 
-#include "all_type_variant.hpp"
+#include "expression/window_function_expression.hpp"
 #include "operators/aggregate/window_function_traits.hpp"
 #include "operators/aggregate_dyod/distinct_set.hpp"
 #include "operators/aggregate_dyod/key_primitives.hpp"

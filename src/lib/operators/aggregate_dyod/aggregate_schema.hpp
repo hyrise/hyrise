@@ -11,10 +11,11 @@
 #include "expression/window_function_expression.hpp"
 #include "operators/aggregate_dyod/accumulator_column.hpp"
 #include "operators/aggregate_dyod/value_scatter_column.hpp"
-#include "storage/table.hpp"
 #include "types.hpp"
 
 namespace hyrise {
+
+class Table;
 
 /**
  * Per-query description of the requested aggregates and the value streams they read.
