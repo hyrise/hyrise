@@ -345,7 +345,7 @@ T decode_lane_value(const std::byte* field) {
 inline void write_length_field(std::byte* key, const uint32_t field_offset, const size_t length_field_width,
                                const size_t length) {
   if (length_field_width < sizeof(uint64_t)) {
-    Assert(length < (uint64_t{1} << (8 * length_field_width)), "String length exceeds the length-prefix field.");
+    DebugAssert(length < (uint64_t{1} << (8 * length_field_width)), "String length exceeds the length-prefix field.");
   }
   const auto value = static_cast<uint64_t>(length);
   std::memcpy(key + field_offset, &value, length_field_width);
