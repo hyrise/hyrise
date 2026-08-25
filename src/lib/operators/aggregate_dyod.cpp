@@ -959,6 +959,16 @@ std::vector<OutputColumns> run_merge_phase(const KeySchema& key_schema, const Ag
           const auto& key_region = store.key_region(job.partition);
           DebugAssert(key_region.size() % key_width == 0, "Key region must hold whole keys.");
           const auto row_count = key_region.size() / key_width;
+          for (auto stream_index = size_t{0}; stream_index < layout.value_stream_widths.size(); ++stream_index) {
+            DebugAssert(store.value_region(job.partition, stream_index).size() ==
+                            row_count * layout.value_stream_widths[stream_index],
+                        "Value region does not match the key region's row count.");
+          }
+          if (layout.value_null_bitmap_width > 0) {
+            DebugAssert(
+                store.value_null_bitmap_region(job.partition).size() == row_count * layout.value_null_bitmap_width,
+                "Value-null-bitmap region does not match the key region's row count.");
+          }
           const auto max_tile_rows = merge_tile_rows();
           for (auto tile_start = size_t{0}; tile_start < row_count; tile_start += max_tile_rows) {
             const auto tile_rows = std::min(max_tile_rows, row_count - tile_start);

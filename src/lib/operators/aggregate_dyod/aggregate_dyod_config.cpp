@@ -7,6 +7,7 @@
 #include <cstdint>
 
 #include "operators/aggregate_dyod/cache_info.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
@@ -74,6 +75,7 @@ size_t low_cardinality_threshold() {
 }
 
 size_t key_piece_width(const size_t key_width) {
+  DebugAssert(key_width > 0 && key_width % 4 == 0, "Key widths are always multiples of 4.");
   if (key_width % 16 == 0) {
     return 16;
   }

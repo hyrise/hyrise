@@ -201,6 +201,10 @@ inline std::shared_ptr<Table> build_output_table(const TableColumnDefinitions& o
     }
 
     const auto chunk_count = segments_per_column.front().size();
+    for (auto column_index = size_t{1}; column_index < column_count; ++column_index) {
+      DebugAssert(segments_per_column[column_index].size() == chunk_count,
+                  "All output columns must seal the same number of chunks.");
+    }
     for (auto chunk_index = size_t{0}; chunk_index < chunk_count; ++chunk_index) {
       auto segments = Segments{};
       segments.reserve(column_count);
