@@ -84,7 +84,7 @@ class MergeMap : private Noncopyable {
   void flush_into(OutputColumns& output) const;
 
  private:
-  static constexpr size_t MIN_TABLE_SIZE = 64;
+  static constexpr auto MIN_TABLE_SIZE = size_t{64};
 
   static std::vector<uint32_t> _build_probe_table(size_t table_size, const std::vector<std::byte>& keys,
                                                   const KeySchema& schema, uint32_t shift);
