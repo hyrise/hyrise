@@ -10,9 +10,9 @@
 
 namespace hyrise {
 
-class DistinctSetTest : public BaseTest {};
+class AggregateDYODDistinctSetTest : public BaseTest {};
 
-TEST_F(DistinctSetTest, InsertReportsFirstSighting) {
+TEST_F(AggregateDYODDistinctSetTest, InsertReportsFirstSighting) {
   auto set = DistinctSet<int32_t>{};
   EXPECT_EQ(set.size(), 0u);
 
@@ -22,7 +22,7 @@ TEST_F(DistinctSetTest, InsertReportsFirstSighting) {
   EXPECT_EQ(set.size(), 2u);
 }
 
-TEST_F(DistinctSetTest, SlotsAreIndependent) {
+TEST_F(AggregateDYODDistinctSetTest, SlotsAreIndependent) {
   auto set = DistinctSet<int64_t>{};
 
   EXPECT_TRUE(set.insert(0, 42));
@@ -31,7 +31,7 @@ TEST_F(DistinctSetTest, SlotsAreIndependent) {
   EXPECT_EQ(set.size(), 2u);
 }
 
-TEST_F(DistinctSetTest, GrowthPreservesMembership) {
+TEST_F(AggregateDYODDistinctSetTest, GrowthPreservesMembership) {
   auto set = DistinctSet<int32_t>{};
   const auto value_count = int32_t{10'000};
 
@@ -44,7 +44,7 @@ TEST_F(DistinctSetTest, GrowthPreservesMembership) {
   }
 }
 
-TEST_F(DistinctSetTest, SplitDistributesEveryEntryExactlyOnce) {
+TEST_F(AggregateDYODDistinctSetTest, SplitDistributesEveryEntryExactlyOnce) {
   auto set = DistinctSet<int32_t>{};
   for (auto value = int32_t{0}; value < 5'000; ++value) {
     set.insert(static_cast<uint32_t>(value % 5), value);
@@ -69,7 +69,7 @@ TEST_F(DistinctSetTest, SplitDistributesEveryEntryExactlyOnce) {
   }
 }
 
-TEST_F(DistinctSetTest, SplitKeepsEqualValuesInTheSameTarget) {
+TEST_F(AggregateDYODDistinctSetTest, SplitKeepsEqualValuesInTheSameTarget) {
   auto first = DistinctSet<pmr_string>{};
   auto second = DistinctSet<pmr_string>{};
   for (auto value = int32_t{0}; value < 500; ++value) {
@@ -90,7 +90,7 @@ TEST_F(DistinctSetTest, SplitKeepsEqualValuesInTheSameTarget) {
   EXPECT_EQ(total, 750u);
 }
 
-TEST_F(DistinctSetTest, SplitIntoSingleTargetMerges) {
+TEST_F(AggregateDYODDistinctSetTest, SplitIntoSingleTargetMerges) {
   auto set = DistinctSet<int32_t>{};
   set.insert(0, 1);
   set.insert(0, 2);
@@ -103,7 +103,7 @@ TEST_F(DistinctSetTest, SplitIntoSingleTargetMerges) {
   EXPECT_EQ(targets.front().size(), 3u);
 }
 
-TEST_F(DistinctSetTest, ClearRetainsCapacityAndDropsContent) {
+TEST_F(AggregateDYODDistinctSetTest, ClearRetainsCapacityAndDropsContent) {
   auto set = DistinctSet<int32_t>{};
   for (auto value = int32_t{0}; value < 1'000; ++value) {
     set.insert(0, value);
@@ -115,7 +115,7 @@ TEST_F(DistinctSetTest, ClearRetainsCapacityAndDropsContent) {
   EXPECT_EQ(set.size(), 1u);
 }
 
-TEST_F(DistinctSetTest, FloatZeroesCollapse) {
+TEST_F(AggregateDYODDistinctSetTest, FloatZeroesCollapse) {
   auto set = DistinctSet<float>{};
 
   EXPECT_TRUE(set.insert(0, 0.0f));
@@ -123,7 +123,7 @@ TEST_F(DistinctSetTest, FloatZeroesCollapse) {
   EXPECT_EQ(set.size(), 1u);
 }
 
-TEST_F(DistinctSetTest, NanPatternsCollapse) {
+TEST_F(AggregateDYODDistinctSetTest, NanPatternsCollapse) {
   auto set = DistinctSet<double>{};
   const auto quiet_nan = std::numeric_limits<double>::quiet_NaN();
   const auto payload_nan = std::bit_cast<double>(std::bit_cast<uint64_t>(quiet_nan) | uint64_t{0xdead});
@@ -134,7 +134,7 @@ TEST_F(DistinctSetTest, NanPatternsCollapse) {
   EXPECT_EQ(set.size(), 2u);
 }
 
-TEST_F(DistinctSetTest, StringsDedupeByContent) {
+TEST_F(AggregateDYODDistinctSetTest, StringsDedupeByContent) {
   auto set = DistinctSet<pmr_string>{};
 
   {
@@ -149,7 +149,7 @@ TEST_F(DistinctSetTest, StringsDedupeByContent) {
   EXPECT_EQ(set.size(), 3u);
 }
 
-TEST_F(DistinctSetTest, MergeUnionsEntries) {
+TEST_F(AggregateDYODDistinctSetTest, MergeUnionsEntries) {
   auto first = DistinctSet<int32_t>{};
   first.insert(0, 1);
   first.insert(0, 2);
@@ -164,7 +164,7 @@ TEST_F(DistinctSetTest, MergeUnionsEntries) {
   EXPECT_FALSE(first.insert(1, 1));
 }
 
-TEST_F(DistinctSetTest, MergeReinternsStrings) {
+TEST_F(AggregateDYODDistinctSetTest, MergeReinternsStrings) {
   auto first = DistinctSet<pmr_string>{};
   first.insert(0, "shared");
   auto second = DistinctSet<pmr_string>{};

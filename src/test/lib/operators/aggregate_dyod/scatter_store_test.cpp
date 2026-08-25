@@ -44,12 +44,12 @@ std::vector<std::byte> concat(const std::vector<std::array<std::byte, hyrise::SW
 }  // namespace
 
 namespace hyrise {
-class RegionTest : public BaseTest {
+class AggregateDYODRegionTest : public BaseTest {
  protected:
   Region _region{};
 };
 
-TEST_F(RegionTest, PushSingleLineStoresBytesAndAdvancesSize) {
+TEST_F(AggregateDYODRegionTest, PushSingleLineStoresBytesAndAdvancesSize) {
   const auto line = make_line(0x10);
 
   _region.push_line(line.data());
@@ -59,7 +59,7 @@ TEST_F(RegionTest, PushSingleLineStoresBytesAndAdvancesSize) {
   expect_region_bytes(_region, std::vector(line.begin(), line.end()));
 }
 
-TEST_F(RegionTest, PushMultipleLinesAccumulateInOrder) {
+TEST_F(AggregateDYODRegionTest, PushMultipleLinesAccumulateInOrder) {
   auto lines = std::vector<std::array<std::byte, SWWC_LINE_BYTES>>{};
 
   for (auto i = size_t{0}; i < 5; ++i) {
@@ -73,7 +73,7 @@ TEST_F(RegionTest, PushMultipleLinesAccumulateInOrder) {
   expect_region_bytes(_region, concat(lines));
 }
 
-TEST_F(RegionTest, DrainPartialAppendsSubLineRemainder) {
+TEST_F(AggregateDYODRegionTest, DrainPartialAppendsSubLineRemainder) {
   constexpr auto partial_length = SWWC_LINE_BYTES / 2;
   const auto partial = make_bytes(partial_length, 0x30);
 
@@ -84,7 +84,7 @@ TEST_F(RegionTest, DrainPartialAppendsSubLineRemainder) {
   expect_region_bytes(_region, partial);
 }
 
-TEST_F(RegionTest, DrainPartialZeroLengthIsNoop) {
+TEST_F(AggregateDYODRegionTest, DrainPartialZeroLengthIsNoop) {
   _region.drain_partial(nullptr, 0);
   EXPECT_EQ(_region.size(), 0u);
 
@@ -96,7 +96,7 @@ TEST_F(RegionTest, DrainPartialZeroLengthIsNoop) {
   expect_region_bytes(_region, std::vector(line.begin(), line.end()));
 }
 
-TEST_F(RegionTest, PushLinesThenDrainPartial) {
+TEST_F(AggregateDYODRegionTest, PushLinesThenDrainPartial) {
   auto lines = std::vector<std::array<std::byte, SWWC_LINE_BYTES>>{};
   for (auto i = size_t{0}; i < 3; ++i) {
     const auto line = make_line(static_cast<uint8_t>(0x40 + i));
@@ -115,7 +115,7 @@ TEST_F(RegionTest, PushLinesThenDrainPartial) {
   expect_region_bytes(_region, expected);
 }
 
-TEST_F(RegionTest, GrowthPreservesContentsAndAlignment) {
+TEST_F(AggregateDYODRegionTest, GrowthPreservesContentsAndAlignment) {
   constexpr auto LINE_COUNT = size_t{256};
   auto lines = std::vector<std::array<std::byte, SWWC_LINE_BYTES>>{};
   lines.reserve(LINE_COUNT);
@@ -130,7 +130,7 @@ TEST_F(RegionTest, GrowthPreservesContentsAndAlignment) {
   expect_region_bytes(_region, concat(lines));
 }
 
-TEST_F(RegionTest, ClearResetsSizeAndRetainsCapacity) {
+TEST_F(AggregateDYODRegionTest, ClearResetsSizeAndRetainsCapacity) {
   for (auto i = size_t{0}; i < 5; ++i) {
     const auto line = make_line(static_cast<uint8_t>(i));
     _region.push_line(line.data());
@@ -152,7 +152,7 @@ TEST_F(RegionTest, ClearResetsSizeAndRetainsCapacity) {
   expect_region_bytes(_region, concat(lines));
 }
 
-TEST_F(RegionTest, ReleaseFreesTheBuffer) {
+TEST_F(AggregateDYODRegionTest, ReleaseFreesTheBuffer) {
   const auto line = make_line(0x20);
   _region.push_line(line.data());
 
@@ -162,7 +162,7 @@ TEST_F(RegionTest, ReleaseFreesTheBuffer) {
   EXPECT_EQ(_region.data(), nullptr);
 }
 
-TEST_F(RegionTest, ReleasedRegionAcceptsNewLines) {
+TEST_F(AggregateDYODRegionTest, ReleasedRegionAcceptsNewLines) {
   const auto line = make_line(0x30);
   _region.push_line(line.data());
   _region.release();
@@ -173,15 +173,15 @@ TEST_F(RegionTest, ReleasedRegionAcceptsNewLines) {
   expect_region_bytes(_region, std::vector(line.begin(), line.end()));
 }
 
-TEST_F(RegionTest, EmptyRegionHasZeroSize) {
+TEST_F(AggregateDYODRegionTest, EmptyRegionHasZeroSize) {
   EXPECT_EQ(_region.size(), 0);
   _region.clear();
   EXPECT_EQ(_region.size(), 0u);
 }
 
-class ScatterStoreTest : public BaseTest {};
+class AggregateDYODScatterStoreTest : public BaseTest {};
 
-TEST_F(ScatterStoreTest, ConstructionAllocatesRegionsForFullSchema) {
+TEST_F(AggregateDYODScatterStoreTest, ConstructionAllocatesRegionsForFullSchema) {
   constexpr auto value_widths = std::array<size_t, 2>{8, 4};
   auto store = ScatterStore(PartitionCount{4}, 8, std::span<const size_t>(value_widths), 1, true);
 
@@ -193,7 +193,7 @@ TEST_F(ScatterStoreTest, ConstructionAllocatesRegionsForFullSchema) {
   }
 }
 
-TEST_F(ScatterStoreTest, ClearResetsAllRegions) {
+TEST_F(AggregateDYODScatterStoreTest, ClearResetsAllRegions) {
   constexpr auto value_widths = std::array<size_t, 1>{8};
   auto store = ScatterStore(PartitionCount{2}, 8, std::span<const size_t>(value_widths), 1, true);
 
@@ -213,7 +213,7 @@ TEST_F(ScatterStoreTest, ClearResetsAllRegions) {
   }
 }
 
-TEST_F(ScatterStoreTest, ReleaseFreesAllRegions) {
+TEST_F(AggregateDYODScatterStoreTest, ReleaseFreesAllRegions) {
   constexpr auto value_widths = std::array<size_t, 1>{8};
   auto store = ScatterStore(PartitionCount{2}, 8, std::span<const size_t>(value_widths), 1, true);
 
@@ -233,9 +233,9 @@ TEST_F(ScatterStoreTest, ReleaseFreesAllRegions) {
   }
 }
 
-class ScatterHeadsTest : public BaseTest {};
+class AggregateDYODScatterHeadsTest : public BaseTest {};
 
-TEST_F(ScatterHeadsTest, ScatterAndReconstruct) {
+TEST_F(AggregateDYODScatterHeadsTest, ScatterAndReconstruct) {
   constexpr auto PARTITION_COUNT = uint32_t{4};
   constexpr auto KEY_WIDTH = size_t{8};
   constexpr auto VALUE_WIDTH = size_t{8};
@@ -275,7 +275,7 @@ TEST_F(ScatterHeadsTest, ScatterAndReconstruct) {
   }
 }
 
-TEST_F(ScatterHeadsTest, ScatterWithNullBitmapStream) {
+TEST_F(AggregateDYODScatterHeadsTest, ScatterWithNullBitmapStream) {
   constexpr auto PARTITION_COUNT = uint32_t{2};
   constexpr auto KEY_WIDTH = size_t{8};
   constexpr auto VALUE_WIDTH = size_t{8};

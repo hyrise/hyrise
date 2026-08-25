@@ -54,28 +54,28 @@ bool is_power_of_two(const PartitionCount partition_count) {
 
 }  // namespace
 
-class HllSketchTest : public BaseTest {};
+class AggregateDYODHllSketchTest : public BaseTest {};
 
-TEST_F(HllSketchTest, EmptySketchEstimatesZero) {
+TEST_F(AggregateDYODHllSketchTest, EmptySketchEstimatesZero) {
   const auto sketch = HllSketch{};
   EXPECT_EQ(sketch.estimate(), 0);
 }
 
-TEST_F(HllSketchTest, SingleHashProducesSmallEstimate) {
+TEST_F(AggregateDYODHllSketchTest, SingleHashProducesSmallEstimate) {
   auto sketch = HllSketch{};
   sketch.add(mix(0));
 
   EXPECT_NEAR(static_cast<double>(sketch.estimate()), 1.0, 1.0);
 }
 
-TEST_F(HllSketchTest, ZeroHashProducesSmallEstimate) {
+TEST_F(AggregateDYODHllSketchTest, ZeroHashProducesSmallEstimate) {
   auto sketch = HllSketch{};
   sketch.add(0);
 
   EXPECT_NEAR(static_cast<double>(sketch.estimate()), 1.0, 1.0);
 }
 
-TEST_F(HllSketchTest, DuplicateHashesDoNotIncreaseEstimate) {
+TEST_F(AggregateDYODHllSketchTest, DuplicateHashesDoNotIncreaseEstimate) {
   auto sketch = HllSketch{};
   const auto hash = mix(17);
 
@@ -86,7 +86,7 @@ TEST_F(HllSketchTest, DuplicateHashesDoNotIncreaseEstimate) {
   EXPECT_NEAR(static_cast<double>(sketch.estimate()), 1.0, 1.0);
 }
 
-TEST_F(HllSketchTest, EstimatesSmallCardinalities) {
+TEST_F(AggregateDYODHllSketchTest, EstimatesSmallCardinalities) {
   const auto counts_and_tolerances = std::array<std::pair<size_t, double>, 3>{{{10, 3.0}, {100, 15.0}, {1'000, 100.0}}};
 
   for (const auto& [count, tolerance] : counts_and_tolerances) {
@@ -97,7 +97,7 @@ TEST_F(HllSketchTest, EstimatesSmallCardinalities) {
   }
 }
 
-TEST_F(HllSketchTest, EstimatesLargeCardinality) {
+TEST_F(AggregateDYODHllSketchTest, EstimatesLargeCardinality) {
   constexpr auto actual_count = size_t{100000};
 
   auto sketch = HllSketch{};
@@ -107,7 +107,7 @@ TEST_F(HllSketchTest, EstimatesLargeCardinality) {
               static_cast<double>(actual_count) * 0.05);
 }
 
-TEST_F(HllSketchTest, EstimatesLargeCardinalityFromPackedKeyHashes) {
+TEST_F(AggregateDYODHllSketchTest, EstimatesLargeCardinalityFromPackedKeyHashes) {
   constexpr auto actual_count = size_t{4'000'000};
 
   auto sketch = HllSketch{};
@@ -119,7 +119,7 @@ TEST_F(HllSketchTest, EstimatesLargeCardinalityFromPackedKeyHashes) {
               static_cast<double>(actual_count) * 0.05);
 }
 
-TEST_F(HllSketchTest, SaturatedSketchClampsEstimate) {
+TEST_F(AggregateDYODHllSketchTest, SaturatedSketchClampsEstimate) {
   auto sketch = HllSketch{};
   for (auto register_index = uint64_t{0}; register_index < (uint64_t{1} << HLL_PRECISION); ++register_index) {
     sketch.add(saturating_hash(register_index));
@@ -128,7 +128,7 @@ TEST_F(HllSketchTest, SaturatedSketchClampsEstimate) {
   EXPECT_EQ(sketch.estimate(), std::numeric_limits<size_t>::max());
 }
 
-TEST_F(HllSketchTest, MergeMatchesSingleSketch) {
+TEST_F(AggregateDYODHllSketchTest, MergeMatchesSingleSketch) {
   constexpr auto actual_count = size_t{100000};
 
   auto single_sketch = HllSketch{};
@@ -150,7 +150,7 @@ TEST_F(HllSketchTest, MergeMatchesSingleSketch) {
   EXPECT_EQ(first_half.estimate(), single_sketch.estimate());
 }
 
-TEST_F(HllSketchTest, MergeIsIdempotent) {
+TEST_F(AggregateDYODHllSketchTest, MergeIsIdempotent) {
   auto sketch = HllSketch{};
   add_distinct_values(sketch, 10000);
 
@@ -160,7 +160,7 @@ TEST_F(HllSketchTest, MergeIsIdempotent) {
   EXPECT_EQ(sketch.estimate(), estimate_before_merge);
 }
 
-TEST_F(HllSketchTest, MergeWithEmptySketchDoesNotChangeEstimate) {
+TEST_F(AggregateDYODHllSketchTest, MergeWithEmptySketchDoesNotChangeEstimate) {
   auto sketch = HllSketch{};
   auto empty_sketch = HllSketch{};
   add_distinct_values(sketch, 10000);
@@ -171,7 +171,7 @@ TEST_F(HllSketchTest, MergeWithEmptySketchDoesNotChangeEstimate) {
   EXPECT_EQ(sketch.estimate(), estimate_before_merge);
 }
 
-TEST_F(HllSketchTest, WorkerSketchesCanBeMerged) {
+TEST_F(AggregateDYODHllSketchTest, WorkerSketchesCanBeMerged) {
   constexpr auto worker_count = size_t{8};
   constexpr auto actual_count = size_t{100000};
 
@@ -198,41 +198,41 @@ TEST_F(HllSketchTest, WorkerSketchesCanBeMerged) {
               static_cast<double>(actual_count) * 0.05);
 }
 
-TEST_F(HllSketchTest, ChoosePartitionCountZeroEstimate) {
+TEST_F(AggregateDYODHllSketchTest, ChoosePartitionCountZeroEstimate) {
   EXPECT_EQ(choose_partition_count(0, 1, 2), PartitionCount{1});
 }
 
-TEST_F(HllSketchTest, ChoosePartitionCountScalesWithKeysBudget) {
+TEST_F(AggregateDYODHllSketchTest, ChoosePartitionCountScalesWithKeysBudget) {
   EXPECT_EQ(choose_partition_count(keys_budget() - 1, 1, 2), PartitionCount{1});
   EXPECT_EQ(choose_partition_count(keys_budget(), 1, 2), PartitionCount{1});
   EXPECT_EQ(choose_partition_count(keys_budget() + 1, 1, 2), PartitionCount{2});
   EXPECT_EQ(choose_partition_count(3 * keys_budget(), 1, 2), PartitionCount{4});
 }
 
-TEST_F(HllSketchTest, ChoosePartitionCountClampsToWorkerCount) {
+TEST_F(AggregateDYODHllSketchTest, ChoosePartitionCountClampsToWorkerCount) {
   EXPECT_EQ(choose_partition_count(1, 3, 2), PartitionCount{4});
   EXPECT_EQ(choose_partition_count(1, 8, 2), PartitionCount{8});
   EXPECT_EQ(choose_partition_count(1, max_partition_count(2), 2), max_partition_count(2));
 }
 
-TEST_F(HllSketchTest, ChoosePartitionCountClampsToStagingCap) {
+TEST_F(AggregateDYODHllSketchTest, ChoosePartitionCountClampsToStagingCap) {
   const auto large_cardinality = static_cast<size_t>(MAX_PARTITION_COUNT) * keys_budget() * 16;
 
   EXPECT_EQ(choose_partition_count(large_cardinality, 1, 2), max_partition_count(2));
 }
 
-TEST_F(HllSketchTest, ChoosePartitionCountCapFallsWithStreamCount) {
+TEST_F(AggregateDYODHllSketchTest, ChoosePartitionCountCapFallsWithStreamCount) {
   const auto large_cardinality = static_cast<size_t>(MAX_PARTITION_COUNT) * keys_budget() * 16;
 
   EXPECT_LT(choose_partition_count(large_cardinality, 1, 8), choose_partition_count(large_cardinality, 1, 2));
 }
 
-TEST_F(HllSketchTest, ChoosePartitionCountClampsOversizedWorkerCountToCap) {
+TEST_F(AggregateDYODHllSketchTest, ChoosePartitionCountClampsOversizedWorkerCountToCap) {
   EXPECT_EQ(choose_partition_count(1, static_cast<size_t>(MAX_PARTITION_COUNT) + 1, 2), max_partition_count(2));
   EXPECT_EQ(choose_partition_count(1, std::numeric_limits<size_t>::max(), 2), max_partition_count(2));
 }
 
-TEST_F(HllSketchTest, ChoosePartitionCountAlwaysReturnsPowerOfTwo) {
+TEST_F(AggregateDYODHllSketchTest, ChoosePartitionCountAlwaysReturnsPowerOfTwo) {
   const auto inputs = std::array<std::tuple<size_t, size_t, size_t>, 8>{{{0, 0, 1},
                                                                          {1, 1, 2},
                                                                          {keys_budget() - 1, 1, 2},

@@ -5,9 +5,9 @@
 
 namespace hyrise {
 
-class CacheInfoTest : public BaseTest {};
+class AggregateDYODCacheInfoTest : public BaseTest {};
 
-TEST_F(CacheInfoTest, SanitizeAppliesFallbacksForUnknownSizes) {
+TEST_F(AggregateDYODCacheInfoTest, SanitizeAppliesFallbacksForUnknownSizes) {
   const auto from_zero = sanitize_cache_sizes(0, 0, 0, 0);
   EXPECT_EQ(from_zero.l1d_bytes, FALLBACK_CACHE_SIZES.l1d_bytes);
   EXPECT_EQ(from_zero.l2_bytes, FALLBACK_CACHE_SIZES.l2_bytes);
@@ -19,14 +19,14 @@ TEST_F(CacheInfoTest, SanitizeAppliesFallbacksForUnknownSizes) {
   EXPECT_EQ(from_error.l3_bytes, FALLBACK_CACHE_SIZES.l3_bytes);
 }
 
-TEST_F(CacheInfoTest, SanitizePassesThroughPlausibleSizes) {
+TEST_F(AggregateDYODCacheInfoTest, SanitizePassesThroughPlausibleSizes) {
   const auto sizes = sanitize_cache_sizes(48 * 1024, 1'280 * 1024, 32 * 1024 * 1024, 4);
   EXPECT_EQ(sizes.l1d_bytes, 48 * 1024);
   EXPECT_EQ(sizes.l2_bytes, 1'280 * 1024);
   EXPECT_EQ(sizes.l3_bytes, 32 * 1024 * 1024);
 }
 
-TEST_F(CacheInfoTest, SanitizeClampsImplausibleSizes) {
+TEST_F(AggregateDYODCacheInfoTest, SanitizeClampsImplausibleSizes) {
   const auto tiny = sanitize_cache_sizes(16, 1024, 4096, 4);
   EXPECT_GE(tiny.l1d_bytes, 4 * 1024);
   EXPECT_GE(tiny.l2_bytes, 64 * 1024);
@@ -38,13 +38,13 @@ TEST_F(CacheInfoTest, SanitizeClampsImplausibleSizes) {
   EXPECT_LE(huge.l3_bytes, 1024 * 1024 * 1024);
 }
 
-TEST_F(CacheInfoTest, SanitizeKeepsLevelsOrdered) {
+TEST_F(AggregateDYODCacheInfoTest, SanitizeKeepsLevelsOrdered) {
   const auto sizes = sanitize_cache_sizes(512 * 1024, 128 * 1024, 0, 4);
   EXPECT_LE(sizes.l1d_bytes, sizes.l2_bytes);
   EXPECT_LE(sizes.l2_bytes, sizes.l3_bytes);
 }
 
-TEST_F(CacheInfoTest, ParseCpuListCountsSinglesAndRanges) {
+TEST_F(AggregateDYODCacheInfoTest, ParseCpuListCountsSinglesAndRanges) {
   EXPECT_EQ(parse_cpu_list_count("0"), 1u);
   EXPECT_EQ(parse_cpu_list_count("0-3"), 4u);
   EXPECT_EQ(parse_cpu_list_count("0,4,8"), 3u);
@@ -52,7 +52,7 @@ TEST_F(CacheInfoTest, ParseCpuListCountsSinglesAndRanges) {
   EXPECT_EQ(parse_cpu_list_count("0-191"), 192u);
 }
 
-TEST_F(CacheInfoTest, ParseCpuListRejectsMalformedLists) {
+TEST_F(AggregateDYODCacheInfoTest, ParseCpuListRejectsMalformedLists) {
   EXPECT_EQ(parse_cpu_list_count(""), 0u);
   EXPECT_EQ(parse_cpu_list_count("cpus"), 0u);
   EXPECT_EQ(parse_cpu_list_count("3-0"), 0u);
@@ -61,7 +61,7 @@ TEST_F(CacheInfoTest, ParseCpuListRejectsMalformedLists) {
   EXPECT_EQ(parse_cpu_list_count("0-3x"), 0u);
 }
 
-TEST_F(CacheInfoTest, SanitizeHandlesTheSharingCount) {
+TEST_F(AggregateDYODCacheInfoTest, SanitizeHandlesTheSharingCount) {
   const auto unknown = sanitize_cache_sizes(0, 0, 0, 0);
   EXPECT_EQ(unknown.llc_sharing_cpus, FALLBACK_CACHE_SIZES.llc_sharing_cpus);
 
@@ -72,7 +72,7 @@ TEST_F(CacheInfoTest, SanitizeHandlesTheSharingCount) {
   EXPECT_LE(absurd.llc_sharing_cpus, 1024u);
 }
 
-TEST_F(CacheInfoTest, CacheSizesAreSanitized) {
+TEST_F(AggregateDYODCacheInfoTest, CacheSizesAreSanitized) {
   const auto& sizes = cache_sizes();
   EXPECT_GE(sizes.l1d_bytes, 4 * 1024);
   EXPECT_LE(sizes.l1d_bytes, sizes.l2_bytes);
