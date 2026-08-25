@@ -30,15 +30,14 @@ const std::string& Update::name() const {
 std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionContext> context) {
   const auto table_to_update = Hyrise::get().storage_manager.get_table(_table_to_update_name);
 
-  // 0. Validate input
-  DebugAssert(context, "Update needs a transaction context");
-  DebugAssert(left_input_table()->row_count() == right_input_table()->row_count(),
-              "Update required identical layouts from its input tables");
-  DebugAssert(left_input_table()->column_data_types() == right_input_table()->column_data_types(),
-              "Update required identical layouts from its input tables");
+  // 0. Validate input.
+  Assert(context, "Update needs a transaction context.");
+  Assert(left_input_table()->row_count() == right_input_table()->row_count(),
+         "Update requires identical layouts from its input tables.");
+  Assert(left_input_table()->column_data_types() == right_input_table()->column_data_types(),
+         "Update requires identical layouts from its input tables.");
 
-  // 1. Delete obsolete data with the Delete operator.
-  //    Delete doesn't accept empty input data
+  // 1. Delete obsolete data with the Delete operator. Delete does not accept empty input data.
   if (left_input_table()->row_count() > 0) {
     const auto delete_operator = std::make_shared<Delete>(_left_input);
     delete_operator->set_transaction_context(context);
@@ -69,6 +68,6 @@ std::shared_ptr<AbstractOperator> Update::_on_deep_copy(
   return std::make_shared<Update>(_table_to_update_name, copied_left_input, copied_right_input);
 }
 
-void Update::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
+void Update::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& /*parameters*/) {}
 
 }  // namespace hyrise

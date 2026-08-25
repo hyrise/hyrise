@@ -252,14 +252,14 @@ TEST_F(StorageLZ4SegmentTest, CompressMultiBlockStringSegment) {
 }
 
 TEST_F(StorageLZ4SegmentTest, CompressDictionaryStringSegment) {
-  const auto block_size = LZ4Encoder::BLOCK_SIZE;
+  constexpr auto block_size = LZ4Encoder::BLOCK_SIZE;
   constexpr auto num_rows = 100'000 / 20;
 
   for (auto index = size_t{0}; index < num_rows; ++index) {
     vs_str->append(AllTypeVariant{pmr_string{"this is element " + std::to_string(index)}});
   }
 
-  auto lz4_segment = compress(vs_str, DataType::String);
+  const auto lz4_segment = compress(vs_str, DataType::String);
 
   // Test segment size.
   EXPECT_EQ(lz4_segment->size(), num_rows);
@@ -296,6 +296,26 @@ TEST_F(StorageLZ4SegmentTest, CompressDictionaryStringSegment) {
   EXPECT_EQ(decompressed_data[1234], "this is element 1234");
   EXPECT_EQ(decompressed_data[4312], "this is element 4312");
   EXPECT_EQ(decompressed_data[4014], "this is element 4014");
+}
+
+// Testing fix of segfault when segment contains many NULLs (issue #2641).
+TEST_F(StorageLZ4SegmentTest, LongStringsFollowedByEmptyOnes) {
+  constexpr auto row_count = 15'000;
+  constexpr auto null_row_count = (row_count / 5) * 4;
+
+  for (auto index = size_t{0}; index < null_row_count; ++index) {
+    vs_str->append(NULL_VALUE);
+  }
+  for (auto index = size_t{null_row_count}; index < row_count; ++index) {
+    vs_str->append(AllTypeVariant{pmr_string{"this is element number #" + std::to_string(index)}});
+  }
+
+  const auto lz4_segment = compress(vs_str, DataType::String);
+  EXPECT_EQ(lz4_segment->size(), row_count);
+  EXPECT_FALSE(lz4_segment->dictionary().empty());
+  const auto last_index = row_count - 1;
+  EXPECT_EQ(lz4_segment->decompress(ChunkOffset{last_index}),
+            pmr_string{std::format("this is element number #{}", last_index)});
 }
 
 TEST_F(StorageLZ4SegmentTest, CompressDictionaryIntSegment) {

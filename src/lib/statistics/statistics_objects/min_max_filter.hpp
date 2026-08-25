@@ -60,6 +60,4 @@ std::ostream& operator<<(std::ostream& stream, const MinMaxFilter<T>& filter) {
   return stream << "{" << filter.min << ", " << filter.max << "}";
 }
 
-EXPLICITLY_DECLARE_DATA_TYPES(MinMaxFilter);
-
 }  // namespace hyrise

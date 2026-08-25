@@ -90,7 +90,7 @@ target_include_directories(
     PUBLIC
     ${LZ4_LIBRARY_DIR}
 )
-target_compile_options(lz4 PRIVATE -fPIC)
+target_compile_options(lz4 PRIVATE -fPIC INTERFACE -Wno-documentation-unknown-command)
 
 # Build compact_vector library
 add_library(compact_vector INTERFACE)
@@ -102,7 +102,7 @@ target_sources(compact_vector
   INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/compact_vector/include/parallel_iterator_traits.hpp
   INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/compact_vector/include/prefetch_iterator_traits.hpp
 )
-target_compile_options(compact_vector INTERFACE -Wno-cast-qual -Wno-old-style-cast -Wno-shorten-64-to-32 -Wno-shadow -Wno-reserved-id-macro -Wno-atomic-implicit-seq-cst)
+target_compile_options(compact_vector INTERFACE -Wno-cast-qual -Wno-old-style-cast -Wno-shorten-64-to-32 -Wno-shadow -Wno-reserved-id-macro -Wno-atomic-implicit-seq-cst -Wno-zero-as-null-pointer-constant -Wno-unused-parameter)
 
 
 # Build uninitialized_vector library

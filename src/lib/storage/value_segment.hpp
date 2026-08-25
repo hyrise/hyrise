@@ -89,6 +89,4 @@ class ValueSegment : public BaseValueSegment {
   std::mutex _null_value_modification_mutex;
 };
 
-EXPLICITLY_DECLARE_DATA_TYPES(ValueSegment);
-
 }  // namespace hyrise

@@ -286,8 +286,8 @@ namespace std {
 template <>
 struct hash<std::basic_string<char, std::char_traits<char>, hyrise::PolymorphicAllocator<char>>> {
   size_t operator()(
-      const std::basic_string<char, std::char_traits<char>, hyrise::PolymorphicAllocator<char>>& string) const {
-    return std::hash<std::string_view>{}(string);
+      const std::basic_string<char, std::char_traits<char>, hyrise::PolymorphicAllocator<char>>& input) const {
+    return std::hash<std::string_view>{}(input);
   }
 };
 }  // namespace std

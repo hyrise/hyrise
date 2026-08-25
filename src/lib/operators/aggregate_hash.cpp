@@ -565,7 +565,7 @@ std::shared_ptr<AbstractOperator> AggregateHash::_on_deep_copy(
   return std::make_shared<AggregateHash>(copied_left_input, _aggregates, _groupby_column_ids);
 }
 
-void AggregateHash::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
+void AggregateHash::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& /*parameters*/) {}
 
 void AggregateHash::_on_cleanup() {
   _contexts_per_column.clear();
@@ -603,9 +603,8 @@ struct AggregateContext : public AggregateResultContext<ColumnDataType, aggregat
 };
 
 template <typename ColumnDataType, WindowFunction aggregate_function, typename AggregateKey>
-__attribute__((hot)) void AggregateHash::_aggregate_segment(ChunkID chunk_id, ColumnID column_index,
-                                                            const AbstractSegment& abstract_segment,
-                                                            KeysPerChunk<AggregateKey>& keys_per_chunk) {
+void AggregateHash::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, const AbstractSegment& abstract_segment,
+                                       KeysPerChunk<AggregateKey>& keys_per_chunk) {
   using AggregateType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
 
   auto aggregator = WindowFunctionBuilder<ColumnDataType, AggregateType, aggregate_function>().get_aggregate_function();

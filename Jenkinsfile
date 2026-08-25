@@ -286,7 +286,7 @@ try {
           }, clangRelWithDebInfoThreadSanitizer: {
             stage("clang-relwithdebinfo:thread-sanitizer") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
-                sh "cd clang-relwithdebinfo-thread-sanitizer && ninja hyriseTest hyriseSystemTest hyriseBenchmarkTPCH hyriseBenchmarkTPCC hyriseBenchmarkTPCDS -j \$(( \$(nproc) / 30))"
+                sh "cd clang-relwithdebinfo-thread-sanitizer && ninja hyriseTest hyriseSystemTest hyriseBenchmarkTPCH hyriseBenchmarkTPCC hyriseBenchmarkTPCDS -j \$(( \$(nproc) / 10))"
                 sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer/hyriseTest clang-relwithdebinfo-thread-sanitizer"
                 // We exclude tests matching NodeQueueSchedulerSemaphoreIncrements* as those tests were stuck with TSAN.
                 // We have seen runtimes of over 20h. The (much larger) tests running in Release mode did not show any
@@ -321,6 +321,13 @@ try {
               } else {
                 Utils.markStageSkippedForConditional("clangDebugCoverage")
               }
+            }
+          }, bolt: {
+            stage('bolt') {
+              sh "mkdir cmake-build-bolt"
+              sh "cd cmake-build-bolt && cmake ${release} ${clang} ${unity} ${ninja} .."
+              sh "cd cmake-build-bolt && python3 ../scripts/build_pgo_bolt.py -n \$(( \$(nproc) / 5)) --ci"
+              sh "cd cmake-build-bolt && ./hyriseTest"
             }
           }
 
