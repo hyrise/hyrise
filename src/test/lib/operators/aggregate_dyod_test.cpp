@@ -11,6 +11,7 @@
 #include "expression/expression_functional.hpp"
 #include "expression/window_function_expression.hpp"
 #include "hyrise.hpp"
+#include "lib/operators/aggregate_dyod/aggregate_dyod_test_utils.hpp"
 #include "operators/aggregate_dyod.hpp"
 #include "operators/aggregate_hash.hpp"
 #include "operators/table_wrapper.hpp"
@@ -122,13 +123,7 @@ void compare_with_aggregate_hash(const std::shared_ptr<AbstractOperator>& input,
   auto aggregates = std::vector<std::shared_ptr<WindowFunctionExpression>>{};
   aggregates.reserve(aggregate_definitions.size());
   for (const auto& [column_id, function] : aggregate_definitions) {
-    if (column_id == INVALID_COLUMN_ID) {
-      aggregates.emplace_back(
-          std::make_shared<WindowFunctionExpression>(function, pqp_column_(column_id, DataType::Long, "*")));
-    } else {
-      aggregates.emplace_back(std::make_shared<WindowFunctionExpression>(
-          function, pqp_column_(column_id, table->column_data_type(column_id), table->column_name(column_id))));
-    }
+    aggregates.emplace_back(make_aggregate(function, *table, column_id));
   }
 
   const auto aggregate_dyod = std::make_shared<AggregateDYOD>(input, aggregates, groupby_column_ids);
@@ -296,8 +291,7 @@ TEST_F(OperatorsAggregateDYODTest, NullRowIdsInPosList) {
 
 TEST_F(OperatorsAggregateDYODTest, DictionaryEncodedInput) {
   const auto table = make_input_table(30'000);
-  table->last_chunk()->set_immutable();
-  ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{EncodingType::Dictionary});
+  encode(table, EncodingType::Dictionary);
   compare_with_aggregate_hash(
       wrap_input(table),
       {{ColumnID{2}, WindowFunction::Sum}, {ColumnID{4}, WindowFunction::Min}, {ColumnID{3}, WindowFunction::Avg}},
@@ -351,8 +345,7 @@ TEST_F(OperatorsAggregateDYODTest, LowCardinalityPathMixedGroupBy) {
 
 TEST_F(OperatorsAggregateDYODTest, LowCardinalityPathDictionaryEncoded) {
   const auto table = make_low_cardinality_table(100'000);
-  table->last_chunk()->set_immutable();
-  ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{EncodingType::Dictionary});
+  encode(table, EncodingType::Dictionary);
   compare_with_aggregate_hash(
       wrap_input(table),
       {{ColumnID{3}, WindowFunction::Sum}, {ColumnID{3}, WindowFunction::Avg}, {ColumnID{2}, WindowFunction::Max}},
