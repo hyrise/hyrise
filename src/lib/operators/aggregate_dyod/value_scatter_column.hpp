@@ -56,9 +56,9 @@ class AbstractValueScatterColumn {
 /**
  * Numeric value stream: writes the source value's native bytes with no transform. One instantiation per numeric type.
  *
- * Unlike the key side (where integer lanes are sign-bit-biased and floats canonicalized for correct ordering and
- * equality), values need no ordering, so the bytes are stored verbatim and the accumulator reinterprets them as its
- * native type.
+ * Unlike the key side (where integer lanes are sign-bit-biased and floats canonicalized so equal values pack to
+ * identical bytes), values are never compared as bytes, so they are stored verbatim and the accumulator reinterprets
+ * them as its native type.
  */
 template <typename T>
 class NumericValueScatterColumn : public AbstractValueScatterColumn {
