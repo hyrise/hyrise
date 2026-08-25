@@ -82,7 +82,7 @@ set(
     lib/operators/aggregate_dyod/aggregate_dyod_test_utils.hpp
     lib/operators/aggregate_dyod/cache_info_test.cpp
     lib/operators/aggregate_dyod/distinct_set_test.cpp
-    lib/operators/aggregate_dyod/hyperloglog_test.cpp
+    lib/operators/aggregate_dyod/hll_sketch_test.cpp
     lib/operators/aggregate_dyod/key_schema_test.cpp
     lib/operators/aggregate_dyod/merge_map_test.cpp
     lib/operators/aggregate_dyod/output_columns_test.cpp

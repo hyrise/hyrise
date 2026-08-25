@@ -26,7 +26,7 @@
 #include "operators/aggregate_dyod/aggregate_dyod_config.hpp"
 #include "operators/aggregate_dyod/aggregate_schema.hpp"
 #include "operators/aggregate_dyod/distinct_set.hpp"
-#include "operators/aggregate_dyod/hyperloglog.hpp"
+#include "operators/aggregate_dyod/hll_sketch.hpp"
 #include "operators/aggregate_dyod/key_primitives.hpp"
 #include "operators/aggregate_dyod/key_schema.hpp"
 #include "operators/aggregate_dyod/merge_map.hpp"

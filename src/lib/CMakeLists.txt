@@ -230,7 +230,7 @@ set(
     operators/aggregate_dyod/cache_info.cpp
     operators/aggregate_dyod/cache_info.hpp
     operators/aggregate_dyod/distinct_set.hpp
-    operators/aggregate_dyod/hyperloglog.hpp
+    operators/aggregate_dyod/hll_sketch.hpp
     operators/aggregate_dyod/key_primitives.cpp
     operators/aggregate_dyod/key_primitives.hpp
     operators/aggregate_dyod/key_schema.hpp
