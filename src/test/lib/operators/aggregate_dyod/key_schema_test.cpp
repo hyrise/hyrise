@@ -256,7 +256,7 @@ TEST_F(AggregateDYODKeySchemaTest, SpillBufferFreesBlocksOnRelease) {
 
   const auto content = std::string{"spilled key content"};
   buffer.append(reinterpret_cast<const std::byte*>(content.data()), content.size());
-  ASSERT_GT(buffer.memory_usage(), empty);
+  EXPECT_GT(buffer.memory_usage(), empty);
 
   buffer.release();
 

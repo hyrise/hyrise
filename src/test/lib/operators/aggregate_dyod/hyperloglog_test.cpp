@@ -65,14 +65,14 @@ TEST_F(AggregateDYODHllSketchTest, SingleHashProducesSmallEstimate) {
   auto sketch = HllSketch{};
   sketch.add(mix(0));
 
-  EXPECT_NEAR(static_cast<double>(sketch.estimate()), 1.0, 1.0);
+  EXPECT_EQ(sketch.estimate(), 1);
 }
 
 TEST_F(AggregateDYODHllSketchTest, ZeroHashProducesSmallEstimate) {
   auto sketch = HllSketch{};
   sketch.add(0);
 
-  EXPECT_NEAR(static_cast<double>(sketch.estimate()), 1.0, 1.0);
+  EXPECT_EQ(sketch.estimate(), 1);
 }
 
 TEST_F(AggregateDYODHllSketchTest, DuplicateHashesDoNotIncreaseEstimate) {
@@ -83,7 +83,7 @@ TEST_F(AggregateDYODHllSketchTest, DuplicateHashesDoNotIncreaseEstimate) {
     sketch.add(hash);
   }
 
-  EXPECT_NEAR(static_cast<double>(sketch.estimate()), 1.0, 1.0);
+  EXPECT_EQ(sketch.estimate(), 1);
 }
 
 TEST_F(AggregateDYODHllSketchTest, EstimatesSmallCardinalities) {
