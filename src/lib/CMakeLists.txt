@@ -239,6 +239,7 @@ set(
     operators/aggregate_dyod/numeric_arbitrary_key_schema.hpp
     operators/aggregate_dyod/numeric_short_key_schema.hpp
     operators/aggregate_dyod/output_columns.hpp
+    operators/aggregate_dyod/scatter_store.cpp
     operators/aggregate_dyod/scatter_store.hpp
     operators/aggregate_dyod/string_only_key_schema.hpp
     operators/aggregate_dyod/value_scatter_column.hpp
