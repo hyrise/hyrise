@@ -81,11 +81,18 @@ std::shared_ptr<const Table> Import::_on_execute() {
         Fail("Cannot load table from csv. No table definition source found.");
       }
 
-      table = CsvParser::parse(filename, csv_meta, _chunk_size);
+      table = CsvParser::parse(filename, csv_meta, _chunk_size, _target_encoding);
       break;
     }
     case FileType::Tbl: {
       table = load_table(filename, _chunk_size);
+
+      const auto chunk_encoding_spec =
+        auto_select_chunk_encoding_spec(table->column_data_types(), unique_columns(table), _target_encoding);
+      // .tlb files are mostly used for testing and thus small. In case larger files are frequently loaded, consider
+      // parallelizing chunk encoding.
+      ChunkEncoder::encode_all_chunks(table, chunk_encoding_spec);
+
       break;
     }
     case FileType::Binary: {
@@ -97,24 +104,12 @@ std::shared_ptr<const Table> Import::_on_execute() {
     }
   }
 
-  // For binary files, the default is the encoding of the file.
-  if (_file_type != FileType::Binary) {
-    auto chunk_encoding_spec = ChunkEncodingSpec{};
-    const auto column_count = table->column_count();
-    chunk_encoding_spec.reserve(column_count);
-
-    for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
-      // If a target encoding is specified and supported, use it. Otherwise, select the encoding automatically.
-      const auto column_data_type = table->column_data_type(column_id);
-      if (_target_encoding && encoding_supports_data_type(*_target_encoding, column_data_type)) {
-        chunk_encoding_spec.emplace_back(*_target_encoding);
-      } else {
-        chunk_encoding_spec.emplace_back(
-            auto_select_segment_encoding_spec(column_data_type, column_is_unique(table, column_id)));
-      }
-    }
-    ChunkEncoder::encode_all_chunks(table, chunk_encoding_spec);
-  }
+  /**
+   * Notes on the file type-dependent encoding:
+   *   - TBL: Encoding is done sequentially after reading the file, using the automatic encoding selection.
+   *   - CSV: Encoding is done in parallel to reading the file, using the automatic encoding selection.
+   *   - Binary: Binary data is stored encoded, as default we thus use the encoding of the binary files.
+   */
 
   if (!Hyrise::get().storage_manager.has_table(_tablename)) {
     // We create statistics when tables are added to the storage manager. As statistics can be expensive to create
@@ -135,8 +130,8 @@ std::shared_ptr<const Table> Import::_on_execute() {
     existing_table->append_chunk(chunk->segments(), chunk->mvcc_data());
   }
 
-  table->set_table_statistics(TableStatistics::from_table(*table));
-  generate_chunk_pruning_statistics(table);
+  existing_table->set_table_statistics(TableStatistics::from_table(*existing_table));
+  generate_chunk_pruning_statistics(existing_table);
 
   // We must match ImportNode::output_expressions.
   return nullptr;

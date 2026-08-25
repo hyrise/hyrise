@@ -31,7 +31,8 @@ class CsvParser {
    * @returns             The table that was created from the csv file.
    */
   static std::shared_ptr<Table> parse(const std::string& filename, const CsvMeta& csv_meta,
-                                      const ChunkOffset chunk_size = Chunk::DEFAULT_SIZE);
+                                      const ChunkOffset chunk_size = Chunk::DEFAULT_SIZE,
+                                      const std::optional<EncodingType>& target_encoding = std::nullopt);
   static std::shared_ptr<Table> create_table_from_meta_file(const std::string& filename,
                                                             const ChunkOffset chunk_size = Chunk::DEFAULT_SIZE);
 
@@ -59,8 +60,7 @@ class CsvParser {
    * @returns               The number of rows in the chunk
    */
   static size_t _parse_into_chunk(std::string_view csv_chunk, const std::vector<size_t>& field_ends, const Table& table,
-                                  Segments& segments, const CsvMeta& meta, const std::string& escaped_linebreak,
-                                  std::mutex& append_chunk_mutex);
+                                  Segments& segments, const CsvMeta& meta, const std::string& escaped_linebreak);
 
   /*
    * @param field The field that needs to be modified to be RFC 4180 compliant.
