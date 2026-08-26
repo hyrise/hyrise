@@ -11,6 +11,7 @@
 
 #include "magic_enum/magic_enum.hpp"
 
+#include "import_export/csv/csv_meta.hpp"
 #include "import_export/file_type.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/abstract_non_query_node.hpp"

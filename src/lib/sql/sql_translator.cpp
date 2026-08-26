@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <format>
 #include <iostream>
 #include <limits>
@@ -42,6 +43,7 @@
 #include "expression/window_expression.hpp"
 #include "expression/window_function_expression.hpp"
 #include "hyrise.hpp"
+#include "import_export/csv/csv_meta.hpp"
 #include "import_export/file_type.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
