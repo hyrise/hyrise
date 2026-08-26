@@ -1,11 +1,13 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
 
 #include "import_export/csv/csv_meta.hpp"
+#include "storage/encoding_type.hpp"
 
 namespace hyrise {
 
