@@ -43,7 +43,7 @@ class BaseTestWithParam
     : public std::conditional_t<std::is_same_v<ParamType, void>, ::testing::Test, ::testing::TestWithParam<ParamType>> {
  public:
   // glibc math functions may leave errno at ERANGE, which Boost.Asio 1.87 misreads when an io_context is created
-  // ("config out of range", fixed in Boost 1.89). Do not let a previous test's errno leak into the next test.
+  // ("config out of range", fixed in Boost 1.88). Do not let a previous test's errno leak into the next test.
   BaseTestWithParam() {
     errno = 0;
   }
