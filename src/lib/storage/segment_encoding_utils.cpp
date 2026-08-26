@@ -95,9 +95,9 @@ ChunkEncodingSpec auto_select_chunk_encoding_spec(const std::vector<DataType>& t
     }
 
     if (target_encoding && encoding_supports_data_type(*target_encoding, types[column_id])) {
-      chunk_encoding_spec.push_back(SegmentEncodingSpec{*target_encoding});
+      chunk_encoding_spec.emplace_back(*target_encoding);
     } else {
-      chunk_encoding_spec.push_back(auto_select_segment_encoding_spec(types[column_id], segment_values_are_unique));
+      chunk_encoding_spec.emplace_back(auto_select_segment_encoding_spec(types[column_id], segment_values_are_unique));
     }
   }
   return chunk_encoding_spec;
