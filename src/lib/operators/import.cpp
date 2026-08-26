@@ -55,6 +55,15 @@ std::shared_ptr<const Table> Import::_on_execute() {
 
   auto table = std::shared_ptr<Table>{};
 
+  /**
+   * Notes on the file type-dependent encoding:
+   *   - TBL: Encoding is done sequentially after reading the file, using the automatic encoding selection and the
+   *          optional target encoding.
+   *   - CSV: Encoding is done in parallel to reading the file, using the automatic encoding selection and the optional
+   *          target encoding.
+   *   - Binary: Binary data is stored encoded. By default, we use the encoding of the binary files.
+   */
+
   switch (_file_type) {
     case FileType::Csv: {
       auto csv_meta = CsvMeta{};
@@ -103,13 +112,6 @@ std::shared_ptr<const Table> Import::_on_execute() {
       Fail("File type should have been determined previously.");
     }
   }
-
-  /**
-   * Notes on the file type-dependent encoding:
-   *   - TBL: Encoding is done sequentially after reading the file, using the automatic encoding selection.
-   *   - CSV: Encoding is done in parallel to reading the file, using the automatic encoding selection.
-   *   - Binary: Binary data is stored encoded, as default we thus use the encoding of the binary files.
-   */
 
   if (!Hyrise::get().storage_manager.has_table(_tablename)) {
     // We create statistics when tables are added to the storage manager. As statistics can be expensive to create
