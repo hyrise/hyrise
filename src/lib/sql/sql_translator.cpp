@@ -1,9 +1,10 @@
 #include "sql_translator.hpp"
 
+#include <string.h>
+
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
-#include <cstring>
 #include <format>
 #include <iostream>
 #include <limits>
