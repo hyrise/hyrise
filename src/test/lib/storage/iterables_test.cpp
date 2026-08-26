@@ -439,6 +439,7 @@ TEST_F(IterablesTest, ValueSegmentIteratorForEach) {
 
   const auto segment = chunk->get_segment(ColumnID{0});
   const auto int_segment = std::dynamic_pointer_cast<const ValueSegment<int32_t>>(segment);
+  ASSERT_TRUE(int_segment);
 
   const auto iterable = ValueSegmentIterable<int>{*int_segment};
 

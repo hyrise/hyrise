@@ -14,6 +14,7 @@ struct ColumnMeta {
   std::string type;
 
   bool nullable = false;
+  bool is_unique = false;  // Used for encoding decisions during CSV loading.
 };
 
 // Strategies on how to deal with unquoted null strings ("...,Null,...") in CSV files:
