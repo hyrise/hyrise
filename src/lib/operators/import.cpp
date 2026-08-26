@@ -48,7 +48,7 @@ const std::string& Import::name() const {
 }
 
 std::shared_ptr<const Table> Import::_on_execute() {
-  // Check if file exists before giving it to the parser
+  // Check if file exists before giving it to the parser.
   auto file = std::ifstream{filename};
   Assert(file.is_open(), std::format("Import: Could not find file '{}'.", filename));
   file.close();
@@ -75,7 +75,8 @@ std::shared_ptr<const Table> Import::_on_execute() {
           std::cerr << "Warning: Ignoring " << meta_filename << " because table " << _tablename << " already exists.\n";
         }
 
-        const auto& column_definitions = Hyrise::get().storage_manager.get_table(_tablename)->column_definitions();
+        const auto& existing_table = Hyrise::get().storage_manager.get_table(_tablename);
+        const auto& column_definitions = existing_table->column_definitions();
         const auto column_count = column_definitions.size();
 
         csv_meta.columns.resize(column_count);
@@ -83,6 +84,10 @@ std::shared_ptr<const Table> Import::_on_execute() {
           csv_meta.columns[column_id].name = column_definitions[column_id].name;
           csv_meta.columns[column_id].type = data_type_to_string.left.at(column_definitions[column_id].data_type);
           csv_meta.columns[column_id].nullable = column_definitions[column_id].nullable;
+        }
+
+        for (const auto unique_column_id : unique_columns(existing_table)) {
+          csv_meta.columns[unique_column_id].is_unique = true;
         }
       } else if (meta_file_exists) {
         csv_meta = process_csv_meta_file(meta_filename);
@@ -97,7 +102,7 @@ std::shared_ptr<const Table> Import::_on_execute() {
       table = load_table(filename, _chunk_size);
 
       const auto chunk_encoding_spec =
-          auto_select_chunk_encoding_spec(table->column_data_types(), unique_columns(table), _target_encoding);
+          auto_select_chunk_encoding_spec(table->column_data_types(), {}, _target_encoding);
       // .tlb files are mostly used for testing and thus small. In case larger files are frequently loaded, consider
       // parallelizing chunk encoding.
       ChunkEncoder::encode_all_chunks(table, chunk_encoding_spec);
@@ -114,8 +119,8 @@ std::shared_ptr<const Table> Import::_on_execute() {
   }
 
   if (!Hyrise::get().storage_manager.has_table(_tablename)) {
-    // We create statistics when tables are added to the storage manager. As statistics can be expensive to create
-    // and their creation benefits from dictionary encoding, we add the tables after they are encoded.
+    // We create statistics when tables are added to the storage manager. As statistics can be expensive to create and
+    // their creation benefits from dictionary encoding, we add the tables after they are encoded.
     Hyrise::get().storage_manager.add_table(_tablename, table);
     return nullptr;
   }

@@ -24,7 +24,6 @@
 #include "scheduler/job_task.hpp"
 #include "storage/chunk.hpp"
 #include "storage/chunk_encoder.hpp"
-#include "storage/constraints/constraint_utils.hpp"
 #include "storage/mvcc_data.hpp"
 #include "storage/segment_encoding_utils.hpp"
 #include "storage/table.hpp"
@@ -41,9 +40,18 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const CsvMe
   const auto table = _create_table_from_meta(chunk_size, csv_meta);
   const auto column_count = table->column_count();
 
+  auto unique_column_ids = std::vector<ColumnID>{};
+
+  for (auto column_id = ColumnID{0}; column_id < csv_meta.columns.size(); ++column_id) {
+    const auto column_meta = csv_meta.columns[column_id];
+    if (column_meta.is_unique) {
+      unique_column_ids.push_back(column_id);
+    }
+  }
+
   const auto table_column_types = table->column_data_types();
   const auto chunk_encoding_spec =
-      auto_select_chunk_encoding_spec(table_column_types, unique_columns(table), target_encoding);
+      auto_select_chunk_encoding_spec(table_column_types, unique_column_ids, target_encoding);
 
   auto csvfile = std::ifstream{filename};
 
