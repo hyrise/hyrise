@@ -189,6 +189,7 @@ def profile(bolt_instrumented=False, pgo_instrumented=False):
     benchmarks_to_run = benchmarks if not args.ci else ci_benchmarks
     for benchmark in benchmarks_to_run:
         run_in_hyrise_folder(
+            f"LLVM_PROFILE_FILE={build_folder}/{benchmark}.profraw" if pgo_instrumented else "",
             f"{build_folder}/{benchmark}",
             "--clients 2",  # Trigger multi-client paths.
             "--scheduler",
@@ -199,9 +200,6 @@ def profile(bolt_instrumented=False, pgo_instrumented=False):
         )
         if bolt_instrumented:
             run_in_build_folder(f"mv /tmp/prof.fdata {benchmark}.fdata")
-
-        if pgo_instrumented:
-            run_in_hyrise_folder(f"mv *.profraw {build_folder}/{benchmark}.profraw")
 
     if bolt_instrumented:
         run_in_build_folder("merge-fdata *.fdata > bolt.fdata")

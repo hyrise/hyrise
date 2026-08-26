@@ -19,7 +19,6 @@
 #include "shutdown_task.hpp"
 #include "task_queue.hpp"
 #include "types.hpp"
-#include "uid_allocator.hpp"
 #include "utils/assert.hpp"
 #include "worker.hpp"
 

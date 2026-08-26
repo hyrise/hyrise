@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cerrno>
 #include <memory>
 #include <string>
 #include <utility>
@@ -41,6 +42,12 @@ template <typename ParamType>
 class BaseTestWithParam
     : public std::conditional_t<std::is_same_v<ParamType, void>, ::testing::Test, ::testing::TestWithParam<ParamType>> {
  public:
+  // glibc math functions may leave errno at ERANGE, which Boost.Asio 1.87 misreads when an io_context is created
+  // ("config out of range", fixed in Boost 1.88). Do not let a previous test's errno leak into the next test.
+  BaseTestWithParam() {
+    errno = 0;
+  }
+
   /**
    * Base test uses its destructor instead of TearDown() to clean up. This way, derived test classes can override TearDown()
    * safely without preventing the BaseTest-cleanup from happening.

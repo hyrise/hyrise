@@ -68,7 +68,6 @@ constexpr auto UPPER_LIMIT_QUEUE_SIZE_FACTOR = size_t{4};
 
 class Worker;
 class TaskQueue;
-class UidAllocator;
 
 /**
  * Schedules Tasks
