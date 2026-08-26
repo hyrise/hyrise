@@ -88,7 +88,7 @@ std::shared_ptr<const Table> Import::_on_execute() {
       table = load_table(filename, _chunk_size);
 
       const auto chunk_encoding_spec =
-        auto_select_chunk_encoding_spec(table->column_data_types(), unique_columns(table), _target_encoding);
+          auto_select_chunk_encoding_spec(table->column_data_types(), unique_columns(table), _target_encoding);
       // .tlb files are mostly used for testing and thus small. In case larger files are frequently loaded, consider
       // parallelizing chunk encoding.
       ChunkEncoder::encode_all_chunks(table, chunk_encoding_spec);
