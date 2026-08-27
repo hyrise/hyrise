@@ -6,6 +6,7 @@
 #include <unordered_set>
 
 #include "abstract_expression.hpp"
+#include "utils/assert.hpp"
 #include "utils/make_bimap.hpp"
 
 namespace hyrise {
