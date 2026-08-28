@@ -45,10 +45,14 @@ Checks: '
          -llvm-header-guard,
          -boost-use-ranges,
          -portability-template-virtual-member-function,
+         -modernize-use-constraints,
          -cppcoreguidelines-avoid-const-or-ref-data-members,
          -portability-avoid-pragma-once,
          -llvm-prefer-static-over-anonymous-namespace
          '
+
+# TODO(anybody-update): `modernize-use-constraints` is temporarily inactive until clang-tidy 22 is used
+#                       (https://github.com/llvm/llvm-project/pull/152938 landed in LLVM 22)
 
 WarningsAsErrors: '*'
 
