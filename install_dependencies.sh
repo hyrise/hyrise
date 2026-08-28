@@ -56,6 +56,17 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
                     exit 1
                 fi
 
+                if ! git submodule update --jobs 5 --init --recursive; then
+                    echo "Error during git fetching submodules."
+                    exit 1
+                fi
+
+                if ! pip3 install --break-system-packages -r requirements.txt; then
+                    echo "Error during installation of python requirements."
+                    exit 1
+                fi
+
+                sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-15 90 --slave /usr/bin/g++ g++ /usr/bin/g++-15
                 sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-20 90 --slave /usr/bin/clang++ clang++ /usr/bin/clang++-20 --slave /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-20 --slave /usr/bin/llvm-profdata llvm-profdata /usr/bin/llvm-profdata-20 --slave /usr/bin/llvm-cov llvm-cov /usr/bin/llvm-cov-20 --slave /usr/bin/clang-format clang-format /usr/bin/clang-format-20  --slave /usr/bin/ld.lld ld.lld /usr/bin/ld.lld-20 --slave /usr/bin/llvm-bolt llvm-bolt /usr/bin/llvm-bolt-20 --slave /usr/bin/merge-fdata merge-fdata /usr/bin/merge-fdata-20 --slave /usr/lib/libbolt_rt_instr.a libbolt_rt_instr.a /usr/lib/llvm-20/lib/libbolt_rt_instr.a
             else
                 echo "Error during installation."
