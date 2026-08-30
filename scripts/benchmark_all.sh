@@ -17,7 +17,7 @@ benchmarks='hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkTPCC hyriseB
 warmup_seconds=1
 mt_shuffled_runtime=1200
 st_runs=50
-mt_runs=100
+mt_runs=100  # Used for MT runs and TPC-H SF 0.01 ST runs due to the very short runtimes.
 
 # Setting the number of clients used for the multi-threaded scenario to the machine's physical core count. This only
 # works for macOS and Linux. We do not use hyper-threads because the benchmark results are less stable on them. We
