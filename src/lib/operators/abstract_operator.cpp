@@ -348,7 +348,7 @@ OperatorState AbstractOperator::state() const {
 }
 
 std::shared_ptr<OperatorTask> AbstractOperator::get_or_create_operator_task() {
-  auto lock = std::lock_guard<std::mutex>{_operator_task_mutex};
+  auto lock = std::scoped_lock<std::mutex>{_operator_task_mutex};
   // Return the OperatorTask that owns this operator if it already exists.
   auto operator_task = _operator_task.lock();
   if (operator_task) {
@@ -386,7 +386,7 @@ std::vector<std::shared_ptr<AbstractOperator>> AbstractOperator::uncorrelated_su
   return subquery_pqps;
 }
 
-void AbstractOperator::_on_set_transaction_context(const std::weak_ptr<TransactionContext>& transaction_context) {}
+void AbstractOperator::_on_set_transaction_context(const std::weak_ptr<TransactionContext>& /*transaction_context*/) {}
 
 void AbstractOperator::_on_cleanup() {}
 

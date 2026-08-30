@@ -911,4 +911,49 @@ TYPED_TEST(OperatorsAggregateTest, StringVariations) {
   EXPECT_EQ(values_sorted, result_values_sorted);
 }
 
+// Test for issue #2761.
+TYPED_TEST(OperatorsAggregateTest, Issue2761) {
+  auto column_definitions = TableColumnDefinitions{
+      {"col_0", DataType::Long, false}, {"col_1", DataType::Long, false}, {"col_2", DataType::Long, false}};
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data);
+
+  auto col_0_segment = pmr_vector<int64_t>{};
+  auto col_1_segment = pmr_vector<int64_t>{};
+  auto col_2_segment = pmr_vector<int64_t>{};
+
+  // To trigger #2761, we need to have more output rows than fit into a chunk.
+  for (auto row_id = int64_t{0}; row_id < static_cast<int64_t>(Chunk::DEFAULT_SIZE + 1'000); ++row_id) {
+    col_0_segment.emplace_back(row_id);
+    col_1_segment.emplace_back(row_id);
+    col_2_segment.emplace_back(17);
+  }
+
+  auto segments = pmr_vector<std::shared_ptr<AbstractSegment>>{};
+  segments.emplace_back(std::make_shared<ValueSegment<int64_t>>(std::move(col_0_segment)));
+  segments.emplace_back(std::make_shared<ValueSegment<int64_t>>(std::move(col_1_segment)));
+  segments.emplace_back(std::make_shared<ValueSegment<int64_t>>(std::move(col_2_segment)));
+
+  table->append_chunk(segments);
+  table->last_chunk()->set_immutable();
+
+  const auto table_wrapper = std::make_shared<TableWrapper>(table);
+  table_wrapper->never_clear_output();
+  table_wrapper->execute();
+
+  const auto col_2 = PQPColumnExpression::from_table(*table, ColumnID{2});
+  const auto aggregates = std::vector<std::shared_ptr<WindowFunctionExpression>>{sum_(col_2)};
+
+  // Single distinct group-by column.
+  const auto groupby_column_id = std::vector<ColumnID>{ColumnID{0}};
+  auto single_groupby_column_aggregate = std::make_shared<TypeParam>(table_wrapper, aggregates, groupby_column_id);
+  single_groupby_column_aggregate->execute();
+  ASSERT_EQ(single_groupby_column_aggregate->get_output()->row_count(), table->row_count());
+
+  // Two distinct group-by columns.
+  const auto groupby_column_ids = std::vector<ColumnID>{ColumnID{0}, ColumnID{1}};
+  auto two_groupby_columns_aggregate = std::make_shared<TypeParam>(table_wrapper, aggregates, groupby_column_ids);
+  two_groupby_columns_aggregate->execute();
+  ASSERT_EQ(two_groupby_columns_aggregate->get_output()->row_count(), table->row_count());
+}
+
 }  // namespace hyrise

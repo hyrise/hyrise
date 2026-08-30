@@ -55,7 +55,7 @@ class GDFSCache : public AbstractCache<Key, Value> {
       entry.value = value;
       entry.size = size;
       entry.frequency++;
-      entry.priority = _inflation + static_cast<double>(entry.frequency) / entry.size;
+      entry.priority = _inflation + (static_cast<double>(entry.frequency) / entry.size);
       _queue.update(handle);
 
       return;
@@ -69,7 +69,7 @@ class GDFSCache : public AbstractCache<Key, Value> {
 
     // Insert new item in cache.
     GDFSCacheEntry entry{key, value, 1, size, 0.0};
-    entry.priority = _inflation + static_cast<double>(entry.frequency) / entry.size;
+    entry.priority = _inflation + (static_cast<double>(entry.frequency) / entry.size);
     const Handle handle = _queue.push(entry);
     _map[key] = handle;
   }
@@ -84,7 +84,7 @@ class GDFSCache : public AbstractCache<Key, Value> {
     const Handle handle = it->second;
     GDFSCacheEntry& entry = (*handle);
     entry.frequency++;
-    entry.priority = _inflation + static_cast<double>(entry.frequency) / entry.size;
+    entry.priority = _inflation + (static_cast<double>(entry.frequency) / entry.size);
     _queue.update(handle);
     return entry.value;
   }

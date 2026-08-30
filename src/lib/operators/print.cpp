@@ -61,7 +61,7 @@ std::shared_ptr<AbstractOperator> Print::_on_deep_copy(
   return std::make_shared<Print>(copied_left_input, _flags, _out);
 }
 
-void Print::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
+void Print::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& /*parameters*/) {}
 
 void Print::print(const std::shared_ptr<const Table>& table, const PrintFlags flags, std::ostream& out) {
   auto table_wrapper = std::make_shared<TableWrapper>(table);
