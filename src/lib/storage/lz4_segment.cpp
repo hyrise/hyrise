@@ -325,7 +325,7 @@ std::pair<pmr_string, size_t> LZ4Segment<pmr_string>::decompress(const ChunkOffs
   auto start_offset = offset_decompressor->get(chunk_offset);
   auto end_offset = size_t{0};
   if (chunk_offset + 1 == offset_decompressor->size()) {
-    end_offset = (_lz4_blocks.size() - 1) * _block_size + _last_block_size;
+    end_offset = ((_lz4_blocks.size() - 1) * _block_size) + _last_block_size;
   } else {
     end_offset = offset_decompressor->get(chunk_offset + 1);
   }
@@ -506,11 +506,10 @@ std::optional<CompressedVectorType> LZ4Segment<T>::compressed_vector_type() cons
 // compression type. So if the vector compression becomes configurable, this method does not need to be touched.
 template <>
 std::optional<CompressedVectorType> LZ4Segment<pmr_string>::compressed_vector_type() const {
-  auto type = std::optional<CompressedVectorType>{};
   if (_string_offsets) {
     return _string_offsets->type();
   }
-  return type;
+  return std::nullopt;
 }
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(LZ4Segment);

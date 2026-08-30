@@ -336,7 +336,7 @@ if add_note_for_capped_runs or add_note_for_insufficient_pvalue_runs:
     width_for_note = len(lines[0]) - first_column_width - 5  # 5 for seperators and spaces
     if add_note_for_capped_runs:
         note = "˄ Execution stopped due to max runs reached"
-        table_string_reformatted += "|" + (" Notes ".rjust(first_column_width, " "))
+        table_string_reformatted += "|" + " Notes ".rjust(first_column_width, " ")
         table_string_reformatted += "|| " + note.ljust(width_for_note, " ") + "|\n"
     if add_note_for_insufficient_pvalue_runs:
         note = "˅" + " Insufficient number of runs for p-value calculation"

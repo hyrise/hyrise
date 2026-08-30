@@ -197,7 +197,7 @@ TEST_F(SchedulerTest, CheckScheduledTasksAreGrouped) {
     auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
 
     for (auto task_id = size_t{0}; task_id < task_count; ++task_id) {
-      tasks.emplace_back(std::make_shared<JobTask>([&] () {
+      tasks.emplace_back(std::make_shared<JobTask>([&]() {
         ++output_counter;
         const auto active_groups = ++concurrently_processed_groups;
         ASSERT_LE(active_groups, group_count);
