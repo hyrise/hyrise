@@ -59,7 +59,7 @@ def calculate_and_format_p_value(old_durations, new_durations):
         return colored("˅", "yellow", attrs=["bold"])
 
     # The results for a query are considered to be statistically not significant if the runtime is unstable. To assess
-    # the variance, we use the coefficient of variation (C.V.): `C.V = standard deviation / mean`. If that value is
+    # the variance, we use the coefficient of variation (CV): `CV = standard deviation / mean`. If that value is
     # higher than 10% (which seems to be a common value), we do not trust the p-value.
     # For details, see https://www.geeksforgeeks.org/data-science/coefficient-of-variation-meaning-formula-and-examples
     old_cv = np.std(old_durations) / np.mean(old_durations)
