@@ -26,7 +26,7 @@ pkgs.mkShell {
   nativeBuildInputs = with pkgs; [
     autoconf
     boost
-    clang
+    clang_20
     cmake
     coreutils
     dos2unix
