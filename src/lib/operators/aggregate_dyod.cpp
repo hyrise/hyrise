@@ -146,8 +146,9 @@ void AggregateDYOD::_normalize_chunk_groupby(const std::shared_ptr<const Chunk>&
       const auto segment = input_chunk->get_segment(column_id);
       auto row_id = uint64_t{0};
       segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
-        const auto byte_index =
-            ((row_offset + row_id) * (_normalized_key_size + _groupby_string_count * 8)) + byte_offset;
+        const auto absolute_row_id = row_offset + row_id;
+        const auto key_size_with_strings = _normalized_key_size + (_groupby_string_count * 8);
+        const auto byte_index = (absolute_row_id * key_size_with_strings) + byte_offset;
         auto* base_byte = byte_vector.data() + byte_index - byte_offset;
         auto* byte_representation = byte_vector.data() + byte_index;
         if constexpr (std::is_arithmetic_v<ColumnDataType>) {
