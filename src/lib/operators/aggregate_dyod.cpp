@@ -19,6 +19,7 @@
 #include "all_type_variant.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
+#include "expression/window_function_expression.hpp"
 #include "hyrise.hpp"
 #include "operators/abstract_aggregate_operator.hpp"
 #include "operators/abstract_operator.hpp"
@@ -26,13 +27,17 @@
 #include "operators/aggregate_hash.hpp"
 #include "operators/operator_state.hpp"
 #include "resolve_type.hpp"
+#include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
-#include "storage/abstract_segment.hpp"
 #include "storage/base_dictionary_segment.hpp"
+#include "storage/chunk.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/table.hpp"
+#include "storage/table_column_definition.hpp"
+#include "storage/value_segment.hpp"
 #include "type_comparison.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace {
 using namespace hyrise;
@@ -107,7 +112,7 @@ struct GroupByPartitions {
 // Struct for a single materialized aggregate column.
 struct MaterializedAggregateColumn {
   std::shared_ptr<void> values;
-  std::shared_ptr<uint8_t[]> nulls;
+  std::shared_ptr<std::vector<uint8_t>> nulls;
   std::shared_ptr<AbstractTask> materialization_task;
 };
 
@@ -150,7 +155,8 @@ std::vector<uint8_t> materialize_groupby_keys(const std::shared_ptr<const Table>
               const auto global_row_idx = global_row_offset + position.chunk_offset();
 
               // Get a direct pointer to where this column starts for this specific row.
-              auto* write_ptr = materialized_data.data() + global_row_idx * normalized_key_size + layout.byte_offset;
+              auto* write_ptr =
+                  materialized_data.data() + (global_row_idx * normalized_key_size) + layout.byte_offset;
 
               if (position.is_null()) {
                 // Write NULL marker.
@@ -169,18 +175,19 @@ std::vector<uint8_t> materialize_groupby_keys(const std::shared_ptr<const Table>
 
                 // Only store this where we need it.
                 if (str.size() > STRING_PREFIX_SIZE) {
-                  row_strings[global_row_idx * string_column_count + layout.string_slot_index] = str;
+                  row_strings[(global_row_idx * string_column_count) + layout.string_slot_index] = str;
                 }
               }
             });
           } else {
-            constexpr size_t type_size = sizeof(ColumnDataType);
+            constexpr size_t TYPE_SIZE = sizeof(ColumnDataType);
 
             segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
               const auto global_row_idx = global_row_offset + position.chunk_offset();
 
               // Get a direct pointer to where this column starts for this specific row.
-              auto* write_ptr = materialized_data.data() + global_row_idx * normalized_key_size + layout.byte_offset;
+              auto* write_ptr =
+                  materialized_data.data() + (global_row_idx * normalized_key_size) + layout.byte_offset;
 
               if (position.is_null()) {
                 // Write NULL marker.
@@ -191,7 +198,7 @@ std::vector<uint8_t> materialize_groupby_keys(const std::shared_ptr<const Table>
 
                 // Copy the actual value starting 1 byte after the null marker.
                 const auto& value = position.value();
-                std::memcpy(write_ptr + 1, &value, type_size);
+                std::memcpy(write_ptr + 1, &value, TYPE_SIZE);
               }
             });
           }
@@ -219,7 +226,7 @@ void compute_row_hashes(const std::vector<uint8_t>& materialized_data, const siz
     const auto row_end = row_count * (job_id + 1) / hash_job_count;
     hash_jobs.emplace_back(std::make_shared<JobTask>([&, row_begin, row_end]() {
       for (auto row_index = row_begin; row_index < row_end; ++row_index) {
-        const auto* key_begin = materialized_data.data() + row_index * normalized_key_size;
+        const auto* key_begin = materialized_data.data() + (row_index * normalized_key_size);
         auto seed = size_t{0};
         boost::hash_range(seed, key_begin, key_begin + normalized_key_size);
         row_hashes[row_index] = seed;
@@ -361,7 +368,7 @@ std::shared_ptr<AbstractTask> schedule_skewed_partition_hash_table_job(
   auto& slice_start = partitions.sub_slice_start[partition_index];
   slice_start.resize(sub_count + 1);
   for (auto sub_partition_index = size_t{0}; sub_partition_index <= sub_count; ++sub_partition_index) {
-    slice_start[sub_partition_index] = begin + partition_row_count * sub_partition_index / sub_count;
+    slice_start[sub_partition_index] = begin + (partition_row_count * sub_partition_index / sub_count);
   }
 
   partitions.sub_row_to_group[partition_index].assign(sub_count, {});
@@ -520,7 +527,8 @@ void partition_by_groupby_keys(const std::shared_ptr<const Table>& input_table,
   };
   auto key_equal = [&partitions, normalized_key_size](const size_t row_a, const size_t row_b) -> bool {
     const auto* data = partitions.materialized_key_bytes.data();
-    if (std::memcmp(data + row_a * normalized_key_size, data + row_b * normalized_key_size, normalized_key_size) != 0) {
+    if (std::memcmp(data + (row_a * normalized_key_size), data + (row_b * normalized_key_size), normalized_key_size) !=
+        0) {
       return false;
     }
     if (!partitions.key_info.has_string_column) {
@@ -528,8 +536,8 @@ void partition_by_groupby_keys(const std::shared_ptr<const Table>& input_table,
     }
 
     const auto string_column_count = partitions.key_info.string_column_count;
-    const auto* row_a_strings = partitions.row_strings.data() + row_a * string_column_count;
-    const auto* row_b_strings = partitions.row_strings.data() + row_b * string_column_count;
+    const auto* row_a_strings = partitions.row_strings.data() + (row_a * string_column_count);
+    const auto* row_b_strings = partitions.row_strings.data() + (row_b * string_column_count);
     return std::equal(row_a_strings, row_a_strings + string_column_count, row_b_strings);
   };
 
@@ -709,13 +717,13 @@ class TrivialGroupAggregateState : public Noncopyable {
             mine.accumulator = theirs.accumulator;
           } else {
             const auto delta = theirs.accumulator[1] - mine.accumulator[1];
-            const auto mean = mine.accumulator[1] + delta * count_theirs / combined_count;
-            const auto m2 = mine.accumulator[2] + theirs.accumulator[2] +
-                            delta * delta * count_mine * count_theirs / combined_count;
+            const auto mean = mine.accumulator[1] + (delta * count_theirs / combined_count);
+            const auto combined_m2 = mine.accumulator[2] + theirs.accumulator[2] +
+                                     (delta * delta * count_mine * count_theirs / combined_count);
             mine.accumulator[0] = combined_count;
             mine.accumulator[1] = mean;
-            mine.accumulator[2] = m2;
-            mine.accumulator[3] = (combined_count > 1) ? std::sqrt(m2 / (combined_count - 1)) : 0.0;
+            mine.accumulator[2] = combined_m2;
+            mine.accumulator[3] = (combined_count > 1) ? std::sqrt(combined_m2 / (combined_count - 1)) : 0.0;
           }
         }
         mine.aggregate_count += theirs.aggregate_count;
@@ -816,8 +824,8 @@ void materialize_aggregate_argument_column(const std::shared_ptr<const Table>& i
   const auto num_rows = input_table->row_count();
   const auto num_chunks = input_table->chunk_count();
 
-  auto values_ptr = std::make_shared_for_overwrite<ColumnDataType[]>(num_rows);
-  auto nulls_ptr = std::make_shared_for_overwrite<uint8_t[]>(num_rows);
+  auto values_ptr = std::make_shared<std::vector<ColumnDataType>>(num_rows);
+  auto nulls_ptr = std::make_shared<std::vector<uint8_t>>(num_rows);
   auto materialization_task = std::make_shared<JobTask>([]() {});
 
   for (ChunkID chunk_id{0}; chunk_id < num_chunks; ++chunk_id) {
@@ -825,8 +833,8 @@ void materialize_aggregate_argument_column(const std::shared_ptr<const Table>& i
       const auto chunk = input_table->get_chunk(chunk_id);
       const auto global_row_offset = chunk_row_offset[chunk_id];
       const auto& segment = chunk->get_segment(column_id);
-      auto* const values = values_ptr.get();
-      auto* const nulls = nulls_ptr.get();
+      auto* const values = values_ptr->data();
+      auto* const nulls = nulls_ptr->data();
 
       // Do some optimized copies for value segments, otherwise iterate over the segment.
       if (const auto* value_segment = dynamic_cast<const ValueSegment<ColumnDataType>*>(segment.get())) {
@@ -872,15 +880,15 @@ void accumulate_partitioned_groups(const std::shared_ptr<const Table>& input_tab
                                    const std::vector<size_t>& chunk_row_offset,
                                    std::vector<Segments>& partition_segments,
                                    std::vector<std::shared_ptr<AbstractTask>>& all_jobs) {
-  auto values_ptr = std::shared_ptr<ColumnDataType[]>{};
-  auto nulls_ptr = std::shared_ptr<uint8_t[]>{};
+  auto values_ptr = std::shared_ptr<std::vector<ColumnDataType>>{};
+  auto nulls_ptr = std::shared_ptr<std::vector<uint8_t>>{};
   auto materialization_task = std::shared_ptr<AbstractTask>{};
 
   if (column_id != INVALID_COLUMN_ID) {
     materialize_aggregate_argument_column<ColumnDataType>(input_table, column_id, chunk_row_offset, column_cache,
                                                           all_jobs);
     const auto& materialized = column_cache.entries.at(column_id);
-    values_ptr = std::static_pointer_cast<ColumnDataType[]>(materialized.values);
+    values_ptr = std::static_pointer_cast<std::vector<ColumnDataType>>(materialized.values);
     nulls_ptr = materialized.nulls;
     materialization_task = materialized.materialization_task;
   }
@@ -905,8 +913,8 @@ void accumulate_partitioned_groups(const std::shared_ptr<const Table>& input_tab
               ++local_results[row_to_group_p[row_index]].aggregate_count;
             }
           } else {
-            const auto* const values = values_ptr.get();
-            const auto* const nulls = nulls_ptr.get();
+            const auto* const values = values_ptr->data();
+            const auto* const nulls = nulls_ptr->data();
 
             for (auto row_index = size_t{0}; row_index < size; ++row_index) {
               const auto global_row_idx = partitions.rows[begin + row_index];
@@ -953,16 +961,16 @@ void accumulate_aggregate(const std::shared_ptr<WindowFunctionExpression>& aggre
     using ColumnDataType = typename decltype(type)::type;
 
     resolve_window_function(aggregate->window_function, [&](auto window_function_t) {
-      constexpr auto aggregate_function = decltype(window_function_t)::value;
+      constexpr auto AGGREGATE_FUNCTION = decltype(window_function_t)::value;
 
-      const auto [output_column_id, needs_null] = prepare_aggregate_output_column<ColumnDataType, aggregate_function>(
+      const auto [output_column_id, needs_null] = prepare_aggregate_output_column<ColumnDataType, AGGREGATE_FUNCTION>(
           aggregate, aggregate_index, input_table, column_id, groupby_column_count, output_column_definitions);
 
       if (!partitions) {
-        accumulate_trivial_group<ColumnDataType, aggregate_function>(input_table, column_id, group_count,
+        accumulate_trivial_group<ColumnDataType, AGGREGATE_FUNCTION>(input_table, column_id, group_count,
                                                                      output_column_id, needs_null, output_segments);
       } else {
-        accumulate_partitioned_groups<ColumnDataType, aggregate_function>(
+        accumulate_partitioned_groups<ColumnDataType, AGGREGATE_FUNCTION>(
             input_table, column_id, *partitions, column_cache, output_column_id, needs_null, chunk_row_offset,
             partition_segments, all_jobs);
       }
@@ -996,7 +1004,8 @@ void write_groupby_segment(const size_t groupby_index, GroupByPartitions& partit
       for (auto local_group_index = size_t{0}; local_group_index < local_groups; ++local_group_index) {
         const auto representative_row = representative_p[local_group_index];
         const auto* row_bytes =
-            partitions.materialized_key_bytes.data() + representative_row * normalized_key_size + layout.byte_offset;
+            partitions.materialized_key_bytes.data() + (representative_row * normalized_key_size) +
+            layout.byte_offset;
 
         if (row_bytes[0] == 1) {
           null_flags[local_group_index] = 1;
@@ -1007,7 +1016,7 @@ void write_groupby_segment(const size_t groupby_index, GroupByPartitions& partit
           const auto length = row_bytes[1];
           if (length > STRING_PREFIX_SIZE) {
             values[local_group_index] =
-                partitions.row_strings[representative_row * string_column_count + layout.string_slot_index];
+                partitions.row_strings[(representative_row * string_column_count) + layout.string_slot_index];
           } else {
             values[local_group_index] = pmr_string(reinterpret_cast<const char*>(row_bytes + 2), length);
           }
@@ -1081,7 +1090,7 @@ std::shared_ptr<Table> assemble_output_table(const TableColumnDefinitions& outpu
     const auto partition_count = partitions->partition_count;
     for (auto partition_index = size_t{0}; partition_index < partition_count; ++partition_index) {
       if (partitions->group_count[partition_index] > 0) {
-        operator_output->append_chunk(std::move(partition_segments[partition_index]));
+        operator_output->append_chunk(partition_segments[partition_index]);
       }
     }
   }
