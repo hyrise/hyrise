@@ -981,7 +981,7 @@ void accumulate_aggregate(const std::shared_ptr<WindowFunctionExpression>& aggre
 // Decodes one GROUP BY columns output segments (across all partitions) from the normalized key bytes.
 template <typename ColumnDataType>
 void write_groupby_segment(const size_t groupby_index, GroupByPartitions& partitions,
-                           std::vector<Segments>& partition_segments) {
+                           std::vector<Segments>& partition_segments, const bool column_is_nullable) {
   const auto& layout = partitions.key_info.column_layouts[groupby_index];
   const auto normalized_key_size = partitions.key_info.key_size;
   const auto string_column_count = partitions.key_info.string_column_count;
@@ -1036,7 +1036,7 @@ void write_groupby_segment(const size_t groupby_index, GroupByPartitions& partit
         }
       }
 
-      if (has_null) {
+      if (has_null || column_is_nullable) {
         partition_segments[partition_index][groupby_index] =
             std::make_shared<ValueSegment<ColumnDataType>>(std::move(values), std::move(nulls));
       } else {
@@ -1055,9 +1055,10 @@ void write_groupby_output(const std::shared_ptr<const Table>& input_table,
   const auto groupby_column_count = groupby_column_ids.size();
   for (auto groupby_index = size_t{0}; groupby_index < groupby_column_count; ++groupby_index) {
     const auto column_id = groupby_column_ids[groupby_index];
+    const auto column_is_nullable = input_table->column_is_nullable(column_id);
     resolve_data_type(input_table->column_data_type(column_id), [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
-      write_groupby_segment<ColumnDataType>(groupby_index, partitions, partition_segments);
+      write_groupby_segment<ColumnDataType>(groupby_index, partitions, partition_segments, column_is_nullable);
     });
   }
 }
