@@ -37,6 +37,7 @@
 #include "storage/value_segment.hpp"
 #include "type_comparison.hpp"
 #include "types.hpp"
+#include "uninitialized_vector.hpp"
 #include "utils/assert.hpp"
 
 namespace {
@@ -86,17 +87,21 @@ NormalizedKeyInfo compute_normalized_key_info(const std::shared_ptr<const Table>
   return key_info;
 }
 
-// Result of hash-partitioning the input rows by their normalized GROUP BY key.
+// Result of hash-partitioning the input rows by their normalized GROUP BY key. The materialized key
+// bytes and hashes cover all rows. Everything below `partition_count` is indexed per partition, the
+// `sub_*` members are scratch used only while a skewed partition is split across parallel sub-jobs.
 struct GroupByPartitions {
   NormalizedKeyInfo key_info;
   std::vector<uint8_t> materialized_key_bytes;
   std::vector<pmr_string> row_strings;
-  std::vector<size_t> row_hashes;
+  // Every slot is overwritten by compute_row_hashes before it is read, so the zero-fill is skipped.
+  uninitialized_vector<size_t> row_hashes;
 
   size_t partition_count{0};
   std::vector<size_t> partition_start;
   std::vector<size_t> partition_size;
-  std::vector<size_t> rows;
+  // Scatter fills every slot exactly once, so the zero-fill is skipped.
+  uninitialized_vector<size_t> rows;
 
   std::vector<size_t> group_count;
   std::vector<std::vector<size_t>> row_to_group;
@@ -131,12 +136,13 @@ std::vector<uint8_t> materialize_groupby_keys(const std::shared_ptr<const Table>
   const auto row_count = table->row_count();
   const auto chunk_count = table->chunk_count();
 
+  // NULL markers and the unused tail of each string prefix rely on the bytes being 0.
   auto materialized_data = std::vector<uint8_t>(row_count * normalized_key_size);
 
   auto materialize_jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   materialize_jobs.reserve(static_cast<size_t>(chunk_count) * column_ids.size());
 
-  for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     for (auto column_index = size_t{0}; column_index < column_ids.size(); ++column_index) {
       materialize_jobs.emplace_back(std::make_shared<JobTask>([&, chunk_id, column_index]() {
         const auto chunk = table->get_chunk(chunk_id);
@@ -155,8 +161,7 @@ std::vector<uint8_t> materialize_groupby_keys(const std::shared_ptr<const Table>
               const auto global_row_idx = global_row_offset + position.chunk_offset();
 
               // Get a direct pointer to where this column starts for this specific row.
-              auto* write_ptr =
-                  materialized_data.data() + (global_row_idx * normalized_key_size) + layout.byte_offset;
+              auto* write_ptr = materialized_data.data() + (global_row_idx * normalized_key_size) + layout.byte_offset;
 
               if (position.is_null()) {
                 // Write NULL marker.
@@ -169,8 +174,7 @@ std::vector<uint8_t> materialize_groupby_keys(const std::shared_ptr<const Table>
                 // The length byte makes the key exact for strings that fit the prefix.
                 // For longer strings which exceed the prefix we need to compare the full string.
                 write_ptr[1] = static_cast<uint8_t>(std::min(str.size(), size_t{255}));
-                // Short strings get zero-padded.
-                std::memset(write_ptr + 2, 0, STRING_PREFIX_SIZE);
+                // Strings shorter than the prefix keep the zero padding already present in the buffer.
                 std::memcpy(write_ptr + 2, str.data(), std::min(str.size(), STRING_PREFIX_SIZE));
 
                 // Only store this where we need it.
@@ -186,8 +190,7 @@ std::vector<uint8_t> materialize_groupby_keys(const std::shared_ptr<const Table>
               const auto global_row_idx = global_row_offset + position.chunk_offset();
 
               // Get a direct pointer to where this column starts for this specific row.
-              auto* write_ptr =
-                  materialized_data.data() + (global_row_idx * normalized_key_size) + layout.byte_offset;
+              auto* write_ptr = materialized_data.data() + (global_row_idx * normalized_key_size) + layout.byte_offset;
 
               if (position.is_null()) {
                 // Write NULL marker.
@@ -214,10 +217,10 @@ std::vector<uint8_t> materialize_groupby_keys(const std::shared_ptr<const Table>
 
 // Computes a hash per row.
 void compute_row_hashes(const std::vector<uint8_t>& materialized_data, const size_t normalized_key_size,
-                        std::vector<size_t>& row_hashes) {
+                        uninitialized_vector<size_t>& row_hashes) {
   const auto row_count = row_hashes.size();
   const auto num_cpus = std::max<size_t>(1, Hyrise::get().topology.num_cpus());
-  const auto hash_job_count = std::min<size_t>(num_cpus, std::max<size_t>(1, row_count));
+  const auto hash_job_count = std::clamp<size_t>(row_count, 1, num_cpus);
 
   auto hash_jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   hash_jobs.reserve(hash_job_count);
@@ -278,7 +281,7 @@ void scatter_rows_into_partitions(GroupByPartitions& partitions, const std::shar
   {
     auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
     jobs.reserve(num_chunks);
-    for (ChunkID chunk_id{0}; chunk_id < num_chunks; ++chunk_id) {
+    for (auto chunk_id = ChunkID{0}; chunk_id < num_chunks; ++chunk_id) {
       jobs.emplace_back(std::make_shared<JobTask>([&, chunk_id]() {
         const auto chunk_size = table->get_chunk(chunk_id)->size();
         const auto global_row_offset = chunk_row_offset[chunk_id];
@@ -305,11 +308,11 @@ void scatter_rows_into_partitions(GroupByPartitions& partitions, const std::shar
     }
   }
 
-  partitions.rows.assign(num_rows, 0);
+  partitions.rows.resize(num_rows);
   {
     auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
     jobs.reserve(num_chunks);
-    for (ChunkID chunk_id{0}; chunk_id < num_chunks; ++chunk_id) {
+    for (auto chunk_id = ChunkID{0}; chunk_id < num_chunks; ++chunk_id) {
       jobs.emplace_back(std::make_shared<JobTask>([&, chunk_id]() {
         const auto chunk_size = table->get_chunk(chunk_id)->size();
         const auto global_row_offset = chunk_row_offset[chunk_id];
@@ -354,6 +357,7 @@ std::shared_ptr<AbstractTask> schedule_partition_hash_table_job(const size_t par
     partitions.group_count[partition_index] = next_local_group;
   });
 }
+
 /**
  * Build a skewed partition's hash table by splitting it into `sub_count` sub-jobs,
  * each building an independent local hash table, followed by a merge job that combines them.
@@ -497,6 +501,7 @@ void build_local_hash_tables(GroupByPartitions& partitions, const KeyHash& key_h
         schedule_skewed_partition_hash_table_job(partition_index, sub_count, partitions, key_hash, key_equal, all_jobs);
   }
 }
+
 /**
  * Hash-partitions the input rows by their normalized GROUP BY key,
  * by building one local hash table (group id lookup) per partition.
@@ -525,6 +530,9 @@ void partition_by_groupby_keys(const std::shared_ptr<const Table>& input_table,
   auto key_hash = [&partitions](const size_t row_index) -> size_t {
     return partitions.row_hashes[row_index];
   };
+  // The key record stores only a length byte and a prefix per string, so the memcmp
+  // handles fixed-width columns and prefix-sized strings. Longer strings share a prefix and are
+  // compared in full via row_strings.
   auto key_equal = [&partitions, normalized_key_size](const size_t row_a, const size_t row_b) -> bool {
     const auto* data = partitions.materialized_key_bytes.data();
     if (std::memcmp(data + (row_a * normalized_key_size), data + (row_b * normalized_key_size), normalized_key_size) !=
@@ -759,7 +767,7 @@ void accumulate_trivial_group(const std::shared_ptr<const Table>& input_table, c
     auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
     jobs.reserve(num_chunks);
 
-    for (ChunkID chunk_id{0}; chunk_id < num_chunks; ++chunk_id) {
+    for (auto chunk_id = ChunkID{0}; chunk_id < num_chunks; ++chunk_id) {
       jobs.emplace_back(std::make_shared<JobTask>([&, chunk_id]() {
         auto& worker_state = operator_state.current_worker_state();
         worker_state.ensure_initialized(group_count);
@@ -828,7 +836,7 @@ void materialize_aggregate_argument_column(const std::shared_ptr<const Table>& i
   auto nulls_ptr = std::make_shared<std::vector<uint8_t>>(num_rows);
   auto materialization_task = std::make_shared<JobTask>([]() {});
 
-  for (ChunkID chunk_id{0}; chunk_id < num_chunks; ++chunk_id) {
+  for (auto chunk_id = ChunkID{0}; chunk_id < num_chunks; ++chunk_id) {
     auto materialize_job = std::make_shared<JobTask>([&, chunk_id, column_id, values_ptr, nulls_ptr]() {
       const auto chunk = input_table->get_chunk(chunk_id);
       const auto global_row_offset = chunk_row_offset[chunk_id];
@@ -902,11 +910,11 @@ void accumulate_partitioned_groups(const std::shared_ptr<const Table>& input_tab
         [&, partition_index, column_id, values_ptr, nulls_ptr, output_column_id, needs_null]() {
           const auto begin = partitions.partition_start[partition_index];
           const auto size = partitions.partition_size[partition_index];
-          const auto local_groups = partitions.group_count[partition_index];
+          const auto local_group_count = partitions.group_count[partition_index];
           const auto& row_to_group_p = partitions.row_to_group[partition_index];
 
           auto local_results = AggregateResults<ColumnDataType, aggregate_function>{};
-          local_results.resize(local_groups);
+          local_results.resize(local_group_count);
 
           if (column_id == INVALID_COLUMN_ID) {
             for (auto row_index = size_t{0}; row_index < size; ++row_index) {
@@ -927,7 +935,7 @@ void accumulate_partitioned_groups(const std::shared_ptr<const Table>& input_tab
             }
           }
 
-          fill_output_segment<ColumnDataType, aggregate_function>(local_results, local_groups, output_column_id,
+          fill_output_segment<ColumnDataType, aggregate_function>(local_results, local_group_count, output_column_id,
                                                                   needs_null, partition_segments[partition_index]);
         });
 
@@ -994,18 +1002,17 @@ void write_groupby_segment(const size_t groupby_index, GroupByPartitions& partit
       continue;
     }
     jobs.emplace_back(std::make_shared<JobTask>([&, partition_index]() {
-      const auto local_groups = partitions.group_count[partition_index];
+      const auto local_group_count = partitions.group_count[partition_index];
       const auto& representative_p = partitions.group_representative_row[partition_index];
 
-      auto values = pmr_vector<ColumnDataType>(local_groups);
+      auto values = pmr_vector<ColumnDataType>(local_group_count);
       // Use uint8_t, we got race conditions with bool vector, see https://stackoverflow.com/questions/33617421/write-concurrently-vectorbool.
-      auto null_flags = std::vector<uint8_t>(local_groups, 0);
+      auto null_flags = std::vector<uint8_t>(local_group_count, 0);
 
-      for (auto local_group_index = size_t{0}; local_group_index < local_groups; ++local_group_index) {
+      for (auto local_group_index = size_t{0}; local_group_index < local_group_count; ++local_group_index) {
         const auto representative_row = representative_p[local_group_index];
         const auto* row_bytes =
-            partitions.materialized_key_bytes.data() + (representative_row * normalized_key_size) +
-            layout.byte_offset;
+            partitions.materialized_key_bytes.data() + (representative_row * normalized_key_size) + layout.byte_offset;
 
         if (row_bytes[0] == 1) {
           null_flags[local_group_index] = 1;
@@ -1028,8 +1035,8 @@ void write_groupby_segment(const size_t groupby_index, GroupByPartitions& partit
       }
 
       auto has_null = false;
-      auto nulls = pmr_vector<bool>(local_groups, false);
-      for (auto local_group_index = size_t{0}; local_group_index < local_groups; ++local_group_index) {
+      auto nulls = pmr_vector<bool>(local_group_count, false);
+      for (auto local_group_index = size_t{0}; local_group_index < local_group_count; ++local_group_index) {
         if (null_flags[local_group_index]) {
           nulls[local_group_index] = true;
           has_null = true;
