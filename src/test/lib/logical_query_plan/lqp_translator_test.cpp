@@ -40,7 +40,6 @@
 #include "logical_query_plan/window_node.hpp"
 #include "operators/abstract_operator.hpp"
 #include "operators/aggregate_dyod.hpp"
-#include "operators/aggregate_hash.hpp"
 #include "operators/change_meta_table.hpp"
 #include "operators/export.hpp"
 #include "operators/get_table.hpp"
