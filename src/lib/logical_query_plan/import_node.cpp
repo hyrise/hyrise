@@ -5,11 +5,13 @@
 #include <optional>
 #include <sstream>
 #include <string>
+#include <utility>
 
 #include <boost/container_hash/hash.hpp>
 
 #include "magic_enum/magic_enum.hpp"
 
+#include "import_export/csv/csv_meta.hpp"
 #include "import_export/file_type.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/abstract_non_query_node.hpp"
@@ -18,12 +20,14 @@
 namespace hyrise {
 
 ImportNode::ImportNode(const std::string& init_table_name, const std::string& init_file_name,
-                       const FileType init_file_type, const std::optional<EncodingType>& init_table_encoding)
+                       const FileType init_file_type, const std::optional<EncodingType>& init_table_encoding,
+                       std::optional<CsvParseConfig> csv_parse_config)
     : AbstractNonQueryNode(LQPNodeType::Import),
       table_name{init_table_name},
       file_name{init_file_name},
       file_type{init_file_type},
-      target_encoding{init_table_encoding} {}
+      target_encoding{init_table_encoding},
+      csv_parse_config(std::move(csv_parse_config)) {}
 
 std::string ImportNode::description(const DescriptionMode /*mode*/) const {
   auto stream = std::ostringstream{};

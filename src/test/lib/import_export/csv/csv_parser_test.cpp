@@ -258,6 +258,11 @@ TEST_F(CsvParserTest, ImportUnquotedNullStringWithNullStringAsNullThrows) {
                std::exception);
 }
 
+TEST_F(CsvParserTest, ImportUppercaseNullStringDoesNotThrow) {
+  const auto csv_file = std::string{"resources/test_data/csv/string_with_uppercase_null.csv"};
+  EXPECT_NO_THROW(CsvParser::parse(csv_file, process_csv_meta_file(csv_file + CsvMeta::META_FILE_EXTENSION)));
+}
+
 TEST_F(CsvParserTest, WithAndWithoutQuotes) {
   const auto csv_file = std::string{"resources/test_data/csv/with_and_without_quotes.csv"};
   auto csv_meta = process_csv_meta_file(csv_file + CsvMeta::META_FILE_EXTENSION);

@@ -3,21 +3,28 @@
 #include <cstddef>
 #include <format>
 #include <memory>
+#include <optional>
 #include <string>
+#include <utility>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/container_hash/hash.hpp>
 
 #include "magic_enum/magic_enum.hpp"
 
+#include "import_export/csv/csv_meta.hpp"
 #include "import_export/file_type.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/abstract_non_query_node.hpp"
 
 namespace hyrise {
 
-ExportNode::ExportNode(const std::string& init_file_name, const FileType init_file_type)
-    : AbstractNonQueryNode(LQPNodeType::Export), file_name(init_file_name), file_type(init_file_type) {}
+ExportNode::ExportNode(const std::string& init_file_name, const FileType init_file_type,
+                       std::optional<CsvParseConfig> csv_parse_config)
+    : AbstractNonQueryNode(LQPNodeType::Export),
+      file_name(init_file_name),
+      file_type(init_file_type),
+      csv_parse_config(std::move(csv_parse_config)) {}
 
 std::string ExportNode::description(const DescriptionMode /*mode*/) const {
   auto file_type_str = std::string{magic_enum::enum_name(file_type)};
