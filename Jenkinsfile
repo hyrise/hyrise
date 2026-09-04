@@ -121,7 +121,7 @@ try {
 
             // Configure the rest in parallel. We use unity builds to decrease build times. The only exceptions are the
             // clang-tidy and precompiled-headers build as they might otherwise miss some issues (e.g., missing includes).
-            sh "mkdir clang-debug-tidy && cd clang-debug-tidy &&                                         ${cmake} ${debug}          ${clang}                      ${ninja} -DENABLE_CLANG_TIDY=ON .. &\
+            sh "mkdir clang-debug-tidy && cd clang-debug-tidy &&                                         ${cmake} ${debug}          ${clang}                      ${ninja} -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_DISABLE_PRECOMPILE_HEADERS=On .. &\
             mkdir clang-debug-unity-odr && cd clang-debug-unity-odr &&                                   ${cmake} ${debug}          ${clang}   ${unity}           ${ninja} -DCMAKE_UNITY_BUILD_BATCH_SIZE=0 .. &\
             mkdir clang-debug-disable-precompile-headers && cd clang-debug-disable-precompile-headers && ${cmake} ${debug}          ${clang}                      ${ninja} -DCMAKE_DISABLE_PRECOMPILE_HEADERS=On .. &\
             mkdir clang-debug-addr-ub-leak-sanitizers && cd clang-debug-addr-ub-leak-sanitizers &&       ${cmake} ${debug}          ${clang}   ${unity}           ${ninja} -DENABLE_ADDR_UB_LEAK_SANITIZATION=ON .. &\
@@ -138,27 +138,31 @@ try {
           parallel clangDebug: {
             stage("clang-debug") {
               // We build clang-debug using make to test make once (and clang-debug is the fastest build).
-              sh "cd clang-debug && make all -j \$(( \$(nproc) / 4))"
+              sh "cd clang-debug && make all -j \$(( \$(nproc) / 5))"
               sh "./clang-debug/hyriseTest clang-debug"
             }
           }, clang19Debug: {
             stage("clang-19-debug") {
-              sh "cd clang-19-debug && ninja all -j \$(( \$(nproc) / 4))"
+              sh "cd clang-19-debug && ninja all -j \$(( \$(nproc) / 5))"
               sh "./clang-19-debug/hyriseTest clang-19-debug"
             }
           }, gccDebug: {
             stage("gcc-debug") {
-              sh "cd gcc-debug && ninja all -j \$(( \$(nproc) / 4))"
+              sh "cd gcc-debug && ninja all -j \$(( \$(nproc) / 5))"
               sh "cd gcc-debug && ./hyriseTest"
             }
           }, gcc13Debug: {
             stage("gcc-13-debug") {
-              sh "cd gcc-13-debug && ninja all -j \$(( \$(nproc) / 4))"
+              sh "cd gcc-13-debug && ninja all -j \$(( \$(nproc) / 5))"
               sh "cd gcc-13-debug && ./hyriseTest"
             }
           }, lint: {
             stage("Linting") {
               sh "scripts/lint.sh"
+            }
+          }, clangDebugTidy: {
+            stage("clang-debug:tidy-changed-files") {
+              sh "bash ./scripts/clang_tidy.sh clang-debug-tidy \$(( \$(nproc) / 5 ))"
             }
           }
 
@@ -226,13 +230,12 @@ try {
                 Utils.markStageSkippedForConditional("clangDebugUnityODR")
               }
             }
-          }, clangDebugTidy: {
-            stage("clang-debug:tidy") {
+          }, clangDebugTidyAllIncludingTUs: {
+            stage("clang-debug:tidy-all-including-tus") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
-                // We do not run tidy checks on the src/test folder, so there is no point in running the expensive clang-tidy for those files
-                sh "cd clang-debug-tidy && ninja hyrise_impl hyriseBenchmarkFileBased hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkJoinOrder hyriseConsole hyriseServer hyriseMvccDeletePlugin hyriseUccDiscoveryPlugin -k 0 -j \$(( \$(nproc) / 2))"
+                sh "CLANG_TIDY_ALL_INCLUDING_TUS=1 bash ./scripts/clang_tidy.sh clang-debug-tidy \$(( \$(nproc) / 4 ))"
               } else {
-                Utils.markStageSkippedForConditional("clangDebugTidy")
+                Utils.markStageSkippedForConditional("clangDebugTidyAllIncludingTUs")
               }
             }
           }, clangDebugDisablePrecompileHeaders: {
@@ -324,10 +327,14 @@ try {
             }
           }, bolt: {
             stage('bolt') {
-              sh "mkdir cmake-build-bolt"
-              sh "cd cmake-build-bolt && cmake ${release} ${clang} ${unity} ${ninja} .."
-              sh "cd cmake-build-bolt && python3 ../scripts/build_pgo_bolt.py -n \$(( \$(nproc) / 5)) --ci"
-              sh "cd cmake-build-bolt && ./hyriseTest"
+              if (env.BRANCH_NAME == 'master' || full_ci) {
+                sh "mkdir cmake-build-bolt"
+                sh "cd cmake-build-bolt && cmake ${release} ${clang} ${unity} ${ninja} .."
+                sh "cd cmake-build-bolt && python3 ../scripts/build_pgo_bolt.py -n \$(( \$(nproc) / 5)) --ci"
+                sh "cd cmake-build-bolt && ./hyriseTest"
+              } else {
+                Utils.markStageSkippedForConditional("bolt")
+              }
             }
           }
 
