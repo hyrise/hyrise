@@ -19,6 +19,7 @@
 #include "concurrency/transaction_context.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
+#include "expression/expression_utils.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
@@ -99,34 +100,27 @@ const std::vector<ColumnID>& GetTable::pruned_column_ids() const {
 }
 
 void GetTable::set_prunable_subquery_predicates(
-    const std::vector<std::weak_ptr<const AbstractOperator>>& subquery_scans) const {
-  DebugAssert(std::ranges::all_of(subquery_scans,
-                                  [](const auto& op) {
-                                    return op.lock() && op.lock()->type() == OperatorType::TableScan;
-                                  }),
-              "No TableScan set as prunable predicate.");
+    const std::vector<std::shared_ptr<AbstractExpression>>& predicates) const {
+  if constexpr (HYRISE_DEBUG) {
+    for (const auto& predicate : predicates) {
+      Assert(predicate->type == ExpressionType::Predicate, "Unexpected expression for subquery predicate.");
+    }
+  }
 
-  _prunable_subquery_scans = subquery_scans;
+  _prunable_subquery_predicates = predicates;
 }
 
-std::vector<std::shared_ptr<const AbstractOperator>> GetTable::prunable_subquery_predicates() const {
-  auto subquery_scans = std::vector<std::shared_ptr<const AbstractOperator>>{};
-  subquery_scans.reserve(_prunable_subquery_scans.size());
-  for (const auto& subquery_scan_ref : _prunable_subquery_scans) {
-    const auto& subquery_scan = subquery_scan_ref.lock();
-    Assert(subquery_scan, "Referenced TableScan expired. PQP is invalid.");
-    subquery_scans.emplace_back(subquery_scan);
-  }
-  return subquery_scans;
+const std::vector<std::shared_ptr<AbstractExpression>>& GetTable::prunable_subquery_predicates() const {
+  return _prunable_subquery_predicates;
 }
 
 std::shared_ptr<AbstractOperator> GetTable::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& /*copied_left_input*/,
     const std::shared_ptr<AbstractOperator>& /*copied_right_input*/,
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& /*copied_ops*/) const {
-  // We cannot copy _prunable_subquery_scans here since deep_copy() recurses into the input operators and the GetTable
-  // operators are the first ones to be copied. Instead, AbstractOperator::deep_copy() sets the copied TableScans after
-  // the whole PQP has been copied.
+  // We cannot copy `_prunable_subquery_predicates` here because `deep_copy()` recurses into the input operators and the
+  // GetTable operators are the first ones to be copied. Instead, `AbstractOperator::deep_copy()` sets the copied
+  // TableScans after the entire PQP has been copied.
   return std::make_shared<GetTable>(_name, _pruned_chunk_ids, _pruned_column_ids);
 }
 
@@ -336,50 +330,47 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
 }
 
 std::set<ChunkID> GetTable::_prune_chunks_dynamically() {
-  if (_prunable_subquery_scans.empty()) {
+  if (_prunable_subquery_predicates.empty()) {
     return {};
   }
 
-  // Create a dummy PredicateNode for each predicate containing a subquery that has already been executed. We do not use
-  // the original predicate to ignore all other nodes between the StoredTableNode and the PredicateNodes. Since the
+  // Create a dummy PredicateNode for each predicate containing a subquery that has already been executed. Because the
   // ChunkPruningRule already took care to add only predicates that are safe to prune with, we can act as if there were
-  // no other LQP nodes.
+  // no other predicates.
   auto prunable_predicate_nodes = std::vector<std::shared_ptr<PredicateNode>>{};
-  prunable_predicate_nodes.reserve(_prunable_subquery_scans.size());
+  prunable_predicate_nodes.reserve(_prunable_subquery_predicates.size());
+  // Create a StoredTableNode without any pruned chunks or prunable predicates.
+  const auto stored_table_node = StoredTableNode::make(_name);
 
-  // Create a dummy StoredTableNode from the table to retrieve. `compute_chunk_exclude_list` modifies the node's
-  // statistics and we want to avoid that. We cannot use `deep_copy()` here since it would complain that the referenced
-  // prunable PredicateNodes are not part of the LQP.
-  const auto& stored_table_node = static_cast<const StoredTableNode&>(*lqp_node);
-  const auto dummy_stored_table_node = StoredTableNode::make(_name);
+  for (const auto& predicate : _prunable_subquery_predicates) {
+    // Create a copy of the predicate that we can modify. Do not create a deep copy of the subquery plan.
+    auto mapping = std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>{};
+    visit_expression(predicate, [&](const auto& expression) {
+      if (expression->type != ExpressionType::PQPSubquery) {
+        return ExpressionVisitation::VisitArguments;
+      }
 
-  for (const auto& op : prunable_subquery_predicates()) {
-    const auto& table_scan = static_cast<const TableScan&>(*op);
-    const auto& operator_predicate_arguments = table_scan.predicate()->arguments;
-    const auto& predicate_node = static_cast<const PredicateNode&>(*table_scan.lqp_node);
-    const auto adjusted_predicate = predicate_node.predicate()->deep_copy();
-    auto& arguments = adjusted_predicate->arguments;
+      // Add the subquery plan to the mapping so the predicate deep copy below uses the existing plan instead of
+      // creating a plan copy.
+      const auto& subquery = static_cast<const PQPSubqueryExpression&>(*expression);
+      mapping.emplace(subquery.pqp.get(), subquery.pqp);
+      return ExpressionVisitation::DoNotVisitArguments;
+    });
+    const auto adjusted_predicate = predicate->deep_copy(mapping);
+    const auto& arguments = predicate->arguments;
+    auto& adjusted_arguments = adjusted_predicate->arguments;
     const auto argument_count = adjusted_predicate->arguments.size();
 
-    // Adjust predicates with the dummy StoredTableNode and the subquery result, if available.
+    // Adjust predicates with the StoredTableNode and the subquery result, if available.
     for (auto expression_idx = size_t{0}; expression_idx < argument_count; ++expression_idx) {
-      auto& argument = arguments[expression_idx];
-      // Replace any column with the respective column from our dummy StoredTableNode.
-      if (const auto lqp_column = std::dynamic_pointer_cast<LQPColumnExpression>(argument)) {
-        Assert(*lqp_column->original_node.lock() == stored_table_node,
-               "Predicate is performed on wrong StoredTableNode.");
-        argument = lqp_column_(dummy_stored_table_node, lqp_column->original_column_id);
-        continue;
-      }
-
-      // Check if expression is an uncorrelated subquery.
-      if (argument->type != ExpressionType::LQPSubquery) {
-        continue;
-      }
-      Assert(operator_predicate_arguments[expression_idx]->type == ExpressionType::PQPSubquery,
-             "Cannot resolve PQPSubqueryExpression.");
-      const auto& subquery = static_cast<PQPSubqueryExpression&>(*operator_predicate_arguments[expression_idx]);
-      if (subquery.is_correlated()) {
+      const auto& argument = arguments[expression_idx];
+      Assert(argument->type == ExpressionType::PQPColumn || argument->type == ExpressionType::PQPSubquery,
+             "Unexpected subquery predicate with argument '" + argument->as_column_name() + "'.");
+      auto& adjusted_argument = adjusted_arguments[expression_idx];
+      // Replace any column with the respective column from our StoredTableNode.
+      if (argument->type == ExpressionType::PQPColumn) {
+        adjusted_argument =
+            lqp_column_(stored_table_node, static_cast<const PQPColumnExpression&>(*argument).column_id);
         continue;
       }
 
@@ -398,20 +389,22 @@ std::set<ChunkID> GetTable::_prune_chunks_dynamically() {
       // We cannot schedule the AggregateHash operator before the GetTable operator to obtain the subquery result for
       // pruning: the OperatorTasks wrapping both operators would be in a circular wait for each other. We simply avoid
       // this circular wait by StoredTableNodes using their prunable_subquery_predicates for equality checks. Thus, the
-      // LQPTranslator creates two GetTable operators rather than deduplicating them. resolve_uncorrelated_subquery()
+      // LQPTranslator creates two GetTable operators rather than deduplicating them. `resolve_uncorrelated_subquery()`
       // asserts that the subquery has already been executed.
-      argument = value_(resolve_uncorrelated_subquery(subquery.pqp));
+      const auto& subquery = static_cast<const PQPSubqueryExpression&>(*argument);
+      Assert(!subquery.is_correlated(), "Correlated subqueries should not appear in prunable predicates.");
+      adjusted_argument = value_(resolve_uncorrelated_subquery(subquery.pqp));
     }
 
     // Add a new PredicateNode to the pruning chain.
-    auto input_node = static_pointer_cast<AbstractLQPNode>(dummy_stored_table_node);
+    auto input_node = std::static_pointer_cast<AbstractLQPNode>(stored_table_node);
     if (!prunable_predicate_nodes.empty()) {
       input_node = prunable_predicate_nodes.back();
     }
     prunable_predicate_nodes.emplace_back(PredicateNode::make(adjusted_predicate, input_node));
   }
 
-  _dynamically_pruned_chunk_ids = compute_chunk_exclude_list(prunable_predicate_nodes, dummy_stored_table_node);
+  _dynamically_pruned_chunk_ids = compute_chunk_exclude_list(prunable_predicate_nodes, stored_table_node);
   return _dynamically_pruned_chunk_ids;
 }
 

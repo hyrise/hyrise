@@ -195,7 +195,7 @@ void ChunkPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<A
     //         already pruned chunks.
     const auto chain_count = predicate_pruning_chains.size();
     auto chain_count_per_subquery_predicate = std::unordered_map<std::shared_ptr<PredicateNode>, uint64_t>{};
-    auto prunable_subquery_predicates = std::vector<std::weak_ptr<AbstractLQPNode>>{};
+    auto prunable_subquery_predicates = std::vector<std::shared_ptr<AbstractExpression>>{};
     for (const auto& predicate_chain : predicate_pruning_chains) {
       for (const auto& predicate_node : predicate_chain) {
         // Only use binary and between predicates that can easily be used for pruning. Do not use, e.g, InExpressions
@@ -241,7 +241,7 @@ void ChunkPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<A
              */
             const auto occurrence_count = ++chain_count_per_subquery_predicate[predicate_node];
             if (occurrence_count == chain_count) {
-              prunable_subquery_predicates.emplace_back(predicate_node);
+              prunable_subquery_predicates.emplace_back(predicate_node->predicate());
             }
             // Make sure we do not count `x BETWEEN (SELECT MIN(y) ...) AND (SELECT (MAX(y) ...)` twice.
             break;

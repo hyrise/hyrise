@@ -41,6 +41,13 @@ bool expression_equal_to_expression_in_different_lqp(const AbstractExpression& e
                                                      const LQPNodeMapping& node_mapping);
 
 /**
+ * Utility to add LQPs referenced by LQPSubqueryExpressions from @param expression and their copies from
+ * @param copied_expression to the @param LQPNodeMapping. PQPSubqueryExpressions do this internally in `deep_copy()`.
+ */
+void map_lqp_subqueries(const AbstractExpression& expression, const AbstractExpression& copied_expression,
+                        LQPNodeMapping& mapping);
+
+/**
  * Utility to AbstractExpression::deep_copy() a vector of expressions.
  *
  * Regarding PQPSubqueryExpressions: Deduplication of operator plans will be preserved. See lqp_translator.cpp
