@@ -38,7 +38,7 @@ class FixedString {
   // Returns the length of the string
   size_t size() const;
 
-  // Returns the maixmum possible size of storable strings
+  // Returns the maximum possible size of storable strings
   size_t maximum_length() const;
 
   // Creates a string object from FixedString

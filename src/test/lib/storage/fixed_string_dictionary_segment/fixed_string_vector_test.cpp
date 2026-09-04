@@ -243,4 +243,11 @@ TEST_F(FixedStringVectorTest, GetAllocator) {
   EXPECT_EQ(alloc.resource(), fs_vector.get_allocator().resource());
 }
 
+TEST_F(FixedStringVectorTest, ConstructorVectorSize) {
+  auto values = pmr_vector<char>{'f', 'o', 'o', 'b', 'a', 'r', 'b', 'a', 'z'};
+  EXPECT_NO_THROW(FixedStringVector(values, 3, 3));
+  EXPECT_THROW(FixedStringVector(values, 3, 2), std::logic_error);
+  EXPECT_THROW(FixedStringVector(values, 4, 3), std::logic_error);
+}
+
 }  // namespace hyrise
