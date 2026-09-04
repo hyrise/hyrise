@@ -235,6 +235,33 @@ TEST_F(OperatorsInsertTest, InsertStringNullValue) {
   EXPECT_TRUE(variant_is_null(null_val));
 }
 
+TEST_F(OperatorsInsertTest, InsertStringNullValueFromCompressedTable) {
+  auto table_name = "test1";
+  auto table_name2 = "test2";
+
+  auto table = load_table("resources/test_data/tbl/string_with_null.tbl", ChunkOffset{4});
+  Hyrise::get().storage_manager.add_table(table_name, table);
+
+  auto table2 = load_table("resources/test_data/tbl/string_with_null.tbl", ChunkOffset{4});
+  Hyrise::get().storage_manager.add_table(table_name2, table2);
+
+  ChunkEncoder::encode_all_chunks(table2);
+  auto get_encoded_table2 = std::make_shared<GetTable>(table_name2);
+  get_encoded_table2->execute();
+
+  auto insert = std::make_shared<Insert>(table_name, get_encoded_table2);
+  auto context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
+  insert->set_transaction_context(context);
+  insert->execute();
+  context->commit();
+
+  EXPECT_EQ(table->chunk_count(), 2u);
+  EXPECT_EQ(table->row_count(), 8u);
+
+  auto null_val = (*(table->get_chunk(ChunkID{1})->get_segment(ColumnID{0})))[ChunkOffset{2}];
+  EXPECT_TRUE(variant_is_null(null_val));
+}
+
 TEST_F(OperatorsInsertTest, InsertIntFloatNullValues) {
   auto table_name = "test1";
   auto table_name2 = "test2";
