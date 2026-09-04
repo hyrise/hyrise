@@ -4,6 +4,7 @@
 #include <memory>
 #include <vector>
 
+#include "optimizer/optimization_context.hpp"
 #include "types.hpp"
 
 namespace hyrise {
@@ -16,7 +17,8 @@ class AbstractExpression;
  */
 class PreparedPlan final {
  public:
-  PreparedPlan(const std::shared_ptr<AbstractLQPNode>& init_lqp, const std::vector<ParameterID>& init_parameter_ids);
+  PreparedPlan(const std::shared_ptr<AbstractLQPNode>& init_lqp, const std::vector<ParameterID>& init_parameter_ids,
+               std::unique_ptr<OptimizationContext>&& init_optimization_context = nullptr);
 
   std::shared_ptr<PreparedPlan> deep_copy() const;
 
@@ -32,6 +34,7 @@ class PreparedPlan final {
 
   std::shared_ptr<AbstractLQPNode> lqp;
   std::vector<ParameterID> parameter_ids;
+  std::unique_ptr<OptimizationContext> optimization_context;
 };
 
 std::ostream& operator<<(std::ostream& stream, const PreparedPlan& prepared_plan);
