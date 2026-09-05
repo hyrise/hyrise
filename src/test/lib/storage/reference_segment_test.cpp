@@ -122,7 +122,7 @@ TEST_F(ReferenceSegmentTest, MemoryUsageEstimation) {
             reference_segment_b.memory_usage(MemoryUsageCalculationMode::Sampled) + 2 * sizeof(RowID));
 }
 
-TEST_F(ReferenceSegmentTest, DoesNotAllowMultipleIndirection) {
+TEST_F(ReferenceSegmentTest, DoesNotAllowMultipleIndirections) {
   auto inner_pos_list = std::make_shared<RowIDPosList>();
   inner_pos_list->emplace_back(ChunkID{0}, ChunkOffset{0});
   auto inner_ref_segment = std::make_shared<ReferenceSegment>(_test_table, ColumnID{0}, inner_pos_list);
