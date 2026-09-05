@@ -9,11 +9,13 @@
 #include "concurrency/transaction_context.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/pqp_column_expression.hpp"
+#include "hyrise.hpp"
 #include "operators/delete.hpp"
 #include "operators/get_table.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/validate.hpp"
+#include "scheduler/node_queue_scheduler.hpp"
 #include "storage/chunk.hpp"
 #include "storage/mvcc_data.hpp"
 #include "storage/pos_lists/row_id_pos_list.hpp"
@@ -122,6 +124,9 @@ TEST_F(OperatorsValidateTest, ParallelValidateJobTask) {
   //  (65,535 rows) so that the first bundled package fills up. Additionally, there must be remaining
   //  chunks left over afterward, which splits the table into multiple JobTasks instead of a single
   //  synchronous execution.
+  Hyrise::get().topology.use_fake_numa_topology(8, 4);
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+
   const auto lineitem_table = load_table("resources/test_data/tbl/tpch/sf-0.02/lineitem.tbl", ChunkOffset{25000});
 
   set_all_records_visible(*lineitem_table);
