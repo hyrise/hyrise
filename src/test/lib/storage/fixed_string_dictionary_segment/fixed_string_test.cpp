@@ -110,6 +110,7 @@ TEST_F(FixedStringTest, Swap) {
   auto char_vector = std::vector<char>{'b', 'a', 'r'};
   auto fixed_string = FixedString(&char_vector[0], 3);
 
+  // This test uses std::swap, NOT the implementation in fixed_string.cpp. See SwapFixedString below.
   std::swap(fixed_string1, fixed_string);
   EXPECT_EQ(fixed_string1, "bar");
   EXPECT_EQ(fixed_string, "foo");
@@ -139,6 +140,10 @@ TEST_F(FixedStringTest, SwapFixedString) {
   EXPECT_EQ(fixed_string1.string(), "bar");
   EXPECT_EQ(fixed_string.string(), "foo");
 
+  // TODO(anyone): figure out how to fix the swap.
+  // swap(FixedString lhs, FixedString rhs) in fixed_string.cpp does not perform a swap currently.
+  // It is still needed to support sorting (which somehow works as intended).
+  // This test reflects the **actual** behaviour, NOT the intended, and should be changed in the future.
   swap(fixed_string, fixed_string1);
   EXPECT_EQ(fixed_string1.string(), "bar");
   EXPECT_EQ(fixed_string.string(), "foo");
