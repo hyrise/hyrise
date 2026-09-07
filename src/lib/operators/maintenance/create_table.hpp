@@ -38,7 +38,5 @@ class CreateTable : public AbstractReadWriteOperator {
 
   // Rollback happens in Insert operator
   void _on_rollback_records() override {}
-
-  std::shared_ptr<Insert> _insert;
 };
 }  // namespace hyrise

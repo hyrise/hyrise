@@ -37,6 +37,7 @@ set(
     lib/import_export/csv/csv_meta_test.cpp
     lib/import_export/csv/csv_parser_test.cpp
     lib/import_export/csv/csv_writer_test.cpp
+    lib/import_export/csv/csv_options_test.cpp
     lib/logical_query_plan/aggregate_node_test.cpp
     lib/logical_query_plan/alias_node_test.cpp
     lib/logical_query_plan/change_meta_table_node_test.cpp

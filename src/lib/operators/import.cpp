@@ -30,12 +30,14 @@
 namespace hyrise {
 
 Import::Import(const std::string& init_filename, const std::string& tablename, const ChunkOffset chunk_size,
-               const FileType file_type, const std::optional<EncodingType> target_encoding)
+               const FileType file_type, const std::optional<EncodingType> target_encoding,
+               const std::optional<CsvParseConfig>& csv_parse_config)
     : AbstractReadOnlyOperator(OperatorType::Import),
       filename(init_filename),
       _tablename(tablename),
       _chunk_size(chunk_size),
       _file_type(file_type),
+      _csv_parse_config(csv_parse_config),
       _target_encoding(target_encoding) {
   if (_file_type == FileType::Auto) {
     _file_type = file_type_from_filename(filename);
@@ -86,11 +88,21 @@ std::shared_ptr<const Table> Import::_on_execute() {
           csv_meta.columns[column_id].nullable = column_definitions[column_id].nullable;
         }
 
+        if (_csv_parse_config) {
+          csv_meta.config = *_csv_parse_config;
+        }
+
         for (const auto unique_column_id : unique_columns(existing_table)) {
           csv_meta.columns[unique_column_id].is_unique = true;
         }
       } else if (meta_file_exists) {
         csv_meta = process_csv_meta_file(meta_filename);
+
+        if (_csv_parse_config) {
+          std::cerr << "Warning: Ignoring CSV parsing options in " << meta_filename
+                    << " because CSV parsing options were explicitly specified in the SQL statement.\n";
+          csv_meta.config = *_csv_parse_config;
+        }
       } else {
         Fail("Cannot load table from csv. No table definition source found.");
       }
@@ -135,6 +147,7 @@ std::shared_ptr<const Table> Import::_on_execute() {
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = table->get_chunk(chunk_id);
     existing_table->append_chunk(chunk->segments(), chunk->mvcc_data());
+    existing_table->last_chunk()->set_immutable();
   }
 
   existing_table->set_table_statistics(TableStatistics::from_table(*existing_table));
