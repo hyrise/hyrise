@@ -9,7 +9,7 @@
 #include <ios>
 #include <list>
 #include <memory>
-#include <mutex>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -23,7 +23,10 @@
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/chunk.hpp"
+#include "storage/chunk_encoder.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/mvcc_data.hpp"
+#include "storage/segment_encoding_utils.hpp"
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
 #include "types.hpp"
@@ -33,8 +36,23 @@
 namespace hyrise {
 
 std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const CsvMeta& csv_meta,
-                                        const ChunkOffset chunk_size) {
+                                        const ChunkOffset chunk_size,
+                                        const std::optional<EncodingType>& target_encoding) {
   const auto table = _create_table_from_meta(chunk_size, csv_meta);
+  const auto column_count = table->column_count();
+
+  auto unique_column_ids = std::vector<ColumnID>{};
+
+  for (auto column_id = ColumnID{0}; column_id < csv_meta.columns.size(); ++column_id) {
+    const auto column_meta = csv_meta.columns[column_id];
+    if (column_meta.is_unique) {
+      unique_column_ids.push_back(column_id);
+    }
+  }
+
+  const auto table_column_types = table->column_data_types();
+  const auto chunk_encoding_spec =
+      auto_select_chunk_encoding_spec(table_column_types, unique_column_ids, target_encoding);
 
   auto csvfile = std::ifstream{filename};
 
@@ -71,7 +89,6 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const CsvMe
   auto segments_by_chunks = std::list<Segments>{};
   auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
   auto field_ends = std::vector<size_t>{};
-  auto append_chunk_mutex = std::mutex{};
   const auto escaped_linebreak =
       std::string(1, csv_meta.config.delimiter_escape) + std::string(1, csv_meta.config.delimiter);
   while (_find_fields_in_chunk(content_view, *table, field_ends, csv_meta)) {
@@ -86,11 +103,16 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const CsvMe
     content_view = content_view.substr(field_ends.back() + 1);
 
     // Create and start parsing task to fill chunk
-    tasks.emplace_back(std::make_shared<JobTask>([relevant_content, field_ends = std::move(field_ends), &table,
-                                                  &segments, &csv_meta, &escaped_linebreak, &append_chunk_mutex]() {
-      _parse_into_chunk(relevant_content, field_ends, *table, segments, csv_meta, escaped_linebreak,
-                        append_chunk_mutex);
-    }));
+    tasks.emplace_back(
+        std::make_shared<JobTask>([relevant_content, field_ends = std::move(field_ends), &table, &segments, &csv_meta,
+                                   &escaped_linebreak, &table_column_types, &chunk_encoding_spec, column_count]() {
+          _parse_into_chunk(relevant_content, field_ends, *table, segments, csv_meta, escaped_linebreak);
+
+          for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+            segments[column_id] = ChunkEncoder::encode_segment(segments[column_id], table_column_types[column_id],
+                                                               chunk_encoding_spec[column_id]);
+          }
+        }));
     tasks.back()->schedule();
     field_ends = std::vector<size_t>{};
   }
@@ -185,7 +207,7 @@ bool CsvParser::_find_fields_in_chunk(std::string_view csv_content, const Table&
 
 size_t CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vector<size_t>& field_ends,
                                     const Table& table, Segments& segments, const CsvMeta& meta,
-                                    const std::string& escaped_linebreak, std::mutex& append_chunk_mutex) {
+                                    const std::string& escaped_linebreak) {
   // For each csv column, create a CsvConverter which builds up a ValueSegment.
   const auto column_count = table.column_count();
   const auto row_count = ChunkOffset{static_cast<ChunkOffset::base_type>(field_ends.size() / column_count)};
@@ -230,7 +252,6 @@ size_t CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vecto
 
   // Transform the field_offsets to segments and add segments to chunk.
   {
-    const auto lock = std::lock_guard<std::mutex>{append_chunk_mutex};
     for (auto& converter : converters) {
       segments.push_back(converter->finish());
     }

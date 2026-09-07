@@ -32,12 +32,14 @@ SegmentEncodingSpec get_segment_encoding_spec(const std::shared_ptr<const Abstra
 VectorCompressionType parent_vector_compression_type(const CompressedVectorType compressed_vector_type);
 
 /**
- * Selects and encoding for a column based on its data type and whether its values are guaranteed to be unique.
+ * Selects an encoding for a column based on its data type and whether its values are guaranteed to be unique. If a
+ * target encoding is provided and applicable, it takes precedence over the automatic encoding selection.
  * For more details, see #2696. This PR includes a comparison of different encoding strategies:
  * https://github.com/hyrise/hyrise/pull/2696#pullrequestreview-3087933111
  */
 ChunkEncodingSpec auto_select_chunk_encoding_spec(const std::vector<DataType>& types,
-                                                  const std::vector<ColumnID>& unique_columns);
+                                                  const std::vector<ColumnID>& unique_columns,
+                                                  const std::optional<EncodingType>& target_encoding = std::nullopt);
 SegmentEncodingSpec auto_select_segment_encoding_spec(const DataType type,
                                                       const bool segment_values_are_unique = false);
 
