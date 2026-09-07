@@ -17,9 +17,9 @@
 #include "file_based_table_generator.hpp"
 #include "hyrise.hpp"
 
-using namespace hyrise;
-
 int main(int argc, char* argv[]) {
+  using namespace hyrise;
+
   auto cli_options = BenchmarkRunner::get_basic_cli_options("Hyrise Benchmark Runner");
 
   // NOLINTBEGIN(whitespace/line_length)

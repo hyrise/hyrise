@@ -1,13 +1,13 @@
 #include "base_test.hpp"
 #include "utils/format_duration.hpp"
 
-using namespace std::chrono_literals;
-
 namespace hyrise {
 
 class FormatDurationTest : public BaseTest {};
 
 TEST_F(FormatDurationTest, Duration) {
+  using namespace std::chrono_literals;
+
   // It seems std::chrono_literals can't handle `12'345'678`, otherwise I'd use it here...
   EXPECT_EQ(format_duration(0ns), "0 ns");
   EXPECT_EQ(format_duration(11ns), "11 ns");

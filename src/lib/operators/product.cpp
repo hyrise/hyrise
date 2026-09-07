@@ -143,6 +143,6 @@ std::shared_ptr<AbstractOperator> Product::_on_deep_copy(
   return std::make_shared<Product>(copied_left_input, copied_right_input);
 }
 
-void Product::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
+void Product::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& /*parameters*/) {}
 
 }  // namespace hyrise
