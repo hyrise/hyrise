@@ -53,6 +53,6 @@ std::shared_ptr<AbstractOperator> ChangeMetaTable::_on_deep_copy(
   return std::make_shared<ChangeMetaTable>(_meta_table_name, _change_type, copied_left_input, copied_right_input);
 }
 
-void ChangeMetaTable::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
+void ChangeMetaTable::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& /*parameters*/) {}
 
 }  // namespace hyrise
