@@ -99,19 +99,12 @@ assert args.pgo or args.bolt, "You should either specify --pgo or --bolt for any
 
 build_folder = getcwd()
 benchmarks = [
-    "hyriseBenchmarkTPCH",
-    "hyriseBenchmarkTPCDS",
-    "hyriseBenchmarkTPCC",
-    "hyriseBenchmarkJoinOrder",
     "hyriseBenchmarkStarSchema",
 ]
 ci_benchmarks = [
-    "hyriseBenchmarkTPCH",
-    "hyriseBenchmarkTPCDS",
-    "hyriseBenchmarkTPCC",
     "hyriseBenchmarkStarSchema",
 ]
-benchmarks_with_float_scaling = {"hyriseBenchmarkTPCH", "hyriseBenchmarkStarSchema"}
+benchmarks_with_float_scaling = {"hyriseBenchmarkStarSchema"}
 
 
 def run_in_hyrise_folder(*cmd, check=True):
