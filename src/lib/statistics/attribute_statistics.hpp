@@ -74,6 +74,4 @@ std::ostream& operator<<(std::ostream& stream, const AttributeStatistics<T>& att
   return stream;
 }
 
-EXPLICITLY_DECLARE_DATA_TYPES(AttributeStatistics);
-
 }  // namespace hyrise

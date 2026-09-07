@@ -45,7 +45,7 @@ struct enum_constant {
  */
 template <typename EnumType, EnumType enum_value>
 // NOLINTNEXTLINE(google-readability-casting)
-[[maybe_unused]] constexpr auto enum_c = enum_constant<EnumType, enum_value>{};
+[[maybe_unused]] inline constexpr auto enum_c = enum_constant<EnumType, enum_value>{};
 
 /**
  * Definition of our own hana concept “is_enum_constant”

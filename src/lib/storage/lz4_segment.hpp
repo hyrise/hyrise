@@ -227,6 +227,4 @@ std::pair<pmr_string, size_t> LZ4Segment<pmr_string>::decompress(const ChunkOffs
 template <>
 std::optional<CompressedVectorType> LZ4Segment<pmr_string>::compressed_vector_type() const;
 
-EXPLICITLY_DECLARE_DATA_TYPES(LZ4Segment);
-
 }  // namespace hyrise
