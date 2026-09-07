@@ -15,8 +15,8 @@ class FixedStringTest : public BaseTest {
 
   std::vector<char> char_vector1 = {'f', 'o', 'o'};
   std::vector<char> char_vector2 = {'b', 'a', 'r', 'b', 'a', 'z'};
-  FixedString fixed_string1 = FixedString(&char_vector1[0], 3u);
-  FixedString fixed_string2 = FixedString(&char_vector2[0], 6u);
+  FixedString fixed_string1 = FixedString(&char_vector1[0], 3);
+  FixedString fixed_string2 = FixedString(&char_vector2[0], 6);
 };
 
 TEST_F(FixedStringTest, Constructors) {
@@ -30,21 +30,21 @@ TEST_F(FixedStringTest, Constructors) {
   EXPECT_EQ(str2, "foo");
 
   if constexpr (HYRISE_DEBUG) {
-    EXPECT_THROW(str1 = FixedString(&charvector2[0], 6u), std::exception);
+    EXPECT_THROW(str1 = FixedString(&charvector2[0], 6), std::exception);
   } else {
-    str1 = FixedString(&charvector2[0], 6u);
+    str1 = FixedString(&charvector2[0], 6);
     EXPECT_EQ(str1, "bar");
   }
 }
 
 TEST_F(FixedStringTest, StringLength) {
   auto char_vector = std::vector<char>{'f', 'o', 'o', '\0', '\0'};
-  auto fixed_string = FixedString(&char_vector[0], 5u);
+  auto fixed_string = FixedString(&char_vector[0], 5);
 
-  EXPECT_EQ(fixed_string1.size(), 3u);
-  EXPECT_EQ(fixed_string1.maximum_length(), 3u);
-  EXPECT_EQ(fixed_string.size(), 3u);
-  EXPECT_EQ(fixed_string.maximum_length(), 5u);
+  EXPECT_EQ(fixed_string1.size(), 3);
+  EXPECT_EQ(fixed_string1.maximum_length(), 3);
+  EXPECT_EQ(fixed_string.size(), 3);
+  EXPECT_EQ(fixed_string.maximum_length(), 5);
   EXPECT_EQ(fixed_string.string(), "foo");
   EXPECT_EQ(fixed_string, "foo");
 }
@@ -52,9 +52,9 @@ TEST_F(FixedStringTest, StringLength) {
 TEST_F(FixedStringTest, CompareFixedStrings) {
   auto bar_help = std::vector<char>{'b', 'a', 'r', '\0'};
   auto bars_help = std::vector<char>{'b', 'a', 'r', 's'};
-  auto bar = FixedString(&bar_help[0], 3u);
-  auto bar_terminator = FixedString(&bar_help[0], 4u);
-  auto bars = FixedString(&bars_help[0], 4u);
+  auto bar = FixedString(&bar_help[0], 3);
+  auto bar_terminator = FixedString(&bar_help[0], 4);
+  auto bars = FixedString(&bars_help[0], 4);
 
   EXPECT_TRUE(bar < fixed_string1);
   EXPECT_TRUE(bars < fixed_string1);
@@ -92,11 +92,11 @@ TEST_F(FixedStringTest, CompareStrings) {
 
 TEST_F(FixedStringTest, Assign) {
   auto char_vector3 = std::vector<char>{'f', 'o', 'o', 'b', 'a', 'r'};
-  auto fixed_string3 = FixedString(&char_vector3[0], 6u);
+  auto fixed_string3 = FixedString(&char_vector3[0], 6);
   EXPECT_EQ(fixed_string3, "foobar");
 
   auto char_vector4 = std::vector<char>{'b', 'a', 'r'};
-  auto fixed_string4 = FixedString(&char_vector4[0], 3u);
+  auto fixed_string4 = FixedString(&char_vector4[0], 3);
   EXPECT_EQ(fixed_string4, "bar");
 
   fixed_string3 = fixed_string4;
@@ -108,7 +108,7 @@ TEST_F(FixedStringTest, Assign) {
 
 TEST_F(FixedStringTest, Swap) {
   auto char_vector = std::vector<char>{'b', 'a', 'r'};
-  auto fixed_string = FixedString(&char_vector[0], 3u);
+  auto fixed_string = FixedString(&char_vector[0], 3);
 
   std::swap(fixed_string1, fixed_string);
   EXPECT_EQ(fixed_string1, "bar");
@@ -118,7 +118,7 @@ TEST_F(FixedStringTest, Swap) {
 TEST_F(FixedStringTest, OutputToStream) {
   auto sstream = std::stringstream{};
   sstream << fixed_string1;
-  EXPECT_EQ(sstream.str().find("foo"), 0u);
+  EXPECT_EQ(sstream.str().find("foo"), 0);
 }
 
 TEST_F(FixedStringTest, MoveWithOwnsMemory) {
