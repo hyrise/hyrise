@@ -209,7 +209,7 @@ TEST_F(FixedStringVectorTest, CompareStdStringToFixedString) {
 }
 
 TEST_F(FixedStringVectorTest, ThrowOnOversizedStrings) {
-  std::vector<pmr_string> v = {"abc", "defd", "ghi"};
+  auto v = std::vector<pmr_string>{"abc", "defd", "ghi"};
   EXPECT_THROW((FixedStringVector{v.cbegin(), v.cend(), 3u}), std::logic_error);
 
   EXPECT_THROW(fixed_string_vector->push_back("opossum"), std::logic_error);
