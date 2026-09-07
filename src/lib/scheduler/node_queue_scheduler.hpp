@@ -62,7 +62,7 @@ constexpr auto NUM_GROUPS_MAX_FACTOR = 2.0;
 // counts perform worse than ensuring at least a group count of eight.
 constexpr auto MIN_GROUP_COUNT = size_t{8};
 
-// This factor is used to determine at which queue load we use the maximum number of groups.
+// This factor is used to determine at which queue load we use the minimal number of groups.
 constexpr auto UPPER_LIMIT_QUEUE_SIZE_FACTOR = size_t{4};
 }  // namespace node_queue_scheduler::detail
 

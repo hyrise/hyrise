@@ -497,7 +497,6 @@ TEST_F(SchedulerTest, NumGroupDeterminationDifferentLoads) {
   // Shutdown. Unblock scheduled jobs.
   block_flag.test_and_set();
   block_flag.notify_all();
-  node_queue_scheduler->schedule_and_wait_for_tasks(tasks_1);
   node_queue_scheduler->wait_for_tasks(tasks_2);
 }
 
