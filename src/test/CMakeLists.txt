@@ -74,6 +74,7 @@ set(
     lib/logical_query_plan/window_node_test.cpp
     lib/lossless_cast_test.cpp
     lib/lossy_cast_test.cpp
+    lib/memory/jemalloc_test.cpp
     lib/memory/segments_using_allocators_test.cpp
     lib/memory/zero_allocator_test.cpp
     lib/null_value_test.cpp
