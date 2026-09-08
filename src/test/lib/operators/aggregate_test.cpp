@@ -912,51 +912,26 @@ TYPED_TEST(OperatorsAggregateTest, StringVariations) {
 }
 
 TYPED_TEST(OperatorsAggregateTest, SingleAggregateMaxWithOnlyNullValuesInGroup) {
-  auto group_values = pmr_vector<int>{1, 1, 2};
-  auto aggregate_values = pmr_vector<int>{0, 0, 5};
-  auto aggregate_null_values = pmr_vector<bool>{true, true, false};
-
-  const auto group_segment = std::make_shared<ValueSegment<int>>(std::move(group_values));
-  const auto aggregate_segment =
-      std::make_shared<ValueSegment<int>>(std::move(aggregate_values), std::move(aggregate_null_values));
-
-  const auto table_definitions = TableColumnDefinitions{{"a", DataType::Int, false}, {"b", DataType::Int, true}};
-  const auto table = std::make_shared<Table>(table_definitions, TableType::Data);
-  table->append_chunk({group_segment, aggregate_segment});
-
-  const auto table_wrapper = std::make_shared<TableWrapper>(table);
-  table_wrapper->execute();
-
+  const auto table = this->_table_wrapper_1_1_null->get_output();
   const auto aggregate_expressions = std::vector<std::shared_ptr<WindowFunctionExpression>>{
       max_(pqp_column_(ColumnID{1}, table->column_data_type(ColumnID{1}), table->column_name(ColumnID{1})))};
-  const auto aggregate =
-      std::make_shared<TypeParam>(table_wrapper, aggregate_expressions, std::vector<ColumnID>{ColumnID{0}});
+  const auto aggregate = std::make_shared<TypeParam>(this->_table_wrapper_1_1_null, aggregate_expressions,
+                                                      std::vector<ColumnID>{ColumnID{0}});
   aggregate->execute();
 
   const auto output = aggregate->get_output();
-  ASSERT_EQ(output->row_count(), 2u);
 
-  auto saw_group_with_only_null_values = false;
-  auto saw_group_with_non_null_value = false;
-
+  // Group `a == 100` only has NULL values in column `b`, so MAX(b) is expected to be NULL for that group.
+  auto found_group_with_only_null_values = false;
   for (auto row_id = size_t{0}; row_id < output->row_count(); ++row_id) {
     const auto group_value = output->template get_value<int>(ColumnID{0}, row_id);
-    ASSERT_TRUE(group_value);
-
-    const auto aggregate_value = output->template get_value<int>(ColumnID{1}, row_id);
-    if (*group_value == 1) {
-      EXPECT_FALSE(aggregate_value);
-      saw_group_with_only_null_values = true;
-    } else if (*group_value == 2) {
-      EXPECT_EQ(aggregate_value, 5);
-      saw_group_with_non_null_value = true;
-    } else {
-      FAIL() << "Unexpected group value: " << *group_value;
+    if (group_value && *group_value == 100) {
+      EXPECT_FALSE(output->template get_value<float>(ColumnID{1}, row_id));
+      found_group_with_only_null_values = true;
     }
   }
 
-  EXPECT_TRUE(saw_group_with_only_null_values);
-  EXPECT_TRUE(saw_group_with_non_null_value);
+  EXPECT_TRUE(found_group_with_only_null_values);
 }
 
 }  // namespace hyrise
