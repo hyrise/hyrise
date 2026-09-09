@@ -271,6 +271,4 @@ class AbstractHistogram : public AbstractStatisticsObject, public std::enable_sh
   HistogramDomain<T> _domain;
 };
 
-EXPLICITLY_DECLARE_DATA_TYPES(AbstractHistogram);
-
 }  // namespace hyrise
