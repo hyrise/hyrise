@@ -4,8 +4,6 @@
 #include <queue>
 #include <unordered_set>
 
-#include "scheduler/abstract_task.hpp"
-
 namespace hyrise {
 
 enum class TaskVisitation : uint8_t { VisitPredecessors, DoNotVisitPredecessors };

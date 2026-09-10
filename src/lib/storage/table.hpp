@@ -274,8 +274,8 @@ class Table : private Noncopyable {
    * To prevent data races for TableType::Data tables, we must access _chunks atomically.
    * This is due to the existence of the MvccDeletePlugin, which might modify shared pointers from a separate thread.
    *
-   * With C++20 we will get std::atomic<std::shared_ptr<T>>, which allows us to omit the std::atomic_load() and
-   * std::atomic_store() function calls.
+   * With C++26, std::atomic_load() and std::atomic_store() functions will be deprecated. But as of 2026, LLVM
+   * (currently 22) does not yet provide std::atomic<std::shared_ptr>>.
    *
    * For the ZeroAllocator, see the implementation of Table::append_chunk.
    */
