@@ -16,8 +16,7 @@
 
 namespace hyrise {
 
-FixedString::FixedString(char* mem, size_t string_length)
-    : _mem(mem), _maximum_length(string_length), _owns_memory(false) {}
+FixedString::FixedString(char* mem, size_t string_length) : _mem(mem), _maximum_length(string_length) {}
 
 FixedString::FixedString(const FixedString& other)
     : _mem(new char[other._maximum_length]{}), _maximum_length(other._maximum_length), _owns_memory(true) {
