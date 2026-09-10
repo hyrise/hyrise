@@ -136,7 +136,7 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
              chunk_id++) {
           count += sorted_table->get_chunk(chunk_id)->size();
         }
-        count += group_boundary.chunk_offset + 1;
+        count += group_boundary.chunk_offset;
         value_count_with_null = count;
       }
       _set_and_write_aggregate_value<AggregateType, aggregate_function>(
