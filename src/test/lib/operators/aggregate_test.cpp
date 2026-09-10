@@ -911,6 +911,29 @@ TYPED_TEST(OperatorsAggregateTest, StringVariations) {
   EXPECT_EQ(values_sorted, result_values_sorted);
 }
 
+TYPED_TEST(OperatorsAggregateTest, SingleAggregateMaxWithOnlyNullValuesInGroup) {
+  const auto table = this->_table_wrapper_1_1_null->get_output();
+  const auto aggregate_expressions = std::vector<std::shared_ptr<WindowFunctionExpression>>{
+      max_(pqp_column_(ColumnID{1}, table->column_data_type(ColumnID{1}), table->column_name(ColumnID{1})))};
+  const auto aggregate = std::make_shared<TypeParam>(this->_table_wrapper_1_1_null, aggregate_expressions,
+                                                      std::vector<ColumnID>{ColumnID{0}});
+  aggregate->execute();
+
+  const auto output = aggregate->get_output();
+
+  // Group `a == 100` only has NULL values in column `b`, so MAX(b) is expected to be NULL for that group.
+  auto found_group_with_only_null_values = false;
+  for (auto row_id = size_t{0}; row_id < output->row_count(); ++row_id) {
+    const auto group_value = output->template get_value<int>(ColumnID{0}, row_id);
+    if (group_value && *group_value == 100) {
+      EXPECT_FALSE(output->template get_value<float>(ColumnID{1}, row_id));
+      found_group_with_only_null_values = true;
+    }
+  }
+
+  EXPECT_TRUE(found_group_with_only_null_values);
+}
+
 // Test for issue #2761.
 TYPED_TEST(OperatorsAggregateTest, Issue2761) {
   auto column_definitions = TableColumnDefinitions{
