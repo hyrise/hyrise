@@ -416,6 +416,27 @@ std::vector<std::shared_ptr<PQPSubqueryExpression>> find_pqp_subquery_expression
   return pqp_subquery_expressions;
 }
 
+void map_lqp_subqueries(const AbstractExpression& expression, const AbstractExpression& copied_expression,
+                        LQPNodeMapping& mapping) {
+  DebugAssert(expression_equal_to_expression_in_different_lqp(expression, copied_expression, mapping),
+              "Expressions should be equal.");
+
+  if (expression.type == ExpressionType::LQPSubquery) {
+    Assert(copied_expression.type == ExpressionType::LQPSubquery, "Expressions have incompatible type.");
+    const auto& subquery = static_cast<const LQPSubqueryExpression&>(expression);
+    const auto& copied_subquery = static_cast<const LQPSubqueryExpression&>(copied_expression);
+    Assert(subquery.is_correlated() == copied_subquery.is_correlated(), "Subqueries are not equal.");
+    DebugAssert(*subquery.lqp == *copied_subquery.lqp, "Subquery LQPs are not equal.");
+    mapping.emplace(subquery.lqp, copied_subquery.lqp);
+  }
+
+  const auto argument_count = expression.arguments.size();
+  Assert(copied_expression.arguments.size() == argument_count, "Arguments are not equal.");
+  for (auto argument_id = size_t{0}; argument_id < argument_count; ++argument_id) {
+    map_lqp_subqueries(*expression.arguments[argument_id], *copied_expression.arguments[argument_id], mapping);
+  }
+}
+
 std::optional<ColumnID> find_expression_idx(const AbstractExpression& search_expression,
                                             const std::vector<std::shared_ptr<AbstractExpression>>& expression_vector) {
   const auto num_expressions = expression_vector.size();
