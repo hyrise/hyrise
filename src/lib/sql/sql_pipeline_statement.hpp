@@ -122,7 +122,7 @@ class SQLPipelineStatement : public Noncopyable {
   const std::string _sql_string;
   const UseMvcc _use_mvcc;
 
-  const std::shared_ptr<Optimizer> _optimizer;
+  std::shared_ptr<Optimizer> _optimizer;
 
   // Execution results
   std::shared_ptr<hsql::SQLParserResult> _parsed_sql_statement;
