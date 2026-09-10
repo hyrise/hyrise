@@ -932,6 +932,8 @@ TYPED_TEST(OperatorsAggregateTest, SingleAggregateMaxWithOnlyNullValuesInGroup) 
   }
 
   EXPECT_TRUE(found_group_with_only_null_values);
+}
+
 // Test for issue #2761.
 TYPED_TEST(OperatorsAggregateTest, Issue2761) {
   auto column_definitions = TableColumnDefinitions{
