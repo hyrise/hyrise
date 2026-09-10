@@ -214,8 +214,8 @@ TEST_F(OperatorsImportTest, RetrieveCsvMetaFromEmptyTable) {
 
 TEST_F(OperatorsImportTest, AppendToExistingTable) {
   auto existing_table = load_table("resources/test_data/tbl/float.tbl");
-
   Hyrise::get().storage_manager.add_table("a", existing_table);
+  const auto initial_row_count = existing_table->row_count();
 
   auto expected_table = load_table("resources/test_data/tbl/float.tbl");
   Assert(expected_table->chunk_count() == 1, "Testing code was only written to support single chunk tables");
@@ -225,7 +225,23 @@ TEST_F(OperatorsImportTest, AppendToExistingTable) {
   auto importer = std::make_shared<Import>("resources/test_data/csv/float.csv", "a");
   importer->execute();
 
-  EXPECT_TABLE_EQ_ORDERED(Hyrise::get().storage_manager.get_table("a"), expected_table);
+  EXPECT_EQ(Hyrise::get().storage_manager.get_table("a"), existing_table);
+  EXPECT_TABLE_EQ_ORDERED(existing_table, expected_table);
+
+  // New chunk(s) should also have pruning statistics.
+  const auto chunk_count = existing_table->chunk_count();
+  EXPECT_EQ(chunk_count, ChunkID{2});
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+    const auto chunk = existing_table->get_chunk(chunk_id);
+    ASSERT_TRUE(chunk);
+    EXPECT_FALSE(chunk->is_mutable());
+    EXPECT_TRUE(chunk->pruning_statistics());
+  }
+
+  // Table statistics should be updated, e.g., with the new row count (`2 * initial_row_count`).
+  const auto table_statistics = existing_table->table_statistics();
+  ASSERT_TRUE(table_statistics);
+  EXPECT_FLOAT_EQ(table_statistics->row_count, static_cast<Cardinality>(2 * initial_row_count));
 }
 
 TEST_F(OperatorsImportTest, ChunkSize) {
