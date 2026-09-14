@@ -4,7 +4,6 @@
 #include <cstdlib>
 #include <memory>
 #include <optional>
-#include <set>
 #include <type_traits>
 #include <unordered_map>
 #include <utility>
@@ -64,6 +63,30 @@ bool can_prune(const BaseAttributeStatistics& base_segment_statistics, const Pre
   return can_prune;
 }
 
+// Merge a sorted list of ChunkIDs into another one, keeping the target sorted and free of duplicates. Excluded ChunkIDs
+// used to be collected in a std::set, which gave us both properties for free but at the cost of a node allocation per
+// insert. Since every list we produce is sorted by construction (we always iterate ChunkIDs in ascending order), we can
+// instead append and merge the two sorted runs in linear time.
+void merge_sorted_chunk_ids(std::vector<ChunkID>& target, const std::vector<ChunkID>& source) {
+  DebugAssert(std::ranges::is_sorted(target), "Expected target ChunkIDs to be sorted.");
+  DebugAssert(std::ranges::is_sorted(source), "Expected source ChunkIDs to be sorted.");
+
+  if (source.empty()) {
+    return;
+  }
+
+  if (target.empty()) {
+    target = source;
+    return;
+  }
+
+  // `insert` can reallocate, so we remember the split point as an offset rather than as an iterator.
+  const auto middle_offset = target.size();
+  target.insert(target.end(), source.begin(), source.end());
+  std::inplace_merge(target.begin(), target.begin() + middle_offset, target.end());
+  target.erase(std::unique(target.begin(), target.end()), target.end());
+}
+
 template <typename T>
 std::vector<T> pruned_items_mapping(const size_t initial_item_count, const std::vector<T>& pruned_item_ids) {
   // This function assumes to be used solely for column and chunk pruning.
@@ -105,21 +128,21 @@ namespace hyrise {
 
 using namespace expression_functional;
 
-std::set<ChunkID> compute_chunk_exclude_list(const PredicatePruningChain& predicate_pruning_chain,
-                                             const std::shared_ptr<StoredTableNode>& stored_table_node) {
+std::vector<ChunkID> compute_chunk_exclude_list(const PredicatePruningChain& predicate_pruning_chain,
+                                                const std::shared_ptr<StoredTableNode>& stored_table_node) {
   auto pruned_chunk_ids_by_predicate_node_cache =
-      std::unordered_map<StoredTableNodePredicateNodePair, std::set<ChunkID>,
+      std::unordered_map<StoredTableNodePredicateNodePair, std::vector<ChunkID>,
                          boost::hash<StoredTableNodePredicateNodePair>>{};
 
   return compute_chunk_exclude_list(predicate_pruning_chain, stored_table_node,
                                     pruned_chunk_ids_by_predicate_node_cache);
 }
 
-std::set<ChunkID> compute_chunk_exclude_list(
+std::vector<ChunkID> compute_chunk_exclude_list(
     const PredicatePruningChain& predicate_pruning_chain, const std::shared_ptr<StoredTableNode>& stored_table_node,
-    std::unordered_map<StoredTableNodePredicateNodePair, std::set<ChunkID>,
+    std::unordered_map<StoredTableNodePredicateNodePair, std::vector<ChunkID>,
                        boost::hash<StoredTableNodePredicateNodePair>>& excluded_chunk_ids_by_predicate_node) {
-  auto excluded_chunk_ids = std::set<ChunkID>{};
+  auto excluded_chunk_ids = std::vector<ChunkID>{};
   for (const auto& predicate_node : predicate_pruning_chain) {
     // Determine the set of chunks that can be excluded for the given PredicateNode's predicate.
     auto excluded_chunk_ids_iter =
@@ -128,7 +151,7 @@ std::set<ChunkID> compute_chunk_exclude_list(
     if (excluded_chunk_ids_iter != excluded_chunk_ids_by_predicate_node.end()) {
       // Shortcut: The given PredicateNode is part of multiple predicate pruning chains and the set of excluded chunks
       //           has already been calculated.
-      excluded_chunk_ids.insert(excluded_chunk_ids_iter->second.begin(), excluded_chunk_ids_iter->second.end());
+      merge_sorted_chunk_ids(excluded_chunk_ids, excluded_chunk_ids_iter->second);
       continue;
     }
 
@@ -161,7 +184,7 @@ std::set<ChunkID> compute_chunk_exclude_list(
       return {};
     }
 
-    auto current_excluded_chunk_ids = std::set<ChunkID>{};
+    auto current_excluded_chunk_ids = std::vector<ChunkID>{};
     const auto table = Hyrise::get().storage_manager.get_table(stored_table_node->table_name);
 
     const auto stored_table_node_output_expressions = stored_table_node_without_column_pruning->output_expressions();
@@ -197,6 +220,10 @@ std::set<ChunkID> compute_chunk_exclude_list(
 
       auto condition = operator_predicate.predicate_condition;
 
+      // ChunkIDs are appended in ascending order below, so this list is sorted by construction and needs no sorting
+      // before it is merged into `current_excluded_chunk_ids`.
+      auto predicate_excluded_chunk_ids = std::vector<ChunkID>{};
+
       const auto chunk_count = table->chunk_count();
       auto num_rows_pruned = size_t{0};
       for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
@@ -222,9 +249,11 @@ std::set<ChunkID> compute_chunk_exclude_list(
             // Chunk was already pruned. While we might prune on a different predicate this time, we must make sure that
             // we do not over-prune the statistics.
           }
-          current_excluded_chunk_ids.insert(chunk_id);
+          predicate_excluded_chunk_ids.emplace_back(chunk_id);
         }
       }
+
+      merge_sorted_chunk_ids(current_excluded_chunk_ids, predicate_excluded_chunk_ids);
 
       if (num_rows_pruned > size_t{0}) {
         const auto& old_statistics =
@@ -238,7 +267,7 @@ std::set<ChunkID> compute_chunk_exclude_list(
     excluded_chunk_ids_by_predicate_node.emplace(std::make_pair(stored_table_node, predicate_node),
                                                  current_excluded_chunk_ids);
     // Add to global excluded list because we collect excluded chunks for the whole predicate pruning chain.
-    excluded_chunk_ids.insert(current_excluded_chunk_ids.begin(), current_excluded_chunk_ids.end());
+    merge_sorted_chunk_ids(excluded_chunk_ids, current_excluded_chunk_ids);
   }
 
   return excluded_chunk_ids;
