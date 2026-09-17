@@ -26,6 +26,24 @@ class TPCCPayment : public AbstractTPCCProcedure {
 
   // Values calculated WHILE the procedure is executed, exposed for facilitating the tests:
   int32_t c_id{-1};  // Customer ID, initialized with invalid value
+
+  // clang-format off
+  static constexpr auto PREPARED_STATEMENTS = std::to_array({
+    "PREPARE payment_select_warehouse FROM 'SELECT W_NAME, W_STREET_1, W_STREET_2, W_CITY, W_STATE, W_ZIP, W_YTD FROM WAREHOUSE WHERE W_ID = ?'",  // NOLINT(whitespace/line_length)
+    "PREPARE payment_update_warehouse_ytd FROM 'UPDATE WAREHOUSE SET W_YTD = ? WHERE W_ID = ?'",  // NOLINT(whitespace/line_length)
+    "PREPARE payment_select_district FROM 'SELECT D_NAME, D_STREET_1, D_STREET_2, D_CITY, D_STATE, D_ZIP, D_YTD FROM DISTRICT WHERE D_W_ID = ? AND D_ID = ?'",  // NOLINT(whitespace/line_length)
+    "PREPARE payment_update_district_ytd FROM 'UPDATE DISTRICT SET D_YTD = ? WHERE D_W_ID = ? AND D_ID = ?'",  // NOLINT(whitespace/line_length)
+    "PREPARE payment_select_customer_by_id FROM 'SELECT C_ID, C_FIRST, C_MIDDLE, C_LAST, C_STREET_1, C_STREET_2, C_CITY, C_STATE, C_ZIP, C_PHONE, C_SINCE, C_CREDIT, C_CREDIT_LIM, C_DISCOUNT, C_BALANCE, C_DATA FROM CUSTOMER WHERE C_W_ID = ? AND C_D_ID = ? AND C_ID = ?'",  // NOLINT(whitespace/line_length)
+    "PREPARE payment_select_customer_by_name FROM 'SELECT C_ID, C_FIRST, C_MIDDLE, C_LAST, C_STREET_1, C_STREET_2, C_CITY, C_STATE, C_ZIP, C_PHONE, C_SINCE, C_CREDIT, C_CREDIT_LIM, C_DISCOUNT, C_BALANCE, C_DATA FROM CUSTOMER WHERE C_W_ID = ? AND C_D_ID = ? AND C_LAST = ? ORDER BY C_FIRST'",  // NOLINT(whitespace/line_length)
+    // The first two floats should be the same value. We don't implement the postgresql syntax for prepared statement
+    // placeholders (e.g. '$1' '$2' '$3') and use '?' instead. This hinders us from reusing inputs.
+    "PREPARE payment_update_customer_balance FROM 'UPDATE CUSTOMER SET C_BALANCE = C_BALANCE - ?, C_YTD_PAYMENT = C_YTD_PAYMENT + ?, C_PAYMENT_CNT = C_PAYMENT_CNT + 1 WHERE C_W_ID = ? AND C_D_ID = ? AND C_ID = ?'",  // NOLINT(whitespace/line_length)
+    "PREPARE payment_update_customer_c_data FROM 'UPDATE CUSTOMER SET C_DATA = ? WHERE C_W_ID = ? AND C_D_ID = ? AND C_ID = ?'",  // NOLINT(whitespace/line_length)
+    // Our parser currently does not support parameters ('?') in the VALUES field of an INSERT statement. As these
+    // statements would not be optimized much anyway, we do not use prepared statements for them.
+    // "PREPARE payment_insert_history FROM 'INSERT INTO HISTORY (H_C_ID, H_C_D_ID, H_C_W_ID, H_D_ID, H_W_ID, H_DATA, H_DATE, H_AMOUNT) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'",  // NOLINT(whitespace/line_length)
+  });
+  // clang-format on
 };
 
 }  // namespace hyrise

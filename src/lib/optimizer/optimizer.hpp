@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "cost_estimation/cost_estimator_logical.hpp"
+#include "optimizer/optimization_context.hpp"
 #include "optimizer/strategy/abstract_rule.hpp"
 #include "statistics/cardinality_estimator.hpp"
 
@@ -30,6 +31,9 @@ class AbstractLQPNode;
 class Optimizer final {
  public:
   static std::shared_ptr<Optimizer> create_default_optimizer();
+  // This optimizer only uses a fraction of the rules and should only be used on the lqp of a prepared statement, which
+  // has already been optimized by the default optimizer when it was prepared.
+  static std::shared_ptr<Optimizer> create_execute_statement_optimizer();
 
   explicit Optimizer(const std::shared_ptr<AbstractCostEstimator>& cost_estimator =
                          std::make_shared<CostEstimatorLogical>(std::make_shared<CardinalityEstimator>()));
@@ -42,20 +46,25 @@ class Optimizer final {
   /**
    * Returns optimized version of @param input LQP. Wraps `optimize_with_context()` and returns only the optimized
    * LQP. @param rule_durations may be set in order to retrieve runtime information for each applied rule.
+   * @param context is a unqiue_ptr to ensure that only this function can change the context. Call `deep_copy` on the
+   * context if you want to reuse the context you pass in this function.
    */
   std::shared_ptr<AbstractLQPNode> optimize(
       std::shared_ptr<AbstractLQPNode> input,
-      const std::shared_ptr<std::vector<OptimizerRuleMetrics>>& rule_durations = nullptr) const;
+      const std::shared_ptr<std::vector<OptimizerRuleMetrics>>& rule_durations = nullptr,
+      std::unique_ptr<OptimizationContext> context = nullptr) const;
 
   /**
    * Returns optimized version of @param input LQP and the OptimizationContext used by all transformation rules.
-   * @param rule_durations may be set in order to retrieve runtime information for each applied rule.
-   * The OptimizationContext contains metadata about the optimization process, such as whether the resulting LQP
-   * is cacheable or not.
+   * @param rule_durations may be set in order to retrieve runtime information for each applied rule. @param context is
+   * a unqiue_ptr to ensure that only this function can change the context. Call `deep_copy` on the
+   * context if you want to reuse the context you pass in this function. The OptimizationContext contains metadata
+   * about the optimization process, such as whether the resulting LQP is cacheable or not.
    */
   std::pair<std::shared_ptr<AbstractLQPNode>, std::unique_ptr<OptimizationContext>> optimize_with_context(
       std::shared_ptr<AbstractLQPNode> input,
-      const std::shared_ptr<std::vector<OptimizerRuleMetrics>>& rule_durations = nullptr) const;
+      const std::shared_ptr<std::vector<OptimizerRuleMetrics>>& rule_durations = nullptr,
+      std::unique_ptr<OptimizationContext> context = nullptr) const;
 
   static void validate_lqp(const std::shared_ptr<AbstractLQPNode>& root_node);
 
