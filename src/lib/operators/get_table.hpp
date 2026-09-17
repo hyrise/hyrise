@@ -2,7 +2,7 @@
 
 #include <memory>
 #include <optional>
-#include <set>
+// #include <set>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -55,7 +55,7 @@ class GetTable : public AbstractReadOnlyOperator {
 
   // Resolve the predicate values for uncorrelated subqueries if they have already been executed. If so, perform chunk
   // pruning with the predicates and return the pruned ChunkIDs.
-  std::set<ChunkID> _prune_chunks_dynamically();
+  std::vector<ChunkID> _prune_chunks_dynamically();
 
   // Name of the table to retrieve.
   const std::string _name;
@@ -63,7 +63,7 @@ class GetTable : public AbstractReadOnlyOperator {
   const std::vector<ColumnID> _pruned_column_ids;
 
   mutable std::vector<std::weak_ptr<const AbstractOperator>> _prunable_subquery_scans;
-  std::set<ChunkID> _dynamically_pruned_chunk_ids;
+  std::vector<ChunkID> _dynamically_pruned_chunk_ids;
 };
 
 }  // namespace hyrise
