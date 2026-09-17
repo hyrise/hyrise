@@ -112,13 +112,14 @@ std::set<ChunkID> compute_chunk_exclude_list(const PredicatePruningChain& predic
                          boost::hash<StoredTableNodePredicateNodePair>>{};
 
   return compute_chunk_exclude_list(predicate_pruning_chain, stored_table_node,
-                                    pruned_chunk_ids_by_predicate_node_cache);
+                                    pruned_chunk_ids_by_predicate_node_cache, false);
 }
 
 std::set<ChunkID> compute_chunk_exclude_list(
     const PredicatePruningChain& predicate_pruning_chain, const std::shared_ptr<StoredTableNode>& stored_table_node,
     std::unordered_map<StoredTableNodePredicateNodePair, std::set<ChunkID>,
-                       boost::hash<StoredTableNodePredicateNodePair>>& excluded_chunk_ids_by_predicate_node) {
+                       boost::hash<StoredTableNodePredicateNodePair>>& excluded_chunk_ids_by_predicate_node,
+    const bool prune_statistics) {
   auto excluded_chunk_ids = std::set<ChunkID>{};
   for (const auto& predicate_node : predicate_pruning_chain) {
     // Determine the set of chunks that can be excluded for the given PredicateNode's predicate.
@@ -226,7 +227,7 @@ std::set<ChunkID> compute_chunk_exclude_list(
         }
       }
 
-      if (num_rows_pruned > size_t{0}) {
+      if (num_rows_pruned > size_t{0} && prune_statistics) {
         const auto& old_statistics =
             stored_table_node->table_statistics ? stored_table_node->table_statistics : table->table_statistics();
         const auto pruned_statistics = prune_table_statistics(*old_statistics, operator_predicate, num_rows_pruned);
