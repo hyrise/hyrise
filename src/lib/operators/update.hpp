@@ -47,7 +47,5 @@ class Update : public AbstractReadWriteOperator {
   void _on_rollback_records() override {}
 
   const std::string _table_to_update_name;
-  std::shared_ptr<Delete> _delete;
-  std::shared_ptr<Insert> _insert;
 };
 }  // namespace hyrise

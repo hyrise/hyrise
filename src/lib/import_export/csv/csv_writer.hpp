@@ -82,7 +82,7 @@ class CsvWriter {
    *  ColumnType    |  c  | float
    *
    */
-  static void write(const Table& table, const std::string& filename, const ParseConfig& config = {});
+  static void write(const Table& table, const std::string& filename, const CsvParseConfig& config = {});
 
   /*
    * Ends a row of entries in the csv file.
@@ -91,10 +91,10 @@ class CsvWriter {
 
  protected:
   static void _generate_meta_info_file(const Table& table, const std::string& filename);
-  static void _generate_content_file(const Table& table, const std::string& filename, const ParseConfig& config);
-  static void _write(const AllTypeVariant& value, std::ofstream& ofstream, const ParseConfig& config);
-  static pmr_string _escape(const pmr_string& string, const ParseConfig& config);
-  static void _write_string_value(const pmr_string& value, std::ofstream& ofstream, const ParseConfig& config);
+  static void _generate_content_file(const Table& table, const std::string& filename, const CsvParseConfig& config);
+  static void _write(const AllTypeVariant& value, std::ofstream& ofstream, const CsvParseConfig& config);
+  static pmr_string _escape(const pmr_string& string, const CsvParseConfig& config);
+  static void _write_string_value(const pmr_string& value, std::ofstream& ofstream, const CsvParseConfig& config);
 };
 
 }  // namespace hyrise
