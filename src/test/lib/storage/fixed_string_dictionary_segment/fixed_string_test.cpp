@@ -141,7 +141,9 @@ TEST_F(FixedStringTest, SwapFixedString) {
   EXPECT_EQ(fixed_string.string(), "foo");
 
   // TODO(anyone): figure out how to fix the swap.
-  // swap(FixedString lhs, FixedString rhs) in fixed_string.cpp does not perform a swap currently.
+  // swap(FixedString lhs, FixedString rhs) in fixed_string.cpp does not perform a swap currently as it
+  // takes copies, no references. It is still needed to support sorting. However, the actual sorting still
+  // works as the underlying iterator returns temporaries.
   // It is still needed to support sorting (which somehow works as intended).
   // This test reflects the **actual** behaviour, NOT the intended, and should be changed in the future.
   swap(fixed_string, fixed_string1);
