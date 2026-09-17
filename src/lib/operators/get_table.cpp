@@ -7,7 +7,7 @@
 #include <iterator>
 #include <memory>
 #include <optional>
-#include <set>
+// #include <set>
 #include <sstream>
 #include <string>
 #include <unordered_map>
@@ -67,8 +67,9 @@ std::string GetTable::description(DescriptionMode description_mode) const {
   stream << AbstractOperator::description(description_mode) << separator;
   stream << "(" << table_name() << ")" << separator;
   stream << "pruned:" << separator;
-  auto overall_pruned_chunk_ids = _dynamically_pruned_chunk_ids;
-  overall_pruned_chunk_ids.insert(_pruned_chunk_ids.begin(), _pruned_chunk_ids.end());
+  auto overall_pruned_chunk_ids = std::vector<ChunkID>{};
+  std::ranges::set_union(_dynamically_pruned_chunk_ids, _pruned_chunk_ids,
+                         std::back_inserter(overall_pruned_chunk_ids));
   const auto overall_pruned_chunk_count = overall_pruned_chunk_ids.size();
   const auto dynamically_pruned_chunk_count = overall_pruned_chunk_count - _pruned_chunk_ids.size();
 
@@ -158,9 +159,11 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
 
   // Currently, value_clustered_by is only used for temporary tables. If tables in the StorageManager start using that
   // flag, too, it needs to be forwarded here; otherwise it would be completely invisible in the PQP.
-  DebugAssert(stored_table->value_clustered_by().empty(), "GetTable does not forward value_clustered_by.");
-  auto overall_pruned_chunk_ids = _prune_chunks_dynamically();
-  overall_pruned_chunk_ids.insert(_pruned_chunk_ids.cbegin(), _pruned_chunk_ids.cend());
+  const auto dynamically_pruned_chunk_ids = _prune_chunks_dynamically();
+  DebugAssert(std::ranges::is_sorted(_pruned_chunk_ids), "Expected pruned ChunkIDs to be sorted.");
+  auto overall_pruned_chunk_ids = std::vector<ChunkID>{};
+  std::ranges::set_union(dynamically_pruned_chunk_ids, _pruned_chunk_ids,
+                         std::back_inserter(overall_pruned_chunk_ids));
   auto pruned_chunk_ids_iter = overall_pruned_chunk_ids.begin();
   auto excluded_chunk_ids = std::vector<ChunkID>{};
   for (auto stored_chunk_id = ChunkID{0}; stored_chunk_id < chunk_count; ++stored_chunk_id) {
@@ -335,7 +338,7 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
                                  stored_table->uses_mvcc(), table_indexes);
 }
 
-std::set<ChunkID> GetTable::_prune_chunks_dynamically() {
+std::vector<ChunkID> GetTable::_prune_chunks_dynamically() {
   if (_prunable_subquery_scans.empty()) {
     return {};
   }

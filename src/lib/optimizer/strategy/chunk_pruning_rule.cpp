@@ -169,22 +169,22 @@ void ChunkPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<A
       continue;
     }
 
-    // (2.1) Determine set of pruned chunks per predicate pruning chain.
-    auto pruned_chunk_id_sets = std::vector<std::set<ChunkID>>{};
+    // (2.1) Determine the pruned chunks per predicate pruning chain.
+    auto pruned_chunk_id_lists = std::vector<std::vector<ChunkID>>{};
+    pruned_chunk_id_lists.reserve(predicate_pruning_chains.size());
     for (const auto& predicate_pruning_chain : predicate_pruning_chains) {
-      auto exclusions = compute_chunk_exclude_list(predicate_pruning_chain, stored_table_node,
-                                                   _excluded_chunk_ids_by_predicate_node_cache);
-      pruned_chunk_id_sets.emplace_back(std::move(exclusions));
+      pruned_chunk_id_lists.emplace_back(compute_chunk_exclude_list(predicate_pruning_chain, stored_table_node,
+                                                                    _excluded_chunk_ids_by_predicate_node_cache));
     }
 
     // (2.2) Calculate the intersection of pruned chunks across all predicate pruning chains.
-    const auto& pruned_chunk_ids = _intersect_chunk_ids(pruned_chunk_id_sets);
+    auto pruned_chunk_ids = _intersect_chunk_ids(pruned_chunk_id_lists);
     if (!pruned_chunk_ids.empty()) {
       // (2.3) Set the pruned ChunkIds of stored_table_node.
       DebugAssert(stored_table_node->pruned_chunk_ids().empty(),
                   "Did not expect a StoredTableNode with an already existing set of pruned ChunkIDs.");
-      // Wanted side effect of using std::set: pruned_chunk_ids vector is already sorted.
-      stored_table_node->set_pruned_chunk_ids(std::vector<ChunkID>(pruned_chunk_ids.begin(), pruned_chunk_ids.end()));
+      DebugAssert(std::ranges::is_sorted(pruned_chunk_ids), "Expected pruned ChunkIDs to be sorted.");
+      stored_table_node->set_pruned_chunk_ids(std::move(pruned_chunk_ids));
     }
 
     // (2.4) Collect predicates with uncorrelated subqueries that we can use for dynamic pruning during execution and
@@ -280,29 +280,31 @@ std::vector<PredicatePruningChain> ChunkPruningRule::_find_predicate_pruning_cha
                                                                         visited_predicate_nodes);
 }
 
-std::set<ChunkID> ChunkPruningRule::_intersect_chunk_ids(const std::vector<std::set<ChunkID>>& chunk_id_sets) {
-  if (chunk_id_sets.empty() || chunk_id_sets[0].empty()) {
+std::vector<ChunkID> ChunkPruningRule::_intersect_chunk_ids(
+    const std::vector<std::vector<ChunkID>>& chunk_id_lists) {
+  if (chunk_id_lists.empty() || chunk_id_lists[0].empty()) {
     return {};
   }
 
-  const auto chunk_id_set_count = chunk_id_sets.size();
-  if (chunk_id_set_count == 1) {
-    return chunk_id_sets[0];
+  const auto chunk_id_list_count = chunk_id_lists.size();
+  if (chunk_id_list_count == 1) {
+    return chunk_id_lists[0];
   }
 
-  auto chunk_id_set = chunk_id_sets[0];
-  for (auto set_idx = size_t{1}; set_idx < chunk_id_set_count; ++set_idx) {
-    const auto& current_chunk_id_set = chunk_id_sets[set_idx];
-    if (current_chunk_id_set.empty()) {
+  auto chunk_ids = chunk_id_lists[0];
+  for (auto list_idx = size_t{1}; list_idx < chunk_id_list_count; ++list_idx) {
+    const auto& current_chunk_ids = chunk_id_lists[list_idx];
+    if (current_chunk_ids.empty()) {
       return {};
     }
 
-    auto intersection = std::set<ChunkID>{};
-    std::ranges::set_intersection(chunk_id_set, current_chunk_id_set, std::inserter(intersection, intersection.end()));
-    chunk_id_set = std::move(intersection);
+    // The inputs are sorted and unique (compute_chunk_exclude_list guarantees this), so the intersection is, too.
+    auto intersection = std::vector<ChunkID>{};
+    std::ranges::set_intersection(chunk_ids, current_chunk_ids, std::back_inserter(intersection));
+    chunk_ids = std::move(intersection);
   }
 
-  return chunk_id_set;
+  return chunk_ids;
 }
 
 }  // namespace hyrise
