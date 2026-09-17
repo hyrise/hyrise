@@ -81,10 +81,11 @@ void merge_sorted_chunk_ids(std::vector<ChunkID>& target, const std::vector<Chun
   }
 
   // `insert` can reallocate, so we remember the split point as an offset rather than as an iterator.
-  const auto middle_offset = target.size();
+  const auto middle_offset = static_cast<std::vector<ChunkID>::difference_type>(target.size());
   target.insert(target.end(), source.begin(), source.end());
-  std::inplace_merge(target.begin(), target.begin() + middle_offset, target.end());
-  target.erase(std::unique(target.begin(), target.end()), target.end());
+  std::ranges::inplace_merge(target, target.begin() + middle_offset);
+  const auto duplicates = std::ranges::unique(target);
+  target.erase(duplicates.begin(), duplicates.end());
 }
 
 template <typename T>

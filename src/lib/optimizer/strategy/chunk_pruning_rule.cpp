@@ -5,7 +5,6 @@
 #include <cstdint>
 #include <iterator>
 #include <memory>
-#include <set>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -184,7 +183,7 @@ void ChunkPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<A
       DebugAssert(stored_table_node->pruned_chunk_ids().empty(),
                   "Did not expect a StoredTableNode with an already existing set of pruned ChunkIDs.");
       DebugAssert(std::ranges::is_sorted(pruned_chunk_ids), "Expected pruned ChunkIDs to be sorted.");
-      stored_table_node->set_pruned_chunk_ids(std::move(pruned_chunk_ids));
+      stored_table_node->set_pruned_chunk_ids(pruned_chunk_ids);
     }
 
     // (2.4) Collect predicates with uncorrelated subqueries that we can use for dynamic pruning during execution and
