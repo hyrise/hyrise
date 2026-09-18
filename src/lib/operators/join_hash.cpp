@@ -134,11 +134,13 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
    *   JoinMode::Inner        The smaller table becomes the build side, the bigger the probe side
    *   JoinMode::Left/Right   The outer table becomes the probe side, the inner table becomes the build side
    *   JoinMode::FullOuter    Not supported by JoinHash
-   *   JoinMode::Semi/Anti*   The left table becomes the probe side, the right table becomes the build side
+   *   JoinMode::Semi/Anti*   The smaller table becomes the build side, the bigger the probe side
    */
   const auto build_hash_table_for_right_input =
       _mode == JoinMode::Left || _mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse ||
-      _mode == JoinMode::Semi ||
+      (_mode == JoinMode::Semi &&
+       (!_secondary_predicates.empty() ||
+       _left_input->get_output()->row_count() > _right_input->get_output()->row_count())) ||
       (_mode == JoinMode::Inner && _left_input->get_output()->row_count() > _right_input->get_output()->row_count());
 
   if (build_hash_table_for_right_input) {
@@ -170,11 +172,19 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
   const auto probe_column_type = probe_input_table->column_data_type(probe_column_id);
 
   // Depending on which input table became the build/probe table we have to order the columns of the output table.
-  // Semi/Anti* Joins only emit tuples from the probe table, which is given by the right input table in Hyrise.
+  // Semi/Anti* Joins only emit tuples from the probe table, which is given by the right input table in Hyrise
+  // for Anti Joins and adaptively chosen for Semi Joins.
   // For other join modes, we need to check which side has been chosen as the probe side (see variable
   // `build_hash_table_for_right_input` for more details).
   auto output_column_order = OutputColumnOrder{};
-  if (is_semi_or_anti_join(_mode)) {
+  if (is_semi_join(_mode))
+  {
+    if (build_hash_table_for_right_input) {
+      output_column_order = OutputColumnOrder::RightOnly;
+    } else {
+      output_column_order = OutputColumnOrder::LeftOnly;
+    }
+  } else if (is_semi_or_anti_join(_mode)) {
     output_column_order = OutputColumnOrder::RightOnly;
   } else if (build_hash_table_for_right_input) {
     output_column_order = OutputColumnOrder::RightFirstLeftSecond;
@@ -284,6 +294,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
     const auto keep_nulls_build_column = _mode == JoinMode::AntiNullAsTrue;
     const auto keep_nulls_probe_column = _mode == JoinMode::Left || _mode == JoinMode::Right ||
                                          _mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse;
+    const auto emit_build_side = _output_column_order == OutputColumnOrder::LeftOnly;
 
     // Containers used to store histograms for (potentially subsequent) radix partitioning step (in cases
     // _radix_bits > 0). Created during materialization step.
@@ -448,12 +459,13 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
      *    probe step.
      */
     auto timer_hash_map_building = Timer{};
-    if (_secondary_predicates.empty() && is_semi_or_anti_join(_mode)) {
+    // Anti joins, or semi joins that didn't switch the build/probe side.
+    if (_secondary_predicates.empty() && is_semi_or_anti_join(_mode) && !emit_build_side) {
       hash_tables = build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::ExistenceOnly,
                                                        _radix_bits, probe_side_bloom_filter);
     } else {
       hash_tables = build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::AllPositions, _radix_bits,
-                                                       probe_side_bloom_filter);
+                                                       probe_side_bloom_filter, emit_build_side);
     }
     _performance_data.set_step_runtime(OperatorSteps::Building, timer_hash_map_building.lap());
 
@@ -517,9 +529,20 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
         break;
 
       case JoinMode::Semi:
-        probe_semi_anti<ProbeColumnType, HashedType, JoinMode::Semi>(radix_probe_column, hash_tables,
-                                                                     probe_side_pos_lists, *_build_input_table,
-                                                                     *_probe_input_table, _secondary_predicates);
+        if (_output_column_order == OutputColumnOrder::LeftOnly) {
+          // `probe_side_pos_lists` stays empty here and is ignored by the output writing.
+          probe_semi_anti<ProbeColumnType, HashedType, JoinMode::Semi, true>(
+              radix_probe_column, hash_tables, probe_side_pos_lists, *_build_input_table, *_probe_input_table,
+              _secondary_predicates);
+          gather_matched_build_side_positions(hash_tables, build_side_pos_lists);
+          // The probe side emits no rows here, but write_output_chunks expects one PosList per partition on both sides.
+          probe_side_pos_lists.clear();
+          probe_side_pos_lists.resize(build_side_pos_lists.size());
+        } else {
+          probe_semi_anti<ProbeColumnType, HashedType, JoinMode::Semi>(radix_probe_column, hash_tables,
+                                                                      probe_side_pos_lists, *_build_input_table,
+                                                                      *_probe_input_table, _secondary_predicates);
+        }
         break;
 
       case JoinMode::AntiNullAsTrue:
