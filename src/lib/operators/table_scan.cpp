@@ -215,7 +215,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
       if (keep_chunk_sort_order && !chunk_in->individually_sorted_by().empty()) {
         chunk->set_individually_sorted_by(chunk_in->individually_sorted_by());
       }
-      const auto lock = std::lock_guard<std::mutex>{output_mutex};
+      const auto lock = std::scoped_lock<std::mutex>{output_mutex};
       output_chunks.emplace_back(chunk);
     };
     // Spawn job when chunk sufficiently large. The upper bound of the chunk size, still needs to be re-evaluated over

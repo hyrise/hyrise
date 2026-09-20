@@ -26,7 +26,7 @@ class FixedString {
   // Create a FixedString with an existing one
   FixedString(const FixedString& other);
   // NOLINTNEXTLINE(cppcoreguidelines-noexcept-move-operations,hicpp-noexcept-move,performance-noexcept-move-constructor)
-  FixedString(FixedString&&);
+  FixedString(FixedString&& /*other*/);
 
   ~FixedString();
 
@@ -38,7 +38,7 @@ class FixedString {
   // Returns the length of the string
   size_t size() const;
 
-  // Returns the maixmum possible size of storable strings
+  // Returns the maximum possible size of storable strings
   size_t maximum_length() const;
 
   // Creates a string object from FixedString
@@ -84,7 +84,7 @@ class FixedString {
  private:
   char* _mem;
   size_t _maximum_length;
-  bool _owns_memory;
+  bool _owns_memory = false;
 };
 
 }  // namespace hyrise

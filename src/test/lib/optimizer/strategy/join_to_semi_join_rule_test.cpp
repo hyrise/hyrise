@@ -49,8 +49,8 @@ TEST_F(JoinToSemiJoinRuleTest, InnerJoinToSemiJoin) {
     column_definitions.emplace_back("column0", DataType::Int, false);
     const auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
 
-    auto& sm = Hyrise::get().storage_manager;
-    sm.add_table("table", table);
+    auto& storage_manager = Hyrise::get().storage_manager;
+    storage_manager.add_table("table", table);
 
     // Non-genuine UCC
     table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE, INITIAL_COMMIT_ID});
@@ -90,8 +90,8 @@ TEST_F(JoinToSemiJoinRuleTest, MultiPredicateInnerJoinToSemiJoinWithSingleEqui) 
     column_definitions.emplace_back("column1", DataType::Int, false);
     const auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
 
-    auto& sm = Hyrise::get().storage_manager;
-    sm.add_table("table", table);
+    auto& storage_manager = Hyrise::get().storage_manager;
+    storage_manager.add_table("table", table);
 
     table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE, INITIAL_COMMIT_ID});
   }
@@ -175,8 +175,8 @@ TEST_F(JoinToSemiJoinRuleTest, DoNotTouchInnerJoinWithNonEqui) {
     column_definitions.emplace_back("column0", DataType::Int, false);
     const auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
 
-    auto& sm = Hyrise::get().storage_manager;
-    sm.add_table("table", table);
+    auto& storage_manager = Hyrise::get().storage_manager;
+    storage_manager.add_table("table", table);
 
     table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE});
   }
@@ -207,8 +207,8 @@ TEST_F(JoinToSemiJoinRuleTest, DoNotTouchInnerJoinWithoutUcc) {
     column_definitions.emplace_back("column0", DataType::Int, false);
     const auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
 
-    auto& sm = Hyrise::get().storage_manager;
-    sm.add_table("table", table);
+    auto& storage_manager = Hyrise::get().storage_manager;
+    storage_manager.add_table("table", table);
   }
 
   const auto stored_table_node = StoredTableNode::make("table");
@@ -245,8 +245,8 @@ TEST_F(JoinToSemiJoinRuleTest, DoNotTouchInnerJoinWithoutMatchingUcc) {
     column_definitions.emplace_back("column1", DataType::Int, false);
     const auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
 
-    auto& sm = Hyrise::get().storage_manager;
-    sm.add_table("table", table);
+    auto& storage_manager = Hyrise::get().storage_manager;
+    storage_manager.add_table("table", table);
 
     table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::UNIQUE});
   }
@@ -277,8 +277,8 @@ TEST_F(JoinToSemiJoinRuleTest, DoNotTouchNonInnerJoin) {
     column_definitions.emplace_back("column0", DataType::Int, false);
     const auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
 
-    auto& sm = Hyrise::get().storage_manager;
-    sm.add_table("table", table);
+    auto& storage_manager = Hyrise::get().storage_manager;
+    storage_manager.add_table("table", table);
 
     table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::PRIMARY_KEY});
   }
