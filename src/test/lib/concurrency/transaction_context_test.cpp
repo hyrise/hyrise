@@ -74,38 +74,6 @@ class CommitFuncOp : public AbstractReadWriteOperator {
   std::function<void()> _func;
 };
 
-class ExecuteFuncOp : public AbstractReadWriteOperator {
- public:
-  explicit ExecuteFuncOp(std::function<void()> func) : AbstractReadWriteOperator(OperatorType::Mock), _func{func} {}
-
-  const std::string& name() const override {
-    static const auto name = std::string{"ExecuteOp"};
-    return name;
-  }
-
- protected:
-  std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> context) override {
-    _func();
-    return nullptr;
-  }
-
-  std::shared_ptr<AbstractOperator> _on_deep_copy(
-      const std::shared_ptr<AbstractOperator>& copied_left_input,
-      const std::shared_ptr<AbstractOperator>& copied_right_input,
-      std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const override {
-    Fail("Unexpected function call");
-  }
-
-  void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override {}
-
-  void _on_commit_records(const CommitID cid) override {}
-
-  void _on_rollback_records() override {}
-
- private:
-  std::function<void()> _func;
-};
-
 TEST_F(TransactionContextTest, CommitShouldCommitAllFollowingPendingTransactions) {
   const auto empty_callback = [](TransactionID) {};
 
@@ -202,61 +170,42 @@ TEST_F(TransactionContextTest, CommitWithFailedOperator) {
   EXPECT_ANY_THROW(context->commit());
 }
 
-TEST_F(TransactionContextTest, PrintCommitTransactionPhase) {
-  auto context = manager().new_transaction_context(AutoCommit::No);
-  const auto empty_callback = [](TransactionID) {};
-  std::stringstream out;
+void test_context_printing(auto context_modification, const std::string expected_phase) {
+  auto context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
+  auto out = std::stringstream{};
 
-  std::string expected_active = "Active";
+  const auto expected_active = std::string{"Active"};
   out << context->phase();
   EXPECT_EQ(expected_active, out.str());
   out.str(std::string());
 
-  // Before reaching the "Committed" TransactionPhase the context may also be in the "Committing" TransactionPhase,
-  // when waiting on another operation before committing.
-  // This case is hard to reproduce as "Committing" is not a persistent TransactionPhase.
-  context->commit_async(empty_callback);
-  std::string expected_commited = "Committed";
+  context_modification(context);
   out << context->phase();
-  EXPECT_EQ(expected_commited, out.str());
+  EXPECT_EQ(expected_phase, out.str());
+}
+
+TEST_F(TransactionContextTest, PrintCommitTransactionPhase) {
+  test_context_printing(
+      [](auto& context) {
+        context->commit_async([](TransactionID) {});
+      },
+      std::string{"Committed"});
 }
 
 TEST_F(TransactionContextTest, PrintRolledBackByUserTransactionPhase) {
-  auto context = manager().new_transaction_context(AutoCommit::No);
-  auto context_user_rollback = manager().new_transaction_context(AutoCommit::No);
-
-  std::stringstream out;
-
-  std::string expected_active = "Active";
-  out << context->phase();
-  EXPECT_EQ(expected_active, out.str());
-  out.str(std::string());
-
-  context_user_rollback->rollback(RollbackReason::User);
-  std::string expected_rolledback_by_user = "RolledBackByUser";
-  out << context_user_rollback->phase();
-  EXPECT_EQ(expected_rolledback_by_user, out.str());
-  out.str(std::string());
+  test_context_printing(
+      [](auto& context) {
+        context->rollback(RollbackReason::User);
+      },
+      std::string{"RolledBackByUser"});
 }
 
 TEST_F(TransactionContextTest, PrintConflictedTransactionPhase) {
-  auto context = manager().new_transaction_context(AutoCommit::No);
-
-  std::stringstream out;
-
-  std::string expected_active = "Active";
-  out << context->phase();
-  EXPECT_EQ(expected_active, out.str());
-  out.str(std::string());
-
-  // Before reaching the "RolledBackAfterConflict" TransactionPhase the context will be
-  // in the "Conflicted" TransactionPhase, after an operator has failed.
-  // This case is hard to reproduce as "Conflicted" is not a persistent TransactionPhase.
-  context->rollback(RollbackReason::Conflict);
-  std::string expected_rollback_after_conflict = "RolledBackAfterConflict";
-  out << context->phase();
-  EXPECT_EQ(expected_rollback_after_conflict, out.str());
-  out.str(std::string());
+  test_context_printing(
+      [](auto& context) {
+        context->rollback(RollbackReason::Conflict);
+      },
+      std::string{"RolledBackAfterConflict"});
 }
 
 }  // namespace hyrise
