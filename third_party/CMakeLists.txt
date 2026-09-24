@@ -137,9 +137,9 @@ if(NOT APPLE)
   # there is an issue with jemalloc's percpu_arena setting that does not work well with CPU affinities (e.g., when using
   # numactl). The workaround is to explicitely set `narenas` to the number of cores (which is also the default; see
   # https://github.com/jemalloc/jemalloc/issues/2054).
-  # We obtained the knob values by starting with values used by ClickHouse and Apache Doris and subsequently adapted them
-  # with a (small) set of benchmarks. The current values (especially the decay values) are optimized for performance, if
-  # memory consumption becomes an issue, lowering these values is a good option.
+  # We obtained the knob values by starting with values used by ClickHouse and Apache Doris and subsequently adapted
+  # them with a (small) set of benchmarks. The current values (especially the decay values) are optimized for
+  # performance, if memory consumption becomes an issue, lowering these values is a good option.
   execute_process(COMMAND bash "-c" "getconf _NPROCESSORS_ONLN" OUTPUT_VARIABLE ARENA_COUNT OUTPUT_STRIP_TRAILING_WHITESPACE)
   set(JEMALLOC_CONFIG "--with-malloc-conf=\"oversize_threshold:0,background_thread:true,narenas:${ARENA_COUNT},percpu_arena:percpu,metadata_thp:auto,muzzy_decay_ms:20000,dirty_decay_ms:20000,lg_extent_max_active_fit:8\"")
 
@@ -154,7 +154,7 @@ if(NOT APPLE)
       # Executing configure script with suppressed output, only printing it in case of non-zero return.
       CONFIGURE_COMMAND bash -c "cd <BINARY_DIR> && output=$(${JEMALLOC_COMPILER_ENVIRONMENT} <SOURCE_DIR>/configure --prefix=<BINARY_DIR> ${JEMALLOC_CONFIG} 2>&1) || \
                                  (printf \"$output\\n\" && false)"
-      BUILD_COMMAND bash -c "output=$(${MAC_INCLUDES} make 2>&1) || (printf \"$output\\n\" && false)"
+      BUILD_COMMAND bash -c "output=$(${MAC_INCLUDES} make -j ${ARENA_COUNT} 2>&1) || (printf \"$output\\n\" && false)"
       INSTALL_COMMAND false  # install should never be called, this is a safe guard that fails if it is
       STEP_TARGETS build
       BUILD_BYPRODUCTS ${JEMALLOC_LIB_PATH}
