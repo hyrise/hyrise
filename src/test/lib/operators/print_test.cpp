@@ -92,8 +92,9 @@ TEST_F(OperatorsPrintTest, TableColumnDefinitions) {
 }
 
 TEST_F(OperatorsPrintTest, PrintEmptyChunk) {
-  auto tab = load_table("resources/test_data/tbl/int_empty.tbl", ChunkOffset{1});
-
+  auto tab = Hyrise::get().storage_manager.get_table(_table_name);
+  tab->append_mutable_chunk();
+  
   auto tw = std::make_shared<TableWrapper>(tab);
   tw->execute();
 
