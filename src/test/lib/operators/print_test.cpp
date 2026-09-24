@@ -94,7 +94,7 @@ TEST_F(OperatorsPrintTest, TableColumnDefinitions) {
 TEST_F(OperatorsPrintTest, PrintEmptyChunk) {
   auto tab = Hyrise::get().storage_manager.get_table(_table_name);
   tab->append_mutable_chunk();
-  
+
   auto tw = std::make_shared<TableWrapper>(tab);
   tw->execute();
 
