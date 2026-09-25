@@ -79,4 +79,38 @@ TEST_F(EqualDistinctCountHistogramTest, AllNullValues) {
   ASSERT_FALSE(hist);
 }
 
+TEST_F(EqualDistinctCountHistogramTest, FromTPCHLineitemColumns) {
+  const auto lineitem = load_table("resources/test_data/tbl/tpch/sf-0.02/lineitem.tbl", ChunkOffset{1'000});
+  ASSERT_EQ(lineitem->chunk_count(), 12);
+
+  // For each column, we test the first, middle, and last bin.
+  const auto orderkey_histogram = EqualDistinctCountHistogram<int32_t>::from_column(*lineitem, ColumnID{0}, 16);
+  ASSERT_TRUE(orderkey_histogram);
+  ASSERT_EQ(orderkey_histogram->bin_count(), 16);
+  EXPECT_EQ(orderkey_histogram->total_count(), lineitem->row_count());
+  EXPECT_EQ(orderkey_histogram->bin(BinID{0}), HistogramBin<int32_t>(1, 7491, 7501, 1875));
+  EXPECT_EQ(orderkey_histogram->bin(BinID{8}), HistogramBin<int32_t>(60'001, 67'491, 7467, 1875));
+  EXPECT_EQ(orderkey_histogram->bin(BinID{15}), HistogramBin<int32_t>(112'486, 120'000, 7499, 1875));
+
+  const auto quantity_histogram = EqualDistinctCountHistogram<float>::from_column(*lineitem, ColumnID{4}, 64);
+  ASSERT_TRUE(quantity_histogram);
+  ASSERT_EQ(quantity_histogram->bin_count(), 50);
+  EXPECT_EQ(quantity_histogram->total_count(), lineitem->row_count());
+  EXPECT_EQ(quantity_histogram->bin(BinID{0}), HistogramBin<float>(1.0f, 1.0f, 2414, 1));
+  EXPECT_EQ(quantity_histogram->bin(BinID{25}), HistogramBin<float>(26.0f, 26.0f, 2518, 1));
+  EXPECT_EQ(quantity_histogram->bin(BinID{49}), HistogramBin<float>(50.0f, 50.0f, 2426, 1));
+
+  const auto comment_histogram = EqualDistinctCountHistogram<pmr_string>::from_column(*lineitem, ColumnID{15}, 256);
+  ASSERT_TRUE(comment_histogram);
+  ASSERT_EQ(comment_histogram->bin_count(), 256);
+  EXPECT_EQ(comment_histogram->total_count(), lineitem->row_count());
+  EXPECT_EQ(comment_histogram->bin(BinID{0}),
+            HistogramBin<pmr_string>(" Tiresias ", "accounts cajole furiously f", 512, 451));
+  EXPECT_EQ(comment_histogram->bin(BinID{128}),
+            HistogramBin<pmr_string>("ironic requests. blithely ironic pl", "ithely after the furiously silent pack",
+                                     458, 451));
+  EXPECT_EQ(comment_histogram->bin(BinID{255}),
+            HistogramBin<pmr_string>("yly ironic instructions. regular foxes w", "zzle: pending i", 465, 450));
+}
+
 }  // namespace hyrise

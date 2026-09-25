@@ -177,12 +177,11 @@ ValueDistributionVector<T> value_distribution_from_column(const Table& table, co
 
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = table.get_chunk(chunk_id);
-    Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
     segments_to_process.emplace_back(chunk_id, chunk->get_segment(column_id));
   }
 
   // We determine the recursion steps (i.e., merge levels) that we want to parallelize. We try to create up to
-  // 2 * #worker sto fully utilize a system with a bit of straggler mitigation (thus 2x) while not overloading the
+  // 2 * #workers to fully utilize a system with a bit of straggler mitigation (thus 2x) while not overloading the
   // scheduler. As the leaves of the created merge tree are single chunks, we would otherwise create tens of thousands
   // of nested jobs for SF 100 TPC-H data. When the limit is reached, each worker executes the recursion on its own
   // sequentially.
@@ -190,7 +189,7 @@ ValueDistributionVector<T> value_distribution_from_column(const Table& table, co
   if (const auto node_queue_scheduler = std::dynamic_pointer_cast<NodeQueueScheduler>(Hyrise::get().scheduler())) {
     worker_count = node_queue_scheduler->workers().size();
   }
-  const auto max_parallel_levels = std::bit_width(worker_count) + 1;
+  const auto max_parallel_levels = std::bit_width(worker_count);
   result = add_segment_to_value_distribution<T>(max_parallel_levels, 0, segments_to_process.begin(),
                                                 segments_to_process.end(), domain);
 
