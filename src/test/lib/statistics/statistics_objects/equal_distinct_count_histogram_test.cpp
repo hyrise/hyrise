@@ -3,6 +3,8 @@
 #include <string>
 
 #include "base_test.hpp"
+#include "hyrise.hpp"
+#include "scheduler/node_queue_scheduler.hpp"
 #include "statistics/statistics_objects/abstract_histogram.hpp"
 #include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
 #include "types.hpp"
@@ -79,9 +81,11 @@ TEST_F(EqualDistinctCountHistogramTest, AllNullValues) {
   ASSERT_FALSE(hist);
 }
 
-TEST_F(EqualDistinctCountHistogramTest, FromTPCHLineitemColumns) {
+TEST_F(EqualDistinctCountHistogramTest, FromTPCHlineitem) {
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+
   const auto lineitem = load_table("resources/test_data/tbl/tpch/sf-0.02/lineitem.tbl", ChunkOffset{1'000});
-  ASSERT_EQ(lineitem->chunk_count(), 12);
+  ASSERT_EQ(lineitem->chunk_count(), 121);
 
   // For each column, we test the first, middle, and last bin.
   const auto orderkey_histogram = EqualDistinctCountHistogram<int32_t>::from_column(*lineitem, ColumnID{0}, 16);
@@ -105,7 +109,7 @@ TEST_F(EqualDistinctCountHistogramTest, FromTPCHLineitemColumns) {
   ASSERT_EQ(comment_histogram->bin_count(), 256);
   EXPECT_EQ(comment_histogram->total_count(), lineitem->row_count());
   EXPECT_EQ(comment_histogram->bin(BinID{0}),
-            HistogramBin<pmr_string>(" Tiresias ", "accounts cajole furiously f", 512, 451));
+            HistogramBin<pmr_string>(" Tiresias ", " accounts cajole furiously f", 512, 451));
   EXPECT_EQ(comment_histogram->bin(BinID{128}),
             HistogramBin<pmr_string>("ironic requests. blithely ironic pl", "ithely after the furiously silent pack",
                                      458, 451));
