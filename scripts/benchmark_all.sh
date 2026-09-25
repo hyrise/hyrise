@@ -16,7 +16,8 @@ benchmarks='hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkTPCC hyriseB
 # #2405 for some preliminary reasoning.
 warmup_seconds=1
 mt_shuffled_runtime=1200
-runs=50
+st_runs=50
+mt_runs=100  # Used for MT runs and TPC-H SF 0.01 ST runs due to the very short runtimes.
 
 # Setting the number of clients used for the multi-threaded scenario to the machine's physical core count. This only
 # works for macOS and Linux. We do not use hyper-threads because the benchmark results are less stable on them. We
@@ -95,9 +96,22 @@ do
   # Checkout and build from scratch, tracking the compile time.
   git checkout "$commit"
   git submodule update --init --recursive
-  echo "Building $commit..."
-  $build_system clean
-  /usr/bin/time -p sh -c "( $build_system -j $(nproc) ${benchmarks} 2>&1 ) | tee benchmark_all_results/build_${commit}.log" 2>"benchmark_all_results/build_time_${commit}.txt"
+
+  # If there is a BOLT or PGO profile, we use it for building.
+  if [ -f ../resources/bolt.fdata ] || [ -f ../resources/libhyrise.profdata ]
+  then
+    echo "Detected bolt.fdata or libhyrise.profdata file, building $commit with PGO/BOLT..."
+    args="--num-cores $(nproc) --import-profile --build-system $build_system"
+    # Append `--no-bolt` or `--no-pgo` to the arguments if the respective files have not been found. The script then
+    # does not try to optimize using non-existant files.
+    [ ! -f ../resources/bolt.fdata ] && args="$args --no-bolt"
+    [ ! -f ../resources/libhyrise.profdata ] && args="$args --no-pgo"
+    /usr/bin/time -p sh -c "( python3 ../scripts/build_pgo_bolt.py $args 2>&1 ) | tee benchmark_all_results/build_${commit}.log" 2>"benchmark_all_results/build_time_${commit}.txt"
+  else
+    echo "Building $commit..."
+    $build_system clean
+    /usr/bin/time -p sh -c "( $build_system -j $(nproc) ${benchmarks} 2>&1 ) | tee benchmark_all_results/build_${commit}.log" 2>"benchmark_all_results/build_time_${commit}.txt"
+  fi
 
   # Run the benchmarks.
   cd ..  # hyriseBenchmarkJoinOrder needs to run from project root.
@@ -109,17 +123,17 @@ do
       ( "${build_folder}"/"$benchmark" -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st.log"
     else
       echo "Running $benchmark for $commit... (single-threaded)"
-      ( "${build_folder}"/"$benchmark" -r ${runs} -w ${warmup_seconds} -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st.log"
+      ( "${build_folder}"/"$benchmark" -r ${st_runs} -w ${warmup_seconds} -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st.log"
     fi
 
     if [ "$benchmark" = "hyriseBenchmarkTPCH" ]; then
       echo "Running $benchmark for $commit... (single-threaded, SF 0.01)"
-      ( "${build_folder}"/"$benchmark" -s .01 -r ${runs} -w ${warmup_seconds} -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s01.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s01.log"
+      ( "${build_folder}"/"$benchmark" -s .01 -r ${mt_runs} -w ${warmup_seconds} -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s01.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s01.log"
     fi
 
     if [ "$benchmark" != "hyriseBenchmarkTPCC" ]; then
       echo "Running $benchmark for $commit... (multi-threaded, ordered, 1 client)"
-      ( "${build_folder}"/"$benchmark" --scheduler --clients 1 --cores ${num_phy_cores} -m Ordered -r ${runs} -w ${warmup_seconds} -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt_ordered.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt_ordered.log"
+      ( "${build_folder}"/"$benchmark" --scheduler --clients 1 --cores ${num_phy_cores} -m Ordered -r ${mt_runs} -w ${warmup_seconds} -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt_ordered.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt_ordered.log"
     fi
 
     if [ "$benchmark" = "hyriseBenchmarkTPCC" ]; then

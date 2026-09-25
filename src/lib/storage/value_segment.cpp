@@ -114,7 +114,7 @@ template <typename T>
 void ValueSegment<T>::set_null_value(const ChunkOffset chunk_offset) {
   Assert(is_nullable(), "This ValueSegment does not support null values.");
 
-  const auto lock = std::lock_guard<std::mutex>{_null_value_modification_mutex};
+  const auto lock = std::scoped_lock<std::mutex>{_null_value_modification_mutex};
   (*_null_values)[chunk_offset] = true;
 }
 
@@ -129,7 +129,7 @@ void ValueSegment<T>::resize(const size_t size) {
               "ValueSegments should not be shrunk or resized beyond their original capacity");
   _values.resize(size);
   if (is_nullable()) {
-    const auto lock = std::lock_guard<std::mutex>{_null_value_modification_mutex};
+    const auto lock = std::scoped_lock<std::mutex>{_null_value_modification_mutex};
     _null_values->resize(size);
   }
 }
