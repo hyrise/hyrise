@@ -170,4 +170,44 @@ TEST_F(TransactionContextTest, CommitWithFailedOperator) {
   EXPECT_ANY_THROW(context->commit());
 }
 
+void test_context_printing(auto context_modification, const std::string expected_phase) {
+  auto context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
+  auto out = std::stringstream{};
+
+  const auto expected_active = std::string{"Active"};
+  out << context->phase();
+
+  EXPECT_EQ(expected_active, out.str());
+  out.str(std::string());
+
+  context_modification(context);
+  out << context->phase();
+
+  EXPECT_EQ(expected_phase, out.str());
+}
+
+TEST_F(TransactionContextTest, PrintCommitTransactionPhase) {
+  test_context_printing(
+      [](auto& context) {
+        context->commit_async([](TransactionID) {});
+      },
+      std::string{"Committed"});
+}
+
+TEST_F(TransactionContextTest, PrintRolledBackByUserTransactionPhase) {
+  test_context_printing(
+      [](auto& context) {
+        context->rollback(RollbackReason::User);
+      },
+      std::string{"RolledBackByUser"});
+}
+
+TEST_F(TransactionContextTest, PrintConflictedTransactionPhase) {
+  test_context_printing(
+      [](auto& context) {
+        context->rollback(RollbackReason::Conflict);
+      },
+      std::string{"RolledBackAfterConflict"});
+}
+
 }  // namespace hyrise
