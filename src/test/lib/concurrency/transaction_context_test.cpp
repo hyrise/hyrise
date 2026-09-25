@@ -176,11 +176,13 @@ void test_context_printing(auto context_modification, const std::string expected
 
   const auto expected_active = std::string{"Active"};
   out << context->phase();
+
   EXPECT_EQ(expected_active, out.str());
   out.str(std::string());
 
   context_modification(context);
   out << context->phase();
+
   EXPECT_EQ(expected_phase, out.str());
 }
 
