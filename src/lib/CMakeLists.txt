@@ -699,6 +699,8 @@ set(
     utils/template_type.hpp
     utils/timer.cpp
     utils/timer.hpp
+    utils/perfetto_tracing.cpp
+    utils/perfetto_tracing.hpp
     visualization/abstract_visualizer.hpp
     visualization/join_graph_visualizer.cpp
     visualization/join_graph_visualizer.hpp
@@ -778,6 +780,10 @@ target_link_libraries_system(
 
 if (NUMA_FOUND)
     target_link_libraries(hyrise_impl PUBLIC numa)
+endif()
+
+if (${ENABLE_PERFETTO})
+    target_link_libraries_system(hyrise_impl perfetto)
 endif()
 
 target_include_directories(hyrise_impl PUBLIC ${CMAKE_BINARY_DIR})
