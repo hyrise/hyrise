@@ -772,7 +772,7 @@ target_link_libraries_system(
     cxxopts
     nlohmann_json::nlohmann_json
     sparse_map
-    SQLite::SQLite3
+    SQLite3::SQLite3
     tbb
 )
 
