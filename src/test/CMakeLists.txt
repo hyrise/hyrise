@@ -280,14 +280,14 @@ set(
     LIBRARIES
     gtest
     gmock
-    SQLite::SQLite3
+    SQLite3::SQLite3
     # Added plugin targets so that we can test member methods without going through dlsym
     hyriseMvccDeletePlugin
     hyriseUccDiscoveryPlugin
 )
 
 # This warning does not play well with SCOPED_TRACE
-add_compile_options(-Wno-used-but-marked-unused)
+add_compile_options(-Wno-used-but-marked-unused -Wno-unused-result)
 
 # We define TEST_PLUGIN_DIR to always load plugins from the correct directory for testing purposes
 add_definitions(-DTEST_PLUGIN_DIR="${CMAKE_BINARY_DIR}/lib/")

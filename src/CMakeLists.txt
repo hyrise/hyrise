@@ -85,16 +85,24 @@ if (NOT "${HYRISE_RELAXED_BUILD}")
             -Wno-pass-failed                # Complains about failed loop unrolling when building release builds with
                                             # sanitization.
             -Wno-sign-conversion            # Currently we do many implicit conversions that change signedness.
-            -Wno-switch-default             # Warns if a switch has no default, even if all enum values are
-                                            # covered. Contradicts -Wcovered-switch-default.
-            -Wno-switch-enum                # We have switches in which we do not want to cover every enum value
-                                            # but use a default.
+            -Wno-switch-default             # Warns if a switch has no default, even if all enum values are covered.
+                                            # Contradicts -Wcovered-switch-default.
+            -Wno-switch-enum                # We have switches in which we do not want to cover every enum value but use
+                                            # use default.
             -Wno-undefined-func-template    # We explicitly instantiate templates for our data types in .cpp files; the
                                             # extern declarations in headers are not required for correctness.
             -Wno-unsafe-buffer-usage        # We access buffers via pointers / pointer arithmetic in some cases when we
                                             # know what we do (e.g., uninitialized vector works like this).
             -Wno-weak-vtables               # Anchoring every polymorphic class in a .cpp solely to move its vtable is
                                             # not worth the boilerplate.
+            -Wno-thread-safety-negative     # Avoid using clang's lock annotations as we don't recursively lock mutexes.
+
+            # The following lifetime checks are widely neglected in our code base and would require a sigificant effort
+            # to address, while the benefit is not clear (some warning are even just noise).
+            -Wno-lifetime-safety-cross-tu-constructor-suggestions
+            -Wno-lifetime-safety-cross-tu-suggestions
+            -Wno-lifetime-safety-intra-tu-suggestions
+            -Wno-lifetime-safety-invalidation
         )
     endif()
 
