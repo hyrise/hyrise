@@ -772,7 +772,7 @@ target_link_libraries_system(
     cxxopts
     nlohmann_json::nlohmann_json
     sparse_map
-    SQLite3::SQLite3
+    SQLite::SQLite3  # TODO(anyone): change to SQLite3::SQLite3 with cmake 4.3+ (Ubuntu 26.04 has 4.2) to silence warning (as happening on recent macOS versions).
     tbb
 )
 

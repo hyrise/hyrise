@@ -280,7 +280,7 @@ set(
     LIBRARIES
     gtest
     gmock
-    SQLite3::SQLite3
+    SQLite::SQLite3  # TODO(anyone): change to SQLite3::SQLite3 with cmake 4.3+ (Ubuntu 26.04 has 4.2) to silence warning (as happening on recent macOS versions).
     # Added plugin targets so that we can test member methods without going through dlsym
     hyriseMvccDeletePlugin
     hyriseUccDiscoveryPlugin
