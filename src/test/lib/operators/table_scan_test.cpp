@@ -240,7 +240,7 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
       }
     }
 
-    ASSERT_EQ(expected.size(), 0u);
+    ASSERT_EQ(expected.size(), 0);
   }
 
   void scan_and_check_sorted_by(const std::shared_ptr<TableWrapper> table_wrapper) const {
@@ -286,7 +286,7 @@ TEST_P(OperatorsTableScanTest, EmptyResultScan) {
   scan_1->execute();
 
   for (auto i = ChunkID{0}; i < scan_1->get_output()->chunk_count(); i++) {
-    EXPECT_EQ(scan_1->get_output()->get_chunk(i)->column_count(), 2u);
+    EXPECT_EQ(scan_1->get_output()->get_chunk(i)->column_count(), 2);
   }
 }
 
@@ -840,10 +840,10 @@ TEST_P(OperatorsTableScanTest, ComparisonOfIntColumnAndNullValue) {
     auto scan = create_table_scan(get_int_float_with_null_op(), ColumnID{0}, predicate_condition, NullValue{});
     scan->execute();
 
-    EXPECT_EQ(scan->get_output()->row_count(), 0u);
+    EXPECT_EQ(scan->get_output()->row_count(), 0);
 
     for (auto chunk_id = ChunkID{0}; chunk_id < scan->get_output()->chunk_count(); chunk_id++) {
-      EXPECT_EQ(scan->get_output()->get_chunk(chunk_id)->column_count(), 2u);
+      EXPECT_EQ(scan->get_output()->get_chunk(chunk_id)->column_count(), 2);
     }
   }
 }
@@ -857,9 +857,9 @@ TEST_P(OperatorsTableScanTest, ComparisonOfStringColumnAndNullValue) {
     auto scan = create_table_scan(get_int_string_op(), ColumnID{1}, predicate_condition, NullValue{});
     scan->execute();
 
-    EXPECT_EQ(scan->get_output()->row_count(), 0u);
+    EXPECT_EQ(scan->get_output()->row_count(), 0);
     for (auto chunk_id = ChunkID{0}; chunk_id < scan->get_output()->chunk_count(); chunk_id++) {
-      EXPECT_EQ(scan->get_output()->get_chunk(chunk_id)->column_count(), 2u);
+      EXPECT_EQ(scan->get_output()->get_chunk(chunk_id)->column_count(), 2);
     }
   }
 }
@@ -1358,6 +1358,13 @@ TEST_P(OperatorsTableScanTest, DeepCopyRetainsExcludedChunks) {
   EXPECT_EQ(*table_scan->excluded_chunk_ids, *new_table_scan->excluded_chunk_ids);
   EXPECT_EQ(table_scan->excluded_chunk_ids->data(),
             new_table_scan->excluded_chunk_ids->data());  // Should be the same object.
+}
+
+TEST_P(OperatorsTableScanTest, Description) {
+  const auto table_scan =
+      create_table_scan(get_int_float_op(), ColumnID{0}, PredicateCondition::GreaterThanEquals, 17);
+  table_scan->execute();
+  EXPECT_EQ(table_scan->description(DescriptionMode::SingleLine), "TableScan Impl: ColumnVsValue a >= 17");
 }
 
 }  // namespace hyrise
