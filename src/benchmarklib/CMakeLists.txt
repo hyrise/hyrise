@@ -88,8 +88,17 @@ add_library(hyriseBenchmarkLib STATIC ${SOURCES})
 add_dependencies(hyriseBenchmarkLib jcchDbgen-build) # *-build is auto-generated
 add_dependencies(hyriseBenchmarkLib ssbDbgen-build) # *-build is auto-generated
 
-# -fPIC generates position independent code which is necessary because plugins can access AbstractBenchmarkItemRunner in their pre-benchmark hooks.
+# -fPIC generates position independent code which is necessary because plugins can access AbstractBenchmarkItemRunner in
+# their pre-benchmark hooks.
 target_compile_options(hyriseBenchmarkLib PRIVATE -fPIC)
+
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+    # TPC-DS has a local config.h that collides with TPC-H's config.h.
+    set_source_files_properties(
+        tpcds/tpcds_table_generator.cpp
+        PROPERTIES COMPILE_OPTIONS -Wno-shadow-header
+    )
+endif()
 
 target_link_libraries(
     hyriseBenchmarkLib

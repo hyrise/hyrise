@@ -62,8 +62,8 @@ target_compile_options(
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     target_compile_options(sqlparser PRIVATE -Wno-unneeded-internal-declaration -Wno-format)
+    target_compile_options(magic_enum INTERFACE -Wno-nrvo)
 endif()
-
 
 # Build concurrentqueue
 add_library(concurrentqueue INTERFACE)

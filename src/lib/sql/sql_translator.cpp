@@ -132,7 +132,7 @@ const auto supported_hsql_data_types = std::unordered_map<hsql::DataType, DataTy
     {hsql::DataType::TEXT, DataType::String}, {hsql::DataType::BIGINT, DataType::Long}};
 
 JoinMode translate_join_mode(const hsql::JoinType join_type) {
-  static const std::unordered_map<const hsql::JoinType, const JoinMode> join_type_to_mode = {
+  static const std::unordered_map<hsql::JoinType, JoinMode> join_type_to_mode = {
       {hsql::kJoinInner, JoinMode::Inner}, {hsql::kJoinFull, JoinMode::FullOuter}, {hsql::kJoinLeft, JoinMode::Left},
       {hsql::kJoinRight, JoinMode::Right}, {hsql::kJoinCross, JoinMode::Cross},
   };

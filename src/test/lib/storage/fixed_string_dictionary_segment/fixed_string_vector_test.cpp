@@ -178,7 +178,8 @@ TEST_F(FixedStringVectorTest, Sort) {
   auto strings = std::vector<pmr_string>{"Larry", "Bill", "Alexander", "Mark", "Hasso"};
   auto fixed_string_vector1 = FixedStringVector(strings.begin(), strings.end(), 10u);
 
-  std::sort(fixed_string_vector1.begin(), fixed_string_vector1.end());
+  std::sort(fixed_string_vector1.begin(), fixed_string_vector1.end(),
+            [](const FixedString& lhs, const FixedString& rhs) { return lhs < rhs; });
 
   EXPECT_EQ(fixed_string_vector1[0u], "Alexander");
   EXPECT_EQ(fixed_string_vector1[4u], "Mark");
