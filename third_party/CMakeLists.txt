@@ -141,7 +141,7 @@ if(NOT APPLE)
   # them with a (small) set of benchmarks. The current values (especially the decay values) are optimized for
   # performance, if memory consumption becomes an issue, lowering these values is a good option.
   execute_process(COMMAND bash "-c" "getconf _NPROCESSORS_ONLN" OUTPUT_VARIABLE JEMALLOC_THREAD_COUNT OUTPUT_STRIP_TRAILING_WHITESPACE)
-  set(JEMALLOC_CONFIG "--with-malloc-conf=\"oversize_threshold:0,background_thread:true,narenas:${ARENA_COUNT},percpu_arena:percpu,metadata_thp:auto,muzzy_decay_ms:20000,dirty_decay_ms:20000,lg_extent_max_active_fit:8\"")
+  set(JEMALLOC_CONFIG "--with-malloc-conf=\"oversize_threshold:0,background_thread:true,narenas:${JEMALLOC_THREAD_COUNT},percpu_arena:percpu,metadata_thp:auto,muzzy_decay_ms:20000,dirty_decay_ms:20000,lg_extent_max_active_fit:8\"")
 
   include(ExternalProject)
   set(JEMALLOC_COMPILER_ENVIRONMENT "CC=\"${CMAKE_C_COMPILER_LAUNCHER} ${CMAKE_C_COMPILER}\" CXX=\"${CMAKE_CXX_COMPILER_LAUNCHER} ${CMAKE_CXX_COMPILER}\"")
