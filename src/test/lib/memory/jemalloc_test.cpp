@@ -27,7 +27,7 @@ TEST_F(JemallocTest, ConfigurationSettings) {
 #ifndef HYRISE_WITH_JEMALLOC
   GTEST_SKIP();
 #else
-  const auto jemalloc_version = std::string{"5.3.0-0-g54eaed1d8b56b1aa528be3bdd1877e59c56fa90c"};
+  const auto jemalloc_version = std::string{"5.4.0-0-g7a34f18502e7b222724097cdcd499b437d189acc"};
   const auto percpu_setting = std::string{"percpu"};
   const auto metadata_thp_setting = std::string{"auto"};
   auto expected_settings = std::vector<std::pair<std::string, std::variant<bool, size_t, unsigned, const char*> > >{
@@ -58,7 +58,7 @@ TEST_F(JemallocTest, ConfigurationSettings) {
           ASSERT_EQ(return_code, 0);
 
           if constexpr (std::is_same_v<T, const char*>) {
-            EXPECT_EQ(*setting, *std::get<T>(setting_value));
+            EXPECT_STREQ(setting, std::get<T>(setting_value));
           } else {
             EXPECT_EQ(setting, std::get<T>(setting_value));
           }
