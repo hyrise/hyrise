@@ -176,7 +176,7 @@ void NodeQueueScheduler::wait_for_all_tasks() {
 
 void NodeQueueScheduler::finish() {
   // Lock finish() to ensure that the shutdown tasks are not sent twice.
-  const auto lock = std::lock_guard{_finish_mutex};
+  const auto lock = std::scoped_lock{_finish_mutex};
 
   if (!_active) {
     return;

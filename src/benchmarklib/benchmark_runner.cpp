@@ -604,9 +604,9 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
   timestamp_stream << std::put_time(&local_time, "%Y-%m-%d %H:%M:%S");
 
   // clang-format off
-  #if defined(__clang__)
+  #ifdef __clang__
     const auto compiler = std::format("clang {}.{}.{}", __clang_major__, __clang_minor__, __clang_patchlevel__);
-  #elif defined(__GNUC__)
+  #elifdef __GNUC__
     const auto compiler = std::format("gcc {}.{}", __GNUC__, __GNUC_MINOR__);
   #else
     const auto compiler = "unknown";

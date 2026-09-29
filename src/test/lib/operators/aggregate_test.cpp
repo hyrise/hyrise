@@ -911,4 +911,72 @@ TYPED_TEST(OperatorsAggregateTest, StringVariations) {
   EXPECT_EQ(values_sorted, result_values_sorted);
 }
 
+TYPED_TEST(OperatorsAggregateTest, SingleAggregateMaxWithOnlyNullValuesInGroup) {
+  const auto table = this->_table_wrapper_1_1_null->get_output();
+  const auto aggregate_expressions = std::vector<std::shared_ptr<WindowFunctionExpression>>{
+      max_(pqp_column_(ColumnID{1}, table->column_data_type(ColumnID{1}), table->column_name(ColumnID{1})))};
+  const auto aggregate = std::make_shared<TypeParam>(this->_table_wrapper_1_1_null, aggregate_expressions,
+                                                      std::vector<ColumnID>{ColumnID{0}});
+  aggregate->execute();
+
+  const auto output = aggregate->get_output();
+
+  // Group `a == 100` only has NULL values in column `b`, so MAX(b) is expected to be NULL for that group.
+  auto found_group_with_only_null_values = false;
+  for (auto row_id = size_t{0}; row_id < output->row_count(); ++row_id) {
+    const auto group_value = output->template get_value<int>(ColumnID{0}, row_id);
+    if (group_value && *group_value == 100) {
+      EXPECT_FALSE(output->template get_value<float>(ColumnID{1}, row_id));
+      found_group_with_only_null_values = true;
+    }
+  }
+
+  EXPECT_TRUE(found_group_with_only_null_values);
+}
+
+// Test for issue #2761.
+TYPED_TEST(OperatorsAggregateTest, Issue2761) {
+  auto column_definitions = TableColumnDefinitions{
+      {"col_0", DataType::Long, false}, {"col_1", DataType::Long, false}, {"col_2", DataType::Long, false}};
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data);
+
+  auto col_0_segment = pmr_vector<int64_t>{};
+  auto col_1_segment = pmr_vector<int64_t>{};
+  auto col_2_segment = pmr_vector<int64_t>{};
+
+  // To trigger #2761, we need to have more output rows than fit into a chunk.
+  for (auto row_id = int64_t{0}; row_id < static_cast<int64_t>(Chunk::DEFAULT_SIZE + 1'000); ++row_id) {
+    col_0_segment.emplace_back(row_id);
+    col_1_segment.emplace_back(row_id);
+    col_2_segment.emplace_back(17);
+  }
+
+  auto segments = pmr_vector<std::shared_ptr<AbstractSegment>>{};
+  segments.emplace_back(std::make_shared<ValueSegment<int64_t>>(std::move(col_0_segment)));
+  segments.emplace_back(std::make_shared<ValueSegment<int64_t>>(std::move(col_1_segment)));
+  segments.emplace_back(std::make_shared<ValueSegment<int64_t>>(std::move(col_2_segment)));
+
+  table->append_chunk(segments);
+  table->last_chunk()->set_immutable();
+
+  const auto table_wrapper = std::make_shared<TableWrapper>(table);
+  table_wrapper->never_clear_output();
+  table_wrapper->execute();
+
+  const auto col_2 = PQPColumnExpression::from_table(*table, ColumnID{2});
+  const auto aggregates = std::vector<std::shared_ptr<WindowFunctionExpression>>{sum_(col_2)};
+
+  // Single distinct group-by column.
+  const auto groupby_column_id = std::vector<ColumnID>{ColumnID{0}};
+  auto single_groupby_column_aggregate = std::make_shared<TypeParam>(table_wrapper, aggregates, groupby_column_id);
+  single_groupby_column_aggregate->execute();
+  ASSERT_EQ(single_groupby_column_aggregate->get_output()->row_count(), table->row_count());
+
+  // Two distinct group-by columns.
+  const auto groupby_column_ids = std::vector<ColumnID>{ColumnID{0}, ColumnID{1}};
+  auto two_groupby_columns_aggregate = std::make_shared<TypeParam>(table_wrapper, aggregates, groupby_column_ids);
+  two_groupby_columns_aggregate->execute();
+  ASSERT_EQ(two_groupby_columns_aggregate->get_output()->row_count(), table->row_count());
+}
+
 }  // namespace hyrise

@@ -1,6 +1,6 @@
 #pragma once
 
-#if !defined(BOOST_NO_IOSTREAM)
+#ifndef BOOST_NO_IOSTREAM
 #include <iosfwd>  // for std::basic_ostream forward declare
 
 #include <boost/detail/templated_streams.hpp>
@@ -57,7 +57,7 @@ inline size_t hash_value(const NullValue& /*value*/) {
 
 // Streaming support
 
-#if !defined(BOOST_NO_IOSTREAM)
+#ifndef BOOST_NO_IOSTREAM
 
 BOOST_TEMPLATED_STREAM_TEMPLATE(E, T)
 
