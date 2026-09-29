@@ -523,14 +523,14 @@ TEST_F(OperatorsInsertTest, InsertNullFromEncodedSegment) {
   auto target_table_name = "target_table";
   auto source_table_name = "source_table";
 
-  // create target table with a nullable column
+  // Create target table with a nullable column.
   auto column_definitions = TableColumnDefinitions{};
   column_definitions.emplace_back("a", DataType::Int, true);
   const auto target_table =
       std::make_shared<Table>(column_definitions, TableType::Data, Chunk::DEFAULT_SIZE, UseMvcc::Yes);
   Hyrise::get().storage_manager.add_table(target_table_name, target_table);
 
-  // create source table and add NULL
+  // Create source table and add NULL.
   const auto source_table =
       std::make_shared<Table>(column_definitions, TableType::Data, Chunk::DEFAULT_SIZE, UseMvcc::Yes);
   source_table->append({NullValue{}});
@@ -538,7 +538,7 @@ TEST_F(OperatorsInsertTest, InsertNullFromEncodedSegment) {
 
   source_table->last_chunk()->set_immutable();
 
-  // encode the source table to take fallback path (segment_with_iterators)
+  // Encode the source table to take fallback path (segment_with_iterators).
   ChunkEncoder::encode_all_chunks(source_table);
 
   const auto source_segment = source_table->get_chunk(ChunkID{0})->get_segment(ColumnID{0});
@@ -555,7 +555,7 @@ TEST_F(OperatorsInsertTest, InsertNullFromEncodedSegment) {
   insert->execute();
   context->commit();
 
-  EXPECT_EQ(target_table->row_count(), 2u);
+  EXPECT_EQ(target_table->row_count(), 2);
 
   const auto inserted_null_variant = (*target_table->get_chunk(ChunkID{0})->get_segment(ColumnID{0}))[ChunkOffset{0}];
   EXPECT_TRUE(variant_is_null(inserted_null_variant));

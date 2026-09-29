@@ -7,7 +7,7 @@ namespace hyrise {
 
 class TypesTest : public BaseTest {};
 
-TEST_F(TypesTest, FlipPredicateCondition) {
+TEST_F(TypesTest, PredicateConditionNotFlippable) {
   EXPECT_THROW(flip_predicate_condition(PredicateCondition::BetweenInclusive), std::logic_error);
   EXPECT_THROW(flip_predicate_condition(PredicateCondition::BetweenLowerExclusive), std::logic_error);
   EXPECT_THROW(flip_predicate_condition(PredicateCondition::BetweenUpperExclusive), std::logic_error);
