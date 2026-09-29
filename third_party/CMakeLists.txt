@@ -140,7 +140,7 @@ if(NOT APPLE)
   # We obtained the knob values by starting with values used by ClickHouse and Apache Doris and subsequently adapted
   # them with a (small) set of benchmarks. The current values (especially the decay values) are optimized for
   # performance, if memory consumption becomes an issue, lowering these values is a good option.
-  execute_process(COMMAND bash "-c" "getconf _NPROCESSORS_ONLN" OUTPUT_VARIABLE ARENA_COUNT OUTPUT_STRIP_TRAILING_WHITESPACE)
+  execute_process(COMMAND bash "-c" "getconf _NPROCESSORS_ONLN" OUTPUT_VARIABLE JEMALLOC_THREAD_COUNT OUTPUT_STRIP_TRAILING_WHITESPACE)
   set(JEMALLOC_CONFIG "--with-malloc-conf=\"oversize_threshold:0,background_thread:true,narenas:${ARENA_COUNT},percpu_arena:percpu,metadata_thp:auto,muzzy_decay_ms:20000,dirty_decay_ms:20000,lg_extent_max_active_fit:8\"")
 
   include(ExternalProject)
@@ -151,10 +151,11 @@ if(NOT APPLE)
       SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/jemalloc
       BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/jemalloc
 
-      # Executing configure script with suppressed output, only printing it in case of non-zero return.
-      CONFIGURE_COMMAND bash -c "cd <BINARY_DIR> && output=$(${JEMALLOC_COMPILER_ENVIRONMENT} <SOURCE_DIR>/configure --prefix=<BINARY_DIR> ${JEMALLOC_CONFIG} 2>&1) || \
+      # Executing autoconf and the configure script with suppressed output, only printing it in case of non-zero return.
+      CONFIGURE_COMMAND bash -c "cd <SOURCE_DIR> && if [ ! -f ./configure ] $<SEMICOLON> then autoconf $<SEMICOLON> fi && \
+                                 cd <BINARY_DIR> && output=$(${JEMALLOC_COMPILER_ENVIRONMENT} <SOURCE_DIR>/configure --prefix=<BINARY_DIR> ${JEMALLOC_CONFIG} 2>&1) || \
                                  (printf \"$output\\n\" && false)"
-      BUILD_COMMAND bash -c "output=$(${MAC_INCLUDES} make -j ${ARENA_COUNT} 2>&1) || (printf \"$output\\n\" && false)"
+      BUILD_COMMAND bash -c "output=$(${MAC_INCLUDES} make -j ${JEMALLOC_THREAD_COUNT} 2>&1) || (printf \"$output\\n\" && false)"
       INSTALL_COMMAND false  # install should never be called, this is a safe guard that fails if it is
       STEP_TARGETS build
       BUILD_BYPRODUCTS ${JEMALLOC_LIB_PATH}
