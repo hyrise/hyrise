@@ -97,6 +97,8 @@ try {
             // To speed compiling up, we use ninja for most builds.
             ninja = '-GNinja'
 
+            sh "cd third_party/jemalloc && git log && cd ../.."
+
             // With Hyrise, we aim to support the most recent compiler versions and do not invest a lot of work to
             // support older versions. We test LLVM 19 and GCC 13.2 (oldest version supported by Hyrise). We execute at
             // least debug runs for them. If you want to upgrade compiler versions, please update
