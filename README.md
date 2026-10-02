@@ -135,6 +135,13 @@ The binary can be executed with `LSAN_OPTIONS=suppressions=asan-ignore.txt ./<Yo
 `cmake -DENABLE_THREAD_SANITIZATION=ON` will work as above but with the ThreadSanitizer.
 Some sanitizers are mutually exclusive, which is why we use two configurations for this.
 
+### Tracing with Perfetto
+`cmake -DENABLE_PERFETTO=ON` builds Hyrise with [Perfetto](https://perfetto.dev) tracing (default: `OFF`, in which case Perfetto is neither compiled nor linked).
+Every operator execution is recorded as a slice on the track of the thread that executed it, named after the operator and annotated with the operator's description.
+Any Hyrise binary built this way (e.g., `hyriseBenchmarkTPCH`) writes the trace to `hyrise.perfetto-trace` in the working directory when it exits.
+Set `HYRISE_PERFETTO_TRACE_FILE=<path>` to write it somewhere else.
+Open the trace by uploading it at [ui.perfetto.dev](https://ui.perfetto.dev). Tracing works with any build type.
+
 ### Compile Times
 When trying to optimize the time spent building the project, it is often helpful to have an idea how much time is spent where.
 `scripts/compile_time.sh` helps with that. Get usage instructions by running it without any arguments.
