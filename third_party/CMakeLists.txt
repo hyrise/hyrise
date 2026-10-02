@@ -140,7 +140,7 @@ if(NOT APPLE)
   # We obtained the knob values by starting with values used by ClickHouse and Apache Doris and subsequently adapted
   # them with a (small) set of benchmarks. The current values (especially the decay values) are optimized for
   # performance, if memory consumption becomes an issue, lowering these values is a good option.
-  set(JEMALLOC_CONFIG "--with-malloc-conf=\"oversize_threshold:0,background_thread:true,narenas:default,percpu_arena:percpu,metadata_thp:auto,muzzy_decay_ms:20000,dirty_decay_ms:20000,lg_extent_max_active_fit:8\"")
+  set(JEMALLOC_CONFIG "--with-malloc-conf=\"oversize_threshold:0,background_thread:true,percpu_arena:percpu,metadata_thp:auto,muzzy_decay_ms:20000,dirty_decay_ms:20000,lg_extent_max_active_fit:8\"")
 
   # Determine thread count for parallel `make` of jemalloc lib.
   execute_process(COMMAND bash "-c" "getconf _NPROCESSORS_ONLN" OUTPUT_VARIABLE JEMALLOC_THREAD_COUNT OUTPUT_STRIP_TRAILING_WHITESPACE)
