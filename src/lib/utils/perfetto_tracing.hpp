@@ -10,41 +10,28 @@
  * HYRISE_PERFETTO_TRACE_FILE. Open the resulting file at https://ui.perfetto.dev.
  */
 
-#if HYRISE_WITH_PERFETTO
-
-#include <perfetto.h>
-
-PERFETTO_DEFINE_CATEGORIES(
-    perfetto::Category("operator").SetDescription("Execution of physical operators."));
+#include <string_view>
 
 namespace hyrise {
+
+#if HYRISE_WITH_PERFETTO
 
 // Starts the tracing session if it is not running yet.
 void ensure_tracing_started();
 
-}  // namespace hyrise
+// Explicit begin/end pair for slices (e.g., to attach a description that is only known at the end). Every begin must be
+// matched by an end on the same thread.
+void trace_event_begin(std::string_view category, std::string_view name);
 
-// Traces until the end of the current scope {} as one slice, and calls trace_event_end automatically.
-#define HYRISE_TRACE_EVENT(category, ...) \
-  ::hyrise::ensure_tracing_started();     \
-  TRACE_EVENT(category, __VA_ARGS__)
-
-// Explicit begin/end pair for slices that do not map to a scope (e.g., to attach arguments that
-// are only known at the end). Every BEGIN must be matched by an END on the same thread.
-#define HYRISE_TRACE_EVENT_BEGIN(category, ...) \
-  ::hyrise::ensure_tracing_started();           \
-  TRACE_EVENT_BEGIN(category, __VA_ARGS__)
-
-#define HYRISE_TRACE_EVENT_END(...) TRACE_EVENT_END(__VA_ARGS__)
-
-// NOLINTEND(cppcoreguidelines-macro-usage)
+// An empty description adds no argument to the slice.
+void trace_event_end(std::string_view category, std::string_view description = {});
 
 #else
 
-// NOLINTBEGIN(cppcoreguidelines-macro-usage)
-#define HYRISE_TRACE_EVENT(category, ...)
-#define HYRISE_TRACE_EVENT_BEGIN(category, ...)
-#define HYRISE_TRACE_EVENT_END(...)
-// NOLINTEND(cppcoreguidelines-macro-usage)
+inline void trace_event_begin(std::string_view /*category*/, std::string_view /*name*/) {}
+
+inline void trace_event_end(std::string_view /*category*/, std::string_view /*description*/ = {}) {}
 
 #endif
+
+}  // namespace hyrise

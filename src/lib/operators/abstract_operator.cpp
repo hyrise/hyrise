@@ -95,7 +95,7 @@ void AbstractOperator::execute() {
     Assert(!_right_input || _right_input->get_output(), "Right input has no output data.");
   }
 
-  HYRISE_TRACE_EVENT_BEGIN("operator", perfetto::DynamicString{name()});
+  trace_event_begin("operator", name());
   auto performance_timer = Timer{};
 
   auto transaction_context = this->transaction_context();
@@ -106,7 +106,7 @@ void AbstractOperator::execute() {
      * tasks of the Transaction run while the Rollback happens.
      */
     if (transaction_context->aborted()) {
-      HYRISE_TRACE_EVENT_END("operator");
+      trace_event_end("operator");
       return;
     }
 
@@ -127,7 +127,7 @@ void AbstractOperator::execute() {
   }
   performance_data->walltime = performance_timer.lap();
   // The description is added at the end, as some operators have details only during execution.
-  HYRISE_TRACE_EVENT_END("operator", "description", description());
+  trace_event_end("operator", description());
 
   _transition_to(OperatorState::ExecutedAndAvailable);
 

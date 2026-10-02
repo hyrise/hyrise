@@ -5,38 +5,35 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+#include <perfetto.h>
+
 #include <cerrno>
 #include <cstdint>
 #include <cstdlib>
-#include <cstring>
+#include <format>
 #include <iostream>
 #include <memory>
 #include <string>
 
+#include "utils/assert.hpp"
+
+// Categories are passed as strings at runtime (perfetto::DynamicCategory).
+PERFETTO_DEFINE_CATEGORIES(
+  perfetto::Category("operator").SetDescription("Execution of physical operators."));
 PERFETTO_TRACK_EVENT_STATIC_STORAGE();
 
 namespace {
 
-/**
- * Perfetto collects events in an in-memory buffer and writes them to the output file every FILE_WRITE_PERIOD_MS
- * (`write_into_file`). The buffer therefore only has to hold the events of one write period, not the entire trace.
- */
+// No default, must be set. Holds the events of one write period (see below) with a large margin.
 constexpr auto BUFFER_SIZE_KB = uint32_t{64 * 1024};
+
+// Default: 5,000 ms. Writing more often keeps the buffer from overflowing between two writes.
 constexpr auto FILE_WRITE_PERIOD_MS = uint32_t{500};  // Perfetto also flushes all threads before each write.
 
-/**
- * Before reaching the buffer above, events pass through a shared memory buffer (SMB) between the traced threads and
- * Perfetto's service. If threads emit events faster than the service moves them on (e.g., bursts of many short
- * operators), the SMB fills up and Perfetto silently drops events. 
- * We use the largest possible SMB to make this unlikely.
- */
+// Default: 256 KB, which dropped events under bursts of short operators. 32 MB is the maximum.
 constexpr auto SHARED_MEMORY_BUFFER_SIZE_KB = uint32_t{32 * 1024};
 
-/**
- * Safety net in case events are lost anyway: event names and thread descriptions are written only once per thread and
- * later events refer back to them. If these first packets are lost, the trace processor cannot decode anything that
- * follows for that thread. Re-emitting them periodically limits the damage to at most one period.
- */
+// Default: off. Re-emits interned names so that lost events do not make the rest of a thread's trace undecodable.
 constexpr auto INCREMENTAL_STATE_CLEAR_PERIOD_MS = uint32_t{1'000};
 
 class TracingSession final {
@@ -47,11 +44,8 @@ class TracingSession final {
 
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg,hicpp-vararg)
     _fd = open(_path.c_str(), O_RDWR | O_CREAT | O_TRUNC, 0644);
-    if (_fd < 0) {
-      std::cerr << "Perfetto: cannot open " << _path << " (" << std::strerror(errno)  // NOLINT(concurrency-mt-unsafe)
-                << "), tracing disabled.\n";
-      return;
-    }
+    Assert(_fd >= 0, std::format("Perfetto: cannot open {} ({}), tracing can't be enabled. "
+      "Try setting the HYRISE_PERFETTO_TRACE_FILE environment variable.\n", _path, std::strerror(errno)));
 
     auto init_args = perfetto::TracingInitArgs{};
     init_args.backends = perfetto::kInProcessBackend;
@@ -87,19 +81,19 @@ class TracingSession final {
   // Called at process exit: flushes pending events, stops the session (which performs the final write), and closes the
   // file. The file descriptor must stay open until StopBlocking() has returned.
   ~TracingSession() {
-    if (!_session) {
-      return;
-    }
+  if (!_session) {
+    return;
+  }
 
-    perfetto::TrackEvent::Flush();
-    _session->StopBlocking();
-    close(_fd);
-    std::cerr << "Perfetto trace written to " << _path << " (open at https://ui.perfetto.dev).\n";
+  perfetto::TrackEvent::Flush();
+  _session->StopBlocking();
+  close(_fd);
+  std::cerr << "Perfetto trace written to " << _path << " (open at https://ui.perfetto.dev).\n";
   }
 
  private:
   std::string _path;
-  int _fd{-1};
+  int32_t _fd{-1};
   std::unique_ptr<perfetto::TracingSession> _session;
 };
 
@@ -110,6 +104,22 @@ namespace hyrise {
 void ensure_tracing_started() {
   // Static local: thread-safe lazy initialization.
   static auto session = TracingSession{};
+}
+
+void trace_event_begin(std::string_view category, std::string_view name) {
+  ensure_tracing_started();
+  // Perfetto requires the category as a variable and the name as a temporary.
+  auto dynamic_category = perfetto::DynamicCategory{std::string{category}};
+  TRACE_EVENT_BEGIN(dynamic_category, (perfetto::DynamicString{name.data(), name.size()}));
+}
+
+void trace_event_end(std::string_view category, std::string_view description) {
+  auto dynamic_category = perfetto::DynamicCategory{std::string{category}};
+  if (description.empty()) {
+  TRACE_EVENT_END(dynamic_category);
+  return;
+  }
+  TRACE_EVENT_END(dynamic_category, "description", std::string{description});
 }
 
 }  // namespace hyrise
