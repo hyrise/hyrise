@@ -3,6 +3,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <tuple>
 #include <type_traits>
@@ -23,6 +24,7 @@
 #include "testing_assert.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
+#include "utils/invalid_input_exception.hpp"
 #include "utils/load_table.hpp"
 
 namespace hyrise {
@@ -260,6 +262,49 @@ TEST_F(OperatorsImportTest, TargetChunkSize) {
   }
 
   EXPECT_TABLE_EQ_ORDERED(Hyrise::get().storage_manager.get_table("a"), expected_table);
+}
+
+TEST_F(OperatorsImportTest, OperatorName) {
+  auto importer =
+      std::make_shared<Import>("resources/test_data/csv/float_int_large_chunksize_max.csv", "a", Chunk::DEFAULT_SIZE);
+
+  EXPECT_EQ(importer->name(), std::string{"Import"});
+}
+
+TEST_F(OperatorsImportTest, CSVNeedsMetaFileOrPreexistingTable) {
+  const auto reference_filename = std::string{"resources/test_data/csv/int_string2_no_meta.csv"};
+
+  auto importer = std::make_shared<Import>(reference_filename, "a", Chunk::DEFAULT_SIZE);
+
+  EXPECT_THROW(importer->execute(), std::logic_error);
+}
+
+TEST_F(OperatorsImportTest, ExistingTableImmutable) {
+  // Create preexisting table based on metafile.
+  const auto existing_table =
+      CsvParser::create_table_from_meta_file("resources/test_data/csv/float.csv.json", ChunkOffset{2});
+
+  // Add a chunk that should be immutable and encoded.
+  existing_table->append({AllTypeVariant{42.0f}});
+  existing_table->append({AllTypeVariant{67.0f}});
+  existing_table->last_chunk()->set_immutable();
+  ChunkEncoder::encode_all_chunks(existing_table);
+
+  // Add a single value such that we have another chunk that is mutable.
+  existing_table->append({AllTypeVariant{37.0f}});
+
+  Hyrise::get().storage_manager.add_table("a", existing_table);
+
+  const auto importer = std::make_shared<Import>("resources/test_data/csv/float.csv", "a", ChunkOffset{2});
+  importer->execute();
+
+  // The 1st chunk should be unchanged. The 2nd chunk should now be immutable because of the import.
+  EXPECT_FALSE(Hyrise::get().storage_manager.get_table("a")->get_chunk(ChunkID{0})->is_mutable());
+  EXPECT_FALSE(Hyrise::get().storage_manager.get_table("a")->get_chunk(ChunkID{1})->is_mutable());
+
+  // The loaded chunks should be mutable.
+  EXPECT_TRUE(Hyrise::get().storage_manager.get_table("a")->get_chunk(ChunkID{2})->is_mutable());
+  EXPECT_TRUE(Hyrise::get().storage_manager.get_table("a")->get_chunk(ChunkID{3})->is_mutable());
 }
 
 }  // namespace hyrise

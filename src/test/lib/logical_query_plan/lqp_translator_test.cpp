@@ -24,6 +24,7 @@
 #include "logical_query_plan/create_prepared_plan_node.hpp"
 #include "logical_query_plan/create_table_node.hpp"
 #include "logical_query_plan/drop_table_node.hpp"
+#include "logical_query_plan/drop_view_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
 #include "logical_query_plan/export_node.hpp"
 #include "logical_query_plan/import_node.hpp"
@@ -52,6 +53,7 @@
 #include "operators/maintenance/create_prepared_plan.hpp"
 #include "operators/maintenance/create_table.hpp"
 #include "operators/maintenance/drop_table.hpp"
+#include "operators/maintenance/drop_view.hpp"
 #include "operators/product.hpp"
 #include "operators/projection.hpp"
 #include "operators/sort.hpp"
@@ -1082,6 +1084,18 @@ TEST_F(LQPTranslatorTest, ReuseSubqueryExpression) {
   const auto subquery_in_temporary_column = pqp_column_(ColumnID{1}, DataType::Int, column_name);
 
   EXPECT_EQ(*projection_a->expressions.at(0), *add_(subquery_in_temporary_column, 3));
+}
+
+TEST_F(LQPTranslatorTest, DropViewNode) {
+  const auto lqp = DropViewNode::make("v", false);
+
+  const auto pqp = LQPTranslator{}.translate_node(lqp);
+
+  EXPECT_EQ(pqp->type(), OperatorType::DropView);
+  EXPECT_EQ(pqp->left_input(), nullptr);
+
+  const auto drop_view = std::dynamic_pointer_cast<DropView>(pqp);
+  EXPECT_EQ(drop_view->view_name, "v");
 }
 
 TEST_F(LQPTranslatorTest, CreateTable) {
