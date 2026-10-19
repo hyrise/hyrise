@@ -95,7 +95,7 @@ class OperatorsJoinIndexTest : public BaseTest {
   static void test_join_output(const std::shared_ptr<AbstractOperator>& left,
                                const std::shared_ptr<AbstractOperator>& right,
                                const OperatorJoinPredicate& primary_predicate, const JoinMode mode,
-                               const size_t chunk_size, const bool using_index = true,
+                               const size_t /*chunk_size*/, const bool using_index = true,
                                const IndexSide index_side = IndexSide::Right,
                                const bool single_chunk_reference_guarantee = true) {
     left->never_clear_output();

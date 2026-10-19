@@ -134,7 +134,7 @@ std::optional<Target> lossless_cast(const Source& source) {
   auto integral_part = Source{};
 
   // No lossless float-to-int conversion possible if the source float has a fractional part.
-  if (std::modf(source, &integral_part) != 0.0) {
+  if (std::modf(source, &integral_part) != Source{}) {
     return std::nullopt;
   }
 
@@ -182,8 +182,9 @@ std::optional<Target> lossless_cast(const Source& source) {
     return std::nullopt;
   }
 
-  if (static_cast<float>(source) == source) {
-    return static_cast<float>(source);
+  const auto casted_source = static_cast<float>(source);
+  if (static_cast<double>(casted_source) == source) {
+    return casted_source;
   }
 
   return std::nullopt;
@@ -191,7 +192,7 @@ std::optional<Target> lossless_cast(const Source& source) {
 
 template <typename Target>
 std::optional<Target> lossless_variant_cast(const AllTypeVariant& variant) {
-  std::optional<Target> result;
+  auto result = std::optional<Target>{};
 
   const auto source_data_type = data_type_from_all_type_variant(variant);
 
@@ -209,7 +210,7 @@ std::optional<Target> lossless_variant_cast(const AllTypeVariant& variant) {
     return std::nullopt;
   }
 
-  resolve_data_type(data_type_from_all_type_variant(variant), [&](auto source_data_type_t) {
+  resolve_data_type(source_data_type, [&](auto source_data_type_t) {
     using SourceDataType = typename decltype(source_data_type_t)::type;
     result = lossless_cast<Target>(boost::get<SourceDataType>(variant));
   });

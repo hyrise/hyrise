@@ -67,6 +67,6 @@ std::shared_ptr<AbstractOperator> UnionAll::_on_deep_copy(
   return std::make_shared<UnionAll>(copied_left_input, copied_right_input);
 }
 
-void UnionAll::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
+void UnionAll::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& /*parameters*/) {}
 
 }  // namespace hyrise

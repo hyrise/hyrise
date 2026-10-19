@@ -210,7 +210,7 @@ class PointAccessibleSegmentIterable : public SegmentIterable<Derived> {
 
 template <typename T>
 // NOLINTNEXTLINE(readability-identifier-naming)
-constexpr auto is_point_accessible_segment_iterable_v =
+inline constexpr auto is_point_accessible_segment_iterable_v =
     std::is_base_of_v<PointAccessibleSegmentIterable<std::decay_t<T>>, T>;
 
 }  // namespace hyrise

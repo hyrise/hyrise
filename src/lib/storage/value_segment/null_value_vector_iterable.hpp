@@ -11,6 +11,7 @@ namespace hyrise {
 // Our function naming for iterables is not correct. `_on_with` is a public function and should not start with `_`,
 // whereas the iterator functions should start with `_` as they are private (but can't, because boost requires them).
 // NOLINTBEGIN(readability-identifier-naming)
+
 /**
  * This is an iterable for the null value vector used by, e.g, value, LZ4, or frame of reference segments.
  * It is used for example in the IS NULL implementation of the table scan.
@@ -18,6 +19,8 @@ namespace hyrise {
 class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueVectorIterable> {
  public:
   using ValueType = bool;
+  using NullValueIterator = pmr_vector<bool>::const_iterator;
+  using NullValueVector = pmr_vector<bool>;
 
   explicit NullValueVectorIterable(const pmr_vector<bool>& null_values) : _null_values{null_values} {}
 
@@ -40,9 +43,6 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
 
   class Iterator : public AbstractSegmentIterator<Iterator, IsNullSegmentPosition> {
    public:
-    using ValueType = bool;
-    using NullValueIterator = pmr_vector<bool>::const_iterator;
-
     explicit Iterator(const NullValueIterator& begin_null_value_it, const NullValueIterator& null_value_it)
         : _begin_null_value_it{begin_null_value_it}, _null_value_it{null_value_it} {}
 
@@ -82,9 +82,6 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
   class PointAccessIterator : public AbstractPointAccessSegmentIterator<PointAccessIterator<PosListIteratorType>,
                                                                         IsNullSegmentPosition, PosListIteratorType> {
    public:
-    using ValueType = bool;
-    using NullValueVector = pmr_vector<bool>;
-
     explicit PointAccessIterator(const NullValueVector& null_values, const PosListIteratorType position_filter_begin,
                                  PosListIteratorType position_filter_it)
         : AbstractPointAccessSegmentIterator<PointAccessIterator, IsNullSegmentPosition,

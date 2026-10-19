@@ -209,7 +209,7 @@ TEST_F(FixedStringVectorTest, CompareStdStringToFixedString) {
 }
 
 TEST_F(FixedStringVectorTest, ThrowOnOversizedStrings) {
-  std::vector<pmr_string> v = {"abc", "defd", "ghi"};
+  auto v = std::vector<pmr_string>{"abc", "defd", "ghi"};
   EXPECT_THROW((FixedStringVector{v.cbegin(), v.cend(), 3u}), std::logic_error);
 
   EXPECT_THROW(fixed_string_vector->push_back("opossum"), std::logic_error);
@@ -241,6 +241,13 @@ TEST_F(FixedStringVectorTest, GetAllocator) {
   const auto strings = {"", ""};
   auto fs_vector = FixedStringVector(strings.begin(), strings.end(), 0, alloc);
   EXPECT_EQ(alloc.resource(), fs_vector.get_allocator().resource());
+}
+
+TEST_F(FixedStringVectorTest, ConstructorVectorSize) {
+  auto values = pmr_vector<char>{'f', 'o', 'o', 'b', 'a', 'r', 'b', 'a', 'z'};
+  EXPECT_NO_THROW(FixedStringVector(values, 3, 3));
+  EXPECT_THROW(FixedStringVector(values, 3, 2), std::logic_error);
+  EXPECT_THROW(FixedStringVector(values, 4, 3), std::logic_error);
 }
 
 }  // namespace hyrise

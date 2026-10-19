@@ -17,8 +17,7 @@ template <typename T>
 #ifdef __clang__
 __attribute__((optnone))  // Fixes issues with memcheck. As we are only accessing constant values, should not cost much.
 #endif
-size_t
-string_heap_size(const T& string) {
+size_t string_heap_size(const T& string) {
   // Get the default pre-allocated capacity of SSO strings. Note that the empty string has an unspecified capacity, so
   // we use a really short one here.
   static const size_t sso_string_capacity = pmr_string{"."}.capacity();

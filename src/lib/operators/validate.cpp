@@ -82,7 +82,7 @@ std::shared_ptr<AbstractOperator> Validate::_on_deep_copy(
   return std::make_shared<Validate>(copied_left_input);
 }
 
-void Validate::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
+void Validate::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& /*parameters*/) {}
 
 std::shared_ptr<const Table> Validate::_on_execute() {
   Fail("Validate cannot be called without a transaction context.");
@@ -296,7 +296,7 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& input_table,
     }
 
     if (!pos_list_out->empty()) {
-      const auto lock = std::lock_guard<std::mutex>{output_mutex};
+      const auto lock = std::scoped_lock<std::mutex>{output_mutex};
       // The validate operator does not affect the sorted_by property. If a chunk has been sorted before, it still is
       // after the validate operator.
       const auto chunk = std::make_shared<Chunk>(output_segments);

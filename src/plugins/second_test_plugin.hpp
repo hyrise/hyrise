@@ -19,7 +19,7 @@ class SecondTestPlugin : public AbstractPlugin {
 
   std::vector<std::pair<PluginFunctionName, PluginFunctionPointer>> provided_user_executable_functions() final;
 
-  void a_user_executable_function() const;
+  static void a_user_executable_function();
 };
 
 }  // namespace hyrise

@@ -81,4 +81,5 @@ class PostgresProtocolHandler {
   ReadBuffer<SocketType> _read_buffer;
   WriteBuffer<SocketType> _write_buffer;
 };
+
 }  // namespace hyrise

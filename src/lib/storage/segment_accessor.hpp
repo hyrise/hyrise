@@ -22,8 +22,6 @@ class CreateSegmentAccessor {
   static std::unique_ptr<AbstractSegmentAccessor<T>> create(const std::shared_ptr<const AbstractSegment>& segment);
 };
 
-EXPLICITLY_DECLARE_DATA_TYPES(CreateSegmentAccessor);
-
 }  // namespace detail
 
 /**

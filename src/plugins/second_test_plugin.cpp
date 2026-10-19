@@ -20,9 +20,9 @@ std::string SecondTestPlugin::description() const {
 void SecondTestPlugin::start() {}
 
 void SecondTestPlugin::stop() {
-  auto& sm = Hyrise::get().storage_manager;
-  if (sm.has_table("TableOfSecondTestPlugin")) {
-    sm.drop_table("TableOfSecondTestPlugin");
+  auto& storage_manager = Hyrise::get().storage_manager;
+  if (storage_manager.has_table("TableOfSecondTestPlugin")) {
+    storage_manager.drop_table("TableOfSecondTestPlugin");
   }
 }
 
@@ -33,11 +33,10 @@ SecondTestPlugin::provided_user_executable_functions() {
            }}};
 }
 
-void SecondTestPlugin::a_user_executable_function() const {
+void SecondTestPlugin::a_user_executable_function() {
   auto column_definitions = TableColumnDefinitions{};
   column_definitions.emplace_back("col_A", DataType::Int, false);
   const auto table = std::make_shared<Table>(column_definitions, TableType::Data);
-
   Hyrise::get().storage_manager.add_table("TableOfSecondTestPlugin", table);
 }
 

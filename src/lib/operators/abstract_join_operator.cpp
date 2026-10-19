@@ -97,7 +97,7 @@ std::string AbstractJoinOperator::description(DescriptionMode description_mode) 
   return stream.str();
 }
 
-void AbstractJoinOperator::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
+void AbstractJoinOperator::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& /*parameters*/) {}
 
 std::shared_ptr<Table> AbstractJoinOperator::_build_output_table(std::vector<std::shared_ptr<Chunk>>&& chunks,
                                                                  const TableType table_type) const {

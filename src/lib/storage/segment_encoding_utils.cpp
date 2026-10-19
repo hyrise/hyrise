@@ -74,7 +74,6 @@ VectorCompressionType parent_vector_compression_type(const CompressedVectorType 
     case CompressedVectorType::FixedWidthInteger2Byte:
     case CompressedVectorType::FixedWidthInteger1Byte:
       return VectorCompressionType::FixedWidthInteger;
-      break;
     case CompressedVectorType::BitPacking:
       return VectorCompressionType::BitPacking;
   }
