@@ -39,7 +39,6 @@ class RunMerger {
     const auto fan_in = std::bit_ceil(num_runs);
 
     auto merge_tree = LoserTree<value_type, Compare>(fan_in);
-    merge_tree.reset();
     for (auto run_index = size_t{0}; run_index < num_runs; ++run_index) {
       auto& [current_it, end] = runs[run_index];
       if (current_it < end) {
