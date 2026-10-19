@@ -10,7 +10,9 @@ namespace hyrise {
 template <typename T, typename CompareValues = std::greater<T>>
 class LoserTree {
  public:
-  explicit LoserTree(std::size_t capacity) : _nodes(capacity) {}
+  explicit LoserTree(std::size_t capacity) : _nodes(capacity) {
+    reset();
+  }
 
   size_t champion_node_index() const {
     return _nodes[0]._slot;
@@ -34,8 +36,8 @@ class LoserTree {
 
   void reset() {
     std::ranges::fill(_nodes, Node{});
-    for (auto node_idx = size_t{0}; node_idx < _nodes.size(); ++node_idx) {
-      _update(Tag::LowSentinel, {}, node_idx, CompareOnSlots{});
+    for (auto node_index = size_t{0}; node_index < _nodes.size(); ++node_index) {
+      _update(Tag::LowSentinel, {}, node_index, CompareOnSlots{});
     }
   }
 
