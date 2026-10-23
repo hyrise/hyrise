@@ -63,31 +63,6 @@ bool can_prune(const BaseAttributeStatistics& base_segment_statistics, const Pre
   return can_prune;
 }
 
-// Merge a sorted list of ChunkIDs into another one, keeping the target sorted and free of duplicates. Excluded ChunkIDs
-// used to be collected in a std::set, which gave us both properties for free but at the cost of a node allocation per
-// insert. Since every list we produce is sorted by construction (we always iterate ChunkIDs in ascending order), we can
-// instead append and merge the two sorted runs in linear time.
-void merge_sorted_chunk_ids(std::vector<ChunkID>& target, const std::vector<ChunkID>& source) {
-  DebugAssert(std::ranges::is_sorted(target), "Expected target ChunkIDs to be sorted.");
-  DebugAssert(std::ranges::is_sorted(source), "Expected source ChunkIDs to be sorted.");
-
-  if (source.empty()) {
-    return;
-  }
-
-  if (target.empty()) {
-    target = source;
-    return;
-  }
-
-  // `insert` can reallocate, so we remember the split point as an offset rather than as an iterator.
-  const auto middle_offset = static_cast<std::vector<ChunkID>::difference_type>(target.size());
-  target.insert(target.end(), source.begin(), source.end());
-  std::ranges::inplace_merge(target, target.begin() + middle_offset);
-  const auto duplicates = std::ranges::unique(target);
-  target.erase(duplicates.begin(), duplicates.end());
-}
-
 template <typename T>
 std::vector<T> pruned_items_mapping(const size_t initial_item_count, const std::vector<T>& pruned_item_ids) {
   // This function assumes to be used solely for column and chunk pruning.
@@ -145,14 +120,20 @@ std::vector<ChunkID> compute_chunk_exclude_list(
                        boost::hash<StoredTableNodePredicateNodePair>>& excluded_chunk_ids_by_predicate_node) {
   auto excluded_chunk_ids = std::vector<ChunkID>{};
   for (const auto& predicate_node : predicate_pruning_chain) {
-    // Determine the set of chunks that can be excluded for the given PredicateNode's predicate.
+    // Everything this PredicateNode contributes is appended to the end of excluded_chunk_ids and merged into the
+    // already-sorted front part afterwards. This avoids the temporary vectors and their copies: the only copy left
+    // is the one for the cache, which needs to own its ChunkIDs.
+    const auto node_offset = static_cast<std::vector<ChunkID>::difference_type>(excluded_chunk_ids.size());
+
     auto excluded_chunk_ids_iter =
         excluded_chunk_ids_by_predicate_node.find(std::make_pair(stored_table_node, predicate_node));
 
     if (excluded_chunk_ids_iter != excluded_chunk_ids_by_predicate_node.end()) {
-      // Shortcut: The given PredicateNode is part of multiple predicate pruning chains and the set of excluded chunks
+      // Shortcut: The given PredicateNode is part of multiple predicate pruning chains and the list of excluded chunks
       //           has already been calculated.
-      merge_sorted_chunk_ids(excluded_chunk_ids, excluded_chunk_ids_iter->second);
+      const auto& cached_chunk_ids = excluded_chunk_ids_iter->second;
+      excluded_chunk_ids.insert(excluded_chunk_ids.end(), cached_chunk_ids.begin(), cached_chunk_ids.end());
+      std::ranges::inplace_merge(excluded_chunk_ids, excluded_chunk_ids.begin() + node_offset);
       continue;
     }
 
@@ -185,9 +166,7 @@ std::vector<ChunkID> compute_chunk_exclude_list(
       return {};
     }
 
-    auto current_excluded_chunk_ids = std::vector<ChunkID>{};
     const auto table = Hyrise::get().storage_manager.get_table(stored_table_node->table_name);
-
     const auto stored_table_node_output_expressions = stored_table_node_without_column_pruning->output_expressions();
     for (const auto& operator_predicate : *operator_predicates) {
       // Cannot prune column-to-column predicates, at the moment. Column-to-placeholder predicates are never prunable.
@@ -221,10 +200,6 @@ std::vector<ChunkID> compute_chunk_exclude_list(
 
       auto condition = operator_predicate.predicate_condition;
 
-      // ChunkIDs are appended in ascending order below, so this list is sorted by construction and needs no sorting
-      // before it is merged into `current_excluded_chunk_ids`.
-      auto predicate_excluded_chunk_ids = std::vector<ChunkID>{};
-
       const auto chunk_count = table->chunk_count();
       auto num_rows_pruned = size_t{0};
       for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
@@ -250,11 +225,9 @@ std::vector<ChunkID> compute_chunk_exclude_list(
             // Chunk was already pruned. While we might prune on a different predicate this time, we must make sure that
             // we do not over-prune the statistics.
           }
-          predicate_excluded_chunk_ids.emplace_back(chunk_id);
+          excluded_chunk_ids.emplace_back(chunk_id);
         }
       }
-
-      merge_sorted_chunk_ids(current_excluded_chunk_ids, predicate_excluded_chunk_ids);
 
       if (num_rows_pruned > size_t{0}) {
         const auto& old_statistics =
@@ -264,12 +237,28 @@ std::vector<ChunkID> compute_chunk_exclude_list(
       }
     }
 
-    // Cache result.
-    excluded_chunk_ids_by_predicate_node.emplace(std::make_pair(stored_table_node, predicate_node),
-                                                 current_excluded_chunk_ids);
-    // Add to global excluded list because we collect excluded chunks for the whole predicate pruning chain.
-    merge_sorted_chunk_ids(excluded_chunk_ids, current_excluded_chunk_ids);
+    // Chunks are visited in ascending order, so each OperatorScanPredicate appended one sorted run. With a single
+    // predicate the tail is sorted already; with more (e.g., BETWEEN) the runs interleave and we sort once.
+    const auto node_begin = excluded_chunk_ids.begin() + node_offset;
+    if (operator_predicates->size() > 1) {
+      std::ranges::sort(node_begin, excluded_chunk_ids.end());
+    }
+    const auto node_duplicates = std::ranges::unique(node_begin, excluded_chunk_ids.end());
+    excluded_chunk_ids.erase(node_duplicates.begin(), node_duplicates.end());
+
+    // Cache this PredicateNode's ChunkIDs before merging them into the front part, where they would no longer be
+    // separable.
+    excluded_chunk_ids_by_predicate_node.emplace(
+        std::make_pair(stored_table_node, predicate_node),
+        std::vector<ChunkID>(excluded_chunk_ids.begin() + node_offset, excluded_chunk_ids.end()));
+
+    std::ranges::inplace_merge(excluded_chunk_ids, excluded_chunk_ids.begin() + node_offset);
   }
+
+  // Different PredicateNodes of the chain can exclude the same chunks. The merges above keep the list sorted but may
+  // leave duplicates, so we deduplicate once for the whole chain.
+  const auto chain_duplicates = std::ranges::unique(excluded_chunk_ids);
+  excluded_chunk_ids.erase(chain_duplicates.begin(), chain_duplicates.end());
 
   return excluded_chunk_ids;
 }
