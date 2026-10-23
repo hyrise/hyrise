@@ -211,6 +211,8 @@ enum class JoinMode : uint8_t { Inner, Left, Right, FullOuter, Cross, Semi, Anti
 
 bool is_semi_or_anti_join(JoinMode join_mode);
 
+bool is_semi_join(JoinMode join_mode);
+
 // SQL set operations come in two flavors, with and without `ALL`, e.g., `UNION` and `UNION ALL`.
 // We have a third mode (Positions) that is used to intersect position lists that point to the same table,
 // see union_positions.hpp for details.

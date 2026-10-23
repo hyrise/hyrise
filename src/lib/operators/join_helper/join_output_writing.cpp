@@ -149,9 +149,10 @@ void write_output_segments(Segments& output_segments, const std::shared_ptr<cons
         }
         if (common_chunk_id && *common_chunk_id != INVALID_CHUNK_ID) {
           // Track the occuring chunk ids and set the single chunk guarantee if possible. Generally, this is the case
-          // if both of the following are true: (1) The probe side input already had this guarantee and (2) no radix
-          // partitioning was used. If multiple small PosLists were merged (see MIN_SIZE), this guarantee cannot be
-          // given.
+          // if both of the following are true: (1) the emitting side's input already had this guarantee and (2) no
+          // radix partitioning was used. The emitting side is usually the probe side, but it is the build side when
+          // only build-side rows are written (see `OutputColumnOrder::LeftOnly`). If multiple small PosLists were
+          // merged (see MIN_SIZE), this guarantee cannot be given.
           new_pos_list->guarantee_single_chunk();
         }
 
@@ -228,6 +229,14 @@ std::vector<std::shared_ptr<Chunk>> write_output_chunks(
     right_side_pos_lists_by_column = setup_pos_list_mapping(right_input_table);
   }
 
+  // The emitting side is the one whose rows end up in the output and thus determines when partitions are merged.
+  // Usually, that is the probe side (right). For `LeftOnly` (semi joins for which the smaller left input became the
+  // build side), the build side is the emitting one and the probe side's PosLists are empty.
+  const auto emitting_side_is_left = output_column_order == OutputColumnOrder::LeftOnly;
+
+  DebugAssert(output_column_order == OutputColumnOrder::RightOnly || pos_lists_left.size() == pos_lists_right.size(),
+              "Expected one PosList per partition on both sides.");
+
   const auto pos_lists_right_size = pos_lists_right.size();
   auto expected_output_chunk_count = size_t{0};
   for (auto partition_id = size_t{0}; partition_id < pos_lists_right_size; ++partition_id) {
@@ -273,10 +282,13 @@ std::vector<std::shared_ptr<Chunk>> write_output_chunks(
     }
 
     if (allow_partition_merge) {
-      // Checking the probe side's PosLists is sufficient. The PosLists from the build side have either the same size
-      // or are empty (in case of semi-/anti-joins).
-      while (partition_id + 1 < pos_lists_right.size() && right_side_pos_list->size() < MIN_SIZE &&
-             right_side_pos_list->size() + pos_lists_right[partition_id + 1].size() < MAX_SIZE) {
+      // Checking the emitting side's PosLists is sufficient. The PosLists from the other side have either the same
+      // size or are empty (in case of semi-/anti-joins).
+      const auto& emitting_side_pos_list = emitting_side_is_left ? left_side_pos_list : right_side_pos_list;
+      const auto& pos_lists_emitting = emitting_side_is_left ? pos_lists_left : pos_lists_right;
+
+      while (partition_id + 1 < pos_lists_emitting.size() && emitting_side_pos_list->size() < MIN_SIZE &&
+             emitting_side_pos_list->size() + pos_lists_emitting[partition_id + 1].size() < MAX_SIZE) {
         // Copy entries from following PosList into the current working set (left_side_pos_list) and free the memory
         // used for the merged PosList.
         //
@@ -311,6 +323,10 @@ std::vector<std::shared_ptr<Chunk>> write_output_chunks(
         case OutputColumnOrder::RightFirstLeftSecond:
           write_output_segments(output_segments, right_input_table, right_side_pos_lists_by_column,
                                 right_side_pos_list);
+          write_output_segments(output_segments, left_input_table, left_side_pos_lists_by_column, left_side_pos_list);
+          break;
+
+        case OutputColumnOrder::LeftOnly:
           write_output_segments(output_segments, left_input_table, left_side_pos_lists_by_column, left_side_pos_list);
           break;
 

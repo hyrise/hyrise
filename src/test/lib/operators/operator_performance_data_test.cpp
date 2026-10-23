@@ -245,8 +245,9 @@ TEST_F(OperatorPerformanceDataTest, JoinHashBloomFilterReductions) {
   EXPECT_EQ(semi_perf.build_side_materialized_value_count, 4);
   EXPECT_EQ(semi_perf.probe_side_materialized_value_count, table_a->row_count());
   EXPECT_EQ(semi_perf.hash_tables_distinct_value_count, 2);
-  EXPECT_FALSE(semi_perf.hash_tables_position_count);
-  EXPECT_FALSE(semi_perf.left_input_is_build_side);
+  // The smaller input (table_a) is the left one, so it becomes the build side.
+  EXPECT_TRUE(semi_perf.left_input_is_build_side);
+  EXPECT_TRUE(semi_perf.hash_tables_position_count);
 }
 
 // Check that steps of IndexJoin (indexed chunks/unindexed chunks) are executed as expected.
