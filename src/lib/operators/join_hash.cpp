@@ -465,7 +465,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
                                                        _radix_bits, probe_side_bloom_filter);
     } else {
       hash_tables = build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::AllPositions, _radix_bits,
-                                                       probe_side_bloom_filter, emit_build_side);
+                                                       probe_side_bloom_filter);
     }
     _performance_data.set_step_runtime(OperatorSteps::Building, timer_hash_map_building.lap());
 
@@ -530,11 +530,17 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
 
       case JoinMode::Semi:
         if (_output_column_order == OutputColumnOrder::LeftOnly) {
+          const auto match_offsets = match_offsets_per_hash_table(hash_tables);
+          auto match_state = SemiJoinMatchState{match_offsets.back()};
+
           // `probe_side_pos_lists` stays empty here and is ignored by the output writing.
           probe_semi_anti<ProbeColumnType, HashedType, JoinMode::Semi, true>(
               radix_probe_column, hash_tables, probe_side_pos_lists, *_build_input_table, *_probe_input_table,
-              _secondary_predicates);
-          gather_matched_build_side_positions(hash_tables, build_side_pos_lists);
+              _secondary_predicates, &match_state, &match_offsets);
+
+          const auto matches = match_state.merge();
+          gather_matched_build_side_positions(hash_tables, matches, match_offsets, build_side_pos_lists);
+
           // The probe side emits no rows here, but write_output_chunks expects one PosList per partition on both sides.
           probe_side_pos_lists.clear();
           probe_side_pos_lists.resize(build_side_pos_lists.size());
