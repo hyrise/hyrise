@@ -95,6 +95,14 @@ else()
     add_definitions(-DHYRISE_WITH_TSAN=0)
 endif()
 
+# Enable Perfetto tracing if requested (see src/lib/utils/perfetto_tracing.hpp)
+option(ENABLE_PERFETTO "Set to ON to build Hyrise with Perfetto tracing. Default: OFF" OFF)
+if (${ENABLE_PERFETTO})
+    add_definitions(-DHYRISE_WITH_PERFETTO=1)
+else()
+    add_definitions(-DHYRISE_WITH_PERFETTO=0)
+endif()
+
 # Set default build type if none was passed on the command line
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Debug")

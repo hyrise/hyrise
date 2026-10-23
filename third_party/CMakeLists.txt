@@ -27,6 +27,15 @@ target_include_directories(
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/zstd/lib>
 )
 
+# Build Perfetto SDK only if tracing is enabled.
+if (${ENABLE_PERFETTO})
+    add_library(perfetto STATIC perfetto/sdk/perfetto.cc)
+    target_include_directories(perfetto SYSTEM PUBLIC perfetto/sdk)
+    target_compile_options(perfetto PRIVATE -fPIC -w)
+    find_package(Threads REQUIRED)
+    target_link_libraries(perfetto PUBLIC Threads::Threads ${CMAKE_DL_LIBS})
+endif()
+
 # Build sql-parser library
 set(PARSER_DIR sql-parser)
 
