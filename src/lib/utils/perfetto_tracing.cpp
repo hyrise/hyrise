@@ -3,9 +3,8 @@
 #if HYRISE_WITH_PERFETTO
 
 #include <fcntl.h>
-#include <unistd.h>
-
 #include <perfetto.h>
+#include <unistd.h>
 
 #include <cerrno>
 #include <cstdint>
@@ -17,9 +16,10 @@
 
 #include "utils/assert.hpp"
 
-// Categories are passed as strings at runtime (perfetto::DynamicCategory).
+// One category per hyrise::TraceCategory.
 PERFETTO_DEFINE_CATEGORIES(
-  perfetto::Category("operator").SetDescription("Execution of physical operators."));
+    perfetto::Category("operator").SetDescription("Execution of physical operators."),
+    perfetto::Category("operator_step").SetDescription("Execution of the steps within physical operators."));
 PERFETTO_TRACK_EVENT_STATIC_STORAGE();
 
 namespace {
@@ -45,7 +45,8 @@ class TracingSession final {
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg,hicpp-vararg)
     _fd = open(_path.c_str(), O_RDWR | O_CREAT | O_TRUNC, 0644);
     Assert(_fd >= 0, std::format("Perfetto: cannot open {} ({}), tracing can't be enabled. "
-      "Try setting the HYRISE_PERFETTO_TRACE_FILE environment variable.\n", _path, std::strerror(errno)));
+                                 "Try setting the HYRISE_PERFETTO_TRACE_FILE environment variable.\n",
+                                 _path, std::strerror(errno)));
 
     auto init_args = perfetto::TracingInitArgs{};
     init_args.backends = perfetto::kInProcessBackend;
@@ -81,14 +82,14 @@ class TracingSession final {
   // Called at process exit: flushes pending events, stops the session (which performs the final write), and closes the
   // file. The file descriptor must stay open until StopBlocking() has returned.
   ~TracingSession() {
-  if (!_session) {
-    return;
-  }
+    if (!_session) {
+      return;
+    }
 
-  perfetto::TrackEvent::Flush();
-  _session->StopBlocking();
-  close(_fd);
-  std::cerr << "Perfetto trace written to " << _path << " (open at https://ui.perfetto.dev).\n";
+    perfetto::TrackEvent::Flush();
+    _session->StopBlocking();
+    close(_fd);
+    std::cerr << "Perfetto trace written to " << _path << " (open at https://ui.perfetto.dev).\n";
   }
 
  private:
@@ -106,20 +107,36 @@ void ensure_tracing_started() {
   static auto session = TracingSession{};
 }
 
-void trace_event_begin(std::string_view category, std::string_view name) {
+// Perfetto requires the category as a string literal and the name as a temporary.
+void trace_event_begin(const TraceCategory category, const std::string_view name) {
   ensure_tracing_started();
-  // Perfetto requires the category as a variable and the name as a temporary.
-  auto dynamic_category = perfetto::DynamicCategory{std::string{category}};
-  TRACE_EVENT_BEGIN(dynamic_category, (perfetto::DynamicString{name.data(), name.size()}));
+  switch (category) {
+    case TraceCategory::Operator:
+      TRACE_EVENT_BEGIN("operator", (perfetto::DynamicString{name.data(), name.size()}));
+      return;
+    case TraceCategory::OperatorStep:
+      TRACE_EVENT_BEGIN("operator_step", (perfetto::DynamicString{name.data(), name.size()}));
+      return;
+  }
 }
 
-void trace_event_end(std::string_view category, std::string_view description) {
-  auto dynamic_category = perfetto::DynamicCategory{std::string{category}};
-  if (description.empty()) {
-  TRACE_EVENT_END(dynamic_category);
-  return;
+void trace_event_end(const TraceCategory category, const std::string_view description) {
+  switch (category) {
+    case TraceCategory::Operator:
+      if (description.empty()) {
+        TRACE_EVENT_END("operator");
+        return;
+      }
+      TRACE_EVENT_END("operator", "description", std::string{description});
+      return;
+    case TraceCategory::OperatorStep:
+      if (description.empty()) {
+        TRACE_EVENT_END("operator_step");
+        return;
+      }
+      TRACE_EVENT_END("operator_step", "description", std::string{description});
+      return;
   }
-  TRACE_EVENT_END(dynamic_category, "description", std::string{description});
 }
 
 }  // namespace hyrise

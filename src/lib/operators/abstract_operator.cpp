@@ -26,9 +26,9 @@
 #include "utils/assert.hpp"
 #include "utils/format_bytes.hpp"
 #include "utils/map_prunable_subquery_predicates.hpp"
+#include "utils/perfetto_tracing.hpp"
 #include "utils/print_utils.hpp"
 #include "utils/timer.hpp"
-#include "utils/perfetto_tracing.hpp"
 
 namespace hyrise {
 
@@ -95,7 +95,7 @@ void AbstractOperator::execute() {
     Assert(!_right_input || _right_input->get_output(), "Right input has no output data.");
   }
 
-  trace_event_begin("operator", name());
+  trace_event_begin(TraceCategory::Operator, name());
   auto performance_timer = Timer{};
 
   auto transaction_context = this->transaction_context();
@@ -106,7 +106,7 @@ void AbstractOperator::execute() {
      * tasks of the Transaction run while the Rollback happens.
      */
     if (transaction_context->aborted()) {
-      trace_event_end("operator");
+      trace_event_end(TraceCategory::Operator);
       return;
     }
 
@@ -127,7 +127,7 @@ void AbstractOperator::execute() {
   }
   performance_data->walltime = performance_timer.lap();
   // The description is added at the end, as some operators have details only during execution.
-  trace_event_end("operator", description());
+  trace_event_end(TraceCategory::Operator, description());
 
   _transition_to(OperatorState::ExecutedAndAvailable);
 
