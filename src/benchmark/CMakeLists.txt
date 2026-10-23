@@ -21,6 +21,7 @@ add_executable(
     operators/union_all_benchmark.cpp
     tpch_data_micro_benchmark.cpp
     tpch_table_generator_benchmark.cpp
+    temp_pruning_benchmarks.cpp
 )
 
 target_link_libraries(
