@@ -273,9 +273,7 @@ TEST_F(OperatorsImportTest, OperatorName) {
 
 TEST_F(OperatorsImportTest, CSVNeedsMetaFileOrPreexistingTable) {
   const auto reference_filename = std::string{"resources/test_data/csv/int_string2_no_meta.csv"};
-
   auto importer = std::make_shared<Import>(reference_filename, "a", Chunk::DEFAULT_SIZE);
-
   EXPECT_THROW(importer->execute(), std::logic_error);
 }
 
@@ -292,6 +290,7 @@ TEST_F(OperatorsImportTest, ExistingTableImmutable) {
 
   // Add a single value such that we have another chunk that is mutable.
   existing_table->append({AllTypeVariant{37.0f}});
+  ASSERT_EQ(existing_table->chunk_count(), ChunkID{2});
 
   Hyrise::get().storage_manager.add_table("a", existing_table);
 
@@ -299,12 +298,20 @@ TEST_F(OperatorsImportTest, ExistingTableImmutable) {
   importer->execute();
 
   // The 1st chunk should be unchanged. The 2nd chunk should now be immutable because of the import.
+  ASSERT_EQ(existing_table->chunk_count(), ChunkID{4});
   EXPECT_FALSE(Hyrise::get().storage_manager.get_table("a")->get_chunk(ChunkID{0})->is_mutable());
   EXPECT_FALSE(Hyrise::get().storage_manager.get_table("a")->get_chunk(ChunkID{1})->is_mutable());
 
-  // The loaded chunks should be mutable.
-  EXPECT_TRUE(Hyrise::get().storage_manager.get_table("a")->get_chunk(ChunkID{2})->is_mutable());
-  EXPECT_TRUE(Hyrise::get().storage_manager.get_table("a")->get_chunk(ChunkID{3})->is_mutable());
+  // The loaded chunks should be immutable.
+  EXPECT_FALSE(Hyrise::get().storage_manager.get_table("a")->get_chunk(ChunkID{2})->is_mutable());
+  EXPECT_FALSE(Hyrise::get().storage_manager.get_table("a")->get_chunk(ChunkID{3})->is_mutable());
+
+  // The last loaded chunk holds only one row. A value added after the import should go to a new mutable chunk.
+  existing_table->append({AllTypeVariant{5.5f}});
+
+  ASSERT_EQ(existing_table->chunk_count(), ChunkID{5});
+  EXPECT_TRUE(existing_table->get_chunk(ChunkID{4})->is_mutable());
+  EXPECT_EQ(existing_table->get_chunk(ChunkID{4})->size(), 1);
 }
 
 }  // namespace hyrise

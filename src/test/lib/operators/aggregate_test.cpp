@@ -1002,26 +1002,13 @@ TYPED_TEST(OperatorsAggregateTest, SingleAggregateCountStarSorted) {
 }
 
 TYPED_TEST(OperatorsAggregateTest, MultiChunkSingleAggregateCountStarSorted) {
-  const auto aggregate_expressions =
-      std::vector<std::shared_ptr<WindowFunctionExpression>>{std::make_shared<WindowFunctionExpression>(
-          WindowFunction::Count, pqp_column_(INVALID_COLUMN_ID, DataType::Long, "*"))};
-  const auto groupby_column_ids = std::vector<ColumnID>{ColumnID{0}};
-
-  // NOTE: The sorted table contains values 12, 123, and 12345 (2 times) in column 0. It has a `target_chunk_size` of
-  // 2, so the first chunk contains 12 and 123, while the second chunk contains the two rows with 12345. It is already
-  // set and marked as sorted and clustered. So the `group_boundaries` of the AggregateSort will be
-  // `{RowID{0, 1}, RowID{1, 0}}`. Therefore, the second group will span two chunks.
-  const auto aggregate =
-      std::make_shared<TypeParam>(this->_table_wrapper_1_1_sorted, aggregate_expressions, groupby_column_ids);
-
-  const auto expected_table = std::make_shared<Table>(
-      TableColumnDefinitions{{"a", DataType::Int, false}, {"COUNT(*)", DataType::Long, false}}, TableType::Data);
-  expected_table->append({AllTypeVariant{12}, AllTypeVariant{int64_t{1}}});
-  expected_table->append({AllTypeVariant{123}, AllTypeVariant{int64_t{1}}});
-  expected_table->append({AllTypeVariant{12345}, AllTypeVariant{int64_t{2}}});
-
-  aggregate->execute();
-  EXPECT_TABLE_EQ_UNORDERED(aggregate->get_output(), expected_table);
+  // NOTE: The sorted table contains values 12345 (2 times), 123 and 12 in column 0. It has a `target_chunk_size` of
+  // 2, so the first chunk contains both values of 12345 and the second chunk contains 123 and 12. It is already set
+  // and marked as sorted and clustered. So the `group_boundaries` of the AggregateSort will be
+  // `{RowID{1, 0}, RowID{1, 1}}` omitting the first group boundary. '12345' is classified as a multi-chunk group,
+  // because the first boundary starts in chunk 1 instead of chunk 0.
+  test_output<TypeParam>(this->_table_wrapper_1_1_sorted, {{INVALID_COLUMN_ID, WindowFunction::Count}}, {ColumnID{0}},
+                         "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/count_star.tbl");
 }
 
 }  // namespace hyrise
