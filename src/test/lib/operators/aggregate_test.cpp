@@ -15,6 +15,7 @@
 #include "operators/aggregate_sort.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/join_nested_loop.hpp"
+#include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk_encoder.hpp"
@@ -96,6 +97,17 @@ class OperatorsAggregateTest : public BaseTest {
         load_table("resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/input.tbl", ChunkOffset{2}));
     _table_wrapper_1_1->never_clear_output();
     _table_wrapper_1_1->execute();
+
+    const auto sorted_table =
+        load_table("resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/input.tbl", ChunkOffset{2});
+    sorted_table->set_value_clustered_by({ColumnID{0}});
+    sorted_table->get_chunk(ChunkID{0})
+        ->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::AscendingNullsFirst));
+    sorted_table->get_chunk(ChunkID{1})
+        ->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::DescendingNullsFirst));
+    _table_wrapper_1_1_sorted = std::make_shared<TableWrapper>(sorted_table);
+    _table_wrapper_1_1_sorted->never_clear_output();
+    _table_wrapper_1_1_sorted->execute();
 
     _table_wrapper_1_1_large = std::make_shared<TableWrapper>(
         load_table("resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/input_large.tbl", ChunkOffset{2}));
@@ -193,11 +205,11 @@ class OperatorsAggregateTest : public BaseTest {
   void SetUp() override {}
 
   inline static std::shared_ptr<TableWrapper> _table_wrapper_1_0, _table_wrapper_1_0_null, _table_wrapper_1_1,
-      _table_wrapper_1_1_null, _table_wrapper_1_1_large, _table_wrapper_join_1, _table_wrapper_join_2,
-      _table_wrapper_1_2, _table_wrapper_2_1, _table_wrapper_2_2, _table_wrapper_2_0_null, _table_wrapper_3_1,
-      _table_wrapper_3_2, _table_wrapper_3_0_null, _table_wrapper_1_1_string, _table_wrapper_1_1_string_null,
-      _table_wrapper_1_1_dict, _table_wrapper_1_1_null_dict, _table_wrapper_2_0_a, _table_wrapper_2_o_b,
-      _table_wrapper_int_int;
+      _table_wrapper_1_1_null, _table_wrapper_1_1_sorted, _table_wrapper_1_1_large, _table_wrapper_join_1,
+      _table_wrapper_join_2, _table_wrapper_1_2, _table_wrapper_2_1, _table_wrapper_2_2, _table_wrapper_2_0_null,
+      _table_wrapper_3_1, _table_wrapper_3_2, _table_wrapper_3_0_null, _table_wrapper_1_1_string,
+      _table_wrapper_1_1_string_null, _table_wrapper_1_1_dict, _table_wrapper_1_1_null_dict, _table_wrapper_2_0_a,
+      _table_wrapper_2_o_b, _table_wrapper_int_int;
 };
 
 using AggregateTypes = ::testing::Types<AggregateHash, AggregateSort>;
@@ -916,7 +928,7 @@ TYPED_TEST(OperatorsAggregateTest, SingleAggregateMaxWithOnlyNullValuesInGroup) 
   const auto aggregate_expressions = std::vector<std::shared_ptr<WindowFunctionExpression>>{
       max_(pqp_column_(ColumnID{1}, table->column_data_type(ColumnID{1}), table->column_name(ColumnID{1})))};
   const auto aggregate = std::make_shared<TypeParam>(this->_table_wrapper_1_1_null, aggregate_expressions,
-                                                      std::vector<ColumnID>{ColumnID{0}});
+                                                     std::vector<ColumnID>{ColumnID{0}});
   aggregate->execute();
 
   const auto output = aggregate->get_output();
@@ -977,6 +989,26 @@ TYPED_TEST(OperatorsAggregateTest, Issue2761) {
   auto two_groupby_columns_aggregate = std::make_shared<TypeParam>(table_wrapper, aggregates, groupby_column_ids);
   two_groupby_columns_aggregate->execute();
   ASSERT_EQ(two_groupby_columns_aggregate->get_output()->row_count(), table->row_count());
+}
+
+TYPED_TEST(OperatorsAggregateTest, SingleAggregateCountStarSorted) {
+  for (const auto& sort_by_column_id : {ColumnID{0}, ColumnID{1}}) {
+    const auto sort = std::make_shared<Sort>(
+        this->_table_wrapper_1_1_sorted, std::vector<SortColumnDefinition>{SortColumnDefinition{sort_by_column_id}});
+    sort->execute();
+    test_output<TypeParam>(sort, {{INVALID_COLUMN_ID, WindowFunction::Count}}, {ColumnID{0}},
+                           "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/count_star.tbl");
+  }
+}
+
+TYPED_TEST(OperatorsAggregateTest, MultiChunkSingleAggregateCountStarSorted) {
+  // NOTE: The sorted table contains values 12345 (2 times), 123 and 12 in column 0. It has a `target_chunk_size` of
+  // 2, so the first chunk contains both values of 12345 and the second chunk contains 123 and 12. It is already set
+  // and marked as sorted and clustered. So the `group_boundaries` of the AggregateSort will be
+  // `{RowID{1, 0}, RowID{1, 1}}` omitting the first group boundary. '12345' is classified as a multi-chunk group,
+  // because the first boundary starts in chunk 1 instead of chunk 0.
+  test_output<TypeParam>(this->_table_wrapper_1_1_sorted, {{INVALID_COLUMN_ID, WindowFunction::Count}}, {ColumnID{0}},
+                         "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/count_star.tbl");
 }
 
 }  // namespace hyrise
