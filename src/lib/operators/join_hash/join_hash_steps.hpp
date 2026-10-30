@@ -238,24 +238,6 @@ class PosHashTable {
     return hash_table_iter->second;
   }
 
-  // Append the RowIDs of all entries marked in `matches` whose offset lies in [begin_offset, end_offset). `matches`
-  // points at this hash table's first value within the merged match state.
-  void write_matched_positions(RowIDPosList& pos_list, const uint8_t* matches, const size_t begin_offset,
-                               const size_t end_offset) const {
-    DebugAssert(_mode == JoinHashBuildMode::AllPositions, "Emitting build-side rows requires stored positions.");
-    DebugAssert(begin_offset <= end_offset, "Invalid offset range.");
-    DebugAssert(end_offset <= _offset_hash_table.size(), "Offset range exceeds the hash table.");
-
-    const auto& unified_pos_list = *_unified_pos_list;
-    for (auto offset = begin_offset; offset < end_offset; ++offset) {
-      if (matches[offset] == 0) {
-        continue;
-      }
-
-      pos_list.insert(pos_list.end(), unified_pos_list.pos_list.begin() + unified_pos_list.offsets[offset],
-                      unified_pos_list.pos_list.begin() + unified_pos_list.offsets[offset + 1]);
-    }
-  }
 
  private:
   // During the build phase, the small_vectors cause many small allocations. Instead of going to malloc every time,
@@ -1074,48 +1056,70 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
 
 /*
 When the build side is the emitting side (i.e., a semi-join for which the smaller input became the build side), the
-probe phase only marks matching entries in the hash tables. This function collects the RowIDs of the marked entries.
+probe phase only marks matching entries. This function walks the materialized build elements and collects the RowIDs of
+those whose value was marked. The hash tables are built in `ExistenceOnly` mode, so they hold no positions and the
+RowIDs come from the build elements instead.
 
-Each hash table is gathered in ranges, one pos list per range. As every build-side value belongs to exactly one hash
-table and one range, the resulting pos lists are disjoint and need no deduplication. Splitting matters most for
-`radix_bits == 0`, where a single hash table would otherwise be gathered by one job into one oversized output chunk -
-write_output_chunks() merges small pos lists but never splits large ones.
+Each build partition is gathered in ranges, one pos list per range. As every build element belongs to exactly one range,
+the resulting pos lists are disjoint and need no deduplication.
 */
-template <typename HashedType>
-void gather_matched_build_side_positions(const std::vector<std::optional<PosHashTable<HashedType>>>& hash_tables,
+template <typename BuildColumnType, typename HashedType>
+void gather_matched_build_side_positions(const RadixContainer<BuildColumnType>& radix_build_column,
+                                         const std::vector<std::optional<PosHashTable<HashedType>>>& hash_tables,
                                          const std::vector<uint8_t>& matches,
                                          const std::vector<size_t>& match_offsets,
                                          std::vector<RowIDPosList>& pos_lists) {
   DebugAssert(pos_lists.empty(), "Expected an empty output vector, gathering appends one pos list per range.");
 
-  const auto hash_table_count = hash_tables.size();
-  if (hash_table_count == 0) {
+  const auto partition_count = radix_build_column.size();
+  if (partition_count == 0 || hash_tables.empty()) {
     return;
   }
 
-  // Radix partitioning already parallelizes the gather through the number of hash tables, so the more partitions
-  // there are, the less each of them has to be split.
-  const auto ranges_per_hash_table = std::max(size_t{1}, TARGET_GATHER_RANGE_COUNT / hash_table_count);
+  // Radix partitioning already parallelizes the gather through the number of partitions, so the more partitions there
+  // are, the less each of them has to be split.
+  const auto ranges_per_partition = std::max(size_t{1}, TARGET_GATHER_RANGE_COUNT / partition_count);
 
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
 
-  for (auto hash_table_idx = size_t{0}; hash_table_idx < hash_table_count; ++hash_table_idx) {
+  for (auto partition_idx = size_t{0}; partition_idx < partition_count; ++partition_idx) {
+    const auto& elements = radix_build_column[partition_idx].elements;
+    const auto elements_count = elements.size();
+    if (elements_count == 0) {
+      continue;
+    }
+
+    const auto hash_table_idx = hash_tables.size() > 1 ? partition_idx : 0;
     if (!hash_tables[hash_table_idx]) {
       continue;
     }
 
-    const auto distinct_value_count = hash_tables[hash_table_idx]->distinct_value_count();
-    const auto range_size = std::max(MIN_GATHER_RANGE_SIZE, distinct_value_count / ranges_per_hash_table);
+    const auto range_size = std::max(MIN_GATHER_RANGE_SIZE, elements_count / ranges_per_partition);
 
-    for (auto range_begin = size_t{0}; range_begin < distinct_value_count; range_begin += range_size) {
+    for (auto range_begin = size_t{0}; range_begin < elements_count; range_begin += range_size) {
       const auto output_idx = pos_lists.size();
       pos_lists.emplace_back();
-      const auto range_end = std::min(range_begin + range_size, distinct_value_count);
+      const auto range_end = std::min(range_begin + range_size, elements_count);
 
-      const auto gather_range = [&, hash_table_idx, output_idx, range_begin, range_end]() {
+      const auto gather_range = [&, partition_idx, hash_table_idx, output_idx, range_begin, range_end]() {
+        const auto& hash_table = *hash_tables[hash_table_idx];
+        const auto* partition_matches = matches.data() + match_offsets[hash_table_idx];
+        const auto& range_elements = radix_build_column[partition_idx].elements;
+
         auto pos_list_local = RowIDPosList{};
-        hash_tables[hash_table_idx]->write_matched_positions(
-            pos_list_local, matches.data() + match_offsets[hash_table_idx], range_begin, range_end);
+
+        for (auto element_idx = range_begin; element_idx < range_end; ++element_idx) {
+          const auto& element = range_elements[element_idx];
+
+          // Build elements skipped by the probe side's Bloom filter are simply not emitted.
+          const auto offset = hash_table.find_offset(element.value);
+          if (!offset || partition_matches[*offset] == 0) {
+            continue;
+          }
+
+          pos_list_local.emplace_back(element.row_id);
+        }
+
         pos_lists[output_idx] = std::move(pos_list_local);
       };
 

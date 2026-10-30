@@ -460,12 +460,14 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
      */
     auto timer_hash_map_building = Timer{};
     // Anti joins, or semi joins that didn't switch the build/probe side.
-    if (_secondary_predicates.empty() && is_semi_or_anti_join(_mode) && !emit_build_side) {
+    // Semi/anti-joins only need to know whether a value exists. Secondary predicates are the exception: they might
+    // disqualify the single stored row, so all rows are needed.
+    if (_secondary_predicates.empty() && is_semi_or_anti_join(_mode)) {
       hash_tables = build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::ExistenceOnly,
                                                        _radix_bits, probe_side_bloom_filter);
     } else {
-      hash_tables = build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::AllPositions, _radix_bits,
-                                                       probe_side_bloom_filter);
+      hash_tables = build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::AllPositions,
+                                                       _radix_bits, probe_side_bloom_filter);
     }
     _performance_data.set_step_runtime(OperatorSteps::Building, timer_hash_map_building.lap());
 
@@ -505,7 +507,10 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
       }
     }
 
-    radix_build_column.clear();
+    // Build elements are only needed for semi join when the build side emits.
+    if (!emit_build_side) {
+      radix_build_column.clear();
+    }
 
     /**
      * 4. Probe step
@@ -539,7 +544,9 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
               _secondary_predicates, &match_state, &match_offsets);
 
           const auto matches = match_state.merge();
-          gather_matched_build_side_positions(hash_tables, matches, match_offsets, build_side_pos_lists);
+          gather_matched_build_side_positions(radix_build_column, hash_tables, matches, match_offsets,
+                                              build_side_pos_lists);
+          radix_build_column.clear();
 
           // The probe side emits no rows here, but write_output_chunks expects one PosList per partition on both sides.
           probe_side_pos_lists.clear();
