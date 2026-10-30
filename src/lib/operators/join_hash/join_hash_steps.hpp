@@ -22,6 +22,8 @@
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
+#include "scheduler/node_queue_scheduler.hpp"
+#include "scheduler/worker.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/segment_iterate.hpp"
 #include "type_comparison.hpp"
@@ -45,6 +47,14 @@ using Hash = size_t;
 // We have to access the value of DEFAULT_SIZE by .t here, because accessing it via operator T&() is not constexpr.
 // A smaller value implies more threads and smaller output chunks, which affects downstream processing.
 constexpr auto PROBE_SIZE_PER_CHUNK = Chunk::DEFAULT_SIZE * 2;
+
+// Number of ranges that gather_matched_build_side_positions() aims for in total, across all hash tables. Each range
+// becomes one job and one output chunk, so splitting too far only fragments the output.
+constexpr auto TARGET_GATHER_RANGE_COUNT = size_t{32};
+
+// A gather range never covers fewer hash table entries than this, so that small hash tables are not split into
+// slivers whose output chunks cost more to write than the split saves.
+constexpr auto MIN_GATHER_RANGE_SIZE = size_t{8'192};
 
 /*
 This is how elements of the input relations are saved after materialization.
@@ -217,6 +227,18 @@ class PosHashTable {
     return std::nullopt;
   }
 
+  // For a value seen on the probe side, return the offset of the corresponding build-side entry, if present. Used
+  // when the build side is the emitting side: the probe marks the entry instead of writing to a pos list.
+  template <typename InputType>
+  std::optional<Offset> find_offset(const InputType& value) const {
+    const auto hash_table_iter = _offset_hash_table.find(static_cast<HashedType>(value));
+    if (hash_table_iter == _offset_hash_table.end()) {
+      return std::nullopt;
+    }
+    return hash_table_iter->second;
+  }
+
+
  private:
   // During the build phase, the small_vectors cause many small allocations. Instead of going to malloc every time,
   // we create our own pool, which is discarded once finalize() is called. The pool is unsynchronized (i.e., non-thread-
@@ -234,6 +256,95 @@ class PosHashTable {
 
   std::optional<UnifiedPosList> _unified_pos_list{};
 };
+
+// Match tracking for semi joins that emit from the build side. Each worker marks into its own byte vector, so no
+// atomics are needed while probing. A vector covers the distinct values of all hash tables, laid out back to back
+// (see match_offsets_per_hash_table()). The vectors are merged once all probe jobs have finished.
+class SemiJoinMatchState : public Noncopyable {
+ public:
+  explicit SemiJoinMatchState(const size_t value_count) : _value_count(value_count) {
+    // One slot per worker, plus one for the main thread, which is also used when no scheduler workers exist. Worker IDs
+    // cannot be used as slots directly: they keep counting up when a scheduler is restarted (e.g., the benchmark runner
+    // re-begins its scheduler after data preparation), so they do not necessarily start at 0.
+    const auto scheduler = std::dynamic_pointer_cast<NodeQueueScheduler>(Hyrise::get().scheduler());
+    if (scheduler) {
+      const auto& workers = scheduler->workers();
+      const auto worker_count = workers.size();
+      _slot_by_worker_id.reserve(worker_count);
+      for (auto slot = size_t{0}; slot < worker_count; ++slot) {
+        _slot_by_worker_id.emplace(static_cast<WorkerID::base_type>(workers[slot]->id()), slot);
+      }
+    }
+    _main_thread_slot = _slot_by_worker_id.size();
+    _worker_matches.resize(_main_thread_slot + 1);
+  }
+
+  // Returns the match vector exclusive to the current worker. Vectors are allocated lazily, so that workers that never
+  // probe do not cost memory.
+  uint8_t* current_worker_matches() {
+    auto slot = _main_thread_slot;
+    const auto worker = Worker::get_this_thread_worker();
+    if (worker) {
+      const auto slot_iter = _slot_by_worker_id.find(static_cast<WorkerID::base_type>(worker->id()));
+      Assert(slot_iter != _slot_by_worker_id.end(), "Unknown worker, did the scheduler change while probing?");
+      slot = slot_iter->second;
+    }
+
+    auto& matches = _worker_matches[slot];
+    if (matches.empty()) {
+      matches.resize(_value_count);
+    }
+    return matches.data();
+  }
+
+  // ORs all worker vectors into one. Returns an all-zero vector if no worker marked anything.
+  std::vector<uint8_t> merge() {
+    auto result = std::vector<uint8_t>{};
+    for (auto& matches : _worker_matches) {
+      if (matches.empty()) {
+        continue;
+      }
+      if (result.empty()) {
+        result = std::move(matches);
+        continue;
+      }
+
+      for (auto value_idx = size_t{0}; value_idx < _value_count; ++value_idx) {
+        result[value_idx] |= matches[value_idx];
+      }
+    }
+
+    if (result.empty()) {
+      result.resize(_value_count);
+    }
+    return result;
+  }
+
+ private:
+  size_t _value_count;
+  size_t _main_thread_slot;
+  boost::unordered_flat_map<WorkerID::base_type, size_t> _slot_by_worker_id;
+  std::vector<std::vector<uint8_t>> _worker_matches;
+};
+
+// Start offset of each hash table's values within a SemiJoinMatchState, plus the total count as the last entry.
+template <typename HashedType>
+std::vector<size_t> match_offsets_per_hash_table(
+    const std::vector<std::optional<PosHashTable<HashedType>>>& hash_tables) {
+  const auto hash_table_count = hash_tables.size();
+  auto offsets = std::vector<size_t>(hash_table_count + 1);
+
+  auto total_count = size_t{0};
+  for (auto hash_table_idx = size_t{0}; hash_table_idx < hash_table_count; ++hash_table_idx) {
+    offsets[hash_table_idx] = total_count;
+    if (hash_tables[hash_table_idx]) {
+      total_count += hash_tables[hash_table_idx]->distinct_value_count();
+    }
+  }
+  offsets.back() = total_count;
+
+  return offsets;
+}
 
 // The Bloom filter (with k=1) is used during the materialization and build phases. It contains `true` for each
 // `hash_function(value) % BLOOM_FILTER_SIZE`. Much of how the Bloom filter is used in the hash join could be improved:
@@ -433,11 +544,11 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
     return {};
   }
 
-  /*
-  NUMA notes:
-  The hash tables for each partition P should also reside on the same node as the build and probe partitions.
-  */
-  std::vector<std::optional<PosHashTable<HashedType>>> hash_tables;
+  /**
+   * NUMA notes:
+   * The hash tables for each partition P should also reside on the same node as the build and probe partitions.
+   */
+  auto hash_tables = std::vector<std::optional<PosHashTable<HashedType>>>{};
 
   if (radix_bits == 0) {
     auto total_size = size_t{0};
@@ -791,11 +902,13 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 }
 
-template <typename ProbeColumnType, typename HashedType, JoinMode mode>
+template <typename ProbeColumnType, typename HashedType, JoinMode mode, bool emit_build_side = false>
 void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_container,
                      const std::vector<std::optional<PosHashTable<HashedType>>>& hash_tables,
                      std::vector<RowIDPosList>& pos_lists, const Table& build_table, const Table& probe_table,
-                     const std::vector<OperatorJoinPredicate>& secondary_join_predicates) {
+                     const std::vector<OperatorJoinPredicate>& secondary_join_predicates,
+                     SemiJoinMatchState* match_state = nullptr,
+                     const std::vector<size_t>* match_offsets = nullptr) {
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
 
   const auto probe_radix_container_count = probe_radix_container.size();
@@ -820,8 +933,9 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
       pos_lists.emplace_back();
       const auto partition_end = std::min(partition_begin + PROBE_SIZE_PER_CHUNK, elements_count);
       const auto partition_elements_count = partition_end - partition_begin;
-      const auto probe_partition = [&, partition_idx, output_idx, partition_begin, partition_end,
-                                    partition_elements_count]() {
+      const auto probe_partition = [&, partition_idx, output_idx, partition_begin, partition_end]() {
+        // Unused when the build side emits: no output is reserved and the Anti* branches below are discarded.
+        [[maybe_unused]] const auto partition_elements_count = partition_end - partition_begin;
         // Get information from work queue.
         const auto& null_values = partition.null_values;
 
@@ -832,14 +946,22 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
           // Valid hash table found, so there is at least one match in this partition.
           const auto& hash_table = *hash_tables[hash_table_idx];
 
+          // Obtained once per job: the lookup is cheap but not free, and the state is exclusive to this worker.
+          [[maybe_unused]] auto* worker_matches = static_cast<uint8_t*>(nullptr);
+          if constexpr (emit_build_side) {
+            worker_matches = match_state->current_worker_matches() + (*match_offsets)[hash_table_idx];
+          }
+
           // Accessors are not thread-safe, so we create one evaluator per job.
           auto multi_predicate_join_evaluator = std::optional<MultiPredicateJoinEvaluator>{};
           if (!secondary_join_predicates.empty()) {
             multi_predicate_join_evaluator.emplace(build_table, probe_table, mode, secondary_join_predicates);
           }
 
-          const auto expected_output_size = std::max(size_t{10}, partition_elements_count / 2);
-          pos_list_local.reserve(expected_output_size);
+          if constexpr (!emit_build_side) {
+            const auto expected_output_size = std::max(size_t{10}, partition_elements_count / 2);
+            pos_list_local.reserve(expected_output_size);
+          }
 
           for (auto partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
             const auto& probe_column_element = elements[partition_offset];
@@ -863,6 +985,17 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
                 // This means that the probe value never gets emitted.
                 continue;
               }
+            }
+
+            // The build side is the emitting side, so we do not produce output here. We only mark the matching
+            // entry in the hash table; the matched rows are collected by gather_matched_build_side_positions().
+            if constexpr (emit_build_side) {
+              static_assert(mode == JoinMode::Semi, "Emitting from the build side is only implemented for semi joins.");
+              const auto matched_offset = hash_table.find_offset(probe_column_element.value);
+              if (matched_offset) {
+                worker_matches[*matched_offset] = 1;
+              }
+              continue;
             }
 
             auto any_build_column_value_matches = false;
@@ -914,6 +1047,86 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
         probe_partition();
       } else {
         jobs.emplace_back(std::make_shared<JobTask>(probe_partition));
+      }
+    }
+  }
+
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+}
+
+/*
+When the build side is the emitting side (i.e., a semi-join for which the smaller input became the build side), the
+probe phase only marks matching entries. This function walks the materialized build elements and collects the RowIDs of
+those whose value was marked. The hash tables are built in `ExistenceOnly` mode, so they hold no positions and the
+RowIDs come from the build elements instead.
+
+Each build partition is gathered in ranges, one pos list per range. As every build element belongs to exactly one range,
+the resulting pos lists are disjoint and need no deduplication.
+*/
+template <typename BuildColumnType, typename HashedType>
+void gather_matched_build_side_positions(const RadixContainer<BuildColumnType>& radix_build_column,
+                                         const std::vector<std::optional<PosHashTable<HashedType>>>& hash_tables,
+                                         const std::vector<uint8_t>& matches,
+                                         const std::vector<size_t>& match_offsets,
+                                         std::vector<RowIDPosList>& pos_lists) {
+  DebugAssert(pos_lists.empty(), "Expected an empty output vector, gathering appends one pos list per range.");
+
+  const auto partition_count = radix_build_column.size();
+  if (partition_count == 0 || hash_tables.empty()) {
+    return;
+  }
+
+  // Radix partitioning already parallelizes the gather through the number of partitions, so the more partitions there
+  // are, the less each of them has to be split.
+  const auto ranges_per_partition = std::max(size_t{1}, TARGET_GATHER_RANGE_COUNT / partition_count);
+
+  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+
+  for (auto partition_idx = size_t{0}; partition_idx < partition_count; ++partition_idx) {
+    const auto& elements = radix_build_column[partition_idx].elements;
+    const auto elements_count = elements.size();
+    if (elements_count == 0) {
+      continue;
+    }
+
+    const auto hash_table_idx = hash_tables.size() > 1 ? partition_idx : 0;
+    if (!hash_tables[hash_table_idx]) {
+      continue;
+    }
+
+    const auto range_size = std::max(MIN_GATHER_RANGE_SIZE, elements_count / ranges_per_partition);
+
+    for (auto range_begin = size_t{0}; range_begin < elements_count; range_begin += range_size) {
+      const auto output_idx = pos_lists.size();
+      pos_lists.emplace_back();
+      const auto range_end = std::min(range_begin + range_size, elements_count);
+
+      const auto gather_range = [&, partition_idx, hash_table_idx, output_idx, range_begin, range_end]() {
+        const auto& hash_table = *hash_tables[hash_table_idx];
+        const auto* partition_matches = matches.data() + match_offsets[hash_table_idx];
+        const auto& range_elements = radix_build_column[partition_idx].elements;
+
+        auto pos_list_local = RowIDPosList{};
+
+        for (auto element_idx = range_begin; element_idx < range_end; ++element_idx) {
+          const auto& element = range_elements[element_idx];
+
+          // Build elements skipped by the probe side's Bloom filter are simply not emitted.
+          const auto offset = hash_table.find_offset(element.value);
+          if (!offset || partition_matches[*offset] == 0) {
+            continue;
+          }
+
+          pos_list_local.emplace_back(element.row_id);
+        }
+
+        pos_lists[output_idx] = std::move(pos_list_local);
+      };
+
+      if (range_end - range_begin < JoinHash::JOB_SPAWN_THRESHOLD) {
+        gather_range();
+      } else {
+        jobs.emplace_back(std::make_shared<JobTask>(gather_range));
       }
     }
   }

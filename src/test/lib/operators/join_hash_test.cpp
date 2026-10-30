@@ -13,6 +13,8 @@
 #include "storage/table.hpp"
 #include "types.hpp"
 #include "utils/load_table.hpp"
+#include "testing_assert.hpp"
+#include "storage/table_column_definition.hpp"
 
 namespace hyrise {
 
@@ -126,6 +128,77 @@ TEST_F(OperatorsJoinHashTest, RadixBitCalculation) {
   EXPECT_EQ(JoinHash::calculate_radix_bits(0, 0), 0);
   EXPECT_EQ(JoinHash::calculate_radix_bits(1, 1), 0);
   EXPECT_GT(JoinHash::calculate_radix_bits(std::numeric_limits<size_t>::max(), std::numeric_limits<size_t>::max()), 0);
+}
+
+TEST_F(OperatorsJoinHashTest, SemiJoinBuildsOnSmallerSide) {
+  const auto primary_predicate = OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals};
+
+  // Precondition of this test: the two inputs differ clearly in size.
+  ASSERT_LT(_table_tpch_orders_scanned->get_output()->row_count(),
+            _table_tpch_lineitems_scanned->get_output()->row_count());
+
+  // The left input is the smaller one. It becomes the build side and the emitted rows are gathered from the hash
+  // table after probing.
+  const auto join_small_left = std::make_shared<JoinHash>(_table_tpch_orders_scanned, _table_tpch_lineitems_scanned,
+                                                          JoinMode::Semi, primary_predicate);
+  join_small_left->execute();
+  const auto& performance_data_small_left =
+      static_cast<const JoinHash::PerformanceData&>(*join_small_left->performance_data);
+  EXPECT_TRUE(performance_data_small_left.left_input_is_build_side);
+
+  // The left input is the larger one. The previous behavior is retained: the right input becomes the build side and
+  // the emitted rows are those of the probe side.
+  const auto join_small_right = std::make_shared<JoinHash>(_table_tpch_lineitems_scanned, _table_tpch_orders_scanned,
+                                                           JoinMode::Semi, primary_predicate);
+  join_small_right->execute();
+  const auto& performance_data_small_right =
+      static_cast<const JoinHash::PerformanceData&>(*join_small_right->performance_data);
+  EXPECT_FALSE(performance_data_small_right.left_input_is_build_side);
+}
+
+TEST_F(OperatorsJoinHashTest, SemiJoinEmittingFromBuildSide) {
+  // The left input is smaller, so the hash table is built on the left side. Duplicates on the build side must each be
+  // emitted once, while duplicates on the probe side must not multiply the output.
+  const auto column_definitions = TableColumnDefinitions{{"a", DataType::Int, false}, {"b", DataType::Int, false}};
+  const auto left_table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2});
+  left_table->append({1, 10});
+  left_table->append({1, 11});
+  left_table->append({2, 12});
+  left_table->append({3, 13});
+  left_table->append({3, 14});
+
+  const auto right_table =
+      std::make_shared<Table>(TableColumnDefinitions{{"c", DataType::Int, false}}, TableType::Data, ChunkOffset{3});
+  for (const auto value : {1, 1, 2, 2, 2, 5, 5, 6}) {
+    right_table->append({value});
+  }
+
+  const auto left_input = std::make_shared<TableWrapper>(left_table);
+  left_input->never_clear_output();
+  left_input->execute();
+  const auto right_input = std::make_shared<TableWrapper>(right_table);
+  right_input->never_clear_output();
+  right_input->execute();
+
+  ASSERT_LT(left_input->get_output()->row_count(), right_input->get_output()->row_count());
+
+  // Both rows with a == 1 are emitted, the single row with a == 2 is emitted once despite three matches on the probe
+  // side, and the rows with a == 3 have no match at all.
+  const auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2});
+  expected_table->append({1, 10});
+  expected_table->append({1, 11});
+  expected_table->append({2, 12});
+
+  const auto join = std::make_shared<JoinHash>(
+      left_input, right_input, JoinMode::Semi,
+      OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals});
+  join->never_clear_output();
+  join->execute();
+
+  const auto& performance_data = static_cast<const JoinHash::PerformanceData&>(*join->performance_data);
+  EXPECT_TRUE(performance_data.left_input_is_build_side);
+
+  EXPECT_TABLE_EQ_UNORDERED(join->get_output(), expected_table);
 }
 
 }  // namespace hyrise
