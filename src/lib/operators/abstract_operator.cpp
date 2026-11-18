@@ -95,7 +95,8 @@ void AbstractOperator::execute() {
     Assert(!_right_input || _right_input->get_output(), "Right input has no output data.");
   }
 
-  trace_event_begin(TraceCategory::Operator, name());
+  // Scoped, so that the slice also ends when the operator is aborted or throws.
+  auto trace_operator = ScopedTraceEvent{TraceCategory::Operator, name()};
   auto performance_timer = Timer{};
 
   auto transaction_context = this->transaction_context();
@@ -106,7 +107,6 @@ void AbstractOperator::execute() {
      * tasks of the Transaction run while the Rollback happens.
      */
     if (transaction_context->aborted()) {
-      trace_event_end(TraceCategory::Operator);
       return;
     }
 
@@ -127,7 +127,7 @@ void AbstractOperator::execute() {
   }
   performance_data->walltime = performance_timer.lap();
   // The description is added at the end, as some operators have details only during execution.
-  trace_event_end(TraceCategory::Operator, description());
+  trace_operator.end(description());
 
   _transition_to(OperatorState::ExecutedAndAvailable);
 

@@ -18,15 +18,16 @@
 
 namespace hyrise {
 
-enum class TraceCategory : uint8_t { Operator, OperatorStep };
+// Operator: the execution of a physical operator. OperatorStep: a step within an operator (e.g., Probing).
+// OperatorJob: a unit of work within a step that might run in parallel with others (e.g., probing one partition).
+enum class TraceCategory : uint8_t { Operator, OperatorStep, OperatorJob };
 
+namespace detail {
+
+// Use ScopedTraceEvent instead of these functions, so that slices are also ended when an exception is thrown. Every
+// begin must be matched by an end on the same thread.
 #if HYRISE_WITH_PERFETTO
 
-// Starts the tracing session if it is not running yet.
-void ensure_tracing_started();
-
-// Explicit begin/end pair for slices (e.g., to attach a description that is only known at the end). Every begin must be
-// matched by an end on the same thread.
 void trace_event_begin(TraceCategory category, std::string_view name);
 
 // An empty description adds no argument to the slice.
@@ -40,11 +41,14 @@ inline void trace_event_end(TraceCategory /*category*/, std::string_view /*descr
 
 #endif
 
-// Traces a slice from construction to destruction.
+}  // namespace detail
+
+// Traces a slice from construction until end() is called or, at the latest, until destruction (e.g., when an
+// exception is thrown or the scope is left early).
 class ScopedTraceEvent final {
  public:
   ScopedTraceEvent(const TraceCategory category, const std::string_view name) : _category{category} {
-    trace_event_begin(category, name);
+    detail::trace_event_begin(category, name);
   }
 
   // Traces an operator step, named after the enum value.
@@ -59,11 +63,22 @@ class ScopedTraceEvent final {
   ScopedTraceEvent& operator=(ScopedTraceEvent&&) = delete;
 
   ~ScopedTraceEvent() {
-    trace_event_end(_category);
+    end();
+  }
+
+  // Ends the slice before the end of the scope. The description (e.g., only known once the work is done) is attached to
+  // the slice. Subsequent calls (including the one from the destructor) have no effect.
+  void end(const std::string_view description = {}) {
+    if (_ended) {
+      return;
+    }
+    _ended = true;
+    detail::trace_event_end(_category, description);
   }
 
  private:
   TraceCategory _category;
+  bool _ended{false};
 };
 
 }  // namespace hyrise

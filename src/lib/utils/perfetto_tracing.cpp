@@ -19,7 +19,8 @@
 // One category per hyrise::TraceCategory.
 PERFETTO_DEFINE_CATEGORIES(
     perfetto::Category("operator").SetDescription("Execution of physical operators."),
-    perfetto::Category("operator_step").SetDescription("Execution of the steps within physical operators."));
+    perfetto::Category("operator_step").SetDescription("Execution of the steps within physical operators."),
+    perfetto::Category("operator_job").SetDescription("Execution of the (parallelizable) jobs within operator steps."));
 PERFETTO_TRACK_EVENT_STATIC_STORAGE();
 
 namespace {
@@ -98,14 +99,14 @@ class TracingSession final {
   std::unique_ptr<perfetto::TracingSession> _session;
 };
 
-}  // namespace
-
-namespace hyrise {
-
 void ensure_tracing_started() {
   // Static local: thread-safe lazy initialization.
   static auto session = TracingSession{};
 }
+
+}  // namespace
+
+namespace hyrise::detail {
 
 // Perfetto requires the category as a string literal and the name as a temporary.
 void trace_event_begin(const TraceCategory category, const std::string_view name) {
@@ -116,6 +117,9 @@ void trace_event_begin(const TraceCategory category, const std::string_view name
       return;
     case TraceCategory::OperatorStep:
       TRACE_EVENT_BEGIN("operator_step", (perfetto::DynamicString{name.data(), name.size()}));
+      return;
+    case TraceCategory::OperatorJob:
+      TRACE_EVENT_BEGIN("operator_job", (perfetto::DynamicString{name.data(), name.size()}));
       return;
   }
 }
@@ -136,9 +140,16 @@ void trace_event_end(const TraceCategory category, const std::string_view descri
       }
       TRACE_EVENT_END("operator_step", "description", std::string{description});
       return;
+    case TraceCategory::OperatorJob:
+      if (description.empty()) {
+        TRACE_EVENT_END("operator_job");
+        return;
+      }
+      TRACE_EVENT_END("operator_job", "description", std::string{description});
+      return;
   }
 }
 
-}  // namespace hyrise
+}  // namespace hyrise::detail
 
 #endif

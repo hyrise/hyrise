@@ -14,8 +14,6 @@
 #include <utility>
 #include <vector>
 
-#include "magic_enum/magic_enum.hpp"
-
 #include "all_type_variant.hpp"
 #include "hyrise.hpp"
 #include "join_hash/join_hash_steps.hpp"
@@ -406,6 +404,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
       auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
 
       jobs.emplace_back(std::make_shared<JobTask>([&]() {
+        const auto trace_job = ScopedTraceEvent{TraceCategory::OperatorJob, "BuildSideClustering"};
         // radix partition the build table
         if (keep_nulls_build_column) {
           radix_build_column = partition_by_radix<BuildColumnType, HashedType, true>(
@@ -420,6 +419,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
       }));
 
       jobs.emplace_back(std::make_shared<JobTask>([&]() {
+        const auto trace_job = ScopedTraceEvent{TraceCategory::OperatorJob, "ProbeSideClustering"};
         // radix partition the probe column.
         if (keep_nulls_probe_column) {
           radix_probe_column = partition_by_radix<ProbeColumnType, HashedType, true>(
@@ -453,7 +453,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
      *    We use the probe side's Bloom filter to exclude values from the hash table that will not be accessed in the
      *    probe step.
      */
-    trace_event_begin(TraceCategory::OperatorStep, magic_enum::enum_name(OperatorSteps::Building));
+    auto trace_building = ScopedTraceEvent{OperatorSteps::Building};
     auto timer_hash_map_building = Timer{};
     if (_secondary_predicates.empty() && is_semi_or_anti_join(_mode)) {
       hash_tables = build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::ExistenceOnly,
@@ -463,7 +463,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
                                                        probe_side_bloom_filter);
     }
     _performance_data.set_step_runtime(OperatorSteps::Building, timer_hash_map_building.lap());
-    trace_event_end(TraceCategory::OperatorStep);
+    trace_building.end();
 
     // Store the element counts of the built hash tables. Depending on the Bloom filter, we might have significantly
     // less values stored than in the initial input table.
@@ -510,7 +510,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
     auto build_side_pos_lists = std::vector<RowIDPosList>{};
     auto probe_side_pos_lists = std::vector<RowIDPosList>{};
 
-    trace_event_begin(TraceCategory::OperatorStep, magic_enum::enum_name(OperatorSteps::Probing));
+    auto trace_probing = ScopedTraceEvent{OperatorSteps::Probing};
     auto timer_probing = Timer{};
     switch (_mode) {
       case JoinMode::Inner:
@@ -548,7 +548,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
         Fail("JoinMode not supported by JoinHash");
     }
     _performance_data.set_step_runtime(OperatorSteps::Probing, timer_probing.lap());
-    trace_event_end(TraceCategory::OperatorStep);
+    trace_probing.end();
 
     radix_probe_column.clear();
     hash_tables.clear();
@@ -563,7 +563,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
      * probe_side_pos_lists[p][r].
      */
 
-    trace_event_begin(TraceCategory::OperatorStep, magic_enum::enum_name(OperatorSteps::OutputWriting));
+    auto trace_output_writing = ScopedTraceEvent{OperatorSteps::OutputWriting};
     auto timer_output_writing = Timer{};
 
     const auto create_left_side_pos_lists_by_segment =
@@ -579,7 +579,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
                             _output_column_order, ALLOW_PARTITION_MERGE);
 
     _performance_data.set_step_runtime(OperatorSteps::OutputWriting, timer_output_writing.lap());
-    trace_event_end(TraceCategory::OperatorStep);
+    trace_output_writing.end();
 
     return _join_hash._build_output_table(std::move(output_chunks));
   }

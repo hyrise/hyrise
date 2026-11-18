@@ -26,6 +26,7 @@
 #include "storage/segment_iterate.hpp"
 #include "type_comparison.hpp"
 #include "types.hpp"
+#include "utils/perfetto_tracing.hpp"
 
 /*
   This file includes the functions that cover the main steps of our hash join implementation
@@ -304,6 +305,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
     const auto num_rows = chunk_in->size();
 
     const auto materialize = [&, chunk_in, chunk_id, num_rows]() {
+      const auto trace_job = ScopedTraceEvent{TraceCategory::OperatorJob, "MaterializeChunk"};
       auto local_output_bloom_filter = BloomFilter{};
       std::reference_wrapper<BloomFilter> used_output_bloom_filter = output_bloom_filter;
       if (Hyrise::get().is_multi_threaded()) {
@@ -464,6 +466,7 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
     const auto elements_count = elements.size();
 
     const auto insert_into_hash_table = [&, partition_idx, elements_count]() {
+      const auto trace_job = ScopedTraceEvent{TraceCategory::OperatorJob, "BuildHashTable"};
       const auto hash_table_idx = radix_bits > 0 ? partition_idx : 0;
 
       auto& hash_table = hash_tables[hash_table_idx];
@@ -563,6 +566,7 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
     const auto elements_count = elements.size();
 
     const auto perform_partition = [&, input_partition_idx, elements_count]() {
+      const auto trace_job = ScopedTraceEvent{TraceCategory::OperatorJob, "RadixPartition"};
       for (auto input_idx = size_t{0}; input_idx < elements_count; ++input_idx) {
         const auto& element = elements[input_idx];
 
@@ -603,6 +607,7 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
   if constexpr (keep_null_values) {
     for (auto output_partition_idx = size_t{0}; output_partition_idx < output_partition_count; ++output_partition_idx) {
       jobs.emplace_back(std::make_shared<JobTask>([&, output_partition_idx]() {
+        const auto trace_job = ScopedTraceEvent{TraceCategory::OperatorJob, "CompressNullValues"};
         const auto null_value_count = output[output_partition_idx].null_values.size();
         for (auto element_idx = size_t{0}; element_idx < null_value_count; ++element_idx) {
           output[output_partition_idx].null_values[element_idx] =
@@ -660,6 +665,7 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
       const auto partition_elements_count = partition_end - partition_begin;
       const auto probe_partition = [&, partition_idx, output_idx, partition_begin, partition_end,
                                     partition_elements_count]() {
+        const auto trace_job = ScopedTraceEvent{TraceCategory::OperatorJob, "ProbePartition"};
         const auto& null_values = partition.null_values;
 
         auto pos_list_build_side_local = RowIDPosList{};
@@ -822,6 +828,7 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
       const auto partition_elements_count = partition_end - partition_begin;
       const auto probe_partition = [&, partition_idx, output_idx, partition_begin, partition_end,
                                     partition_elements_count]() {
+        const auto trace_job = ScopedTraceEvent{TraceCategory::OperatorJob, "ProbePartition"};
         // Get information from work queue.
         const auto& null_values = partition.null_values;
 
