@@ -22,6 +22,7 @@
 #include "storage/table.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
+#include "utils/perfetto_tracing.hpp"
 
 namespace {
 
@@ -298,6 +299,7 @@ std::vector<std::shared_ptr<Chunk>> write_output_chunks(
     // We need to pass the position lists as parameters to ensure the shared_ptr is copied (capturing by value would
     // result in const shared_ptrs and write_output_segments expects non-const).
     auto write_output_segments_task = [&, chunk_input_position](auto left_side_pos_list, auto right_side_pos_list) {
+      const auto trace_job = ScopedTraceEvent{TraceCategory::OperatorJob, "WriteOutputChunk"};
       auto output_segments = Segments{};
 
       // Swap back the inputs, so that the order of the output columns is not changed.
