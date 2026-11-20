@@ -106,10 +106,10 @@ void ensure_tracing_started() {
 
 }  // namespace
 
-namespace hyrise::detail {
+namespace hyrise {
 
 // Perfetto requires the category as a string literal and the name as a temporary.
-void trace_event_begin(const TraceCategory category, const std::string_view name) {
+void ScopedTraceEvent::_begin_slice(const TraceCategory category, const std::string_view name) {
   ensure_tracing_started();
   switch (category) {
     case TraceCategory::Operator:
@@ -124,7 +124,7 @@ void trace_event_begin(const TraceCategory category, const std::string_view name
   }
 }
 
-void trace_event_end(const TraceCategory category, const std::string_view description) {
+void ScopedTraceEvent::_end_slice(const TraceCategory category, const std::string_view description) {
   switch (category) {
     case TraceCategory::Operator:
       if (description.empty()) {
@@ -150,6 +150,6 @@ void trace_event_end(const TraceCategory category, const std::string_view descri
   }
 }
 
-}  // namespace hyrise::detail
+}  // namespace hyrise
 
 #endif

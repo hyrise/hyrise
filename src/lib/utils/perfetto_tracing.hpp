@@ -2,8 +2,9 @@
 
 /**
  * Tracing of Hyrise's execution using Perfetto (https://perfetto.dev). Tracing is only compiled in when Hyrise is built
- * with -DENABLE_PERFETTO=ON. Otherwise, all functions below are empty inline functions and Perfetto is neither compiled
- * nor linked.
+ * with -DENABLE_PERFETTO=ON. Otherwise, ScopedTraceEvent does nothing and Perfetto is neither compiled nor linked.
+ *
+ * Trace a slice by creating a ScopedTraceEvent; it ends when end() is called or when the object is destroyed.
  *
  * The trace is streamed to `hyrise.perfetto-trace` in the working directory while the process runs
  * and finalized when the process exits. The output path can be changed with the environment variable
@@ -22,33 +23,12 @@ namespace hyrise {
 // OperatorJob: a unit of work within a step that might run in parallel with others (e.g., probing one partition).
 enum class TraceCategory : uint8_t { Operator, OperatorStep, OperatorJob };
 
-namespace detail {
-
-// Use ScopedTraceEvent instead of these functions, so that slices are also ended when an exception is thrown. Every
-// begin must be matched by an end on the same thread.
-#if HYRISE_WITH_PERFETTO
-
-void trace_event_begin(TraceCategory category, std::string_view name);
-
-// An empty description adds no argument to the slice.
-void trace_event_end(TraceCategory category, std::string_view description = {});
-
-#else
-
-inline void trace_event_begin(TraceCategory /*category*/, std::string_view /*name*/) {}
-
-inline void trace_event_end(TraceCategory /*category*/, std::string_view /*description*/ = {}) {}
-
-#endif
-
-}  // namespace detail
-
 // Traces a slice from construction until end() is called or, at the latest, until destruction (e.g., when an
 // exception is thrown or the scope is left early).
 class ScopedTraceEvent final {
  public:
   ScopedTraceEvent(const TraceCategory category, const std::string_view name) : _category{category} {
-    detail::trace_event_begin(category, name);
+    _begin_slice(category, name);
   }
 
   // Traces an operator step, named after the enum value.
@@ -73,10 +53,23 @@ class ScopedTraceEvent final {
       return;
     }
     _ended = true;
-    detail::trace_event_end(_category, description);
+    _end_slice(_category, description);
   }
 
  private:
+  // Only called by ScopedTraceEvent, so that every begin is matched by an end on the same thread,
+  // even if an exception is thrown. Without Perfetto, they are empty and optimized away.
+#if HYRISE_WITH_PERFETTO
+  static void _begin_slice(TraceCategory category, std::string_view name);
+
+  // An empty description adds no argument to the slice.
+  static void _end_slice(TraceCategory category, std::string_view description);
+#else
+  static void _begin_slice(TraceCategory /*category*/, std::string_view /*name*/) {}
+
+  static void _end_slice(TraceCategory /*category*/, std::string_view /*description*/) {}
+#endif
+
   TraceCategory _category;
   bool _ended{false};
 };
